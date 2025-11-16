@@ -21,6 +21,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
+import salve.BuildConfig;
 import salve.core.ReconocimientoFacial;
 
 import java.io.ByteArrayOutputStream;
@@ -39,9 +40,10 @@ import java.io.FileOutputStream;
 public class CamaraService extends Service implements Camera.PreviewCallback {
 
     // ===== API pública (acciones) =====
-    public static final String ACTION_VERIFY_ONE_SHOT = "com.salve.salve.action.VERIFY_ONE_SHOT";   // Verifica y apaga
-    public static final String ACTION_ENROLL_OWNER    = "com.salve.salve.action.ENROLL_OWNER";      // Fuerza alta del rostro base
-    public static final String ACTION_STOP            = "com.salve.salve.action.STOP";              // Apagar si estuviera corriendo
+    private static final String ACTION_PREFIX = BuildConfig.APPLICATION_ID + ".action.";
+    public static final String ACTION_VERIFY_ONE_SHOT = ACTION_PREFIX + "VERIFY_ONE_SHOT";   // Verifica y apaga
+    public static final String ACTION_ENROLL_OWNER    = ACTION_PREFIX + "ENROLL_OWNER";      // Fuerza alta del rostro base
+    public static final String ACTION_STOP            = ACTION_PREFIX + "STOP";              // Apagar si estuviera corriendo
 
     // ===== Notificación (FGS) =====
     private static final String TAG   = "Salve/CamaraService";

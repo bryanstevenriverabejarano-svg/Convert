@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * CodeAnalyzer.java
  * -----------------
- * Explora las clases del paquete com.salve.salve.core mediante reflection
+ * Explora las clases del paquete salve.core mediante reflection
  * e identifica posibles puntos de mejora estructural.
  */
 public class CodeAnalyzer {
@@ -46,10 +46,10 @@ public class CodeAnalyzer {
     private List<Class<?>> discoverCoreClasses() {
         List<Class<?>> classes = new ArrayList<>();
         try {
-            classes.add(Class.forName("com.salve.salve.core.MotorConversacional"));
-            classes.add(Class.forName("com.salve.salve.core.MemoriaEmocional"));
-            classes.add(Class.forName("com.salve.salve.core.DetectorEmociones"));
-            classes.add(Class.forName("com.salve.salve.core.ThinkWorker"));
+            classes.add(Class.forName("salve.core.MotorConversacional"));
+            classes.add(Class.forName("salve.core.MemoriaEmocional"));
+            classes.add(Class.forName("salve.core.DetectorEmociones"));
+            classes.add(Class.forName("salve.core.ThinkWorker"));
             // Si añades nuevas clases core, inclúyelas aquí
         } catch (ClassNotFoundException e) {
             Log.e(TAG, "Clase core no encontrada durante el descubrimiento", e);

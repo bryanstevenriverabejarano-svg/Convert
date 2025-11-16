@@ -74,7 +74,7 @@ public class CodeAnalyzerEnhanced {
             Enumeration<String> entries = dex.entries();
             while (entries.hasMoreElements()) {
                 String name = entries.nextElement();
-                if (name.startsWith("com.salve.salve.core")) {
+                if (name.startsWith("salve.core")) {
                     Class<?> cls = Class.forName(name);
                     if (cls.isAnnotationPresent(CoreComponent.class)) {
                         classes.add(cls);

@@ -1,45 +1,41 @@
 package salve.core;
 
-import android.content.Context;
-
-import com.salve.salve.core.LocalLlmEngine;
+import android.text.TextUtils;
 
 /**
- * Motor de respaldo para desarrollo.
- * No infiere de verdad: devuelve una respuesta amable usando el USER del prompt.
- * Sirve para comprobar el cableado (que todo llama a generate()).
+ * Generador de respuestas sintéticas cuando el motor local aún no está disponible.
+ * Mantiene separado el texto de depuración que usamos en {@link LocalLlmEngine}
+ * para que el resto del código pueda seguir evolucionando sin depender del
+ * backend nativo todavía.
  */
-public class FallbackEngine implements LocalLlmEngine {
+final class FallbackEngine {
 
-    private boolean ready = true;
-    private String lastModelPath = null;
-
-    @Override
-    public boolean isReady() {
-        return ready;
+    private FallbackEngine() {
+        // Utility class
     }
 
-    @Override
-    public void loadIfNeeded(Context ctx, String modelPath) {
-        // No carga nada real, solo recuerda la ruta (para logs futuros).
-        this.lastModelPath = modelPath;
-        this.ready = true;
+    static String buildPreview(String modelId, String prompt) {
+        final String safeModel = TextUtils.isEmpty(modelId) ? "<sin_modelo>" : modelId;
+        final String userBlock = extractUserSegment(prompt);
+        return "/* LocalLlmEngine aún no está conectado a un modelo GGUF real. */\n" +
+                "Modelo solicitado: " + safeModel + "\n\n" +
+                "Último mensaje del usuario:\n" + userBlock + "\n" +
+                "(Esta es una respuesta simulada para verificar el flujo de extremo a extremo.)";
     }
 
-    @Override
-    public String generate(String prompt, int maxTokens, float temperature, int topK, float topP) {
-        // Extrae el bloque USER (si existe) para simular una respuesta útil.
-        String user = prompt;
-        int i = prompt.lastIndexOf("<<USER>>");
-        if (i >= 0) {
-            user = prompt.substring(i).replace("<<USER>>", "")
+    private static String extractUserSegment(String prompt) {
+        if (prompt == null || prompt.trim().isEmpty()) {
+            return "<prompt vacío>";
+        }
+        String segment = prompt;
+        int marker = prompt.lastIndexOf("<<USER>>");
+        if (marker >= 0) {
+            segment = prompt.substring(marker)
+                    .replace("<<USER>>", "")
                     .replace("<</USER>>", "")
                     .replace("<<ASSISTANT>>", "")
                     .trim();
         }
-        String modelo = (lastModelPath == null) ? "(modelo no especificado)" : lastModelPath;
-        return "Estoy usando el flujo de LLM (modo prueba). Modelo: " + modelo +
-                "\n\nPedido del usuario:\n" + user +
-                "\n\nRespuesta (borrador): puedo desarrollar esto cuando conectemos el motor real. 😊";
+        return segment.isEmpty() ? "<sin_contenido>" : segment;
     }
 }
