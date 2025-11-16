@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mainLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/fondo_salv"
+    android:padding="16dp">
+
+    <!-- Imagen de Salve -->
+    <ImageView
+        android:id="@+id/imagenSalve"
+        android:layout_width="250dp"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp"
+        android:src="@drawable/salve_imagen"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/salve" />
+
+    <!-- Campo de texto -->
+    <EditText
+        android:id="@+id/inputChat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/imagenSalve"
+        android:layout_marginTop="16dp"
+        android:hint="@string/hint_chat"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#AAAAAA"
+        android:background="#333333"
+        android:padding="10dp"
+        android:minHeight="48dp"
+        android:inputType="text"
+        android:autofillHints="username"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Botón Enviar mensaje -->
+    <Button
+        android:id="@+id/btnEnviarMensaje"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/inputChat"
+        android:text="@string/enviar_mensaje"
+        android:textColor="#FFFFFF"
+        android:background="#FF5722"
+        android:padding="12dp"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Botón Haz que Salve hable -->
+    <Button
+        android:id="@+id/btnHablar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/btnEnviarMensaje"
+        android:text="@string/salve_hable"
+        android:textColor="#FFFFFF"
+        android:background="#4CAF50"
+        android:padding="12dp"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Botón Hablar con Salve (Escuchar) -->
+    <Button
+        android:id="@+id/btnEscuchar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/btnHablar"
+        android:text="@string/hablar_con_salve"
+        android:textColor="#FFFFFF"
+        android:background="#2196F3"
+        android:padding="12dp"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- NUEVO Botón Ver reflexión de Salve -->
+    <!-- NUEVO Botón Ver reflexión de Salve (por ejemplo: "Ver reflexión de Salve") -->
+    <Button
+        android:id="@+id/btnReflexiones"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/btnEscuchar"
+        android:text="@string/titulo_reflexion"
+        android:textColor="#FFFFFF"
+        android:background="#7E57C2"
+        android:padding="12dp"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp" />
+
+
+    <!-- FAB rosa (icono engranaje / reflexión) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnMostrarReflexion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:layout_margin="8dp"
+        android:backgroundTint="#FF4081"
+        android:contentDescription="@string/ver_reflexion"
+        app:srcCompat="@drawable/ic_reflexion" />
+
+    <!-- Panel de Reflexiones (Bottom Panel) -->
+    <LinearLayout
+        android:id="@+id/panelReflexion"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#1E1E1E"
+        android:elevation="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tituloReflexion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/titulo_reflexion"
+            android:textColor="#FF4081"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/textoReflexion"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:text="@string/contenido_reflexion"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:lineSpacingExtra="6dp"
+            android:background="#262626"
+            android:padding="10dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="12dp">
+
+            <Button
+                android:id="@+id/btnCerrarReflexion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/cerrar"
+                android:textColor="#FFFFFF"
+                android:background="#444444"
+                android:layout_marginEnd="8dp"
+                style="?android:attr/borderlessButtonStyle" />
+
+            <Button
+                android:id="@+id/btnResponderReflexion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/responder"
+                android:textColor="#FFFFFF"
+                android:background="#FF9800"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnSiguienteReflexion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/siguiente"
+                android:textColor="#FFFFFF"
+                android:background="#03A9F4"
+                style="?android:attr/borderlessButtonStyle" />
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

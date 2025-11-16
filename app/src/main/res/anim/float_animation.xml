@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shareInterpolator="false">
+
+    <!-- Subida inicial -->
+    <translate
+        android:fromYDelta="0%"
+        android:toYDelta="-10%"
+        android:duration="1000"
+        android:fillAfter="true" />
+
+    <!-- Flotación suave infinita -->
+    <translate
+        android:fromYDelta="0%"
+        android:toYDelta="-3%"
+        android:startOffset="1000"
+        android:duration="1800"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:anim/accelerate_decelerate_interpolator" />
+
+    <!-- Respiración suave (expansión) -->
+    <scale
+        android:fromXScale="1.0"
+        android:toXScale="1.03"
+        android:fromYScale="1.0"
+        android:toYScale="1.04"
+        android:pivotX="50%"
+        android:pivotY="50%"
+        android:startOffset="1000"
+        android:duration="2800"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:anim/accelerate_decelerate_interpolator" />
+</set>

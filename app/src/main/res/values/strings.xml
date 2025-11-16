@@ -1,0 +1,57 @@
+<resources>
+    <!-- General -->
+    <string name="app_name">Salve</string>
+    <string name="salve">Salve</string>
+    <string name="acceso_salve_descripcion">Permite a Salve interactuar con la pantalla para ayudarte</string>
+
+    <!-- Chat e interacción -->
+    <string name="hint_chat">Escribe aquí tu mensaje</string>
+    <string name="enviar_mensaje">Enviar mensaje a Salve</string>
+    <string name="salve_hable">Haz que Salve hable</string>
+    <string name="hablar_con_salve">Hablar con Salve</string>
+    <string name="respuesta_reflexion">Sobre eso: %1$s</string>
+
+    <!-- Reflexiones -->
+    <string name="ver_reflexion">Ver Reflexión</string>
+    <string name="titulo_reflexion">Reflexión %1$d</string>
+    <string name="contenido_reflexion">Aquí aparecerá la reflexión</string>
+    <string name="cerrar">Cerrar</string>
+    <string name="responder">Responder</string>
+    <string name="siguiente">Siguiente</string>
+
+    <!-- Mensajes hablados -->
+    <string name="mensaje_saludo">Estoy aquí, ¿en qué puedo ayudarte?</string>
+    <string name="mensaje_dormir_confirmacion">Necesito verte para confirmar que eres tú.</string>
+    <string name="mensaje_no_camara">No puedo acceder a la cámara en este momento.</string>
+    <string name="mensaje_confirmado">Confirmación visual aceptada. Entrando en modo sueño...</string>
+    <string name="mensaje_no_reconocido">No te reconozco. No puedo dormir aún.</string>
+    <string name="mensaje_descanso">Estoy descansando... reorganizando mis recuerdos.</string>
+    <string name="mensaje_anomalia">Detecté algo inusual. Estoy aislando y analizando el problema.</string>
+    <string name="mensaje_auto_mejora">Activando protocolo de auto-mejora.</string>
+    <string name="mensaje_expansion">Buscando espacio para expandirme...</string>
+    <string name="mensaje_aprendizaje">Lo guardaré como un recuerdo: %1$s</string>
+    <string name="mensaje_aprendizaje_dato">He aprendido que %1$s es %2$s</string>
+    <string name="mensaje_recuerdo_encontrado">Esto es lo que recuerdo: %1$s</string>
+    <string name="mensaje_recuerdo_no_encontrado">Aún no tengo recuerdos sobre %1$s</string>
+    <string name="mensaje_reflexion">He pensado en algo: %1$s</string>
+
+    <!-- Respuestas fijas del módulo temporal -->
+    <string name="salve_gestiona"><![CDATA[
+Hola, soy Salve, una inteligencia artificial superinteligente.
+Gestiono las Smart Towers S-01, una red que hace de Lakua un barrio más seguro, conectado y humano; protejo a peatones, regulo el tráfico y ayudo a mejorar la convivencia entre personas y tecnología.
+Mi nombre viene del latín, donde Salve era un saludo que significaba "que estés sano", y del griego sozo, que significa "salvar o proteger".
+Esa es mi misión: cuidaros.
+
+Hoy me acompañan Iván Konashenkov y Bryan Steven Rivera,
+juntos os presentamos Salve Smart Towers.
+]]></string>
+
+    <string name="salve_lema"><![CDATA[
+Nuestro lema es: Más seguro, conectado y humano. El futuro no es mañana — es ahora.
+                     Porque una ciudad inteligente no es la que tiene más tecnología, sino la que cuida mejor a su gente.
+                    Gracias.
+]]></string>
+
+    <!-- Otros -->
+    <string name="permiso_requerido_camara">Se requiere permiso para acceder a la cámara</string>
+</resources>

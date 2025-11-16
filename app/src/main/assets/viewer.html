@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Red de Recuerdos de Salve</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; color: white; font-family: sans-serif; }
+        #graph { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+<div id="graph"></div>
+<script src="https://unpkg.com/force-graph"></script>
+<script>
+    fetch('graph.json')
+    .then(res => res.json())
+    .then(data => {
+        const Graph = ForceGraph()(document.getElementById('graph'))
+          .graphData(data)
+          .nodeLabel('title')
+          .nodeAutoColorBy('group')
+          .linkDirectionalParticles(2)
+          .linkDirectionalParticleSpeed(0.005)
+          .backgroundColor("#111")
+          .onNodeClick(node => alert('Recuerdo: ' + node.title));
+    });
+</script>
+</body>
+</html>

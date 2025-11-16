@@ -1,0 +1,29 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://jitpack.io" }
+    }
+}
+
+rootProject.name = "MLCChat"
+
+// Módulo principal de la app
+include(":app")
+
+// Módulo mlc4j (motor MLC para Java)
+include(":mlc4j")
+// Ruta correcta: la carpeta mlc4j está al mismo nivel que MLCChat
+project(":mlc4j").projectDir = file("../mlc4j")
+
+// No necesitamos el proyecto de ejemplo aquí, lo quitamos
+// include(":mlcengineexample")

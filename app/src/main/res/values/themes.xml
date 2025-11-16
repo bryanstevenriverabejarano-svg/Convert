@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Tema que se aplica después del splash -->
+    <style name="Theme.Salve" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/fondo_salv</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:colorBackground">@android:color/black</item>
+    </style>
+
+</resources>
