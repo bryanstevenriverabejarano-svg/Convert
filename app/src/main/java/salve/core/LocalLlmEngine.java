@@ -60,12 +60,12 @@ public class LocalLlmEngine {
                 + ", prompt.length=" + fullPrompt.length());
 
         if (engineNoInicializado()) {
-            return buildStubResponse(modelId);
+            return FallbackEngine.buildPreview(modelId, fullPrompt);
         }
 
         // ⚠️ Stub temporal: aquí todavía no está conectado el motor real.
         // Cuando tengamos el runtime GGUF, sustituiremos este bloque.
-        return buildStubResponse(modelId);
+        return FallbackEngine.buildPreview(modelId, fullPrompt);
     }
 
     private boolean engineNoInicializado() {
@@ -73,8 +73,4 @@ public class LocalLlmEngine {
         return true;
     }
 
-    private String buildStubResponse(String modelId) {
-        return "/* LocalLlmEngine aún no está conectado a un modelo GGUF real. " +
-                "modelId=" + modelId + " */";
-    }
 }

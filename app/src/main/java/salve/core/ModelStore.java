@@ -11,7 +11,7 @@ public final class ModelStore {
 
     // Carpeta única de modelos (dentro del sandbox de la app)
     public static File dir(Context ctx) {
-        // /Android/data/com.salve.salve/files/models
+        // /Android/data/salve/files/models
         File d = new File(ctx.getExternalFilesDir(null), "models");
         if (!d.exists()) d.mkdirs();
         return d;
