@@ -24,7 +24,7 @@ import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import salve.R;
+import com.salve.app.R;
 import salve.core.MemoriaEmocional;
 import salve.core.TTSManager;
 import salve.services.SalveApplication;

@@ -141,11 +141,11 @@ public class ValidationSandbox {
         private final long durationMillis;
 
         private TestExecutionResult(boolean attempted,
-                                   boolean success,
-                                   String summary,
-                                   List<String> steps,
-                                   String rawLog,
-                                   long durationMillis) {
+                                    boolean success,
+                                    String summary,
+                                    List<String> steps,
+                                    String rawLog,
+                                    long durationMillis) {
             this.attempted = attempted;
             this.success = success;
             this.summary = summary == null ? "" : summary.trim();

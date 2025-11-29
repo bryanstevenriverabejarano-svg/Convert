@@ -4,10 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
-import android.content.pm.ServiceInfo;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
+import android.content.pm.ServiceInfo; // <-- IMPORTANTE: tipos de FGS (Android 14+)
 import android.os.Build;
 import android.util.Log;
 
@@ -21,13 +18,24 @@ import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-import salve.data.util.CloudLogger;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+// Conectividad
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+
+// Tus imports propios
+import salve.data.util.CloudLogger;
+
+// ✅ Nuevo: para organización del grafo con LLM
+import salve.core.GrafoConocimientoVivo;
 
 public class ThinkWorker extends Worker {
     private static final String TAG = "ThinkWorker";
@@ -47,7 +55,8 @@ public class ThinkWorker extends Worker {
         super(ctx, params);
     }
 
-    @NonNull @Override
+    @NonNull
+    @Override
     public Result doWork() {
         Context ctx = getApplicationContext();
         ensureNotifChannel(ctx);
@@ -66,7 +75,7 @@ public class ThinkWorker extends Worker {
             safeCloudLog("think_error", "Plugins: " + e.getMessage());
         }
 
-        // 2) Ciclo de sueño/pensamiento (offline)
+        // 2) Ciclo de sueño/pensamiento (offline) → reorganiza recuerdos internos básicos
         try {
             new MemoriaEmocional(ctx).cicloDeSueno();
         } catch (Exception e) {
@@ -101,12 +110,29 @@ public class ThinkWorker extends Worker {
             safeCloudLog("think_error", "Análisis: " + e.getMessage());
         }
 
-        // 4) DESCARGA DE MODELOS LLM con reanudación (usa tu ModelDownloader)
+        // 4) ✅ Nuevo: organización del grafo de conocimiento con el LLM local
+        //    Aquí Salve mira su grafo completo y genera categorías, agrupaciones
+        //    e identidad sintetizada a partir de sus recuerdos.
+        try {
+            GrafoConocimientoVivo grafo = new GrafoConocimientoVivo(ctx);
+            // Puedes ajustar estos números (nodos / relaciones) según el tamaño típico de tu grafo.
+            grafo.reorganizarConLLMAsync(
+                    80,   // maxNodos a considerar para el snapshot
+                    160   // maxRelaciones a considerar
+            );
+            safeCloudLog("think_info", "reorganizarConLLMAsync lanzado");
+        } catch (Exception e) {
+            Log.e(TAG, "Organizacion LLM", e);
+            safeCloudLog("think_error", "Organizacion LLM: " + e.getMessage());
+        }
+
+        // 5) DESCARGA DE MODELOS LLM con reanudación (usa tu ModelDownloader)
         try (InputStream is = ctx.getAssets().open("config/models.json")) {
             setForegroundAsync(makeForeground(0, "Preparando descargas LLM…"));
 
             ModelDownloader.downloadAll(ctx, is, new ModelDownloader.Listener() {
-                @Override public void onProgress(String id, int percent) {
+                @Override
+                public void onProgress(String id, int percent) {
                     // Actualiza notificación y progreso de WorkManager (con TIPO!)
                     setForegroundAsync(makeForeground(percent, "Descargando " + id));
                     setProgressAsync(new Data.Builder()
@@ -115,15 +141,18 @@ public class ThinkWorker extends Worker {
                             .build());
                 }
 
-                @Override public void onComplete(String id, File file) {
+                @Override
+                public void onComplete(String id, File file) {
                     // Verificación opcional
                 }
 
-                @Override public void onError(String id, Exception e) {
+                @Override
+                public void onError(String id, Exception e) {
                     Log.e(TAG, "DL error " + id, e);
                 }
 
-                @Override public void onAllDone() {
+                @Override
+                public void onAllDone() {
                     setForegroundAsync(makeForeground(100, "Modelos listos"));
                 }
             });
@@ -133,7 +162,7 @@ public class ThinkWorker extends Worker {
             // Continúa
         }
 
-        // 5) Ciclo de decisión autónomo (offline)
+        // 6) Ciclo de decisión autónomo (offline)
         try {
             MemoriaEmocional memoria = new MemoriaEmocional(ctx);
             DiarioSecreto diario = new DiarioSecreto(ctx);
@@ -193,7 +222,10 @@ public class ThinkWorker extends Worker {
     /** Envía a la nube si hay internet; si no, ignora (offline-first). */
     private void safeCloudLog(String type, String content) {
         if (isConnected(getApplicationContext())) {
-            try { CloudLogger.log(type, content); } catch (Exception ignore) {}
+            try {
+                CloudLogger.log(type, content);
+            } catch (Exception ignore) {
+            }
         }
     }
 

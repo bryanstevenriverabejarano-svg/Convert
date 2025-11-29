@@ -1,5 +1,4 @@
 package salve.services;
-
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
 import android.os.Bundle;

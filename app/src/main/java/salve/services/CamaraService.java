@@ -1,5 +1,4 @@
 package salve.services;
-
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -21,7 +20,6 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
-import salve.BuildConfig;
 import salve.core.ReconocimientoFacial;
 
 import java.io.ByteArrayOutputStream;
@@ -33,14 +31,16 @@ import java.io.FileOutputStream;
  *
  * • No mantiene la cámara activa todo el tiempo: solo se enciende cuando se pide (acción VERIFY_ONE_SHOT o ENROLL_OWNER)
  * • La primera vez que verifique correctamente, marca al usuario como "owner_verified" y guarda un snapshot (y, si existe, fija el patrón en ReconocimientoFacial)
- * • En siguientes llamadas, si ya está verificado, el servicio hace una verificación rápida (one‑shot) y se apaga solo.
+ * • En siguientes llamadas, si ya está verificado, el servicio hace una verificación rápida (one-shot) y se apaga solo.
  * • Throttling de frames para no quemar CPU.
  */
 @SuppressWarnings("deprecation") // Usamos Camera API antigua por compatibilidad
 public class CamaraService extends Service implements Camera.PreviewCallback {
 
     // ===== API pública (acciones) =====
-    private static final String ACTION_PREFIX = BuildConfig.APPLICATION_ID + ".action.";
+    // Antes: BuildConfig.APPLICATION_ID + ".action."
+    // Quitamos BuildConfig para evitar el error y usamos el applicationId fijo de tu app.
+    private static final String ACTION_PREFIX = "com.salve.app.action.";
     public static final String ACTION_VERIFY_ONE_SHOT = ACTION_PREFIX + "VERIFY_ONE_SHOT";   // Verifica y apaga
     public static final String ACTION_ENROLL_OWNER    = ACTION_PREFIX + "ENROLL_OWNER";      // Fuerza alta del rostro base
     public static final String ACTION_STOP            = ACTION_PREFIX + "STOP";              // Apagar si estuviera corriendo
@@ -91,13 +91,13 @@ public class CamaraService extends Service implements Camera.PreviewCallback {
         if (ACTION_ENROLL_OWNER.equals(action)) {
             currentMode = Mode.ENROLL;
         } else {
-            currentMode = Mode.VERIFY; // por defecto one‑shot verify
+            currentMode = Mode.VERIFY; // por defecto one-shot verify
         }
 
         // Subir a FOREGROUND **antes** de tocar la cámara
         Notification notif = new NotificationCompat.Builder(this, CH_ID)
                 .setContentTitle("Cámara activa")
-                .setContentText(currentMode == Mode.ENROLL ? "Registrando rostro base" : "Verificando rostro (one‑shot)")
+                .setContentText(currentMode == Mode.ENROLL ? "Registrando rostro base" : "Verificando rostro (one-shot)")
                 .setSmallIcon(android.R.drawable.presence_video_online)
                 .setOngoing(true)
                 .build();
@@ -181,7 +181,7 @@ public class CamaraService extends Service implements Camera.PreviewCallback {
                 return;
             }
 
-            // VERIFY one‑shot
+            // VERIFY one-shot
             if (!isOwnerVerified()) {
                 // Si aún no hay owner verificado, al primer match correcto: marcar y guardar
                 reconocimiento.verificarRostro(bitmap, esValido -> {
@@ -191,7 +191,7 @@ public class CamaraService extends Service implements Camera.PreviewCallback {
                     } else {
                         Log.w(TAG, "Rostro no reconocido durante primera verificación.");
                     }
-                    stopSelf(); // siempre one‑shot
+                    stopSelf(); // siempre one-shot
                 });
             } else {
                 // Ya verificado anteriormente: comprobación rápida y apagar

@@ -1,7 +1,6 @@
 package salve.services;
 
 import android.app.Application;
-
 import salve.core.TTSManager;
 
 public class SalveApplication extends Application {

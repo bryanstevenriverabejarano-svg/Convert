@@ -103,9 +103,9 @@ public class RevisionSemanalCreativa {
     }
 
     public String construirDashboardIntegrado(GrafoConocimientoVivo.GraphVisualization visualizacion,
-                                               String mapaBitacora,
-                                               String narrativaCobertura,
-                                               String pronosticos) {
+                                              String mapaBitacora,
+                                              String narrativaCobertura,
+                                              String pronosticos) {
         StringBuilder builder = new StringBuilder();
         builder.append("Informe semanal creativo unificado\n");
         builder.append("Facilitador: ").append(facilitador).append(" | Fecha: ")

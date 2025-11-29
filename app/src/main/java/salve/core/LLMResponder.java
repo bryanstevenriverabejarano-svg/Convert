@@ -27,8 +27,7 @@ public class LLMResponder {
      * Genera una respuesta a partir de un prompt. Este método implementa
      * un motor muy simple sin dependencias externas, con algunas
      * heurísticas básicas para tareas comunes. Si no reconoce la tarea,
-     * devuelve un comentario para que el desarrollador implemente una
-     * solución más avanzada o integre un modelo local más potente.
+     * delega en SalveLLM (si está disponible).
      *
      * @param prompt Texto que describe la tarea a ejecutar.
      * @return respuesta generada o comentario indicativo
@@ -56,8 +55,22 @@ public class LLMResponder {
         if (lower.contains("imprimir") || lower.contains("mostrar")) {
             return "System.out.println(\"" + prompt.replace("\"", "\\\"") + "\");";
         }
-        // 3. Si no se detecta ningún patrón conocido, delegamos en el nuevo gestor de modelos.
-        SalveLLM llm = SalveLLM.getInstance(context);
-        return llm.generate(prompt, SalveLLM.Role.CONVERSACIONAL);
+
+        // 3. Si no se detecta ningún patrón conocido,
+        //    intentamos delegar en el nuevo gestor de modelos.
+        try {
+            SalveLLM llm = SalveLLM.getInstance(context);
+            if (llm != null) {
+                return llm.generate(prompt, SalveLLM.Role.CONVERSACIONAL);
+            } else {
+                return "/* LLM interno: SalveLLM no está disponible en este momento */";
+            }
+        } catch (Exception e) {
+            // No propagamos la excepción para no romper la app;
+            // devolvemos un mensaje seguro.
+            return "/* LLM interno: error al inicializar SalveLLM: " +
+                    (e.getMessage() == null ? "desconocido" : e.getMessage()) +
+                    " */";
+        }
     }
 }

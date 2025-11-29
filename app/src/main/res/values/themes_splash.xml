@@ -6,7 +6,7 @@
         parent="Theme.Material3.DayNight.NoActionBar"
         tools:targetApi="31">
 
-        <item name="android:windowBackground">@drawable/fondo_salv</item>
+        <item name="android:windowBackground">@drawable/baseline_voice_chat_24</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
     </style>

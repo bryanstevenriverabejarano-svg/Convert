@@ -3,7 +3,6 @@ package salve.core;
 import android.content.Context;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
-
 import java.util.Locale;
 
 public class TTSManager implements TextToSpeech.OnInitListener {

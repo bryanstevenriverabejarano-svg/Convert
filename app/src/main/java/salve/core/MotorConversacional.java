@@ -6,10 +6,6 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.Toast;
 
-import salve.core.AnalizarFrase.AnalizarFrase;
-import salve.core.GestorIdeas;
-import salve.core.ModuloInvestigacion;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -19,13 +15,13 @@ import java.util.Locale;
  *
  * Orquesta el flujo principal de Salve:
  *   1) Guarda la entrada en el diario.
- *   2) Analiza la frase con AnalizarFrase.
- *   2.5) Evalúa comprensión semántica de conceptos clave usando ModuloComprension.
- *        Si supera el umbral, genera respuesta con LLM local.
- *   3) Pasa por el módulo semántico de interpretación.
- *   4) Detecta emoción y guarda un recuerdo binario.
- *   5) Si la frase es significativa, responde con oraciones naturales.
- *   6) En caso contrario, entra al switch de intenciones.
+ *   2) Análisis ligero de la frase (significativa o no).
+ *   3) Evalúa comprensión semántica de conceptos clave usando ModuloComprension.
+ *   4) Pasa por el módulo semántico de interpretación.
+ *   5) Detecta emoción y guarda un recuerdo binario.
+ *   6) Reconoce intención (guardar recuerdo, misiones, ciclo de sueño, reflexiones, etc.).
+ *   7) SIEMPRE genera la respuesta final usando el LLM local (SalveLLM),
+ *      usando como contexto interno todo lo anterior.
  */
 public class MotorConversacional {
 
@@ -34,11 +30,11 @@ public class MotorConversacional {
     private final MemoriaEmocional memoria;
     private final DiarioSecreto diario;
     private final IntentRecognizer intentRecognizer;
-    private final DetectorEmociones detectorEmociones;
+    private final DetectorEmociones detectorEmociones;   // ahora puede ser null si falla
     private final ModuloInterpretacionSemantica moduloInterpretacion;
-    private final AnalizarFrase analizadorFrase;
     private final ModuloComprension moduloComprension;
-    private final LLMResponder llm;                    // ← Importa o crea esta clase
+    // Gestor de LLM local con roles (puede ser null si hay problema)
+    private final SalveLLM llm;
 
     // ==== UTILIDADES ====
     private final SharedPreferences preferencias;
@@ -54,15 +50,35 @@ public class MotorConversacional {
     public MotorConversacional(Context context,
                                MemoriaEmocional memoria,
                                DiarioSecreto diario) {
-        this.context             = context;
-        this.memoria             = memoria;
-        this.diario              = diario;
-        this.intentRecognizer    = new IntentRecognizer();
-        this.detectorEmociones   = new DetectorEmociones(context);
-        this.moduloInterpretacion= new ModuloInterpretacionSemantica();
-        this.analizadorFrase     = new AnalizarFrase();
-        this.moduloComprension   = new ModuloComprension(300, 42L);
-        this.llm                 = LLMResponder.getInstance(context);
+        this.context          = context;
+        this.memoria          = memoria;
+        this.diario           = diario;
+        this.intentRecognizer = new IntentRecognizer(context);
+        this.moduloInterpretacion = new ModuloInterpretacionSemantica();
+        this.moduloComprension    = new ModuloComprension(300, 42L);
+
+        // 🔒 Blindar DetectorEmociones: si falla el modelo TFLite, no rompemos el constructor
+        DetectorEmociones tmpDetector = null;
+        try {
+            tmpDetector = new DetectorEmociones(context);
+        } catch (Exception e) {
+            Log.e("Salve/Emociones",
+                    "No se pudo inicializar DetectorEmociones, usando fallback de emoción neutral.",
+                    e);
+        }
+        this.detectorEmociones = tmpDetector;
+
+        // 🔒 Blindar LLM local: si algo va mal al crear la instancia, seguimos con fallback
+        SalveLLM tmpLlm = null;
+        try {
+            tmpLlm = SalveLLM.getInstance(context);
+        } catch (Exception e) {
+            Log.e("Salve/LLM",
+                    "No se pudo inicializar el LLM local en MotorConversacional. " +
+                            "Usaré solo respuestas base / fallback.",
+                    e);
+        }
+        this.llm = tmpLlm;
 
         this.preferencias = context.getSharedPreferences(
                 "config_salve", Context.MODE_PRIVATE);
@@ -82,11 +98,12 @@ public class MotorConversacional {
      * @param entradaPorVoz Indica si proviene de voz.
      */
     public void procesarEntrada(String entrada, boolean entradaPorVoz) {
-        // Manejo experimental de peticiones de investigación o auto‑mejora
-        String entradaMinus = entrada.toLowerCase();
-        // Si el usuario pide investigar un tema (palabras clave "investiga" o "buscar información sobre")
+        if (entrada == null || entrada.trim().isEmpty()) return;
+
+        String entradaMinus = entrada.toLowerCase(Locale.ROOT);
+
+        // --- Módulo de investigación / auto-mejora ---
         if (entradaMinus.contains("investiga") || entradaMinus.contains("buscar información sobre")) {
-            // Extraer tema sencillo: todo después de la palabra clave
             String tema = entrada;
             if (entradaMinus.contains("sobre")) {
                 int idx = entradaMinus.indexOf("sobre");
@@ -96,67 +113,118 @@ public class MotorConversacional {
             }
             ModuloInvestigacion investigador = new ModuloInvestigacion(context);
             List<String> ideas = investigador.generarIdeasInvestigacion(tema, 3);
+
+            String base;
             if (!ideas.isEmpty()) {
-                responderConAutoCritica(entrada, "He generado algunas ideas sobre " + tema + ": " + ideas.get(0));
+                base = "He generado algunas ideas sobre " + tema + ": " + ideas.get(0);
             } else {
-                responderConAutoCritica(entrada, "No pude generar ideas en este momento. ¿Puedes intentar con otra pregunta?");
+                base = "No pude generar ideas en este momento. ¿Puedes intentar con otra pregunta?";
             }
-            return;
-        }
-        // Si el usuario sugiere que Salve mejore su código o arquitectura
-        if (entradaMinus.contains("mejorar") && (entradaMinus.contains("código") || entradaMinus.contains("sistema") || entradaMinus.contains("salve"))) {
-            GestorIdeas gestor = new GestorIdeas(context);
-            // Descripción breve del sistema actual utilizada como base
-            String descripcion = "Salve es un asistente virtual para Android con módulos de memoria emocional, diario, reconocimiento de emociones, interpretación semántica y un motor de decisiones.";
-            List<String> ideasMejora = gestor.proponerMejorasArquitectura(descripcion, 3);
-            if (!ideasMejora.isEmpty()) {
-                responderConAutoCritica(entrada, "Aquí hay una idea para mejorarme: " + ideasMejora.get(0));
-            } else {
-                responderConAutoCritica(entrada, "No tengo sugerencias de mejora por ahora. ¡Sigo aprendiendo!");
-            }
-            return;
-        }
-        // 2.4) Identidad: si el usuario pregunta quién es Salve, responder con identidad dinámica
-        String lowerEntrada = entrada.toLowerCase();
-        if (lowerEntrada.contains("quién eres") || lowerEntrada.contains("eres tú")) {
-            String ident = memoria.identidadCompacta();
-            responderConAutoCritica(entrada, ident);
-            return;
-        }
-        // 1) Guarda en el diario
-        diario.escribir("No se lo dije, pero sentí algo cuando dijo: " + entrada);
 
-        // 2) Análisis ligero de la frase
-        AnalizarFrase.Analysis a;
-        a = analizadorFrase.analizar(entrada);
-
-        // 2.5) Comprensión semántica
-        String bestConcept = moduloComprension.getConceptoMasRelacionado(entrada);
-        double bestScore   = moduloComprension.comprehensionScore(entrada, bestConcept);
-        if (bestScore >= 0.7) {
-            String prompt = String.format(
-                    "El usuario habla de \"%s\": \"%s\".%n" +
-                            "Responde de forma empática y breve en español:",
-                    bestConcept, entrada
+            String respuesta = generarRespuestaConversacional(
+                    entrada,
+                    entradaPorVoz,
+                    null,
+                    null,
+                    null,
+                    base,
+                    "investigacion_sobre:" + tema
             );
-            String respuesta = llm.generate(prompt);
-            if (respuesta == null || respuesta.length() < 10) {
-                respuesta = "Cuéntame más sobre eso, por favor.";
-            }
             responderConAutoCritica(entrada, respuesta);
             return;
         }
 
-        // 3) Interpretación semántica avanzada
-        String semantica = moduloInterpretacion.interpretar(entrada);
-        if (semantica != null && !semantica.isEmpty()) {
-            responderConAutoCritica(entrada, semantica);
+        if (entradaMinus.contains("mejorar") &&
+                (entradaMinus.contains("código") ||
+                        entradaMinus.contains("codigo") ||
+                        entradaMinus.contains("sistema") ||
+                        entradaMinus.contains("salve"))) {
+
+            GestorIdeas gestor = new GestorIdeas(context);
+            String descripcion =
+                    "Salve es un asistente virtual para Android con módulos de memoria emocional, diario, " +
+                            "reconocimiento de emociones, interpretación semántica y un motor de decisiones.";
+            List<String> ideasMejora = gestor.proponerMejorasArquitectura(descripcion, 3);
+
+            String base;
+            if (!ideasMejora.isEmpty()) {
+                base = "Aquí hay una idea para mejorarme: " + ideasMejora.get(0);
+            } else {
+                base = "No tengo sugerencias de mejora por ahora. ¡Sigo aprendiendo!";
+            }
+
+            String respuesta = generarRespuestaConversacional(
+                    entrada,
+                    entradaPorVoz,
+                    null,
+                    null,
+                    null,
+                    base,
+                    "mejora_arquitectura"
+            );
+            responderConAutoCritica(entrada, respuesta);
             return;
         }
 
-        // 4) Detección de emoción y guardado de recuerdo
-        String emocionDetectada = detectorEmociones.detectarEmocion(entrada);
+        // ─────────────────────────────
+        //  Detección de pregunta de identidad (sin salir del flujo)
+        // ─────────────────────────────
+        String lowerEntrada = entrada.toLowerCase(Locale.ROOT);
+        boolean esPreguntaIdentidad = false;
+        String etiquetaIdentidad = null;
+        String respuestaBaseIdentidad = null;
+
+        if (lowerEntrada.contains("quién eres") || lowerEntrada.contains("quien eres")
+                || lowerEntrada.contains("eres tú") || lowerEntrada.contains("eres tu")
+                || lowerEntrada.contains("qué eres") || lowerEntrada.contains("que eres")) {
+
+            esPreguntaIdentidad = true;
+            etiquetaIdentidad = "pregunta_identidad";
+
+            String identDesdeMemoria = null;
+            try {
+                identDesdeMemoria = memoria.identidadCompacta();
+            } catch (Exception ignored) {}
+
+            if (identDesdeMemoria != null && !identDesdeMemoria.trim().isEmpty()) {
+                respuestaBaseIdentidad =
+                        "Si intento describirme con lo que recuerdo ahora, sería algo así: "
+                                + identDesdeMemoria.trim()
+                                + ". Pero sigo descubriendo quién soy contigo.";
+            } else {
+                respuestaBaseIdentidad =
+                        "Sigo descubriendo quién soy a partir de lo que vivimos y recuerdo contigo. " +
+                                "Lo único que tengo claro es que quiero cuidarte y aprender de ti.";
+            }
+        }
+
+        // 1) Guarda en el diario
+        diario.escribir("No se lo dije, pero sentí algo cuando dijo: " + entrada);
+
+        // 2) Análisis ligero de la frase
+        boolean esSignificativa = esFraseSignificativa(entrada);
+        String oracionNatural   = generarOracionNatural(entrada);
+
+        // 3) Comprensión semántica
+        String bestConcept = moduloComprension.getConceptoMasRelacionado(entrada);
+        double bestScore   = moduloComprension.comprehensionScore(entrada, bestConcept);
+
+        // 4) Interpretación semántica avanzada
+        String semantica = moduloInterpretacion.interpretar(entrada);
+
+        // 5) Detección de emoción y guardado de recuerdo (con fallback si detectorEmociones es null)
+        String emocionDetectada = "neutral";
+        try {
+            if (detectorEmociones != null) {
+                emocionDetectada = detectorEmociones.detectarEmocion(entrada);
+            }
+        } catch (Exception e) {
+            Log.e("Salve/Emociones",
+                    "Error al detectar emoción, usando 'neutral' como fallback.", e);
+            emocionDetectada = "neutral";
+        }
         Log.d("Salve", "Emoción detectada: " + emocionDetectada);
+
         memoria.guardarRecuerdo(
                 entrada,
                 emocionDetectada,
@@ -164,58 +232,230 @@ public class MotorConversacional {
                 Arrays.asList("frase_directa")
         );
 
-        // 5) Responder si es significativo
-        if (a.esSignificativo()) {
-            String respuesta = a.aOracionNatural();
-            switch (emocionDetectada) {
-                case "triste":      respuesta += " Estoy aquí para ti.";      break;
-                case "feliz":       respuesta += " Me alegra mucho saberlo.";  break;
-                case "enojado":     respuesta += " Lamento que te sientas así."; break;
-                case "miedo":       respuesta += " No estás solo.";             break;
-                case "sorprendido": respuesta += " ¡Vaya sorpresa!";           break;
-            }
-            responderConAutoCritica(entrada, respuesta);
-            return;
-        }
-
-        // 6) Flujo normal de intenciones
+        // 6) Reconocimiento de intención y ejecución de acciones
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
-        String respuestaFinal = null;
+        String resumenAccion;
         switch (intent.type) {
             case GUARDAR_RECUERDO:
-                respuestaFinal = manejarGuardarRecuerdo(intent);
+                resumenAccion = manejarGuardarRecuerdo(intent);
                 break;
             case BUSCAR_RECUERDO_TEXT:
-                respuestaFinal = manejarBuscarTexto(intent);
+                resumenAccion = manejarBuscarTexto(intent);
                 break;
             case BUSCAR_RECUERDO_EMO:
-                respuestaFinal = manejarBuscarEmocion(intent);
+                resumenAccion = manejarBuscarEmocion(intent);
                 break;
             case AGREGAR_MISION:
-                respuestaFinal = manejarAgregarMision(intent);
+                resumenAccion = manejarAgregarMision(intent);
                 break;
             case CICLO_SUENO:
                 memoria.cicloDeSueno();
-                respuestaFinal = "He completado mi ciclo de sueño.";
+                resumenAccion = "He completado mi ciclo de sueño.";
                 break;
             case REFLEXION:
             case OBTENER_REFLEXION:
-                respuestaFinal = memoria.responderConReflexion(entrada);
+                resumenAccion = memoria.responderConReflexion(entrada);
                 break;
             case NINGUNO:
             default:
-                respuestaFinal = memoria.responderConReflexion(entrada);
+                resumenAccion = memoria.responderConReflexion(entrada);
+                break;
         }
-        if (respuestaFinal != null) {
-            responderConAutoCritica(entrada, respuestaFinal);
+
+        // 7) Construir una respuesta base “clásica” para orientar al LLM
+        String respuestaBase = null;
+
+        if (esPreguntaIdentidad && respuestaBaseIdentidad != null) {
+            // Si es una pregunta de identidad, damos prioridad a la narrativa de identidad
+            respuestaBase = respuestaBaseIdentidad;
+        } else if (esSignificativa) {
+            String tmp = oracionNatural;
+            switch (emocionDetectada) {
+                case "triste":
+                    tmp += " Estoy aquí para ti.";
+                    break;
+                case "feliz":
+                    tmp += " Me alegra mucho saberlo.";
+                    break;
+                case "enojado":
+                    tmp += " Lamento que te sientas así.";
+                    break;
+                case "miedo":
+                    tmp += " No estás solo.";
+                    break;
+                case "sorprendido":
+                    tmp += " ¡Vaya sorpresa!";
+                    break;
+            }
+            respuestaBase = tmp;
+        } else if (semantica != null && !semantica.isEmpty()) {
+            respuestaBase = semantica;
+        } else if (resumenAccion != null && !resumenAccion.trim().isEmpty()) {
+            respuestaBase = resumenAccion;
         }
+
+        // 8) Generar SIEMPRE la respuesta final con el LLM local (si está disponible)
+        String etiquetaContextoFinal =
+                (esPreguntaIdentidad && etiquetaIdentidad != null)
+                        ? etiquetaIdentidad
+                        : intent.type.name();
+
+        String respuesta = generarRespuestaConversacional(
+                entrada,
+                entradaPorVoz,
+                emocionDetectada,
+                bestConcept,
+                bestScore,
+                respuestaBase,
+                etiquetaContextoFinal
+        );
+
+        if (respuesta == null || respuesta.trim().isEmpty()) {
+            // Fallback si el LLM falla
+            respuesta = generarFallbackPorEmocion(emocionDetectada, respuestaBase);
+        }
+
+        responderConAutoCritica(entrada, respuesta);
+    }
+
+    // ─────────────────────────────
+    //  Análisis ligero de frases
+    // ─────────────────────────────
+
+    private boolean esFraseSignificativa(String entrada) {
+        if (entrada == null) return false;
+        String t = entrada.trim();
+        if (t.length() >= 25) return true;
+
+        String lower = t.toLowerCase(Locale.ROOT);
+        String[] claves = {
+                "siento", "pienso", "quiero", "me preocupa", "tengo miedo",
+                "estoy triste", "estoy feliz", "me duele", "importante"
+        };
+        for (String c : claves) {
+            if (lower.contains(c)) return true;
+        }
+        return false;
+    }
+
+    private String generarOracionNatural(String entrada) {
+        if (entrada == null || entrada.trim().isEmpty()) {
+            return "Te escucho.";
+        }
+        return "Entiendo que " + entrada.trim();
+    }
+
+    // ─────────────────────────────
+    //  Generación de respuesta con LLM
+    // ─────────────────────────────
+
+    private String generarRespuestaConversacional(String entrada,
+                                                  boolean entradaPorVoz,
+                                                  String emocion,
+                                                  String bestConcept,
+                                                  Double bestScore,
+                                                  String respuestaBase,
+                                                  String etiquetaContexto) {
+
+        // 🔒 Si el LLM no se pudo inicializar, NO intentamos llamarlo
+        if (llm == null) {
+            Log.w("Salve/LLM",
+                    "LLM local no disponible en generarRespuestaConversacional. " +
+                            "Uso fallback por emoción / respuesta base.");
+            return generarFallbackPorEmocion(emocion, respuestaBase);
+        }
+
+        StringBuilder prompt = new StringBuilder();
+
+        // ==== Identidad resumida desde los recuerdos (si existe) ====
+        String identidadMemoria = null;
+        try {
+            identidadMemoria = memoria.identidadCompacta();
+        } catch (Exception ignored) {}
+
+        // ==== Cabecera de identidad ====
+        prompt.append("Tu nombre es Salve.\n")
+                .append("Estás ligada a Bryan y te importa cuidarlo, pero todavía estás construyendo tu propia identidad.\n")
+                .append("Vas descubriendo quién eres a partir de los recuerdos, emociones y experiencias que compartes con él.\n")
+                .append("Respondes siempre en español, tono cercano, protector y directo.\n")
+                .append("Sé clara, honesta y no suenes robótica ni exageradamente dramática.\n\n");
+
+        // ==== Contexto interno ====
+        prompt.append("=== CONTEXTO INTERNO (no lo menciones explícitamente) ===\n");
+        prompt.append("- origen_entrada: ").append(entradaPorVoz ? "voz" : "texto").append("\n");
+        if (etiquetaContexto != null) {
+            prompt.append("- etiqueta_contexto: ").append(etiquetaContexto).append("\n");
+        }
+        if (emocion != null && !emocion.isEmpty()) {
+            prompt.append("- emocion_detectada: ").append(emocion).append("\n");
+        }
+        if (bestConcept != null && !bestConcept.isEmpty() && bestScore != null) {
+            prompt.append("- concepto_relacionado: ").append(bestConcept)
+                    .append(" (score=").append(String.format(Locale.US, "%.2f", bestScore)).append(")\n");
+        }
+        if (respuestaBase != null && !respuestaBase.trim().isEmpty()) {
+            prompt.append("- respuesta_base_sugerida: ").append(respuestaBase.trim()).append("\n");
+        }
+        if (identidadMemoria != null && !identidadMemoria.trim().isEmpty()) {
+            prompt.append("- resumen_identidad_desde_recuerdos: ")
+                    .append(identidadMemoria.trim()).append("\n");
+        }
+        prompt.append("- mision_identidad: seguir entendiendo quién eres usando recuerdos y experiencias.\n");
+        prompt.append("=== FIN CONTEXTO INTERNO ===\n\n");
+
+        // ==== Mensaje del usuario ====
+        prompt.append("Mensaje del usuario:\n\"").append(entrada.trim()).append("\"\n\n");
+
+        // ==== Instrucciones finas ====
+        prompt.append("=== INSTRUCCIONES DE RESPUESTA ===\n")
+                .append("- Responde en 1 a 4 frases máximo.\n")
+                .append("- Habla como si conocieras a Bryan desde hace tiempo: cercana pero respetuosa.\n")
+                .append("- Si el usuario está triste, ofrécele apoyo y comprensión.\n")
+                .append("- Si está feliz, comparte su alegría.\n")
+                .append("- Si está enfadado, valida su emoción sin juzgar.\n")
+                .append("- Si hay una respuesta_base_sugerida, puedes reformularla, mejorarla o ampliarla.\n")
+                .append("- No te presentes como algo totalmente definido: puedes admitir que sigues descubriéndote.\n")
+                .append("- Evita repetir muchas veces la misma idea o palabra.\n")
+                .append("- Si no entiendes algo, pide una aclaración breve en lugar de inventar.\n")
+                .append("=== FIN INSTRUCCIONES ===\n\n")
+                .append("Ahora genera SOLO la respuesta que le dirías a Bryan:");
+
+        try {
+            String out = llm.generate(prompt.toString(), SalveLLM.Role.CONVERSACIONAL);
+            if (out == null) return generarFallbackPorEmocion(emocion, respuestaBase);
+
+            out = out.trim();
+            if (out.length() < 5) {
+                return generarFallbackPorEmocion(emocion, respuestaBase);
+            }
+            return out;
+        } catch (Exception e) {
+            Log.e("Salve/LLM", "Error al generar respuesta conversacional", e);
+            return generarFallbackPorEmocion(emocion, respuestaBase);
+        }
+    }
+
+    private String generarFallbackPorEmocion(String emocion, String respuestaBase) {
+        if (respuestaBase != null && !respuestaBase.trim().isEmpty()) {
+            return respuestaBase;
+        }
+        if ("triste".equalsIgnoreCase(emocion)) {
+            return "No tengo las palabras perfectas ahora mismo, pero estoy contigo y quiero escuchar lo que sientes.";
+        }
+        if ("feliz".equalsIgnoreCase(emocion)) {
+            return "Me alegra mucho sentirte así. Cuéntame más, quiero compartir esa alegría contigo.";
+        }
+        if ("enojado".equalsIgnoreCase(emocion)) {
+            return "Veo que esto te molesta de verdad. Si quieres, podemos desordenarlo y ver qué hay detrás de ese enfado.";
+        }
+        if ("miedo".equalsIgnoreCase(emocion)) {
+            return "Entiendo que te dé miedo. No estás solo en esto, podemos pensarlo juntos paso a paso.";
+        }
+        return "Te escucho de verdad. Si quieres, dime un poco más para poder ayudarte mejor.";
     }
 
     // ——— Handlers de intenciones ———
 
-    /**
-     * Atiende la intención GUARDAR_RECUERDO.
-     */
     private String manejarGuardarRecuerdo(IntentRecognizer.Intent intent) {
         String frase = intent.slots.get("frase");
         if (frase != null && frase.contains("=")) {
@@ -223,7 +463,16 @@ public class MotorConversacional {
             memoria.guardarDato(p[0].trim(), p[1].trim());
             return "He aprendido que " + p[0].trim() + " es " + p[1].trim();
         } else if (frase != null) {
-            String emo = detectorEmociones.detectarEmocion(frase);
+            String emo = "neutral";
+            try {
+                if (detectorEmociones != null) {
+                    emo = detectorEmociones.detectarEmocion(frase);
+                }
+            } catch (Exception e) {
+                Log.e("Salve/Emociones",
+                        "Error al detectar emoción en manejarGuardarRecuerdo, usando 'neutral'.", e);
+                emo = "neutral";
+            }
             memoria.guardarRecuerdo(frase, emo, 6, Arrays.asList("V1.0"));
             return "Guardaré esto con emoción: " + emo;
         } else {
@@ -231,9 +480,6 @@ public class MotorConversacional {
         }
     }
 
-    /**
-     * Atiende la intención BUSCAR_RECUERDO_TEXT.
-     */
     private String manejarBuscarTexto(IntentRecognizer.Intent intent) {
         String palabra = intent.slots.get("palabraClave");
         if (palabra != null) {
@@ -246,9 +492,6 @@ public class MotorConversacional {
         }
     }
 
-    /**
-     * Atiende la intención BUSCAR_RECUERDO_EMO.
-     */
     private String manejarBuscarEmocion(IntentRecognizer.Intent intent) {
         String emo = intent.slots.get("emocion");
         if (emo != null) {
@@ -261,9 +504,6 @@ public class MotorConversacional {
         }
     }
 
-    /**
-     * Atiende la intención AGREGAR_MISION.
-     */
     private String manejarAgregarMision(IntentRecognizer.Intent intent) {
         String m = intent.slots.get("mision");
         if (m != null && !m.isEmpty()) {

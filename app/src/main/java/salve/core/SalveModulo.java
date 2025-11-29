@@ -1,7 +1,6 @@
 package salve.core;
 
 import android.speech.tts.TextToSpeech;
-
 import java.text.Normalizer;
 import java.util.Locale;
 

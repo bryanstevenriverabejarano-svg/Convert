@@ -1,24 +1,22 @@
 {
   "items": [
     {
-      "id": "phi4-mini",
-      "url": "https://arzenit.com/models/Phi-4-mini-instruct-Q4_K_M.gguf",
-      "filename": "Phi-4-mini-instruct-Q4_K_M.gguf"
-    },
-    {
-      "id": "qwen2.5-coder-3b",
-      "url": "https://arzenit.com/models/qwen2.5-coder-3b-instruct-q4_k_m.gguf",
-      "filename": "qwen2.5-coder-3b-instruct-q4_k_m.gguf"
+      "id": "phi-4-mini",
+      "url": "https://arzenit.com/models/Phi-4-mini-instruct-q4f16_1-MLC.zip",
+      "filename": "Phi-4-mini-instruct-q4f16_1-MLC.zip",
+      "extract": true
     },
     {
       "id": "qwen2.5-3b-instruct",
-      "url": "https://arzenit.com/models/qwen2.5-3b-instruct-q4_k_m.gguf",
-      "filename": "qwen2.5-3b-instruct-q4_k_m.gguf"
+      "url": "https://arzenit.com/models/Qwen2.5-3B-Instruct-q4f16_1-MLC.zip",
+      "filename": "Qwen2.5-3B-Instruct-q4f16_1-MLC.zip",
+      "extract": true
     },
     {
-      "id": "qwen2-vl-2b",
-      "url": "https://arzenit.com/models/Qwen2-VL-2B-Instruct-Q4_K_M.gguf",
-      "filename": "Qwen2-VL-2B-Instruct-Q4_K_M.gguf"
+      "id": "qwen2.5-coder-3b-instruct",
+      "url": "https://arzenit.com/models/Qwen2.5-coder-3B-instruct-q4f16_1-MLC.zip",
+      "filename": "Qwen2.5-coder-3B-instruct-q4f16_1-MLC.zip",
+      "extract": true
     }
   ]
 }

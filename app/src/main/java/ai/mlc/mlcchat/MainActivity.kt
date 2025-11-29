@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private var cameraImageUri: Uri? = null
+
     private val takePictureLauncher = registerForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success: Boolean ->
@@ -152,6 +153,9 @@ class MainActivity : ComponentActivity() {
             contentValues
         )
 
-        takePictureLauncher.launch(cameraImageUri)
+        // ✅ Arreglo: solo lanzamos la cámara si tenemos un Uri no nulo
+        cameraImageUri?.let { uri ->
+            takePictureLauncher.launch(uri)
+        }
     }
 }

@@ -22,8 +22,9 @@ include(":app")
 
 // Módulo mlc4j (motor MLC para Java)
 include(":mlc4j")
-// Ruta correcta: la carpeta mlc4j está al mismo nivel que MLCChat
+// Si la carpeta mlc4j está al MISMO nivel que MLCChat, usa ../mlc4j
 project(":mlc4j").projectDir = file("../mlc4j")
 
-// No necesitamos el proyecto de ejemplo aquí, lo quitamos
-// include(":mlcengineexample")
+// Si en algún momento mueves la carpeta mlc4j DENTRO del proyecto (al lado de app),
+// cambia la línea anterior por:
+// project(":mlc4j").projectDir = file("mlc4j")

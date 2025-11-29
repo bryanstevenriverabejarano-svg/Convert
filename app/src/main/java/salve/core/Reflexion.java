@@ -7,7 +7,7 @@ import java.util.Locale;
  *
  * <p>Las reflexiones se utilizan como pensamientos intermedios (Reflegion),
  * resúmenes creativos o auto-observaciones. Se construyen a través del
- * {@link Builder} para garantizar valores coherentes y facilitar
+ * {@link Reflexion.Builder} para garantizar valores coherentes y facilitar
  * futuras extensiones (p. ej. metadatos adicionales).</p>
  */
 public final class Reflexion {

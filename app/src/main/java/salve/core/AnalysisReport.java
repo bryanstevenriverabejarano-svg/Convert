@@ -29,7 +29,7 @@ public class AnalysisReport {
      * El contenido de la lista no debe ser modificado por el llamador.
      * @return lista de objetos MethodIssue
      */
-    public List<MethodIssue> getIssues() {
+    public java.util.List<MethodIssue> getIssues() {
         return issues;
     }
 

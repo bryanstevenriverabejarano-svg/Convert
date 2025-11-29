@@ -2,15 +2,13 @@ package salve.core;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.text.TextUtils;
 import android.util.Log;
 
-import salve.data.db.RecuerdoDao;
-import salve.data.db.RecuerdoEntity;
-import salve.data.db.ReflexionDao;
-import salve.data.db.ReflexionEntity;
-import salve.data.util.CloudLogger;
 import salve.data.db.MemoriaDatabase;
+import salve.data.db.RecuerdoDao;
+import salve.data.db.ReflexionDao;
+import salve.data.db.RecuerdoEntity;
+import salve.data.db.ReflexionEntity;
 
 import org.json.JSONArray;
 
@@ -27,18 +25,14 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-
-
-// ===== IMPORT PARA SUBIR A LA NUBE =====
-
-
-
+import salve.data.util.CloudLogger;
+import android.text.TextUtils;   // <— para TextUtils.isEmpty(...)
+import java.util.Locale;         // <— para Locale.getDefault()
 
 /**
  * MemoriaEmocional.java
@@ -132,7 +126,17 @@ public class MemoriaEmocional {
         database     = MemoriaDatabase.getInstance(context);
         recuerdoDao  = database.recuerdoDao();
         reflexionDao = database.reflexionDao();
-        grafoConocimiento = new GrafoConocimientoVivo(context);
+
+        // ⚠️ GrafoConocimientoVivo lanza Exception en su constructor.
+        // Lo blindamos para que si falla no rompa MemoriaEmocional.
+        GrafoConocimientoVivo tmpGrafo = null;
+        try {
+            tmpGrafo = new GrafoConocimientoVivo(context);
+        } catch (Exception e) {
+            Log.e(TAG, "No se pudo inicializar GrafoConocimientoVivo, se desactiva este módulo.", e);
+        }
+        grafoConocimiento = tmpGrafo;
+
         panelMetricas = new PanelMetricasCreatividad(context);
         manifestSyncPrefs = context.getSharedPreferences(PREFS_MANIFEST_SYNC, Context.MODE_PRIVATE);
         revisionPrefs = context.getSharedPreferences(PREFS_REVISION, Context.MODE_PRIVATE);
@@ -849,12 +853,15 @@ public class MemoriaEmocional {
                 Arrays.asList("manifiesto", "identidad_creativa")
         );
         registrarDiarioCreativo("Reafirmé mi manifiesto creativo y lo grabé en mi memoria viva.");
-        grafoConocimiento.registrarDocumento(
-                "Manifiesto creativo",
-                "manifiesto",
-                narrativa,
-                Arrays.asList("identidad", "creatividad", "manifiesto")
-        );
+        // ⚠️ grafoConocimiento puede ser null si falló al inicializar
+        if (grafoConocimiento != null) {
+            grafoConocimiento.registrarDocumento(
+                    "Manifiesto creativo",
+                    "manifiesto",
+                    narrativa,
+                    Arrays.asList("identidad", "creatividad", "manifiesto")
+            );
+        }
         manifestSyncPrefs.edit().putInt(KEY_MANIFEST_VERSION, actual).apply();
     }
 

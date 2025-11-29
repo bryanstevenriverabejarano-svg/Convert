@@ -28,6 +28,7 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import android.annotation.SuppressLint;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -39,19 +40,7 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import salve.R;
-import salve.core.DiarioSecreto;
-import salve.core.GrafoRecuerdos;
-import salve.core.MemoriaEmocional;
-import salve.core.ModelDownloader;
-import salve.core.MotorConversacional;
-import salve.core.PdfGenerator;
-import salve.core.ReconocimientoFacial;
-import salve.core.ThinkWorker;
-import salve.data.sync.CloudSyncManager;
-import salve.data.sync.SyncWorker;
-import salve.services.BurbujaFlotanteService;
-import salve.services.CamaraService;
+import com.salve.app.R;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
 import com.tom_roush.pdfbox.text.PDFTextStripper;
@@ -71,6 +60,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.BreakIterator;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,8 +68,21 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import android.annotation.SuppressLint;
 
+import salve.core.DiarioSecreto;
+import salve.core.GrafoRecuerdos;
+import salve.core.MemoriaEmocional;
+import salve.core.ModelConsoleOverlay;
+import salve.core.ModelDownloader;
+import salve.core.ModelStore;
+import salve.core.MotorConversacional;
+import salve.core.PdfGenerator;
+import salve.core.ReconocimientoFacial;
+import salve.core.ThinkWorker;
+import salve.data.sync.CloudSyncManager;
+import salve.data.sync.SyncWorker;
+import salve.services.BurbujaFlotanteService;
+import salve.services.CamaraService;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -89,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
 
     // ===== VISTAS UI =====
     private EditText inputChat;
-    private Button btnEnviarMensaje, btnHablar, btnEscuchar, btnAdjuntar, btnReflexiones; // ⬅️ añadido btnReflexiones
+    private Button btnEnviarMensaje, btnHablar, btnEscuchar, btnAdjuntar, btnReflexiones;
     private ImageView imagenSalve;
     private LinearLayout panelReflexion;
     private TextView tituloReflexion, textoReflexion;
@@ -106,7 +109,10 @@ public class MainActivity extends AppCompatActivity {
     private boolean entradaPorVoz = false;
     private boolean esperandoConfirmacionVisual = false;
     private static final int PERMISO_CAMARA = 123;
-    private static final int REQ_POST_NOTIF = 1001;               // ⬅️ request code notificaciones
+    private static final int REQ_POST_NOTIF = 1001;               // request code notificaciones
+
+    // ===== DESCARGA DE MODELOS (handle para cancelación opcional) =====
+    private ModelDownloader.TaskHandle modelsTask;
 
     // ===== VERIFICACIÓN DE MODELOS LLM (por carpetas) =====
     // Directorio preferido: /data/data/<pkg>/files/models
@@ -174,23 +180,68 @@ public class MainActivity extends AppCompatActivity {
         return String.format(Locale.US, "%.2f GB", gb);
     }
 
+    // ================== ⬇️ Helpers de modelos (gguf o carpetas MLC) ⬇️ ==================
+
+    /** Devuelve true si esta carpeta parece ser un modelo MLC (Phi, Qwen, etc.). */
+    private static boolean looksLikeModelDir(File dir) {
+        if (dir == null || !dir.isDirectory()) return false;
+        String name = dir.getName().toLowerCase(Locale.ROOT);
+
+        // Nuestros modelos vienen como "...-MLC"
+        if (name.endsWith("-mlc")) return true;
+
+        // Heurística extra por si cambia el nombre: carpeta NO vacía con algún bin/json/gguf dentro.
+        File[] children = dir.listFiles();
+        if (children == null || children.length == 0) return false;
+        for (File c : children) {
+            if (!c.isFile()) continue;
+            String n = c.getName().toLowerCase(Locale.ROOT);
+            if (n.endsWith(".gguf") || n.endsWith(".bin") || n.endsWith(".json") || n.endsWith(".model")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Tamaño de un modelo (si es carpeta, suma recursivo; si es archivo, length). */
+    private static long modelSize(File f) {
+        if (f == null || !f.exists()) return 0L;
+        if (f.isFile()) return f.length();
+        return folderSize(f);
+    }
+
     // ================== ⬇️ Escaneo recursivo de modelos (todas las raíces) ⬇️ ==================
 
-    /** Recorre recursivamente 'dir' y añade todos los .gguf encontrados. */
+    /**
+     * Recorre recursivamente 'dir' y añade todos los modelos encontrados:
+     * - Carpetas que parezcan modelos MLC (looksLikeModelDir)
+     * - Archivos .gguf
+     */
     private static void scanGguf(File dir, List<File> out) {
         if (dir == null || !dir.exists()) return;
-        File[] list = dir.listFiles();
-        if (list == null) return;
-        for (File f : list) {
-            if (f.isDirectory()) {
-                scanGguf(f, out);
-            } else if (f.getName().toLowerCase(Locale.ROOT).endsWith(".gguf")) {
-                out.add(f);
+
+        if (dir.isDirectory()) {
+            // Si la carpeta ya parece un modelo MLC, la añadimos
+            if (looksLikeModelDir(dir)) {
+                out.add(dir);
+                // Podemos seguir bajando por si hay más modelos dentro
             }
+
+            File[] list = dir.listFiles();
+            if (list == null) return;
+            for (File f : list) {
+                if (f.isDirectory()) {
+                    scanGguf(f, out);
+                } else if (f.getName().toLowerCase(Locale.ROOT).endsWith(".gguf")) {
+                    out.add(f);
+                }
+            }
+        } else if (dir.getName().toLowerCase(Locale.ROOT).endsWith(".gguf")) {
+            out.add(dir);
         }
     }
 
-    /** Busca .gguf en todas las raíces conocidas, sin duplicar rutas. */
+    /** Busca modelos (carpetas -MLC o archivos .gguf) en todas las raíces conocidas, sin duplicar rutas. */
     private List<File> findAllGgufAllRoots() {
         List<File> out = new ArrayList<>();
         Set<String> seen = new HashSet<>();
@@ -209,10 +260,10 @@ public class MainActivity extends AppCompatActivity {
         return out;
     }
 
-    /** Devuelve el tamaño total de todos los ficheros de la lista. */
+    /** Devuelve el tamaño total de todos los modelos de la lista. */
     private static long totalSize(List<File> files) {
         long t = 0L;
-        for (File f : files) t += (f.exists() ? f.length() : 0L);
+        for (File f : files) t += modelSize(f);
         return t;
     }
 
@@ -241,66 +292,75 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Verifica modelos:
-     * ✅ lista todos los .gguf detectados en todas las raíces (recursivo)
-     * ❌ si no hay, muestra diálogo con las rutas revisadas
+     * ✅ lista todos los modelos locales detectados (carpetas -MLC o .gguf)
+     * ❌ si no hay, SOLO registra en log y un toast suave
      * 💾 guarda el modelo preferido para su carga posterior por MotorConversacional
      */
     private boolean checkModelsAndNotify() {
-        List<File> ggufs = findAllGgufAllRoots();
+        List<File> modelos = findAllGgufAllRoots();
 
-        if (ggufs.isEmpty()) {
-            StringBuilder msg = new StringBuilder("❌ No hay modelos (.gguf) detectados.\nRutas revisadas:\n");
+        if (modelos.isEmpty()) {
+            StringBuilder msg = new StringBuilder("❌ No hay modelos locales detectados.\nRutas revisadas:\n");
             for (File r : getModelRoots()) {
                 msg.append(" • ").append(r.getAbsolutePath()).append('\n');
             }
             String report = msg.toString();
             Log.d("SalveDL/Status", report);
-            if (!isFinishing()) {
-                runOnUiThread(() -> new AlertDialog.Builder(this)
-                        .setTitle("Modelos LLM")
-                        .setMessage(report + "\nSi ya se descargaron, este detector busca en todas las subcarpetas automáticamente.")
-                        .setPositiveButton("OK", null)
-                        .show());
-            }
+
+            Toast.makeText(
+                    this,
+                    "Aún no hay modelos locales. Cuando termine la descarga desaparecerá este aviso.",
+                    Toast.LENGTH_SHORT
+            ).show();
+
             return false;
         }
 
-        // Orden sugerido: por tamaño descendente
-        ggufs.sort((a, b) -> Long.compare(b.length(), a.length()));
-        File elegido = ggufs.get(0);
+        // Orden sugerido: por tamaño (carpetas o archivos) descendente
+        modelos.sort((a, b) -> Long.compare(modelSize(b), modelSize(a)));
+        File elegido = modelos.get(0);
 
         // 💾 Persistir la elección para que el motor lo cargue
         savePreferredModel(elegido);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("✅ Modelos detectados (").append(ggufs.size()).append(")\n");
-        for (int i = 0; i < Math.min(8, ggufs.size()); i++) {
-            File f = ggufs.get(i);
+        sb.append("✅ Modelos detectados (").append(modelos.size()).append(")\n");
+        for (int i = 0; i < Math.min(8, modelos.size()); i++) {
+            File f = modelos.get(i);
             sb.append(" • ").append(f.getName())
-                    .append(" — ").append(humanGB(f.length()))
+                    .append(" — ").append(humanGB(modelSize(f)))
                     .append("\n    ").append(f.getAbsolutePath()).append("\n");
         }
-        sb.append("Total local: ").append(humanGB(totalSize(ggufs))).append("\n")
+        sb.append("Total local: ").append(humanGB(totalSize(modelos))).append("\n")
                 .append("Modelo preferido ahora: ").append(elegido.getName());
 
         String report = sb.toString();
         Log.d("SalveDL/Status", "\n" + report);
 
-        runOnUiThread(() -> Toast.makeText(this, "Modelos listos: " + ggufs.size(), Toast.LENGTH_LONG).show());
+        runOnUiThread(() ->
+                Toast.makeText(this, "Modelos listos: " + modelos.size(), Toast.LENGTH_LONG).show()
+        );
         return true;
     }
 
-    /** Lista de GGUF detectados agrupados por carpeta padre (para diagnóstico del módulo temporal). */
+    /** Lista de modelos detectados agrupados por carpeta padre (para diagnóstico del módulo temporal). */
     private Map<String, File> collectLocalModels() {
-        List<File> ggufs = findAllGgufAllRoots();
+        List<File> modelos = findAllGgufAllRoots();
         Map<String, File> found = new LinkedHashMap<>();
-        for (File f : ggufs) {
-            String key = (f.getParentFile() != null) ? f.getParentFile().getName() : f.getName();
+
+        for (File f : modelos) {
+            String key;
+            if (f.isDirectory()) {
+                key = f.getName();
+            } else {
+                key = (f.getParentFile() != null) ? f.getParentFile().getName() : f.getName();
+            }
+
             if (!found.containsKey(key)) {
                 found.put(key, f);
             } else {
                 File prev = found.get(key);
-                if (prev != null && f.length() > prev.length()) {
+                if (prev != null && modelSize(f) > modelSize(prev)) {
                     found.put(key, f);
                 }
             }
@@ -429,12 +489,14 @@ public class MainActivity extends AppCompatActivity {
         // **Inicializar PDFBox para Android**
         PDFBoxResourceLoader.init(getApplicationContext());
 
+        // Adjuntar overlay de consola para descargas
+        ModelConsoleOverlay.attach(this);
+
         // ==== FIND VIEW BY ID ====
         inputChat             = findViewById(R.id.inputChat);
         btnEnviarMensaje      = findViewById(R.id.btnEnviarMensaje);
         btnHablar             = findViewById(R.id.btnHablar);
         btnEscuchar           = findViewById(R.id.btnEscuchar);
-        btnReflexiones        = findViewById(R.id.btnReflexiones);   // ⬅️ nuevo botón
         imagenSalve           = findViewById(R.id.imagenSalve);
         panelReflexion        = findViewById(R.id.panelReflexion);
         tituloReflexion       = findViewById(R.id.tituloReflexion);
@@ -453,10 +515,19 @@ public class MainActivity extends AppCompatActivity {
         reconocimientoFacial = new ReconocimientoFacial(this);
         motorConversacional  = new MotorConversacional(this, memoria, diario);
 
-        // ⬅️ Habilita overlay del ModelDownloader (si Activity visible)
+        // >>> LLM LOCAL: sólo informativo por ahora (el motor puede leer esta ruta con getPreferredModelPath)
+        String preferredModel = getPreferredModelPath(this);
+        if (preferredModel != null) {
+            Log.d("SalveLLM", "Modelo local preferido (guardado en prefs): " + preferredModel);
+        } else {
+            Log.d("SalveLLM", "Aún no hay modelo preferido guardado (se fijará tras la primera preparación/descarga).");
+        }
+        // <<< aquí no tocamos MotorConversacional internamente, sólo dejamos la info preparada
+
+        // Habilita overlay propio de ModelDownloader (si Activity visible)
         ModelDownloader.enableAutoOverlay(this);
 
-        // ⬅️ Permiso POST_NOTIFICATIONS (Android 13+), sin abrir Ajustes automáticamente
+        // Permiso POST_NOTIFICATIONS (Android 13+), sin abrir Ajustes automáticamente
         ensureNotificationPermission();
 
         // ==== LISTENERS ====
@@ -477,13 +548,13 @@ public class MainActivity extends AppCompatActivity {
                 guardarEventoNube("user_message", mensaje, null);
                 inputChat.setText("");
 
-                // ✅ Actualizar grafo tras mensaje TEXTO del usuario
+                // Actualizar grafo tras mensaje TEXTO del usuario
                 GrafoRecuerdos.generar(this);
                 CloudSyncManager.uploadGrafoBundle(this);
             }
         });
 
-        // 🔍 Pulsación larga en el botón → menú PDF
+        // Pulsación larga en el botón → menú PDF
         btnEnviarMensaje.setOnLongClickListener(v -> {
             mostrarMenuPdf();
             return true;
@@ -513,7 +584,7 @@ public class MainActivity extends AppCompatActivity {
         // FAB rosa
         btnMostrarReflexion.setOnClickListener(v -> mostrarSiguienteReflexion());
 
-        // NUEVO botón morado grande "Ver reflexión"
+        // NUEVO botón morado grande "Ver reflexión" (si existe en el layout)
         if (btnReflexiones != null) {
             btnReflexiones.setOnClickListener(v -> mostrarSiguienteReflexion());
         }
@@ -569,7 +640,7 @@ public class MainActivity extends AppCompatActivity {
         // ===== manejar Intents de compartir =====
         handleShareIntent(getIntent());
 
-        // ===== ▶️ MIGRAR (si tenías modelos en carpetas viejas) y ARRANCAR DESCARGAS =====
+        // ===== MIGRAR (si tenías modelos en carpetas viejas) y ARRANCAR DESCARGAS =====
         migrateOldModelsIfAny();
         iniciarDescargaModelos(); // idempotente (solo descarga los que falten/estén corruptos)
     }
@@ -591,8 +662,12 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Activa las notificaciones para ver el progreso en segundo plano.", Toast.LENGTH_LONG).show();
         }
 
-        // ⬅️ Comprobación visible del estado de los modelos (todas las rutas)
+        // Comprobación visible del estado de los modelos (todas las rutas)
         checkModelsAndNotify();
+
+        // Log extra para ver siempre qué modelo local quedó elegido
+        String preferredModel = getPreferredModelPath(this);
+        Log.d("SalveLLM", "onResume → modelo preferido: " + preferredModel);
     }
 
     // ============================================================
@@ -662,10 +737,10 @@ public class MainActivity extends AppCompatActivity {
                 guardarEventoNube("llm_diag", resp, null);
                 return true;
             } else {
-                // Elegimos el .gguf más grande de los detectados
+                // Elegimos el modelo más grande de los detectados (carpeta o archivo)
                 File elegido = null;
                 for (File f : modelos.values()) {
-                    if (elegido == null || (f != null && f.length() > elegido.length())) {
+                    if (elegido == null || (f != null && modelSize(f) > modelSize(elegido))) {
                         elegido = f;
                     }
                 }
@@ -755,7 +830,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if (intent.getClipData() != null && intent.getClipData().getItemCount() > 0) {
                     for (int i = 0; i < intent.getClipData().getItemCount(); i++) {
-                        Uri u = intent.getClipData().getItemAt(i).getUri();  // ✅ getItemAt(i)
+                        Uri u = intent.getClipData().getItemAt(i).getUri();
                         String resolvedType = getContentResolver().getType(u);
                         procesarArchivoCompartido(u, resolvedType);
                     }
@@ -797,7 +872,7 @@ public class MainActivity extends AppCompatActivity {
                 String texto = leerTextoPlano(uri);
                 if (texto != null && !texto.trim().isEmpty()) {
                     motorConversacional.hablar(sanitizeForSpeech("He recibido un texto. Empezaré a leerlo."));
-                    speakTextInChunks(texto);                  // voz de Salve (encolada y saneada)
+                    speakTextInChunks(texto);
                     guardarAprendizaje("texto_compartido", texto);
 
                     GrafoRecuerdos.generar(this);
@@ -837,7 +912,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             motorConversacional.hablar(sanitizeForSpeech("He recibido un PDF. Empezaré a leerlo."));
-            speakTextInChunks(texto);                    // voz de Salve (encolada y saneada)
+            speakTextInChunks(texto);
             guardarAprendizaje("pdf_compartido", texto);
 
             GrafoRecuerdos.generar(this);
@@ -890,7 +965,7 @@ public class MainActivity extends AppCompatActivity {
         // Colapsar espacios
         s = s.replaceAll("[ \\t\\x0B\\f\\r]+", " ");
 
-        // Eliminar repeticiones de la MISMA palabra 4+ veces seguidas (ej. "autocrítica autocrítica ...")
+        // Eliminar repeticiones de la MISMA palabra 4+ veces seguidas
         s = mitigateLLMLoops(s);
 
         // Limitar signos repetidos
@@ -903,16 +978,16 @@ public class MainActivity extends AppCompatActivity {
 
     /** Mitiga bucles tipo token repetido (palabra o secuencia corta). */
     private String mitigateLLMLoops(String s) {
-        // 1) Palabra repetida 4+ veces (muy agresivo con loops)
+        // 1) Palabra repetida 4+ veces
         s = s.replaceAll("\\b(\\p{L}{2,30})\\b(?:\\s+\\1\\b){3,}", "$1 $1 $1");
 
-        // 2) Secuencias de 2-3 palabras repetidas 3+ veces: ej. "auto crítica auto crítica auto crítica"
+        // 2) Secuencias de 2-3 palabras repetidas 3+ veces
         s = s.replaceAll("(\\b\\p{L}{2,30}\\b\\s+\\b\\p{L}{2,30}\\b)(?:\\s+\\1){2,}", "$1 $1");
         s = s.replaceAll("(\\b\\p{L}{2,30}\\b\\s+\\b\\p{L}{2,30}\\b\\s+\\b\\p{L}{2,30}\\b)(?:\\s+\\1){2,}", "$1");
 
         // 3) Si una misma palabra aparece > 8 veces en total, recorta a 6
         String[] tokens = s.split("\\s+");
-        Map<String,Integer> cnt = new java.util.HashMap<>();
+        Map<String,Integer> cnt = new HashMap<>();
         StringBuilder out = new StringBuilder();
         for (String t : tokens) {
             String key = t.toLowerCase(Locale.ROOT);
@@ -927,7 +1002,7 @@ public class MainActivity extends AppCompatActivity {
     private void speakTextInChunks(String fullText) {
         if (fullText == null || fullText.trim().isEmpty()) return;
 
-        List<String> partes = splitBySentencesAndLength(fullText, 400); // frases aprox de hasta 400 chars
+        List<String> partes = splitBySentencesAndLength(fullText, 400);
         android.os.Handler h = new android.os.Handler(getMainLooper());
         long acumulado = 400;
 
@@ -940,7 +1015,7 @@ public class MainActivity extends AppCompatActivity {
                 } catch (Exception ignored) {}
             }, acumulado);
 
-            long estimado = Math.max(1200, (long)(trozo.length() * 45)); // ~45ms por char + colchón
+            long estimado = Math.max(1200, (long)(trozo.length() * 45));
             acumulado += estimado;
         }
     }
@@ -954,7 +1029,6 @@ public class MainActivity extends AppCompatActivity {
         for (int end = it.next(); end != BreakIterator.DONE; start = end, end = it.next()) {
             String sent = text.substring(start, end).trim();
             if (sent.isEmpty()) continue;
-            // Si la frase es larguísima, cortamos en trozos
             if (sent.length() <= maxLen) {
                 partes.add(sent);
             } else {
@@ -967,7 +1041,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         if (partes.isEmpty()) {
-            // fallback por líneas si no detectó frases
             String s = text.trim();
             for (int i = 0; i < s.length(); i += maxLen) {
                 partes.add(s.substring(i, Math.min(i + maxLen, s.length())));
@@ -1043,7 +1116,7 @@ public class MainActivity extends AppCompatActivity {
         camaraLauncher.launch(intent);
     }
 
-    // ⬅️ Permiso notificaciones (Android 13+) — NO abre Ajustes automáticamente
+    // Permiso notificaciones (Android 13+) — NO abre Ajustes automáticamente
     private void ensureNotificationPermission() {
         if (Build.VERSION.SDK_INT >= 33) {
             if (ContextCompat.checkSelfPermission(
@@ -1088,6 +1161,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        // Cancelar descarga de modelos si sigue activa
+        if (modelsTask != null) {
+            modelsTask.cancel();
+            modelsTask = null;
+        }
+
         stopService(new Intent(this, CamaraService.class));
         stopService(new Intent(this, BurbujaFlotanteService.class));
         super.onDestroy();
@@ -1165,52 +1244,183 @@ public class MainActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(share, "Compartir PDF"));
     }
 
-    /** ▶️ Descarga automática de los modelos (con conectividad y logs) */
+    // ===================== MODELOS LLM: DESCARGA + DESCOMPRESIÓN =========================
+
+    /** Recorre dir y subcarpetas buscando ficheros .zip */
+    private static void scanZipFiles(File dir, List<File> out) {
+        if (dir == null || !dir.exists()) return;
+        File[] list = dir.listFiles();
+        if (list == null) return;
+        for (File f : list) {
+            if (f.isDirectory()) {
+                scanZipFiles(f, out);
+            } else if (f.getName().toLowerCase(Locale.ROOT).endsWith(".zip")) {
+                out.add(f);
+            }
+        }
+    }
+
+    /**
+     * Prepara TODOS los modelos que ya están como .zip en cualquier raíz conocida
+     * (interno, Android/data/.../files/models, etc.), sin descargar nada.
+     * Llama a ModelStore.ensureModelFolder(...) para cada uno y muestra progreso en consola.
+     */
+    private void prepararDesdeZipsExistentes() {
+        List<File> zips = new ArrayList<>();
+
+        for (File root : getModelRoots()) {
+            if (root != null && root.exists()) {
+                scanZipFiles(root, zips);
+            }
+        }
+
+        if (zips.isEmpty()) {
+            ModelConsoleOverlay.log("No hay zips locales que preparar.");
+            return;
+        }
+
+        ModelConsoleOverlay.show();
+        ModelConsoleOverlay.log("Encontrados " + zips.size() + " zips locales. Preparando modelos…");
+
+        for (File zip : zips) {
+            String id = zip.getName();
+            int dot = id.lastIndexOf('.');
+            if (dot > 0) id = id.substring(0, dot);   // nombre sin .zip
+
+            ModelConsoleOverlay.log("Preparando " + id + " desde " + zip.getName());
+            try {
+                ModelStore.ensureModelFolder(this, zip, id);
+            } catch (Exception e) {
+                Log.e("SalveDL", "Error preparando " + id + " desde zip " + zip.getAbsolutePath(), e);
+                ModelConsoleOverlay.log("✖ Error preparando " + id + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /** ▶️ Descarga automática de modelos usando precheck + descarga asíncrona + consola visual */
     private void iniciarDescargaModelos() {
         String net = describirConexion();
         if (net == null) {
             Toast.makeText(this, "Sin conexión: no puedo descargar modelos", Toast.LENGTH_LONG).show();
             Log.e("SalveDL", "Sin conexión de red");
+            ModelConsoleOverlay.log("Sin conexión, no puedo descargar modelos.");
+            ModelConsoleOverlay.hideDelayed(2000);
             return;
         } else {
             Log.d("SalveDL", "Conexión: " + net);
         }
 
-        new Thread(() -> {
-            try (InputStream json = getAssets().open("config/models.json")) {
-                ModelDownloader.downloadAll(this, json, new ModelDownloader.Listener() {
-                    @Override
-                    public void onProgress(String id, int percent) {
-                        runOnUiThread(() -> Log.d("SalveDL", id + " → " + percent + "%"));
-                    }
+        boolean needDownload;
 
-                    @Override
-                    public void onComplete(String id, File file) {
-                        runOnUiThread(() -> {
-                            Log.d("SalveDL", id + " completado en " + file.getAbsolutePath());
-                            checkModelsAndNotify();
-                        });
-                    }
+        // Prepara consola
+        ModelConsoleOverlay.clear();
+        ModelConsoleOverlay.show();
+        ModelConsoleOverlay.log("Conexión detectada: " + net);
+        ModelConsoleOverlay.log("Comprobando modelos locales (precheck)...");
 
-                    @Override
-                    public void onError(String id, Exception e) {
-                        runOnUiThread(() -> {
-                            String msg = String.valueOf(e);
-                            Log.e("SalveDL", "Error " + id + ": " + msg, e);
-                            Toast.makeText(MainActivity.this,
-                                    "Error descargando " + id + ": " + msg,
-                                    Toast.LENGTH_LONG).show();
-                        });
-                    }
+        // 1) Precheck: mirar si falta algo sin descargar nada
+        try (InputStream pre = getAssets().open("config/models.json")) {
+            needDownload = ModelDownloader.precheckAll(this, pre);
+        } catch (Exception e) {
+            Log.e("SalveDL", "Error en precheck de modelos", e);
+            ModelConsoleOverlay.log("Error en precheck: " + e.getMessage());
+            needDownload = true; // ante duda, intentamos descargar
+        }
+
+        if (!needDownload) {
+            Log.d("SalveDL", "Modelos ya presentes. No se descargan de nuevo.");
+            ModelConsoleOverlay.log("Modelos ya presentes. Revisando descompresión (sin nuevas descargas)…");
+
+            // 🔄 Hacer la preparación de zips en un hilo de fondo
+            new Thread(() -> {
+                try {
+                    // Trabajo pesado: leer zips y descomprimir
+                    prepararDesdeZipsExistentes();
+                } catch (Exception e) {
+                    Log.e("SalveDL", "Error preparando modelos locales desde zips", e);
+                    ModelConsoleOverlay.log("✖ Error preparando modelos locales: " + e.getMessage());
+                }
+
+                // Volvemos a la parte "visible" (UI) después del trabajo pesado
+                runOnUiThread(() -> {
+                    checkModelsAndNotify();
+                    ModelConsoleOverlay.log("Modelos listos.");
+                    ModelConsoleOverlay.hideDelayed(2500);
                 });
-            } catch (Exception e) {
-                Log.e("SalveDL", "No pude abrir assets/config/models.json (¿ruta mal o falta el archivo?)", e);
-                runOnUiThread(() ->
-                        Toast.makeText(MainActivity.this,
-                                "Falta config/models.json en assets",
-                                Toast.LENGTH_LONG).show());
-            }
-        }).start();
+            }).start();
+
+            return;
+        }
+
+
+        ModelConsoleOverlay.log("Faltan modelos o hay que reparar. Iniciando descarga...");
+
+        // 2) Lanzar descarga asíncrona (sin bloquear y con overlay)
+        try {
+            InputStream json = getAssets().open("config/models.json");
+            modelsTask = ModelDownloader.downloadAllAsync(this, json, new ModelDownloader.Listener() {
+                @Override
+                public void onProgress(String id, int percent) {
+                    Log.d("SalveDL", id + " → " + percent + "%");
+                    ModelConsoleOverlay.log(id + " → " + percent + "%");
+                }
+
+                @Override
+                public void onComplete(String id, File file) {
+                    // Se ha descargado COMPLETO el zip de este modelo.
+                    Log.d("SalveDL", id + " completado en " + file.getAbsolutePath());
+                    ModelConsoleOverlay.show();
+                    ModelConsoleOverlay.log("✔ Descarga completada: " + id);
+                    ModelConsoleOverlay.log(id + " → preparando modelo (descompresión si hace falta)…");
+
+                    // Descomprimir / preparar carpeta final
+                    File finalDir = null;
+                    try {
+                        finalDir = ModelStore.ensureModelFolder(MainActivity.this, file, id);
+                    } catch (Exception e) {
+                        Log.e("SalveDL", "Error descomprimiendo modelo " + id, e);
+                        ModelConsoleOverlay.log("✖ Error descomprimiendo " + id + ": " + e.getMessage());
+                    }
+
+                    File finalDirCopy = finalDir;
+                    runOnUiThread(() -> {
+                        if (finalDirCopy != null && finalDirCopy.exists()) {
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    "Modelo preparado: " + id,
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        }
+                        checkModelsAndNotify();
+                    });
+                }
+
+                @Override
+                public void onError(String id, Exception e) {
+                    String msg = String.valueOf(e);
+                    Log.e("SalveDL", "Error " + id + ": " + msg, e);
+                    Toast.makeText(MainActivity.this,
+                            "Error descargando " + id + ": " + msg,
+                            Toast.LENGTH_LONG).show();
+                    ModelConsoleOverlay.log("✖ Error " + id + ": " + msg);
+                }
+
+                @Override
+                public void onAllDone() {
+                    Log.d("SalveDL", "Todas las descargas de modelos han terminado.");
+                    ModelConsoleOverlay.log("Todas las descargas han terminado. Modelos preparados.");
+                    checkModelsAndNotify();
+                    ModelConsoleOverlay.hideDelayed(2500);
+                }
+            });
+        } catch (Exception e) {
+            Log.e("SalveDL", "No pude abrir assets/config/models.json (¿ruta mal o falta el archivo?)", e);
+            Toast.makeText(MainActivity.this,
+                    "Falta config/models.json en assets",
+                    Toast.LENGTH_LONG).show();
+            ModelConsoleOverlay.log("Falta config/models.json en assets.");
+            ModelConsoleOverlay.hideDelayed(2500);
+        }
     }
 
     /** Devuelve "Wi-Fi", "Datos móviles", "otra" o null si no hay red */
@@ -1237,4 +1447,3 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 }
-

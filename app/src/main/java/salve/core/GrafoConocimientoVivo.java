@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;   // ✅ LLM: para listas rápidas
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -27,6 +28,11 @@ import java.util.concurrent.Executors;
  * Administra el grafo de conocimiento vivo propuesto en la fase 3.1 del plan.
  * Consolida nodos y relaciones provenientes de recuerdos, experimentos y
  * documentos creativos para ofrecer reportes y consultas narrativas.
+ *
+ * ✅ Ahora también puede pedir ayuda al LLM local (SalveLLM) para:
+ *    - Proponer categorías sobre el grafo.
+ *    - Agrupar nodos bajo esas categorías.
+ *    - Generar un resumen de identidad cognitiva.
  */
 public class GrafoConocimientoVivo {
 
@@ -37,18 +43,26 @@ public class GrafoConocimientoVivo {
     private final ExecutorService executor;
     private final Context context;
 
-    public GrafoConocimientoVivo(Context context) {
+    // ✅ Acceso al LLM local
+    private final SalveLLM llm;
+
+    public GrafoConocimientoVivo(Context context) throws Exception {
         this.context = context == null ? null : context.getApplicationContext();
         MemoriaDatabase database = MemoriaDatabase.getInstance(context);
         this.nodeDao = database.knowledgeNodeDao();
         this.relationDao = database.knowledgeRelationDao();
         this.executor = Executors.newSingleThreadExecutor();
+        this.llm = SalveLLM.getInstance(this.context);
     }
 
+    // =====================================================================
+    //  REGISTROS DE CONOCIMIENTO (igual que antes)
+    // =====================================================================
+
     public void registrarDocumento(final String titulo,
-                                    final String tipo,
-                                    final String resumen,
-                                    final List<String> etiquetas) {
+                                   final String tipo,
+                                   final String resumen,
+                                   final List<String> etiquetas) {
         registrarNodoAsync(titulo, tipo == null ? "documento" : tipo,
                 "orgullo", resumen, etiquetas, 6);
     }
@@ -250,6 +264,10 @@ public class GrafoConocimientoVivo {
         });
     }
 
+    // =====================================================================
+    //  REPORTES / VISUALIZACIÓN (igual que antes)
+    // =====================================================================
+
     public String generarReporteNarrativo(int maxNodos) {
         List<KnowledgeNodeEntity> nodos;
         try {
@@ -337,6 +355,188 @@ public class GrafoConocimientoVivo {
         }
     }
 
+    // =====================================================================
+    //  ✅ NUEVO: ORGANIZACIÓN ASISTIDA POR LLM
+    // =====================================================================
+
+    /**
+     * Pide al LLM local que lea un snapshot del grafo y proponga:
+     *  - categorías temáticas
+     *  - agrupaciones de nodos
+     *  - un pequeño resumen de identidad
+     *
+     * El resultado se materializa como nodos "categoria_llm" y relaciones "agrupa".
+     */
+    public void reorganizarConLLMAsync(int maxNodos, int maxRelaciones) {
+        executor.execute(() -> {
+            try {
+                GraphVisualization vis = construirVisualizacion(maxNodos, maxRelaciones);
+                if (vis == null || vis.nodes.isEmpty() || context == null) {
+                    Log.w(TAG, "reorganizarConLLM: grafo vacío o sin contexto, nada que organizar");
+                    return;
+                }
+
+                // 1) Snapshot compacto del grafo para el LLM
+                JSONObject snapshot = new JSONObject();
+                JSONArray jNodes = new JSONArray();
+                for (GraphNode n : vis.nodes) {
+                    JSONObject o = new JSONObject();
+                    o.put("id", n.id);
+                    o.put("label", n.label);
+                    o.put("type", n.type);
+                    o.put("emotion", n.emotion);
+                    o.put("relevance", n.relevance);
+                    o.put("summary", n.summary);
+                    jNodes.put(o);
+                }
+                JSONArray jEdges = new JSONArray();
+                for (GraphEdge e : vis.edges) {
+                    JSONObject o = new JSONObject();
+                    o.put("from", e.fromId);
+                    o.put("to", e.toId);
+                    o.put("type", e.type);
+                    o.put("weight", e.weight);
+                    o.put("narrative", e.narrative);
+                    jEdges.put(o);
+                }
+                snapshot.put("nodes", jNodes);
+                snapshot.put("edges", jEdges);
+
+                // 2) Prompt para el LLM
+                String prompt = buildLLMOrgPrompt(snapshot.toString(0));
+
+                // 3) Llamada al LLM local (usando el campo llm)
+                String raw = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
+
+                if (raw == null || raw.trim().isEmpty()) {
+                    Log.w(TAG, "reorganizarConLLM: respuesta vacía del LLM");
+                    return;
+                }
+
+                // 4) Extraer JSON de la respuesta
+                String jsonOnly = extractJson(raw);
+                if (jsonOnly == null) {
+                    Log.e(TAG, "reorganizarConLLM: no se encontró JSON en la respuesta del LLM");
+                    return;
+                }
+
+                JSONObject out = new JSONObject(jsonOnly);
+                aplicarOrganizacionLLM(out);
+
+            } catch (Exception e) {
+                Log.e(TAG, "reorganizarConLLMAsync error", e);
+            }
+        });
+    }
+
+    /**
+     * Construye el prompt que se le pasa al LLM para organizar el grafo.
+     */
+    private String buildLLMOrgPrompt(String snapshotJson) {
+        return "Eres el módulo de organización cognitiva interna de Salve.\n" +
+                "Recibirás un snapshot JSON de su grafo de conocimiento vivo (nodos y relaciones).\n" +
+                "\n" +
+                "Tarea:\n" +
+                "1) Detecta entre 3 y 8 CATEGORÍAS principales que describan el contenido.\n" +
+                "2) Para cada categoría, indica qué nodos pertenecen (usando sus IDs numéricos).\n" +
+                "3) Opcionalmente indica un tipoCategoria (por ejemplo: 'emocional', 'aprendizaje', 'vínculo', 'mision').\n" +
+                "4) Escribe una breve descripcion de la categoría (1–2 frases).\n" +
+                "5) Redacta un campo identidad_resumen que describa cómo ves a Salve y a su creador a partir de este grafo.\n" +
+                "\n" +
+                "Formato de salida OBLIGATORIO (JSON puro, sin texto extra):\n" +
+                "{\n" +
+                "  \"categorias\": [\n" +
+                "    {\n" +
+                "      \"nombre\": \"...\",\n" +
+                "      \"descripcion\": \"...\",\n" +
+                "      \"tipoCategoria\": \"emocional | aprendizaje | vínculo | mision | otro\",\n" +
+                "      \"relevancia\": 1-10,\n" +
+                "      \"nodos\": [id1, id2, ...]\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"identidad_resumen\": \"...\"\n" +
+                "}\n" +
+                "\n" +
+                "Snapshot del grafo:\n" +
+                snapshotJson;
+    }
+
+    /**
+     * Aplica la organización propuesta por el LLM:
+     * - Crea nodos de categoría_llm.
+     * - Crea relaciones 'agrupa' desde cada categoría a los nodos listados.
+     * - Registra opcionalmente un nodo de identidad sintetizada.
+     */
+    private void aplicarOrganizacionLLM(JSONObject out) {
+        try {
+            // 1) Categorías → nodos + relaciones
+            JSONArray cats = out.optJSONArray("categorias");
+            if (cats != null) {
+                for (int i = 0; i < cats.length(); i++) {
+                    JSONObject c = cats.optJSONObject(i);
+                    if (c == null) continue;
+
+                    String nombre = c.optString("nombre", "Categoría sin nombre");
+                    String desc = c.optString("descripcion", "Agrupación propuesta por el LLM.");
+                    String tipoCat = c.optString("tipoCategoria", "categoria_llm");
+                    int relevancia = c.optInt("relevancia", 7);
+                    JSONArray nodosCat = c.optJSONArray("nodos");
+
+                    long catId = asegurarNodo(
+                            "Categoría: " + nombre,
+                            tipoCat,
+                            "analisis",
+                            desc,
+                            Arrays.asList("llm_categoria", nombre),
+                            relevancia
+                    );
+                    if (catId <= 0 || nodosCat == null) continue;
+
+                    for (int j = 0; j < nodosCat.length(); j++) {
+                        long targetId = nodosCat.optLong(j, -1);
+                        if (targetId <= 0) continue;
+                        crearRelacion(catId, targetId,
+                                "agrupa",
+                                0.7,
+                                "Agrupación automática por tema '" + nombre + "' (LLM)");
+                    }
+                }
+            }
+
+            // 2) Identidad sintetizada → nodo especial
+            String identidad = out.optString("identidad_resumen", null);
+            if (identidad != null && identidad.trim().length() > 0) {
+                asegurarNodo(
+                        "Identidad sintetizada (LLM)",
+                        "identidad_llm",
+                        "reflexion",
+                        identidad,
+                        Arrays.asList("llm_identidad", "auto_concepto"),
+                        9
+                );
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "aplicarOrganizacionLLM error", e);
+        }
+    }
+
+    /**
+     * Intenta extraer el JSON “puro” de una respuesta del LLM que pueda venir
+     * envuelta en texto. Busca el primer '{' y el último '}'.
+     */
+    private String extractJson(String raw) {
+        if (raw == null) return null;
+        int start = raw.indexOf('{');
+        int end = raw.lastIndexOf('}');
+        if (start < 0 || end <= start) return null;
+        return raw.substring(start, end + 1);
+    }
+
+    // =====================================================================
+    //  NODOS / RELACIONES / HELPERS (igual que antes)
+    // =====================================================================
+
     private void registrarNodoAsync(final String etiqueta,
                                     final String tipo,
                                     final String emocion,
@@ -347,11 +547,11 @@ public class GrafoConocimientoVivo {
     }
 
     private long asegurarNodo(String etiqueta,
-                               String tipo,
-                               String emocion,
-                               String resumen,
-                               List<String> etiquetas,
-                               int relevanciaBase) {
+                              String tipo,
+                              String emocion,
+                              String resumen,
+                              List<String> etiquetas,
+                              int relevanciaBase) {
         if (TextUtils.isEmpty(etiqueta)) {
             return -1;
         }
@@ -595,8 +795,8 @@ public class GrafoConocimientoVivo {
                 JSONArray edgesArray = new JSONArray();
                 for (GraphEdge edge : edges) {
                     JSONObject object = new JSONObject();
-                    object.put("from", edge.fromId);
-                    object.put("to", edge.toId);
+                    object.put("originId", edge.fromId);
+                    object.put("targetId", edge.toId);
                     object.put("type", edge.type);
                     object.put("weight", edge.weight);
                     object.put("narrative", edge.narrative);

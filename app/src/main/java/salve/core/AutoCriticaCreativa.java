@@ -1,7 +1,6 @@
 package salve.core;
 
 import androidx.annotation.NonNull;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 

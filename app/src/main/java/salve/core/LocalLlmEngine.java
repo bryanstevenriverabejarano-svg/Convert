@@ -4,34 +4,27 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 
+import java.io.File;
+
 /**
  * Motor local de modelos de lenguaje para Salve.
  *
- * Esta clase es un "wrapper" sencillo alrededor del motor real
- * (llama.cpp, gguf, etc.). De momento solo es un stub para que
- * todo compile y podamos integrar el motor más adelante.
+ * Recibe la ruta a un archivo .gguf y un prompt completo,
+ * y delega la inferencia en el runtime real (por ahora FallbackEngine).
  */
 public class LocalLlmEngine {
 
     private static final String TAG = "LocalLlmEngine";
 
-    // Singleton
     private static LocalLlmEngine instance;
-
     private final Context appContext;
 
-    /**
-     * Constructor privado. Usa getInstance() para obtener la instancia.
-     */
     private LocalLlmEngine(Context context) {
         this.appContext = context.getApplicationContext();
         Log.d(TAG, "LocalLlmEngine inicializado.");
-        // TODO: inicializar aquí el motor real (cargar libs nativas, etc.)
+        // TODO: inicializar aquí el runtime real (cargar libs nativas, etc.)
     }
 
-    /**
-     * Devuelve la instancia única del motor local.
-     */
     public static synchronized LocalLlmEngine getInstance(Context context) {
         if (instance == null) {
             instance = new LocalLlmEngine(context);
@@ -40,37 +33,40 @@ public class LocalLlmEngine {
     }
 
     /**
-     * Punto de entrada síncrono que usa SalveLLM.
+     * Ejecuta un modelo local a partir de su archivo .gguf.
      *
-     * @param modelId    ID del modelo (por ejemplo, "qwen2.5-3b-instruct")
-     * @param fullPrompt Prompt completo (system + usuario)
-     * @return Respuesta generada por el modelo local.
+     * @param modelPath  Ruta completa al modelo (.gguf) en almacenamiento interno.
+     * @param fullPrompt Prompt completo (system + usuario).
      */
-    public String generateSync(String modelId, String fullPrompt) {
-        if (TextUtils.isEmpty(modelId)) {
-            Log.e(TAG, "generateSync() recibido con modelId vacío");
-            return "/* LocalLlmEngine: modelId requerido */";
+    public String generateSync(String modelPath, String fullPrompt) {
+        if (TextUtils.isEmpty(modelPath)) {
+            Log.e(TAG, "generateSync() recibido con modelPath vacío");
+            return "/* LocalLlmEngine: modelPath requerido */";
         }
         if (fullPrompt == null) {
             Log.w(TAG, "generateSync() recibió prompt nulo, se asume cadena vacía");
             fullPrompt = "";
         }
 
-        Log.d(TAG, "generateSync() llamado. modelId=" + modelId
-                + ", prompt.length=" + fullPrompt.length());
+        Log.d(TAG, "generateSync() llamado. modelPath=" + modelPath +
+                ", prompt.length=" + fullPrompt.length());
 
-        if (engineNoInicializado()) {
-            return FallbackEngine.buildPreview(modelId, fullPrompt);
+        File f = new File(modelPath);
+        if (!f.exists()) {
+            return "/* LocalLlmEngine: modelo no encontrado en " + modelPath + " */";
         }
 
-        // ⚠️ Stub temporal: aquí todavía no está conectado el motor real.
-        // Cuando tengamos el runtime GGUF, sustituiremos este bloque.
-        return FallbackEngine.buildPreview(modelId, fullPrompt);
+        if (engineNoInicializado()) {
+            // De momento solo vista previa
+            return FallbackEngine.buildPreview(modelPath, fullPrompt);
+        }
+
+        // TODO: aquí llamar al runtime real (MLC / llama.cpp / etc.)
+        return FallbackEngine.buildPreview(modelPath, fullPrompt);
     }
 
     private boolean engineNoInicializado() {
-        // TODO: reemplazar cuando se inicie el motor real (gestionar handles, threads, etc.)
+        // Cambia a false cuando inicialices el runtime real
         return true;
     }
-
 }

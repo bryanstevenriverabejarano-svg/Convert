@@ -116,11 +116,12 @@ public class ModelDownloader {
             int s = path.lastIndexOf('/');
             String name = (s >= 0 ? path.substring(s + 1) : path);
             if (name == null || name.trim().isEmpty()) {
-                return fallbackId + ".gguf";
+                // ahora el fallback es .zip porque subes los modelos comprimidos
+                return fallbackId + ".zip";
             }
             return name;
         } catch (Exception e) {
-            return fallbackId + ".gguf";
+            return fallbackId + ".zip";
         }
     }
 
@@ -184,6 +185,12 @@ public class ModelDownloader {
             ensureOverlayAttachedIfEnabled();
             if (sOverlay != null) sOverlay.show();
 
+            // ======== CONSOLA HACKER: inicio ========
+            ModelConsoleOverlay.show();
+            ModelConsoleOverlay.clear();
+            ModelConsoleOverlay.log("🔁 Comprobando / descargando modelos LLM…");
+            // =========================================
+
             for (int i = 0; i < total; i++) {
                 if (th.isCancelled()) break;
 
@@ -196,17 +203,29 @@ public class ModelDownloader {
                 String sha256       = optStringOrNull(it, "sha256");
 
                 File out = outputFor(ctx, filename);
+                ModelConsoleOverlay.log("⬇ Descargando " + id + " → " + filename);
                 downloadOneWithRetries(url, out, id, i + 1, total, expectedSize, sha256, cb, th);
             }
 
             if (!th.isCancelled()) runMain(() -> { if (cb != null) cb.onAllDone(); });
             if (sOverlay != null) sOverlay.hideSmooth();
+
+            // ======== CONSOLA HACKER: fin OK ========
+            if (!th.isCancelled()) {
+                ModelConsoleOverlay.log("✔ Descarga de modelos completada.");
+                ModelConsoleOverlay.hideDelayed(1500);
+            }
+            // ========================================
         } catch (Exception e) {
             Log.e(TAG, "Error en downloadAll", e);
             runMain(() -> {
                 if (cb != null) cb.onError("all", e);
                 if (sOverlay != null) sOverlay.setError("Error descargando modelos");
             });
+            // ======== CONSOLA HACKER: error global ========
+            ModelConsoleOverlay.log("⚠ Error general descargando modelos: " + e.getMessage());
+            ModelConsoleOverlay.hideDelayed(2500);
+            // =============================================
         }
     }
 
@@ -228,6 +247,9 @@ public class ModelDownloader {
                         if (cb != null) cb.onError(id, ex);
                         if (sOverlay != null) sOverlay.setError("Error en " + id);
                     });
+                    // ======== CONSOLA HACKER: error por modelo ========
+                    ModelConsoleOverlay.log("⚠ Error descargando " + id + ": " + e.getMessage());
+                    // ==================================================
                     return;
                 }
                 long sleep = (long) (BASE_BACKOFF_MS * Math.pow(2, attempt - 1));
@@ -254,6 +276,7 @@ public class ModelDownloader {
                     runMain(() -> {
                         if (cb != null) cb.onComplete(id, f);
                         if (sOverlay != null) sOverlay.setSnapshot(id, index, total, f.length(), f.length(), 0);
+                        ModelConsoleOverlay.log("✅ Modelo descargado (ya existente): " + id);
                     });
                     return;
                 }
@@ -262,6 +285,7 @@ public class ModelDownloader {
                 runMain(() -> {
                     if (cb != null) cb.onComplete(id, f);
                     if (sOverlay != null) sOverlay.setSnapshot(id, index, total, f.length(), f.length(), 0);
+                    ModelConsoleOverlay.log("✅ Modelo descargado (ya existente): " + id);
                 });
                 return;
             }
@@ -436,6 +460,7 @@ public class ModelDownloader {
                         if (cb != null) cb.onComplete(id, f);
                         if (sOverlay != null) sOverlay.update(id, index, total,
                                 f.length(), (totalBytes > 0 ? totalBytes : f.length()), 0);
+                        ModelConsoleOverlay.log("✅ Modelo descargado: " + id);
                     });
                     return; // listo 1 ítem
                 }
