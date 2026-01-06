@@ -1,0 +1,12 @@
+.idea/
+.gradle/
+local.properties
+/build/
+/app/build/
+
+# Evitar volver a incluir volcados de mlc-chat dentro del código fuente
+**/mlc-chat/.idea/
+**/mlc-chat/META-INF/
+**/mlc-chat/classes*.dex
+**/mlc-chat/resources.arsc
+**/mlc-chat/*.bin
