@@ -113,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
 
     // ===== DESCARGA DE MODELOS (handle para cancelación opcional) =====
     private ModelDownloader.TaskHandle modelsTask;
+    private ActivityResultLauncher<String> audioPermissionLauncher;
 
     // ===== VERIFICACIÓN DE MODELOS LLM (por carpetas) =====
     // Directorio preferido: /data/data/<pkg>/files/models
@@ -180,6 +181,13 @@ public class MainActivity extends AppCompatActivity {
         return String.format(Locale.US, "%.2f GB", gb);
     }
 
+    /** Requiere mlc-chat-config.json para considerarlo modelo válido. */
+    private static boolean hasMlcConfig(File dir) {
+        if (dir == null || !dir.isDirectory()) return false;
+        File cfg = new File(dir, "mlc-chat-config.json");
+        return cfg.exists();
+    }
+
     // ================== ⬇️ Helpers de modelos (gguf o carpetas MLC) ⬇️ ==================
 
     /** Devuelve true si esta carpeta parece ser un modelo MLC (Phi, Qwen, etc.). */
@@ -188,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
         String name = dir.getName().toLowerCase(Locale.ROOT);
 
         // Nuestros modelos vienen como "...-MLC"
-        if (name.endsWith("-mlc")) return true;
+        if (name.endsWith("-mlc") && hasMlcConfig(dir)) return true;
 
         // Heurística extra por si cambia el nombre: carpeta NO vacía con algún bin/json/gguf dentro.
         File[] children = dir.listFiles();
@@ -196,7 +204,8 @@ public class MainActivity extends AppCompatActivity {
         for (File c : children) {
             if (!c.isFile()) continue;
             String n = c.getName().toLowerCase(Locale.ROOT);
-            if (n.endsWith(".gguf") || n.endsWith(".bin") || n.endsWith(".json") || n.endsWith(".model")) {
+            if ((n.endsWith(".gguf") || n.endsWith(".bin") || n.endsWith(".json") || n.endsWith(".model"))
+                    && hasMlcConfig(dir)) {
                 return true;
             }
         }
@@ -299,7 +308,16 @@ public class MainActivity extends AppCompatActivity {
     private boolean checkModelsAndNotify() {
         List<File> modelos = findAllGgufAllRoots();
 
-        if (modelos.isEmpty()) {
+        // Filtrar sólo aquellos que tienen mlc-chat-config.json
+        List<File> compatibles = new ArrayList<>();
+        for (File f : modelos) {
+            File dir = f.isDirectory() ? f : f.getParentFile();
+            if (dir != null && hasMlcConfig(dir)) {
+                compatibles.add(f.isDirectory() ? f : dir);
+            }
+        }
+
+        if (compatibles.isEmpty()) {
             StringBuilder msg = new StringBuilder("❌ No hay modelos locales detectados.\nRutas revisadas:\n");
             for (File r : getModelRoots()) {
                 msg.append(" • ").append(r.getAbsolutePath()).append('\n');
@@ -309,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
 
             Toast.makeText(
                     this,
-                    "Aún no hay modelos locales. Cuando termine la descarga desaparecerá este aviso.",
+                    "Aún no hay modelos MLC listos. Cuando termine la descarga desaparecerá este aviso.",
                     Toast.LENGTH_SHORT
             ).show();
 
@@ -317,21 +335,21 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Orden sugerido: por tamaño (carpetas o archivos) descendente
-        modelos.sort((a, b) -> Long.compare(modelSize(b), modelSize(a)));
-        File elegido = modelos.get(0);
+        compatibles.sort((a, b) -> Long.compare(modelSize(b), modelSize(a)));
+        File elegido = compatibles.get(0);
 
         // 💾 Persistir la elección para que el motor lo cargue
         savePreferredModel(elegido);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("✅ Modelos detectados (").append(modelos.size()).append(")\n");
-        for (int i = 0; i < Math.min(8, modelos.size()); i++) {
-            File f = modelos.get(i);
+        sb.append("✅ Modelos detectados (").append(compatibles.size()).append(")\n");
+        for (int i = 0; i < Math.min(8, compatibles.size()); i++) {
+            File f = compatibles.get(i);
             sb.append(" • ").append(f.getName())
                     .append(" — ").append(humanGB(modelSize(f)))
                     .append("\n    ").append(f.getAbsolutePath()).append("\n");
         }
-        sb.append("Total local: ").append(humanGB(totalSize(modelos))).append("\n")
+        sb.append("Total local: ").append(humanGB(totalSize(compatibles))).append("\n")
                 .append("Modelo preferido ahora: ").append(elegido.getName());
 
         String report = sb.toString();
@@ -349,6 +367,9 @@ public class MainActivity extends AppCompatActivity {
         Map<String, File> found = new LinkedHashMap<>();
 
         for (File f : modelos) {
+            File dir = f.isDirectory() ? f : f.getParentFile();
+            if (dir == null || !hasMlcConfig(dir)) continue;
+
             String key;
             if (f.isDirectory()) {
                 key = f.getName();
@@ -446,6 +467,9 @@ public class MainActivity extends AppCompatActivity {
                                     CloudSyncManager.uploadGrafoBundle(this);
                                 }
                             }
+                        } else {
+                            Toast.makeText(this, "No pude escuchar tu voz. Revisa el permiso de micrófono.", Toast.LENGTH_SHORT).show();
+                            updateAudioPermissionState();
                         }
                     });
 
@@ -492,6 +516,17 @@ public class MainActivity extends AppCompatActivity {
         // Adjuntar overlay de consola para descargas
         ModelConsoleOverlay.attach(this);
 
+        audioPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    btnEscuchar.setEnabled(granted);
+                    btnEscuchar.setAlpha(granted ? 1f : 0.5f);
+                    if (!granted) {
+                        Toast.makeText(this, "Activa el micrófono para usar reconocimiento de voz.", Toast.LENGTH_LONG).show();
+                    }
+                }
+        );
+
         // ==== FIND VIEW BY ID ====
         inputChat             = findViewById(R.id.inputChat);
         btnEnviarMensaje      = findViewById(R.id.btnEnviarMensaje);
@@ -508,6 +543,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Animación flotante de Salve
         imagenSalve.setAnimation(AnimationUtils.loadAnimation(this, R.anim.float_animation));
+
+        updateAudioPermissionState();
 
         // ==== INICIALIZAR LÓGICA ====
         memoria              = new MemoriaEmocional(this);
@@ -564,6 +601,10 @@ public class MainActivity extends AppCompatActivity {
                 motorConversacional.hablar(sanitizeForSpeech("Estoy aquí, ¿en qué puedo ayudarte?")));
 
         btnEscuchar.setOnClickListener(v -> {
+            if (!hasAudioPermission()) {
+                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+                return;
+            }
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
@@ -657,6 +698,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         SyncWorker.enqueueWhenOnline(getApplicationContext());
+
+        updateAudioPermissionState();
 
         if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
             Toast.makeText(this, "Activa las notificaciones para ver el progreso en segundo plano.", Toast.LENGTH_LONG).show();
@@ -1080,6 +1123,22 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Para la burbuja, activa 'Mostrar sobre otras apps' en Ajustes.", Toast.LENGTH_LONG).show();
         } else {
             iniciarBurbujaFlotante();
+        }
+    }
+
+    private boolean hasAudioPermission() {
+        return ContextCompat.checkSelfPermission(
+                this, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void updateAudioPermissionState() {
+        boolean granted = hasAudioPermission();
+        btnEscuchar.setEnabled(granted);
+        if (!granted) {
+            btnEscuchar.setAlpha(0.5f);
+        } else {
+            btnEscuchar.setAlpha(1f);
         }
     }
 

@@ -19,6 +19,9 @@ object BasicLocalLlm {
     @Volatile
     private var initialized: Boolean = false
 
+    @JvmStatic
+    fun isInitialized(): Boolean = initialized
+
     /**
      * Inicializa el motor con el modelo ya descargado.
      *
@@ -39,8 +42,13 @@ object BasicLocalLlm {
             }
 
             // Igual que hace AppViewModel.ChatState.mainReloadChat
-            engine.reload(modelPath, modelLib)
-            initialized = true
+            try {
+                engine.reload(modelPath, modelLib)
+                initialized = true
+            } catch (e: Exception) {
+                initialized = false
+                throw e
+            }
         }
     }
 
@@ -57,10 +65,14 @@ object BasicLocalLlm {
         }
 
         return runBlocking {
-            val responses = engine.chat.completions.create(
-                messages = messages,
-                stream_options = OpenAIProtocol.StreamOptions(include_usage = true)
-            )
+            val responses = try {
+                engine.chat.completions.create(
+                    messages = messages,
+                    stream_options = OpenAIProtocol.StreamOptions(include_usage = true)
+                )
+            } catch (e: Exception) {
+                return@runBlocking "No se pudo generar respuesta con el motor MLC: ${e.message}"
+            }
 
             val sb = StringBuilder()
             var finishReasonLength = false
