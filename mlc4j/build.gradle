@@ -24,5 +24,6 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.annotation:annotation:1.9.1'
+    // Usa el runtime oficial de MLC para Android (incluye JNI/AAR reales)
+    api 'ai.mlc:mlc4j-android:0.1.0'
 }
