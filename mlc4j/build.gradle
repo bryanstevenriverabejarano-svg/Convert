@@ -1,6 +1,10 @@
+import org.gradle.api.GradleException
+import org.gradle.api.file.RelativePath
+
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 android {
@@ -21,9 +25,82 @@ android {
     kotlinOptions {
         jvmTarget = '11'
     }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs', 'output']
+        }
+    }
 }
 
 dependencies {
-    // Usa el runtime oficial de MLC para Android (incluye JNI/AAR reales)
-    api 'ai.mlc:mlc4j-android:0.1.0'
+    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+}
+
+// ----------------------------------------------------------------------
+// TVM runtime fetcher
+// ----------------------------------------------------------------------
+def tvmRuntimeZipName = "tvm4j_runtime_packed-android-arm64.zip"
+def tvmRuntimeDownloadUrl = project.findProperty("tvmRuntimeUrl") ?: System.getenv("TVM_RUNTIME_URL")
+def tvmRuntimeDownloadDir = file("${buildDir}/runtime-download")
+def tvmRuntimeZip = file("${tvmRuntimeDownloadDir}/${tvmRuntimeZipName}")
+def tvmRuntimeSo = file("src/main/jniLibs/arm64-v8a/libtvm4j_runtime_packed.so")
+def tvmRuntimeExtractDir = tvmRuntimeSo.parentFile
+
+tasks.register("fetchTvmRuntime") {
+    group = "mlc4j"
+    description = "Descarga y descomprime libtvm4j_runtime_packed.so desde el asset externo"
+    outputs.file(tvmRuntimeSo)
+
+    doLast {
+        if (tvmRuntimeSo.exists()) {
+            logger.lifecycle("TVM runtime ya presente en ${tvmRuntimeSo}")
+            return
+        }
+
+        if (!tvmRuntimeDownloadUrl) {
+            throw new GradleException(
+                    "Missing TVM runtime. Run ./gradlew :mlc4j:fetchTvmRuntime " +
+                            "-PtvmRuntimeUrl=https://github.com/<org>/<repo>/releases/download/<tag>/${tvmRuntimeZipName}"
+            )
+        }
+
+        tvmRuntimeDownloadDir.mkdirs()
+        logger.lifecycle("Descargando TVM runtime desde ${tvmRuntimeDownloadUrl}")
+        tvmRuntimeZip.withOutputStream { outStream ->
+            new URL(tvmRuntimeDownloadUrl.toString()).withInputStream { input ->
+                outStream << input
+            }
+        }
+
+        copy {
+            from zipTree(tvmRuntimeZip)
+            include "arm64-v8a/libtvm4j_runtime_packed.so", "libtvm4j_runtime_packed.so"
+            into tvmRuntimeExtractDir
+            eachFile { fileCopyDetails ->
+                fileCopyDetails.relativePath = new RelativePath(true, fileCopyDetails.name)
+            }
+            includeEmptyDirs = false
+        }
+
+        if (!tvmRuntimeSo.exists()) {
+            throw new GradleException(
+                    "Missing TVM runtime after extraction. " +
+                            "Ensure the zip contains libtvm4j_runtime_packed.so at the root or in arm64-v8a/, " +
+                            "or run ./gradlew :mlc4j:fetchTvmRuntime -PtvmRuntimeUrl=<...>"
+            )
+        }
+        logger.lifecycle("TVM runtime descargado en ${tvmRuntimeSo}")
+    }
+}
+
+def gateTasks = ["preBuild", "mergeDebugNativeLibs", "mergeReleaseNativeLibs", "mergeNativeLibs"]
+tasks.configureEach { task ->
+    if (gateTasks.contains(task.name)) {
+        task.dependsOn(tasks.named("fetchTvmRuntime"))
+    }
 }

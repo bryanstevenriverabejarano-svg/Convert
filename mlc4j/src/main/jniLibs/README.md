@@ -1,0 +1,1 @@
+This directory is populated at build time by :mlc4j:fetchTvmRuntime.
