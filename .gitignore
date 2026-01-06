@@ -10,3 +10,8 @@ local.properties
 **/mlc-chat/classes*.dex
 **/mlc-chat/resources.arsc
 **/mlc-chat/*.bin
+
+# TVM runtime artifacts (fetched externally)
+mlc4j/src/main/jniLibs/**/*.so
+app/mlc4j/src/main/jniLibs/**/*.so
+mlc4j/build/runtime-download/
