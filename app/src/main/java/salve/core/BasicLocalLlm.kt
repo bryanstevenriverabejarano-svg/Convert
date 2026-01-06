@@ -4,6 +4,7 @@ import ai.mlc.mlcllm.MLCEngine
 import ai.mlc.mlcllm.OpenAIProtocol
 import ai.mlc.mlcllm.OpenAIProtocol.ChatCompletionMessage
 import ai.mlc.mlcllm.OpenAIProtocol.ChatCompletionMessageContent
+import android.util.Log
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -44,6 +45,7 @@ object BasicLocalLlm {
             // Igual que hace AppViewModel.ChatState.mainReloadChat
             try {
                 engine.reload(modelPath, modelLib)
+                Log.i(TAG, "MLC runtime cargado con modelPath=$modelPath modelLib=$modelLib")
                 initialized = true
             } catch (e: Exception) {
                 initialized = false
@@ -94,7 +96,11 @@ object BasicLocalLlm {
                 sb.append(" [output truncated due to context length limit...]")
             }
 
-            sb.toString()
+            val finalText = sb.toString()
+            if (finalText.isBlank()) {
+                Log.w(TAG, "El motor MLC devolvió una respuesta vacía.")
+            }
+            finalText
         }
     }
 
@@ -109,4 +115,6 @@ object BasicLocalLlm {
         )
         return simpleChat(listOf(msg))
     }
+
+    private const val TAG = "BasicLocalLlm"
 }
