@@ -519,8 +519,8 @@ public class MainActivity extends AppCompatActivity {
         audioPermissionLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
                 granted -> {
-                    btnEscuchar.setEnabled(granted);
-                    btnEscuchar.setAlpha(granted ? 1f : 0.5f);
+                    btnEscuchar.setEnabled(true);
+                    btnEscuchar.setAlpha(granted ? 1f : 0.75f);
                     if (!granted) {
                         Toast.makeText(this, "Activa el micrófono para usar reconocimiento de voz.", Toast.LENGTH_LONG).show();
                     }
@@ -1134,12 +1134,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateAudioPermissionState() {
         boolean granted = hasAudioPermission();
-        btnEscuchar.setEnabled(granted);
-        if (!granted) {
-            btnEscuchar.setAlpha(0.5f);
-        } else {
-            btnEscuchar.setAlpha(1f);
-        }
+        btnEscuchar.setEnabled(true);
+        btnEscuchar.setAlpha(granted ? 1f : 0.75f);
     }
 
     private void openOverlaySettings() {
