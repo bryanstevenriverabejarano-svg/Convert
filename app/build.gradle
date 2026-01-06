@@ -7,6 +7,7 @@ android {
 
     namespace 'com.salve.app'
     compileSdk 34
+    buildToolsVersion "34.0.0"
 
     defaultConfig {
         applicationId "com.salve.app"
@@ -47,8 +48,8 @@ android {
 }
 
 dependencies {
-    // Motor MLC para Java/Android (binario oficial)
-    implementation 'ai.mlc:mlc4j-android:0.1.0'
+    // Motor MLC para Java/Android (módulo local)
+    implementation project(':mlc4j')
 
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
