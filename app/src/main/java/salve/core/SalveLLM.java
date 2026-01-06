@@ -50,6 +50,7 @@ public class SalveLLM {
     private String modelLib;    // nombre de la librería del modelo
     private boolean engineInitialized = false;
     private boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
+    private String lastErrorMessage   = null;
 
     private SalveLLM(Context context) {
         this.appContext = context.getApplicationContext();
@@ -67,6 +68,7 @@ public class SalveLLM {
             modelLib = null;
             engineInitialized = false;
             modelAvailable = false;
+            lastErrorMessage = e.getMessage();
         }
     }
 
@@ -107,12 +109,26 @@ public class SalveLLM {
         // Manejar subcarpeta interna con el mismo nombre
         File effectiveDir = resolveEffectiveModelDir(dir);
 
+        // Validar existencia de config antes de seguir
+        File cfg = new File(effectiveDir, MODEL_CONFIG_FILENAME);
+        if (!cfg.exists()) {
+            throw new IllegalStateException(
+                    "No se encontró " + MODEL_CONFIG_FILENAME + " en " + effectiveDir.getAbsolutePath()
+            );
+        }
+
         this.modelPath = effectiveDir.getAbsolutePath();
         this.modelLib  = detectModelLibFromConfig(effectiveDir);
 
         if (this.modelLib == null || this.modelLib.trim().isEmpty()) {
             throw new IllegalStateException(
                     "No se pudo determinar ninguna librería para el modelo en " + this.modelPath
+            );
+        }
+
+        if (!isModelLibPresent(effectiveDir, this.modelLib)) {
+            throw new IllegalStateException(
+                    "No se encontró la librería del modelo (" + this.modelLib + ") en " + effectiveDir.getAbsolutePath()
             );
         }
 
@@ -256,14 +272,15 @@ public class SalveLLM {
             Log.w(TAG,
                     "generate() llamado pero el modelo local NO está disponible. " +
                             "Devolviendo null (se usará fallback).");
-            return null;
+            return "No hay modelo local listo todavía. Puedes esperar a la descarga o elegir uno compatible.";
         }
 
         try {
             initEngineIfNeeded();
         } catch (Exception e) {
+            lastErrorMessage = e.getMessage();
             Log.e(TAG, "Error inicializando el LLM local en generate()", e);
-            return null;
+            return "No pude preparar el modelo local: " + e.getMessage();
         }
 
         String decoratedPrompt = decoratePrompt(prompt, role);
@@ -271,8 +288,9 @@ public class SalveLLM {
         try {
             return BasicLocalLlm.INSTANCE.chatSinglePrompt(decoratedPrompt);
         } catch (Exception e) {
+            lastErrorMessage = e.getMessage();
             Log.e(TAG, "Error generando respuesta con BasicLocalLlm", e);
-            return null;
+            return "El modelo local falló al responder: " + e.getMessage();
         }
     }
 
@@ -322,6 +340,16 @@ public class SalveLLM {
             modelLib = null;
             engineInitialized = false;
             modelAvailable = false;
+            lastErrorMessage = e.getMessage();
         }
+    }
+
+    private boolean isModelLibPresent(File modelDir, String libName) {
+        if (libName == null || libName.trim().isEmpty()) return false;
+        File candidate = new File(modelDir, libName);
+        if (candidate.exists()) return true;
+        // Muchos paquetes de MLC colocan las .so en la raíz o en subcarpetas
+        File found = findFirstSoRecursive(modelDir);
+        return found != null && found.getName().equals(libName);
     }
 }

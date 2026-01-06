@@ -424,11 +424,16 @@ public class MotorConversacional {
             String out = llm.generate(prompt.toString(), SalveLLM.Role.CONVERSACIONAL);
             if (out == null) return generarFallbackPorEmocion(emocion, respuestaBase);
 
-            out = out.trim();
-            if (out.length() < 5) {
+            String trimmed = out.trim();
+            String lower = trimmed.toLowerCase(Locale.ROOT);
+            if (lower.contains("modelo local") && lower.contains("no") && lower.contains("disponible")) {
                 return generarFallbackPorEmocion(emocion, respuestaBase);
             }
-            return out;
+
+            if (trimmed.length() < 5) {
+                return generarFallbackPorEmocion(emocion, respuestaBase);
+            }
+            return trimmed;
         } catch (Exception e) {
             Log.e("Salve/LLM", "Error al generar respuesta conversacional", e);
             return generarFallbackPorEmocion(emocion, respuestaBase);

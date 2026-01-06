@@ -12,6 +12,8 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url "https://jitpack.io" }
+        // Repositorio oficial de MLC con el AAR binario de mlc4j
+        maven { url "https://mlc.ai/package/android" }
     }
 }
 
@@ -19,12 +21,3 @@ rootProject.name = "MLCChat"
 
 // Módulo principal de la app
 include(":app")
-
-// Módulo mlc4j (motor MLC para Java)
-include(":mlc4j")
-// Si la carpeta mlc4j está al MISMO nivel que MLCChat, usa ../mlc4j
-project(":mlc4j").projectDir = file("../mlc4j")
-
-// Si en algún momento mueves la carpeta mlc4j DENTRO del proyecto (al lado de app),
-// cambia la línea anterior por:
-// project(":mlc4j").projectDir = file("mlc4j")
