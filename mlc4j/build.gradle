@@ -55,13 +55,9 @@ tasks.register("fetchTvmRuntime") {
     group = "mlc4j"
     description = "Descarga y descomprime libtvm4j_runtime_packed.so desde el asset externo"
     outputs.file(tvmRuntimeSo)
+    onlyIf { !tvmRuntimeSo.exists() }
 
     doLast {
-        if (tvmRuntimeSo.exists()) {
-            logger.lifecycle("TVM runtime ya presente en ${tvmRuntimeSo}")
-            return
-        }
-
         if (!tvmRuntimeDownloadUrl) {
             throw new GradleException(
                     "Missing TVM runtime. Run ./gradlew :mlc4j:fetchTvmRuntime " +
