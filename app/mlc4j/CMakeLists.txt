@@ -35,11 +35,9 @@ set(JNI_HEADER ${CMAKE_BINARY_DIR}/jni_header)
 add_jar(tvm4j_core ${javasources} GENERATE_NATIVE_HEADERS tvm4jheaders
         DESTINATION ${JNI_HEADER})
 
-add_custom_command(
-  TARGET tvm4j_core
-  POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy ${JNI_HEADER}/org_apache_tvm_LibInfo.h
-          ${JNI_HEADER}/org_apache_tvm_native_c_api.h)
+# NOTE: Do not copy/rename JNI headers. Overwriting org_apache_tvm_native_c_api.h
+# with another class header can desync native signatures and cause ART aborts.
+# Use the generated headers directory directly via include paths instead.
 
 add_library(model_android STATIC IMPORTED)
 set_target_properties(
