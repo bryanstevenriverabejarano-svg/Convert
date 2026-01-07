@@ -57,6 +57,11 @@ tasks.register("fetchTvmRuntime") {
     onlyIf { !tvmRuntimeSo.exists() }
 
     doLast {
+        if (tvmRuntimeSo.exists()) {
+            logger.lifecycle("TVM runtime ya existe en ${tvmRuntimeSo}, se omite descarga.")
+            return
+        }
+
         def tvmRuntimeDownloadUrl = project.findProperty("tvmRuntimeUrl") ?: System.getenv("TVM_RUNTIME_URL")
         if (!tvmRuntimeDownloadUrl) {
             throw new GradleException(

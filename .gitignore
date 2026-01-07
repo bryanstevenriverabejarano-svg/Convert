@@ -3,6 +3,8 @@
 local.properties
 /build/
 /app/build/
+build/
+*.iml
 
 # Evitar volver a incluir volcados de mlc-chat dentro del código fuente
 **/mlc-chat/.idea/
