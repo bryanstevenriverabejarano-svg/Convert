@@ -31,6 +31,10 @@ class MLCEngine {
     init {
         state = EngineState()
         jsonFFIEngine = JSONFFIEngine()
+        if (!jsonFFIEngine.isAvailable()) {
+            val reason = jsonFFIEngine.getInitFailure() ?: "unknown error"
+            throw IllegalStateException("MLC runtime unavailable: $reason")
+        }
         chat = Chat(jsonFFIEngine, state)
 
         jsonFFIEngine.initBackgroundEngine { result ->
