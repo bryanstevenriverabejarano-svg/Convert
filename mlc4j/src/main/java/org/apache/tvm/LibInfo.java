@@ -13,17 +13,38 @@ import androidx.annotation.NonNull;
 public final class LibInfo {
     private static final String TAG = "LibInfo";
     private static volatile boolean initialized = false;
+    private static final java.util.concurrent.atomic.AtomicBoolean initStarted =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+    private static final java.util.concurrent.CountDownLatch initLatch =
+            new java.util.concurrent.CountDownLatch(1);
 
     private LibInfo() { }
 
-    public static synchronized void ensureLoaded() {
+    public static void ensureLoaded() {
         if (initialized) {
             return;
         }
-        System.loadLibrary("tvm4j_runtime_packed");
-        nativeLibInit();
-        initialized = true;
-        Log.i(TAG, "tvm4j_runtime_packed loaded");
+        if (initStarted.compareAndSet(false, true)) {
+            try {
+                synchronized (LibInfo.class) {
+                    if (!initialized) {
+                        System.loadLibrary("tvm4j_runtime_packed");
+                        nativeLibInit();
+                        initialized = true;
+                        Log.i(TAG, "tvm4j_runtime_packed loaded");
+                    }
+                }
+            } finally {
+                initLatch.countDown();
+            }
+        } else {
+            try {
+                initLatch.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while waiting for TVM runtime init", e);
+            }
+        }
     }
 
     public static native void nativeLibInit();
