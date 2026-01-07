@@ -45,7 +45,6 @@ dependencies {
 // TVM runtime fetcher
 // ----------------------------------------------------------------------
 def tvmRuntimeZipName = "tvm4j_runtime_packed-android-arm64.zip"
-def tvmRuntimeDownloadUrl = project.findProperty("tvmRuntimeUrl") ?: System.getenv("TVM_RUNTIME_URL")
 def tvmRuntimeDownloadDir = file("${buildDir}/runtime-download")
 def tvmRuntimeZip = file("${tvmRuntimeDownloadDir}/${tvmRuntimeZipName}")
 def tvmRuntimeSo = file("src/main/jniLibs/arm64-v8a/libtvm4j_runtime_packed.so")
@@ -58,6 +57,7 @@ tasks.register("fetchTvmRuntime") {
     onlyIf { !tvmRuntimeSo.exists() }
 
     doLast {
+        def tvmRuntimeDownloadUrl = project.findProperty("tvmRuntimeUrl") ?: System.getenv("TVM_RUNTIME_URL")
         if (!tvmRuntimeDownloadUrl) {
             throw new GradleException(
                     "Missing TVM runtime. Run ./gradlew :mlc4j:fetchTvmRuntime " +
@@ -97,6 +97,8 @@ tasks.register("fetchTvmRuntime") {
 def gateTasks = ["preBuild", "mergeDebugNativeLibs", "mergeReleaseNativeLibs", "mergeNativeLibs"]
 tasks.configureEach { task ->
     if (gateTasks.contains(task.name)) {
-        task.dependsOn(tasks.named("fetchTvmRuntime"))
+        if (!tvmRuntimeSo.exists()) {
+            task.dependsOn(tasks.named("fetchTvmRuntime"))
+        }
     }
 }
