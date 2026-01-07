@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace 'ai.mlc.mlcengineexample'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "ai.mlc.mlcengineexample"
