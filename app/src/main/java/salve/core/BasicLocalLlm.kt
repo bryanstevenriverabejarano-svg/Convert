@@ -15,7 +15,7 @@ import kotlinx.coroutines.runBlocking
  */
 object BasicLocalLlm {
 
-    private val engine = MLCEngine()
+    private val engine: MLCEngine by lazy { MLCEngine() }
 
     @Volatile
     private var initialized: Boolean = false
@@ -35,16 +35,22 @@ object BasicLocalLlm {
         if (initialized) return
 
         runBlocking {
+            val engineInstance = try {
+                engine
+            } catch (e: Exception) {
+                initialized = false
+                throw e
+            }
             // Por si hubiese algo cargado antes
             try {
-                engine.unload()
+                engineInstance.unload()
             } catch (_: Exception) {
                 // ignoramos errores al descargar lo anterior
             }
 
             // Igual que hace AppViewModel.ChatState.mainReloadChat
             try {
-                engine.reload(modelPath, modelLib)
+                engineInstance.reload(modelPath, modelLib)
                 Log.i(TAG, "MLC runtime cargado con modelPath=$modelPath modelLib=$modelLib")
                 initialized = true
             } catch (e: Exception) {
