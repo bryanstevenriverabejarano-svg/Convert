@@ -1,5 +1,7 @@
 package org.apache.tvm;
 
+import android.system.Os;
+import android.system.OsConstants;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -12,6 +14,7 @@ import androidx.annotation.NonNull;
  */
 public final class LibInfo {
     private static final String TAG = "LibInfo";
+    private static final long PAGE_SIZE_16K = 16 * 1024L;
     private static volatile boolean initialized = false;
     private static final java.util.concurrent.atomic.AtomicBoolean initStarted =
             new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -28,6 +31,13 @@ public final class LibInfo {
             try {
                 synchronized (LibInfo.class) {
                     if (!initialized) {
+                        if (is16kDevice() && !is16kRuntimeAllowed()) {
+                            throw new IllegalStateException(
+                                    "TVM runtime disabled on 16KB page-size devices. " +
+                                            "Rebuild libtvm4j_runtime_packed.so with 16KB alignment " +
+                                            "or set -Dmlc.allow16k=true to override."
+                            );
+                        }
                         System.loadLibrary("tvm4j_runtime_packed");
                         nativeLibInit();
                         initialized = true;
@@ -70,4 +80,18 @@ public final class LibInfo {
     public static native String[] tvmFuncListGlobalNames();
 
     public static native String tvmGetLastError();
+
+    private static boolean is16kDevice() {
+        try {
+            long pageSize = Os.sysconf(OsConstants._SC_PAGESIZE);
+            return pageSize == PAGE_SIZE_16K;
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to detect page size; assuming non-16KB.", e);
+            return false;
+        }
+    }
+
+    private static boolean is16kRuntimeAllowed() {
+        return Boolean.parseBoolean(System.getProperty("mlc.allow16k", "false"));
+    }
 }

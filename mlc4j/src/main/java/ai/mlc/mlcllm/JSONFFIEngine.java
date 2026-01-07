@@ -27,6 +27,8 @@ public class JSONFFIEngine {
     private static final String JSON_FFI_MARKER = "json";
 
     private KotlinFunction streamCallback;
+    private final boolean available;
+    private final String initFailure;
     private final AtomicBoolean functionsReady = new AtomicBoolean(false);
     private Function reloadFunc;
     private Function chatCompletionFunc;
@@ -37,16 +39,28 @@ public class JSONFFIEngine {
     private Function unloadFunc;
 
     public JSONFFIEngine() {
-        LibInfo.ensureLoaded();
+        boolean ready = false;
+        String failure = null;
+        try {
+            LibInfo.ensureLoaded();
+            ready = true;
+        } catch (RuntimeException e) {
+            Log.e(TAG, "TVM runtime init failed; JSON FFI disabled.", e);
+            failure = e.getMessage();
+        }
+        this.available = ready;
+        this.initFailure = failure;
     }
 
     public void initBackgroundEngine(KotlinFunction callback) {
+        ensureAvailable();
         this.streamCallback = callback;
         ensureFunctions();
         Log.i(TAG, "engine initialized (callbacks registered)");
     }
 
     public void reload(String engineConfigJSONStr) {
+        ensureAvailable();
         ensureFunctions();
         if (reloadFunc == null) {
             throw new IllegalStateException("No reload function available in the runtime.");
@@ -56,6 +70,7 @@ public class JSONFFIEngine {
     }
 
     public void chatCompletion(String requestJSONStr, String requestId) {
+        ensureAvailable();
         ensureFunctions();
         if (chatCompletionFunc == null) {
             throw new IllegalStateException("No chat completion function available in the runtime.");
@@ -76,6 +91,7 @@ public class JSONFFIEngine {
     }
 
     public void runBackgroundLoop() {
+        ensureAvailable();
         ensureFunctions();
         if (runBackgroundLoopFunc != null) {
             runBackgroundLoopFunc.invoke();
@@ -83,6 +99,7 @@ public class JSONFFIEngine {
     }
 
     public void runBackgroundStreamBackLoop() {
+        ensureAvailable();
         ensureFunctions();
         if (runBackgroundStreamBackLoopFunc != null) {
             runBackgroundStreamBackLoopFunc.invoke();
@@ -102,12 +119,14 @@ public class JSONFFIEngine {
     }
 
     public void reset() {
+        ensureAvailable();
         if (resetFunc != null) {
             resetFunc.invoke();
         }
     }
 
     private void ensureFunctions() {
+        ensureAvailable();
         if (functionsReady.get()) {
             return;
         }
@@ -169,5 +188,20 @@ public class JSONFFIEngine {
             return prefix + ",\"request_id\":\"" + requestId + "\"}";
         }
         return json;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public String getInitFailure() {
+        return initFailure;
+    }
+
+    private void ensureAvailable() {
+        if (!available) {
+            String reason = initFailure == null ? "unknown error" : initFailure;
+            throw new IllegalStateException("TVM runtime unavailable: " + reason);
+        }
     }
 }
