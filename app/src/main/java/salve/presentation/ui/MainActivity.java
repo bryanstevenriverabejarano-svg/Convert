@@ -342,11 +342,12 @@ public class MainActivity extends AppCompatActivity {
 
         // 💾 Persistir la elección para que el motor lo cargue
         savePreferredModel(elegido);
+        // ⚠ Recargar el motor LLM para usar el nuevo modelo inmediatamente.
+        //   Si falla, seguimos con el fallback sin interrumpir la app.
         try {
-            SalveLLM.getInstance(this).forceReloadModel();
-            Log.d("SalveLLM", "forceReloadModel() después de guardar modelo preferido");
+            SalveLLM.getInstance(getApplicationContext()).forceReloadModel();
         } catch (Exception e) {
-            Log.e("SalveLLM", "No pude recargar SalveLLM tras guardar modelo", e);
+            Log.e("SalveDL/LLMReload", "Error al recargar el modelo local", e);
         }
 
         StringBuilder sb = new StringBuilder();
