@@ -28,7 +28,7 @@ android {
 
     sourceSets {
         main {
-            jniLibs.srcDirs = ['src/main/jniLibs', 'output']
+            jniLibs.srcDirs = ['src/main/jniLibs']
         }
     }
 }
@@ -100,9 +100,22 @@ tasks.register("fetchTvmRuntime") {
 }
 
 def isWindowsHost = System.getProperty("os.name").toLowerCase().contains("windows")
+def resolveReadElfFromNdk = { File ndkDir ->
+    if (!ndkDir?.exists()) {
+        return null
+    }
+    def binMatches = fileTree(ndkDir) {
+        include "**/toolchains/llvm/prebuilt/**/bin/llvm-readelf*"
+    }.files
+    if (binMatches.isEmpty()) {
+        return null
+    }
+    def preferred = binMatches.find { it.name.equalsIgnoreCase("llvm-readelf.exe") }
+    return (preferred ?: binMatches.first()).absolutePath
+}
 def resolveReadElf = { ->
     if (isWindowsHost) {
-        return null
+        return resolveReadElfFromNdk(android.ndkDirectory)
     }
     def candidates = ["llvm-readelf", "readelf"]
     def pathEnv = System.getenv("PATH") ?: ""
@@ -140,7 +153,46 @@ tasks.register("verifyTvmRuntimeAlignment") {
             throw new GradleException("Missing TVM runtime at ${tvmRuntimeSo}; run :mlc4j:fetchTvmRuntime")
         }
         if (isWindowsHost) {
-            logger.lifecycle("Skipping TVM runtime alignment check on Windows host.")
+            def readelf = resolveReadElf()
+            if (!readelf) {
+                logger.lifecycle("Skipping TVM runtime alignment check on Windows host (llvm-readelf not found in NDK).")
+                return
+            }
+            def output = new ByteArrayOutputStream()
+            exec {
+                commandLine readelf, "-l", tvmRuntimeSo.absolutePath
+                standardOutput = output
+            }
+            def lines = output.toString().readLines()
+            def failures = []
+            def pageSize = 0x4000
+            lines.each { line ->
+                def trimmed = line.trim()
+                if (!trimmed.startsWith("LOAD")) {
+                    return
+                }
+                def parts = trimmed.split("\\s+")
+                if (parts.length < 7) {
+                    return
+                }
+                def offset = parseHex(parts[1])
+                def vaddr = parseHex(parts[2])
+                def align = parseHex(parts[parts.length - 1])
+                if (align == null || offset == null || vaddr == null) {
+                    return
+                }
+                if (align < pageSize || (offset % pageSize) != 0 || (vaddr % pageSize) != 0) {
+                    failures.add("LOAD offset=${parts[1]} vaddr=${parts[2]} align=${parts[parts.length - 1]}")
+                }
+            }
+            if (!failures.isEmpty()) {
+                throw new GradleException(
+                        "libtvm4j_runtime_packed.so is not 16KB-aligned:\n" +
+                                failures.join("\n") +
+                                "\nRebuild with -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
+                )
+            }
+            logger.lifecycle("libtvm4j_runtime_packed.so is 16KB-aligned.")
             return
         }
         def readelf = resolveReadElf()
