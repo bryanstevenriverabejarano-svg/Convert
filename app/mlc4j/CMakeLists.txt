@@ -80,6 +80,13 @@ target_link_libraries(
   mlc_llm_static
   model_android
   -Wl,--no-whole-archive)
+if(ANDROID)
+  target_link_options(
+    tvm4j_runtime_packed
+    PRIVATE
+    "-Wl,-z,max-page-size=16384"
+    "-Wl,-z,common-page-size=16384")
+endif()
 
 target_compile_definitions(tvm4j_runtime_packed PUBLIC TVM4J_ANDROID)
 add_dependencies(tvm4j_runtime_packed tvm4j_core)

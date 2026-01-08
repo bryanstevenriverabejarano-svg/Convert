@@ -100,6 +100,22 @@ tasks.register("fetchTvmRuntime") {
 }
 
 def isWindowsHost = System.getProperty("os.name").toLowerCase().contains("windows")
+def resolveNdkDir = { ->
+    if (android.ndkDirectory != null && android.ndkDirectory.exists()) {
+        return android.ndkDirectory
+    }
+    def envCandidates = ["ANDROID_NDK_HOME", "ANDROID_NDK"]
+    for (def envVar : envCandidates) {
+        def value = System.getenv(envVar)
+        if (value) {
+            def dir = new File(value)
+            if (dir.exists()) {
+                return dir
+            }
+        }
+    }
+    return null
+}
 def resolveReadElfFromNdk = { File ndkDir ->
     if (!ndkDir?.exists()) {
         return null
@@ -115,7 +131,26 @@ def resolveReadElfFromNdk = { File ndkDir ->
 }
 def resolveReadElf = { ->
     if (isWindowsHost) {
-        return resolveReadElfFromNdk(android.ndkDirectory)
+        def ndkDir = resolveNdkDir()
+        def fromNdk = resolveReadElfFromNdk(ndkDir)
+        if (fromNdk) {
+            return fromNdk
+        }
+        def candidates = ["llvm-readelf.exe", "readelf.exe"]
+        def pathEnv = System.getenv("PATH") ?: ""
+        def pathEntries = pathEnv.split(java.io.File.pathSeparator)
+        for (def candidate : candidates) {
+            for (def entry : pathEntries) {
+                if (!entry) {
+                    continue
+                }
+                def file = new File(entry, candidate)
+                if (file.exists() && file.canExecute()) {
+                    return file.absolutePath
+                }
+            }
+        }
+        return null
     }
     def candidates = ["llvm-readelf", "readelf"]
     def pathEnv = System.getenv("PATH") ?: ""
