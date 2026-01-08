@@ -19,10 +19,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class JSONFFIEngine {
 
-    public interface KotlinFunction {
-        void invoke(String arg);
-    }
-
     private static final String TAG = "JSONFFIEngine";
     private static final String JSON_FFI_MARKER = "json";
 
