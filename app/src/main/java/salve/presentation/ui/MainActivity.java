@@ -397,39 +397,46 @@ public class MainActivity extends AppCompatActivity {
             if (srcRoot == null) continue;
             if (!srcRoot.exists() || srcRoot.equals(dstRoot)) continue;
 
-            moveGgufRecursively(srcRoot, dstRoot);
+            moveModelsRecursively(srcRoot, dstRoot);
         }
     }
 
-    private void moveGgufRecursively(File src, File dstRoot) {
+    private void moveModelsRecursively(File src, File dstRoot) {
         if (src == null || !src.exists()) return;
         File[] list = src.listFiles();
         if (list == null) return;
 
         for (File f : list) {
             if (f.isDirectory()) {
-                moveGgufRecursively(f, dstRoot);
-            } else if (f.getName().toLowerCase(Locale.ROOT).endsWith(".gguf")) {
-                // Construir subcarpeta destino usando el padre inmediato como "familia"
-                String family = (f.getParentFile() != null) ? f.getParentFile().getName() : "misc";
-                File famDst = new File(dstRoot, family);
-                if (!famDst.exists()) famDst.mkdirs();
-                File target = new File(famDst, f.getName());
-                if (target.exists()) continue;
-
-                boolean moved = f.renameTo(target);
-                if (!moved) {
-                    // Si no se pudo renombrar (entre volúmenes), intentar copiar
-                    try {
-                        copyFile(f, target);
-                        //noinspection ResultOfMethodCallIgnored
-                        f.delete();
-                        moved = true;
-                    } catch (Exception e) {
-                        Log.e("SalveDL/Migrate", "Copia fallida: " + f.getAbsolutePath(), e);
+                if (looksLikeModelDir(f)) {
+                    File targetDir = new File(dstRoot, f.getName());
+                    if (!targetDir.exists()) {
+                        boolean moved = moveDirWithFallback(f, targetDir);
+                        Log.d("SalveDL/Migrate", "Mov carpeta modelo " + f.getAbsolutePath()
+                                + " -> " + targetDir.getAbsolutePath() + " = " + moved);
                     }
+                    continue;
                 }
-                Log.d("SalveDL/Migrate", "Mov " + f.getAbsolutePath() + " -> " + target.getAbsolutePath() + " = " + moved);
+                moveModelsRecursively(f, dstRoot);
+            } else {
+                String name = f.getName().toLowerCase(Locale.ROOT);
+                if (name.endsWith(".gguf")) {
+                    // Construir subcarpeta destino usando el padre inmediato como "familia"
+                    String family = (f.getParentFile() != null) ? f.getParentFile().getName() : "misc";
+                    File famDst = new File(dstRoot, family);
+                    if (!famDst.exists()) famDst.mkdirs();
+                    File target = new File(famDst, f.getName());
+                    if (target.exists()) continue;
+                    boolean moved = moveFileWithFallback(f, target);
+                    Log.d("SalveDL/Migrate", "Mov " + f.getAbsolutePath()
+                            + " -> " + target.getAbsolutePath() + " = " + moved);
+                } else if (name.endsWith(".zip")) {
+                    File target = new File(dstRoot, f.getName());
+                    if (target.exists()) continue;
+                    boolean moved = moveFileWithFallback(f, target);
+                    Log.d("SalveDL/Migrate", "Mov zip " + f.getAbsolutePath()
+                            + " -> " + target.getAbsolutePath() + " = " + moved);
+                }
             }
         }
     }
@@ -441,6 +448,66 @@ public class MainActivity extends AppCompatActivity {
             int r;
             while ((r = in.read(buf)) != -1) out.write(buf, 0, r);
         }
+    }
+
+    private static void copyDir(File src, File dst) throws Exception {
+        if (!dst.exists() && !dst.mkdirs()) {
+            throw new Exception("No se pudo crear carpeta destino: " + dst.getAbsolutePath());
+        }
+        File[] list = src.listFiles();
+        if (list == null) return;
+        for (File f : list) {
+            File target = new File(dst, f.getName());
+            if (f.isDirectory()) {
+                copyDir(f, target);
+            } else {
+                copyFile(f, target);
+            }
+        }
+    }
+
+    private static boolean moveFileWithFallback(File src, File dst) {
+        boolean moved = src.renameTo(dst);
+        if (!moved) {
+            try {
+                copyFile(src, dst);
+                //noinspection ResultOfMethodCallIgnored
+                src.delete();
+                moved = true;
+            } catch (Exception e) {
+                Log.e("SalveDL/Migrate", "Copia fallida: " + src.getAbsolutePath(), e);
+            }
+        }
+        return moved;
+    }
+
+    private static boolean moveDirWithFallback(File src, File dst) {
+        boolean moved = src.renameTo(dst);
+        if (!moved) {
+            try {
+                copyDir(src, dst);
+                //noinspection ResultOfMethodCallIgnored
+                deleteDirRecursive(src);
+                moved = true;
+            } catch (Exception e) {
+                Log.e("SalveDL/Migrate", "Copia carpeta fallida: " + src.getAbsolutePath(), e);
+            }
+        }
+        return moved;
+    }
+
+    private static void deleteDirRecursive(File dir) {
+        if (dir == null || !dir.exists()) return;
+        File[] list = dir.listFiles();
+        if (list != null) {
+            for (File f : list) {
+                if (f.isDirectory()) deleteDirRecursive(f);
+                else //noinspection ResultOfMethodCallIgnored
+                    f.delete();
+            }
+        }
+        //noinspection ResultOfMethodCallIgnored
+        dir.delete();
     }
 
     // ===== RESULT LAUNCHERS =====
