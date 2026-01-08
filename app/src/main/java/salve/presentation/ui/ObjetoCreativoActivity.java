@@ -6,6 +6,9 @@ import android.os.Bundle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
+
+import salve.core.GlifoReliquia;
 import salve.core.MemoriaEmocional;
 import salve.core.ObjetoCreativo;
 import salve.core.ZonaReservada;
@@ -18,6 +21,21 @@ public class ObjetoCreativoActivity extends AppCompatActivity {
     public static final String EXTRA_SEED = "extra_seed";
     public static final String EXTRA_STYLE = "extra_style";
     public static final String EXTRA_RELIQUIA_ID = "extra_reliquia_id";
+
+    public static void openFromReliquia(Context context, GlifoReliquia reliquia) {
+        if (reliquia == null) {
+            return;
+        }
+        Intent intent = new Intent(context, ObjetoCreativoActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra(EXTRA_FORMA, ObjetoCreativo.Forma.GLIFO.name());
+        intent.putExtra(EXTRA_COLOR, reliquia.getColorArgb());
+        intent.putExtra(EXTRA_TAMANO_DP, (float) reliquia.getSizeDp());
+        intent.putExtra(EXTRA_SEED, reliquia.getSeed());
+        intent.putExtra(EXTRA_STYLE, reliquia.getStyle());
+        intent.putExtra(EXTRA_RELIQUIA_ID, reliquia.getId());
+        context.startActivity(intent);
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
