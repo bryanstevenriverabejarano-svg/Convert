@@ -14,6 +14,9 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import androidx.fragment.app.FragmentActivity;
+
+import salve.presentation.ui.InventarioReliquiasBottomSheet;
 import salve.presentation.ui.ObjetoCreativoActivity;
 /**
  * MotorConversacional.java
@@ -534,12 +537,25 @@ public class MotorConversacional {
         if (respuesta == null || respuesta.trim().isEmpty()) {
             return;
         }
-        lanzarObjetoCreativoSiExiste(respuesta);
+        String respuestaProcesada = respuesta;
+        if (respuestaProcesada.contains("[inventario]")) {
+            mostrarInventarioReliquias();
+            respuestaProcesada = respuestaProcesada.replace("[inventario]", "").trim();
+        }
+        lanzarObjetoCreativoSiExiste(respuestaProcesada);
         AutoCriticaCreativa critica = memoria.registrarAutoCriticaCreativa(entrada, respuesta);
         if (critica != null) {
             diario.escribirAutoCritica(critica.toNarrativa());
         }
-        hablar(respuesta);
+        hablar(respuestaProcesada);
+    }
+
+    private void mostrarInventarioReliquias() {
+        if (context instanceof FragmentActivity) {
+            FragmentActivity activity = (FragmentActivity) context;
+            InventarioReliquiasBottomSheet sheet = new InventarioReliquiasBottomSheet();
+            sheet.show(activity.getSupportFragmentManager(), "inventario_reliquias");
+        }
     }
 
     private void lanzarObjetoCreativoSiExiste(String texto) {

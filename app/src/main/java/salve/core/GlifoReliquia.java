@@ -12,7 +12,7 @@ public class GlifoReliquia {
     private final int sizeDp;
     private final long createdAt;
     private final String titulo;
-    private final String nota;
+    private final String significado;
 
     public GlifoReliquia(String id,
                          long seed,
@@ -21,7 +21,7 @@ public class GlifoReliquia {
                          int sizeDp,
                          long createdAt,
                          String titulo,
-                         String nota) {
+                         String significado) {
         this.id = id;
         this.seed = seed;
         this.style = style;
@@ -29,7 +29,7 @@ public class GlifoReliquia {
         this.sizeDp = sizeDp;
         this.createdAt = createdAt;
         this.titulo = titulo;
-        this.nota = nota;
+        this.significado = significado;
     }
 
     public String getId() {
@@ -60,8 +60,8 @@ public class GlifoReliquia {
         return titulo;
     }
 
-    public String getNota() {
-        return nota;
+    public String getSignificado() {
+        return significado;
     }
 
     public JSONObject toJson() {
@@ -74,7 +74,7 @@ public class GlifoReliquia {
             json.put("sizeDp", sizeDp);
             json.put("createdAt", createdAt);
             json.put("titulo", titulo);
-            json.put("nota", nota);
+            json.put("significado", significado);
         } catch (Exception ignored) {
         }
         return json;
@@ -92,11 +92,14 @@ public class GlifoReliquia {
             int sizeDp = json.optInt("sizeDp", 120);
             long createdAt = json.optLong("createdAt", System.currentTimeMillis());
             String titulo = json.optString("titulo", null);
-            String nota = json.optString("nota", null);
+            String significado = json.optString("significado", null);
+            if (significado == null || significado.trim().isEmpty()) {
+                significado = json.optString("nota", null);
+            }
             if (id == null) {
                 return null;
             }
-            return new GlifoReliquia(id, seed, style, colorArgb, sizeDp, createdAt, titulo, nota);
+            return new GlifoReliquia(id, seed, style, colorArgb, sizeDp, createdAt, titulo, significado);
         } catch (Exception ignored) {
             return null;
         }

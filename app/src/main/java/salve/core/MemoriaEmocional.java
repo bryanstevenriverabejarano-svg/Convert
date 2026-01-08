@@ -1206,6 +1206,45 @@ public class MemoriaEmocional {
                                               String nota) {
         String id = UUID.randomUUID().toString();
         String titulo = "Reliquia #" + (reliquias.size() + 1);
+        String significado = (nota == null || nota.trim().isEmpty())
+                ? "Reliquia forjada por Salve"
+                : nota.trim();
+
+        try {
+            SalveLLM llm = SalveLLM.getInstance(context);
+            if (llm != null) {
+                String prompt = "Genera un título breve (máximo 5 palabras) y un significado simbólico "
+                        + "para un glifo con seed=" + seed + ", estilo=" + style + ". "
+                        + "Devuelve en dos líneas: Titulo: ... y Significado: ...";
+                String respuesta = llm.generate(prompt, SalveLLM.Role.REFLEXION);
+                if (respuesta != null && !respuesta.trim().isEmpty()) {
+                    String lower = respuesta.toLowerCase(Locale.ROOT);
+                    if (!lower.contains("no hay modelo local")
+                            && !lower.contains("no pude preparar")
+                            && !lower.contains("modelo local falló")) {
+                        String[] lineas = respuesta.split("\n");
+                        for (String linea : lineas) {
+                            if (linea.toLowerCase(Locale.ROOT).contains("titulo")) {
+                                String value = linea.split(":", 2).length > 1
+                                        ? linea.split(":", 2)[1].trim()
+                                        : linea.trim();
+                                if (!value.isEmpty()) {
+                                    titulo = value;
+                                }
+                            } else if (linea.toLowerCase(Locale.ROOT).contains("significado")) {
+                                String value = linea.split(":", 2).length > 1
+                                        ? linea.split(":", 2)[1].trim()
+                                        : linea.trim();
+                                if (!value.isEmpty()) {
+                                    significado = value;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
         GlifoReliquia reliquia = new GlifoReliquia(
                 id,
                 seed,
@@ -1214,7 +1253,7 @@ public class MemoriaEmocional {
                 sizeDp,
                 System.currentTimeMillis(),
                 titulo,
-                nota
+                significado
         );
         reliquias.add(reliquia);
         persistirReliquiasGlifos();
