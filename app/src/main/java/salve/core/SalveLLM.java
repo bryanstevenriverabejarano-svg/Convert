@@ -9,6 +9,9 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 // 🔹 IMPORTANTE: import de tu wrapper Kotlin
 import salve.core.BasicLocalLlm;
@@ -117,6 +120,11 @@ public class SalveLLM {
             );
         }
 
+        Log.d(TAG, "resolveEffectiveModelDir=" + effectiveDir.getAbsolutePath() +
+                " files=" + Arrays.toString(effectiveDir.list()));
+
+        validateModelContents(effectiveDir);
+
         this.modelPath = effectiveDir.getAbsolutePath();
         this.modelLib  = detectModelLibFromConfig(effectiveDir);
 
@@ -127,9 +135,15 @@ public class SalveLLM {
         }
 
         if (!isModelLibPresent(effectiveDir, this.modelLib)) {
-            throw new IllegalStateException(
-                    "No se encontró la librería del modelo (" + this.modelLib + ") en " + effectiveDir.getAbsolutePath()
-            );
+            File fallback = findFirstSoRecursive(effectiveDir);
+            if (fallback != null) {
+                this.modelLib = fallback.getName();
+                Log.w(TAG, "No se encontró model_lib exacto. Usando .so detectado: " + this.modelLib);
+            } else {
+                throw new IllegalStateException(
+                        "No se encontró la librería del modelo (" + this.modelLib + ") en " + effectiveDir.getAbsolutePath()
+                );
+            }
         }
 
         Log.d(TAG, "Modelo configurado: path=" + this.modelPath + " lib=" + this.modelLib);
@@ -204,6 +218,8 @@ public class SalveLLM {
             Log.e(TAG, "Error leyendo/parsing " + MODEL_CONFIG_FILENAME + ". Usando libpenguin.so.", e);
         }
 
+        Log.d(TAG, "model_lib (from json) = " + libFromJson);
+
         if (libFromJson != null && !libFromJson.trim().isEmpty()) {
             // IMPORTANTE: MLC espera el nombre (libpenguin.so), no una ruta absoluta.
             return libFromJson.trim();
@@ -256,6 +272,8 @@ public class SalveLLM {
         // Llama a tu wrapper Kotlin
         BasicLocalLlm.INSTANCE.init(modelPath, modelLib);
         engineInitialized = true;
+        Log.d(TAG, "initEngineIfNeeded OK, BasicLocalLlm.isInitialized=" +
+                BasicLocalLlm.INSTANCE.isInitialized());
     }
 
     /**
@@ -351,5 +369,18 @@ public class SalveLLM {
         // Muchos paquetes de MLC colocan las .so en la raíz o en subcarpetas
         File found = findFirstSoRecursive(modelDir);
         return found != null && found.getName().equals(libName);
+    }
+
+    private void validateModelContents(File modelDir) throws Exception {
+        List<String> missing = new ArrayList<>();
+        String[] required = {MODEL_CONFIG_FILENAME, "params_shard_0.bin", "tokenizer.json"};
+        for (String req : required) {
+            if (!new File(modelDir, req).exists()) {
+                missing.add(req);
+            }
+        }
+        if (!missing.isEmpty()) {
+            throw new IllegalStateException("Modelo incompleto. Faltan: " + missing);
+        }
     }
 }
