@@ -48,6 +48,28 @@ public class MotorConversacional {
     private final SharedPreferences preferencias;
     private TextToSpeech tts;
 
+    // ==== Estado para glifos personalizados ====
+    /**
+     * Cuando el usuario solicita un glifo paramétrico personalizado, Salve
+     * entrará en modo de recolección de parámetros. En este modo no se
+     * invoca el LLM, sino que se le pide al usuario cada parámetro (semilla,
+     * estilo, tamaño y color) y se guarda en campos temporales. Una vez
+     * recogidos todos los parámetros se construye la directiva correspondiente
+     * y se lanza el ObjetoCreativo.
+     */
+    private boolean esperandoParamsGlifo = false;
+    private int indiceParamGlifo = 0;
+    private Long tmpSeed;
+    private String tmpStyle;
+    private Float tmpSize;
+    private String tmpColor;
+
+    /**
+     * Secuencia de nombres de parámetros a solicitar para un glifo personalizado.
+     * 0 = seed (long), 1 = style (ORB, SIGIL, SPIRAL), 2 = size (float dp), 3 = color (string hex).
+     */
+    private final String[] ordenParamsGlifo = {"seed", "style", "size", "color"};
+
     /**
      * Constructor de MotorConversacional.
      *
@@ -108,7 +130,32 @@ public class MotorConversacional {
     public void procesarEntrada(String entrada, boolean entradaPorVoz) {
         if (entrada == null || entrada.trim().isEmpty()) return;
 
+        if (esperandoParamsGlifo) {
+            manejarRespuestaParametroGlifo(entrada);
+            return;
+        }
+
         String entradaMinus = entrada.toLowerCase(Locale.ROOT);
+        if (entradaMinus.contains("glifo personalizado")
+                || entradaMinus.contains("glifo paramétrico")
+                || entradaMinus.contains("glifo parametrico")
+                || entradaMinus.contains("glifo con parámetros")
+                || entradaMinus.contains("glifo con parametros")
+                || entradaMinus.contains("glifo paramétrico personalizado")
+                || entradaMinus.contains("forja un glifo con parámetros")
+                || entradaMinus.contains("forja un glifo con parametros")
+                || entradaMinus.contains("quiero un glifo paramétrico")
+                || entradaMinus.contains("quiero un glifo parametrico")) {
+            esperandoParamsGlifo = true;
+            indiceParamGlifo = 0;
+            tmpSeed = null;
+            tmpStyle = null;
+            tmpSize = null;
+            tmpColor = null;
+            hablar("¿Cuál es la semilla (un número)?");
+            return;
+        }
+
         if (entradaMinus.contains("reliquia")
                 && (entradaMinus.contains("ultima") || entradaMinus.contains("última"))) {
             if (invocarReliquia(memoria.getUltimaReliquia())) {
@@ -548,6 +595,76 @@ public class MotorConversacional {
             diario.escribirAutoCritica(critica.toNarrativa());
         }
         hablar(respuestaProcesada);
+    }
+
+    private void manejarRespuestaParametroGlifo(String entrada) {
+        if (entrada == null || entrada.trim().isEmpty()) {
+            hablar("Necesito una respuesta para continuar.");
+            return;
+        }
+
+        String entradaTrim = entrada.trim();
+        switch (indiceParamGlifo) {
+            case 0:
+                try {
+                    tmpSeed = Long.parseLong(entradaTrim);
+                } catch (NumberFormatException e) {
+                    hablar("Esa semilla no parece un número. ¿Cuál es la semilla (un número)?");
+                    return;
+                }
+                indiceParamGlifo = 1;
+                hablar("¿Qué estilo? (ORB, SIGIL o SPIRAL)");
+                break;
+            case 1:
+                String styleUpper = entradaTrim.toUpperCase(Locale.ROOT);
+                if (!styleUpper.equals("ORB") && !styleUpper.equals("SIGIL") && !styleUpper.equals("SPIRAL")) {
+                    hablar("Ese estilo no es válido. ¿Qué estilo? (ORB, SIGIL o SPIRAL)");
+                    return;
+                }
+                tmpStyle = styleUpper;
+                indiceParamGlifo = 2;
+                hablar("¿Qué tamaño en dp? (por ejemplo: 140)");
+                break;
+            case 2:
+                try {
+                    tmpSize = Float.parseFloat(entradaTrim);
+                } catch (NumberFormatException e) {
+                    hablar("Ese tamaño no parece válido. ¿Qué tamaño en dp? (por ejemplo: 140)");
+                    return;
+                }
+                indiceParamGlifo = 3;
+                hablar("¿Qué color en formato #RRGGBB?");
+                break;
+            case 3:
+                tmpColor = entradaTrim;
+                esperandoParamsGlifo = false;
+                String directiva = String.format(
+                        Locale.ROOT,
+                        "[glifo:seed=%d,style=%s,size=%.0f,color=%s]",
+                        tmpSeed,
+                        tmpStyle,
+                        tmpSize,
+                        tmpColor
+                );
+                lanzarObjetoCreativoSiExiste(directiva);
+                hablar("Aquí está tu glifo personalizado.");
+                tmpSeed = null;
+                tmpStyle = null;
+                tmpSize = null;
+                tmpColor = null;
+                indiceParamGlifo = 0;
+                break;
+            default:
+                esperandoParamsGlifo = false;
+                indiceParamGlifo = 0;
+                tmpSeed = null;
+                tmpStyle = null;
+                tmpSize = null;
+                tmpColor = null;
+                hablar("Vamos a intentarlo de nuevo. ¿Cuál es la semilla (un número)?");
+                esperandoParamsGlifo = true;
+                break;
+        }
     }
 
     private void mostrarInventarioReliquias() {
