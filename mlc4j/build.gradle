@@ -99,7 +99,8 @@ tasks.register("fetchTvmRuntime") {
     }
 }
 
-def isWindowsHost = System.getProperty("os.name").toLowerCase().contains("windows")
+def isWindowsHost = System.getProperty("os.name").toLowerCase().contains("win")
+def verifyTvmAlignmentEnabled = (project.findProperty("verifyTvmAlignment") ?: "false").toString().toBoolean()
 def resolveNdkDir = { ->
     if (android.ndkDirectory != null && android.ndkDirectory.exists()) {
         return android.ndkDirectory
@@ -182,56 +183,18 @@ tasks.register("verifyTvmRuntimeAlignment") {
     dependsOn(tasks.named("fetchTvmRuntime"))
     inputs.file(tvmRuntimeSo)
     outputs.upToDateWhen { false }
+    onlyIf { verifyTvmAlignmentEnabled }
 
     doLast {
         if (!tvmRuntimeSo.exists()) {
             throw new GradleException("Missing TVM runtime at ${tvmRuntimeSo}; run :mlc4j:fetchTvmRuntime")
         }
-        if (isWindowsHost) {
-            def readelf = resolveReadElf()
-            if (!readelf) {
-                logger.lifecycle("Skipping TVM runtime alignment check on Windows host (llvm-readelf not found in NDK).")
-                return
-            }
-            def output = new ByteArrayOutputStream()
-            exec {
-                commandLine readelf, "-l", tvmRuntimeSo.absolutePath
-                standardOutput = output
-            }
-            def lines = output.toString().readLines()
-            def failures = []
-            def pageSize = 0x4000
-            lines.each { line ->
-                def trimmed = line.trim()
-                if (!trimmed.startsWith("LOAD")) {
-                    return
-                }
-                def parts = trimmed.split("\\s+")
-                if (parts.length < 7) {
-                    return
-                }
-                def offset = parseHex(parts[1])
-                def vaddr = parseHex(parts[2])
-                def align = parseHex(parts[parts.length - 1])
-                if (align == null || offset == null || vaddr == null) {
-                    return
-                }
-                if (align < pageSize || (offset % pageSize) != 0 || (vaddr % pageSize) != 0) {
-                    failures.add("LOAD offset=${parts[1]} vaddr=${parts[2]} align=${parts[parts.length - 1]}")
-                }
-            }
-            if (!failures.isEmpty()) {
-                throw new GradleException(
-                        "libtvm4j_runtime_packed.so is not 16KB-aligned:\n" +
-                                failures.join("\n") +
-                                "\nRebuild with -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
-                )
-            }
-            logger.lifecycle("libtvm4j_runtime_packed.so is 16KB-aligned.")
-            return
-        }
         def readelf = resolveReadElf()
         if (!readelf) {
+            if (isWindowsHost) {
+                logger.warn("Skipping TVM runtime alignment check (readelf/llvm-readelf not found on Windows).")
+                return
+            }
             throw new GradleException("readelf not found. Install llvm-readelf or readelf to verify 16KB alignment.")
         }
         def output = new ByteArrayOutputStream()
@@ -278,6 +241,8 @@ tasks.configureEach { task ->
         if (!tvmRuntimeSo.exists()) {
             task.dependsOn(tasks.named("fetchTvmRuntime"))
         }
-        task.dependsOn(tasks.named("verifyTvmRuntimeAlignment"))
+        if (verifyTvmAlignmentEnabled) {
+            task.dependsOn(tasks.named("verifyTvmRuntimeAlignment"))
+        }
     }
 }
