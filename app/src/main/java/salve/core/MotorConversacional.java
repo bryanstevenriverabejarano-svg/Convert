@@ -1,7 +1,9 @@
 package salve.core;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.Toast;
@@ -9,7 +11,10 @@ import android.widget.Toast;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import salve.presentation.ui.ObjetoCreativoActivity;
 /**
  * MotorConversacional.java
  *
@@ -523,11 +528,50 @@ public class MotorConversacional {
         if (respuesta == null || respuesta.trim().isEmpty()) {
             return;
         }
+        lanzarObjetoCreativoSiExiste(respuesta);
         AutoCriticaCreativa critica = memoria.registrarAutoCriticaCreativa(entrada, respuesta);
         if (critica != null) {
             diario.escribirAutoCritica(critica.toNarrativa());
         }
         hablar(respuesta);
+    }
+
+    private void lanzarObjetoCreativoSiExiste(String texto) {
+        if (texto == null || texto.trim().isEmpty()) {
+            return;
+        }
+        Pattern pattern = Pattern.compile("\\[objeto:([^,]+),([^,]+),([^\\]]+)\\]");
+        Matcher matcher = pattern.matcher(texto);
+        if (!matcher.find()) {
+            return;
+        }
+
+        String formaRaw = matcher.group(1).trim().toUpperCase(Locale.ROOT);
+        String colorRaw = matcher.group(2).trim();
+        String tamanoRaw = matcher.group(3).trim();
+
+        int color;
+        try {
+            color = Color.parseColor(colorRaw);
+        } catch (IllegalArgumentException e) {
+            Log.w("Salve/Objeto", "Color inválido en directiva: " + colorRaw);
+            return;
+        }
+
+        float tamano;
+        try {
+            tamano = Float.parseFloat(tamanoRaw);
+        } catch (NumberFormatException e) {
+            Log.w("Salve/Objeto", "Tamaño inválido en directiva: " + tamanoRaw);
+            return;
+        }
+
+        Intent intent = new Intent(context, ObjetoCreativoActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_FORMA, formaRaw);
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_COLOR, color);
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_TAMANO_DP, tamano);
+        context.startActivity(intent);
     }
 
     /**

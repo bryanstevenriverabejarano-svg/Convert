@@ -66,6 +66,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name="salve.presentation.ui.ObjetoCreativoActivity"
+            android:exported="false" />
+
         <!-- Servicio foreground interno de WorkManager, necesario en Android 12+ -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
