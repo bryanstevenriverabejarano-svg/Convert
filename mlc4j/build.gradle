@@ -101,6 +101,21 @@ tasks.register("fetchTvmRuntime") {
 
 def isWindowsHost = System.getProperty("os.name").toLowerCase().contains("win")
 def verifyTvmAlignmentEnabled = (project.findProperty("verifyTvmAlignment") ?: "false").toString().toBoolean()
+def resolveCommandOnPath = { String commandName ->
+    def output = new ByteArrayOutputStream()
+    def command = isWindowsHost ? "where" : "which"
+    exec {
+        commandLine command, commandName
+        standardOutput = output
+        errorOutput = new ByteArrayOutputStream()
+        ignoreExitValue = true
+    }
+    def lines = output.toString().readLines().findAll { it?.trim() }
+    if (lines.isEmpty()) {
+        return null
+    }
+    return lines.first().trim()
+}
 def resolveNdkDir = { ->
     if (android.ndkDirectory != null && android.ndkDirectory.exists()) {
         return android.ndkDirectory
@@ -131,40 +146,16 @@ def resolveReadElfFromNdk = { File ndkDir ->
     return (preferred ?: binMatches.first()).absolutePath
 }
 def resolveReadElf = { ->
-    if (isWindowsHost) {
-        def ndkDir = resolveNdkDir()
-        def fromNdk = resolveReadElfFromNdk(ndkDir)
-        if (fromNdk) {
-            return fromNdk
-        }
-        def candidates = ["llvm-readelf.exe", "readelf.exe"]
-        def pathEnv = System.getenv("PATH") ?: ""
-        def pathEntries = pathEnv.split(java.io.File.pathSeparator)
-        for (def candidate : candidates) {
-            for (def entry : pathEntries) {
-                if (!entry) {
-                    continue
-                }
-                def file = new File(entry, candidate)
-                if (file.exists() && file.canExecute()) {
-                    return file.absolutePath
-                }
-            }
-        }
-        return null
+    def ndkDir = resolveNdkDir()
+    def fromNdk = resolveReadElfFromNdk(ndkDir)
+    if (fromNdk) {
+        return fromNdk
     }
-    def candidates = ["llvm-readelf", "readelf"]
-    def pathEnv = System.getenv("PATH") ?: ""
-    def pathEntries = pathEnv.split(java.io.File.pathSeparator)
+    def candidates = isWindowsHost ? ["llvm-readelf.exe", "readelf.exe"] : ["llvm-readelf", "readelf"]
     for (def candidate : candidates) {
-        for (def entry : pathEntries) {
-            if (!entry) {
-                continue
-            }
-            def file = new File(entry, candidate)
-            if (file.exists() && file.canExecute()) {
-                return file.absolutePath
-            }
+        def resolved = resolveCommandOnPath(candidate)
+        if (resolved) {
+            return resolved
         }
     }
     return null
@@ -228,7 +219,9 @@ tasks.register("verifyTvmRuntimeAlignment") {
             throw new GradleException(
                     "libtvm4j_runtime_packed.so is not 16KB-aligned:\n" +
                             failures.join("\n") +
-                            "\nRebuild with -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
+                            "\nRebuild with -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384, " +
+                            "or supply a pre-aligned .so. You can temporarily skip this check with " +
+                            "-PverifyTvmAlignment=false."
             )
         }
         logger.lifecycle("libtvm4j_runtime_packed.so is 16KB-aligned.")
