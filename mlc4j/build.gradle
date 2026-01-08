@@ -99,18 +99,23 @@ tasks.register("fetchTvmRuntime") {
     }
 }
 
+def isWindowsHost = System.getProperty("os.name").toLowerCase().contains("windows")
 def resolveReadElf = { ->
+    if (isWindowsHost) {
+        return null
+    }
     def candidates = ["llvm-readelf", "readelf"]
+    def pathEnv = System.getenv("PATH") ?: ""
+    def pathEntries = pathEnv.split(java.io.File.pathSeparator)
     for (def candidate : candidates) {
-        def out = new ByteArrayOutputStream()
-        exec {
-            commandLine "which", candidate
-            standardOutput = out
-            errorOutput = new ByteArrayOutputStream()
-            ignoreExitValue = true
-        }
-        if (out.toString().trim()) {
-            return candidate
+        for (def entry : pathEntries) {
+            if (!entry) {
+                continue
+            }
+            def file = new File(entry, candidate)
+            if (file.exists() && file.canExecute()) {
+                return file.absolutePath
+            }
         }
     }
     return null
@@ -133,6 +138,10 @@ tasks.register("verifyTvmRuntimeAlignment") {
     doLast {
         if (!tvmRuntimeSo.exists()) {
             throw new GradleException("Missing TVM runtime at ${tvmRuntimeSo}; run :mlc4j:fetchTvmRuntime")
+        }
+        if (isWindowsHost) {
+            logger.lifecycle("Skipping TVM runtime alignment check on Windows host.")
+            return
         }
         def readelf = resolveReadElf()
         if (!readelf) {
