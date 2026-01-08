@@ -106,6 +106,12 @@ public class MotorConversacional {
         if (entrada == null || entrada.trim().isEmpty()) return;
 
         String entradaMinus = entrada.toLowerCase(Locale.ROOT);
+        if (entradaMinus.contains("reliquia")
+                && (entradaMinus.contains("ultima") || entradaMinus.contains("última"))) {
+            if (invocarReliquia(memoria.getUltimaReliquia())) {
+                return;
+            }
+        }
 
         // --- Módulo de investigación / auto-mejora ---
         if (entradaMinus.contains("investiga") || entradaMinus.contains("buscar información sobre")) {
@@ -540,6 +546,21 @@ public class MotorConversacional {
         if (texto == null || texto.trim().isEmpty()) {
             return;
         }
+        Pattern invocaPattern = Pattern.compile(
+                "\\[invoca_reliquia:([^\\]]+)\\]",
+                Pattern.CASE_INSENSITIVE
+        );
+        Matcher invocaMatcher = invocaPattern.matcher(texto);
+        if (invocaMatcher.find()) {
+            String idRaw = invocaMatcher.group(1).trim();
+            GlifoReliquia reliquia = "ultima".equalsIgnoreCase(idRaw)
+                    ? memoria.getUltimaReliquia()
+                    : memoria.getReliquiaPorId(idRaw);
+            if (invocarReliquia(reliquia)) {
+                return;
+            }
+        }
+
         Pattern glifoPattern = Pattern.compile(
                 "\\[glifo:seed=([^,\\]]+),style=([^,\\]]+),size=([^,\\]]+),color=([^\\]]+)\\]",
                 Pattern.CASE_INSENSITIVE
@@ -583,6 +604,16 @@ public class MotorConversacional {
             intent.putExtra(ObjetoCreativoActivity.EXTRA_TAMANO_DP, tamano);
             intent.putExtra(ObjetoCreativoActivity.EXTRA_SEED, seed);
             intent.putExtra(ObjetoCreativoActivity.EXTRA_STYLE, styleRaw);
+            GlifoReliquia reliquia = memoria.guardarReliquiaGlifo(
+                    seed,
+                    styleRaw,
+                    color,
+                    Math.round(tamano),
+                    null
+            );
+            if (reliquia != null) {
+                intent.putExtra(ObjetoCreativoActivity.EXTRA_RELIQUIA_ID, reliquia.getId());
+            }
             context.startActivity(intent);
             return;
         }
@@ -619,6 +650,23 @@ public class MotorConversacional {
         intent.putExtra(ObjetoCreativoActivity.EXTRA_COLOR, color);
         intent.putExtra(ObjetoCreativoActivity.EXTRA_TAMANO_DP, tamano);
         context.startActivity(intent);
+    }
+
+    private boolean invocarReliquia(GlifoReliquia reliquia) {
+        if (reliquia == null) {
+            return false;
+        }
+        Intent intent = new Intent(context, ObjetoCreativoActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_FORMA,
+                ObjetoCreativo.Forma.GLIFO.name());
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_COLOR, reliquia.getColorArgb());
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_TAMANO_DP, (float) reliquia.getSizeDp());
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_SEED, reliquia.getSeed());
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_STYLE, reliquia.getStyle());
+        intent.putExtra(ObjetoCreativoActivity.EXTRA_RELIQUIA_ID, reliquia.getId());
+        context.startActivity(intent);
+        return true;
     }
 
     /**
