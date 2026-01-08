@@ -10,6 +10,7 @@ import android.view.View;
 import androidx.annotation.Nullable;
 
 import salve.core.ObjetoCreativo;
+import salve.core.ParametricGlyph;
 
 public class ObjetoCreativoView extends View {
 
@@ -65,6 +66,22 @@ public class ObjetoCreativoView extends View {
                 path.lineTo(centerX + half, centerY + half);
                 path.close();
                 canvas.drawPath(path, paint);
+                break;
+            case GLIFO:
+                ParametricGlyph.Style style = ParametricGlyph.Style.ORB;
+                String styleRaw = objeto.getStyle();
+                if (styleRaw != null) {
+                    try {
+                        style = ParametricGlyph.Style.valueOf(styleRaw.toUpperCase());
+                    } catch (IllegalArgumentException ignored) {
+                        style = ParametricGlyph.Style.ORB;
+                    }
+                }
+                Path glyph = ParametricGlyph.build(objeto.getSeed(), style, sizePx);
+                canvas.save();
+                canvas.translate(centerX, centerY);
+                canvas.drawPath(glyph, paint);
+                canvas.restore();
                 break;
             default:
                 break;
