@@ -76,6 +76,7 @@ import salve.core.ModelConsoleOverlay;
 import salve.core.ModelDownloader;
 import salve.core.ModelStore;
 import salve.core.MotorConversacional;
+import salve.core.SalveLLM;
 import salve.core.PdfGenerator;
 import salve.core.ReconocimientoFacial;
 import salve.core.ThinkWorker;
@@ -285,6 +286,7 @@ public class MainActivity extends AppCompatActivity {
                 .edit()
                 .putString(KEY_MODEL_PATH, f.getAbsolutePath())
                 .apply();
+        Log.d("SalveLLM", "savePreferredModel → " + f.getAbsolutePath());
     }
 
     /** Devuelve la ruta del modelo preferido para que otras clases lo carguen. */
@@ -340,6 +342,12 @@ public class MainActivity extends AppCompatActivity {
 
         // 💾 Persistir la elección para que el motor lo cargue
         savePreferredModel(elegido);
+        try {
+            SalveLLM.getInstance(this).forceReloadModel();
+            Log.d("SalveLLM", "forceReloadModel() después de guardar modelo preferido");
+        } catch (Exception e) {
+            Log.e("SalveLLM", "No pude recargar SalveLLM tras guardar modelo", e);
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append("✅ Modelos detectados (").append(compatibles.size()).append(")\n");
@@ -1514,6 +1522,12 @@ public class MainActivity extends AppCompatActivity {
                             ).show();
                         }
                         checkModelsAndNotify();
+                        try {
+                            SalveLLM.getInstance(MainActivity.this).forceReloadModel();
+                            Log.d("SalveLLM", "forceReloadModel() tras onComplete de descarga");
+                        } catch (Exception e) {
+                            Log.e("SalveLLM", "Recarga fallida tras onComplete", e);
+                        }
                     });
                 }
 
@@ -1532,6 +1546,12 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("SalveDL", "Todas las descargas de modelos han terminado.");
                     ModelConsoleOverlay.log("Todas las descargas han terminado. Modelos preparados.");
                     checkModelsAndNotify();
+                    try {
+                        SalveLLM.getInstance(MainActivity.this).forceReloadModel();
+                        Log.d("SalveLLM", "forceReloadModel() tras onAllDone");
+                    } catch (Exception e) {
+                        Log.e("SalveLLM", "Recarga fallida tras onAllDone", e);
+                    }
                     ModelConsoleOverlay.hideDelayed(2500);
                 }
             });
