@@ -66,10 +66,15 @@ class MLCEngine {
     }
 
     fun reload(modelPath: String, modelLib: String) {
+        val libSpec = when {
+            modelLib.startsWith("system://") || modelLib.startsWith("model://") -> modelLib
+            modelLib.endsWith(".so") -> "model://$modelLib"
+            else -> "system://$modelLib"
+        }
         val engineConfig = """
             {
                 "model": "$modelPath",
-                "model_lib": "system://$modelLib",
+                "model_lib": "$libSpec",
                 "mode": "interactive"
             }
         """
