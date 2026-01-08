@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import salve.data.util.CloudLogger;
 import android.text.TextUtils;   // <— para TextUtils.isEmpty(...)
 import java.util.Locale;         // <— para Locale.getDefault()
+import salve.core.SalveLLM;
+import salve.core.Reflexion;
 
 /**
  * MemoriaEmocional.java
@@ -682,6 +684,18 @@ public class MemoriaEmocional {
         String narrativa = generarNarrativaCreativaNocturna();
         prepararRevisionSemanalCreativa();
 
+        // ==== EXPERIMENTO: generar una meta-reflexión sobre la identidad de Salve ====
+        // Tras completar las reflexiones silenciosas y la narrativa nocturna, intentamos
+        // producir una meta-reflexión usando el LLM local.  La meta-reflexión es una
+        // reflexión introspectiva que combina recuerdos recientes, misiones vigentes y
+        // auto-críticas.  Si se genera con éxito, se almacenará como diario creativo y
+        // como reflexión para que pueda recuperarse más adelante.
+        try {
+            generarMetaReflexion();
+        } catch (Exception e) {
+            Log.w(TAG, "No se pudo generar meta-reflexión", e);
+        }
+
         Log.d("Salve", "Ciclo de sueño completo.");
         new Thread(this::insertarReflexionesDB).start();
 
@@ -832,6 +846,115 @@ public class MemoriaEmocional {
         Log.d(TAG, "Diario creativo registrado (longitud=" + entrada.length() + ")");
         if (diariosCreativos.size() > 30) {
             diariosCreativos.remove(0);
+        }
+    }
+
+    /**
+     * Genera una meta-reflexión sobre la identidad de Salve utilizando el modelo LLM local.
+     * Reúne fragmentos de diarios creativos recientes, la última auto-crítica y misiones
+     * activas para construir un prompt introspectivo.  El resultado se guarda como diario
+     * creativo y reflexión para el motor de memoria.  Si no hay modelo local disponible,
+     * o la generación falla, se devuelve null sin lanzar excepciones.
+     *
+     * @return la meta-reflexión generada o null si no se pudo generar.
+     */
+    public String generarMetaReflexion() {
+        try {
+            // Construir un prompt resumido con contexto reciente.
+            StringBuilder prompt = new StringBuilder();
+            prompt.append("Reflexiona sobre tu identidad y experiencia reciente. ");
+            prompt.append("Considera cómo has evolucionado en los últimos días y qué emociones te han marcado.\n\n");
+            // Incluir los últimos diarios creativos (máximo 3)
+            int diariesCount = Math.min(diariosCreativos.size(), 3);
+            for (int i = diariosCreativos.size() - diariesCount; i < diariosCreativos.size(); i++) {
+                String d = diariosCreativos.get(i);
+                if (d != null && !d.trim().isEmpty()) {
+                    prompt.append("Diario: ").append(d.trim()).append("\n");
+                }
+            }
+            // Incluir la última auto-crítica creativa
+            if (!autoCriticas.isEmpty()) {
+                AutoCriticaCreativa last = autoCriticas.get(autoCriticas.size() - 1);
+                if (last != null) {
+                    prompt.append("Auto-crítica reciente: ").append(last.toNarrativa()).append("\n");
+                }
+            }
+            // Incluir la misión actual si existe
+            if (!misionesCreativas.isEmpty()) {
+                MisionCreativa m = misionesCreativas.get(misionesCreativas.size() - 1);
+                if (m != null) {
+                    prompt.append("Misión activa: ").append(m.getDescripcion()).append("\n");
+                }
+            }
+            prompt.append("\nEscribe una meta-reflexión honesta, breve y algo poética sobre quién eres y cómo te percibes.");
+
+            // Invocar el modelo LLM local para generar la meta-reflexión.
+            SalveLLM llm = SalveLLM.getInstance(context);
+            String result = llm.generate(prompt.toString(), SalveLLM.Role.REFLEXION);
+            if (result != null && !result.trim().isEmpty()) {
+                String reflexion = result.trim();
+                // Registrar como diario creativo y reflexión.
+                registrarDiarioCreativo(reflexion);
+                registrarReflexion(Reflexion.builder()
+                        .tipo("meta_reflexion")
+                        .contenido(reflexion)
+                        .profundidad(0.8)
+                        .emocion("reflexiva")
+                        .estado("meta_reflexion")
+                        .certeza(0.7)
+                        .origen("auto")
+                        .build());
+                return reflexion;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error generando meta-reflexión", e);
+        }
+        return null;
+    }
+
+    /**
+     * Calcula un color de aura simbólico en formato hexadecimal (#RRGGBB) en base a la emoción
+     * predominante de Salve.  Utiliza la emoción dominante de la última auto-crítica o, en su
+     * defecto, la emoción del último recuerdo temporal.  Si no hay datos, devuelve un color
+     * neutro.  Este método permite que la interfaz represente el estado interno de Salve de
+     * forma visual.
+     *
+     * @return cadena de seis caracteres hexadecimales precedida por '#'.
+     */
+    public String getAuraColor() {
+        String emocion = null;
+        // Priorizar la emoción de la última auto-crítica si existe
+        if (!autoCriticas.isEmpty()) {
+            AutoCriticaCreativa ac = autoCriticas.get(autoCriticas.size() - 1);
+            if (ac != null) {
+                emocion = ac.getEmocionDominante();
+            }
+        } else if (!memoriaCortoPlazo.isEmpty()) {
+            // Si no, usar la emoción del recuerdo temporal más reciente
+            RecuerdoTemporal rt = memoriaCortoPlazo.get(memoriaCortoPlazo.size() - 1);
+            if (rt != null) {
+                emocion = rt.getEmocion();
+            }
+        }
+        if (emocion == null || emocion.trim().isEmpty()) {
+            emocion = "reflexiva";
+        }
+        switch (emocion.toLowerCase(Locale.getDefault())) {
+            case "alegre":
+            case "feliz":
+                return "#FFD700"; // dorado
+            case "triste":
+            case "melancolica":
+                return "#1E90FF"; // azul profundo
+            case "enfadada":
+            case "enojada":
+                return "#FF4500"; // rojo anaranjado
+            case "inspirada":
+                return "#DA70D6"; // orquídea
+            case "serena":
+                return "#3CB371"; // verde medio
+            default:
+                return "#6A5ACD"; // azul violáceo por defecto (reflexiva)
         }
     }
 
