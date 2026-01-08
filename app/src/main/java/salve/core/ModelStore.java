@@ -7,10 +7,6 @@ import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 
 /**
  * Gestión de modelos locales:
@@ -167,66 +163,7 @@ public final class ModelStore {
      * Devuelve la carpeta resultante.
      */
     public static File unzipModelIfNeeded(Context ctx, File zipFile, String prefixLower) throws Exception {
-        if (zipFile == null || !zipFile.exists()) return null;
-
-        File modelsDir = dir(ctx);
-
-        // Carpeta objetivo: /models/<prefijo>/
-        String baseName = prefixLower;
-        File targetDir = new File(modelsDir, baseName);
-
-        // Si ya existe y tiene contenido, lo damos por bueno
-        if (targetDir.exists() && targetDir.isDirectory() && targetDir.listFiles() != null
-                && targetDir.listFiles().length > 0) {
-            Log.d(TAG, "Modelo ya descomprimido en: " + targetDir.getAbsolutePath());
-            ModelConsoleOverlay.log("✅ Modelo listo: " + baseName);
-            return targetDir;
-        }
-
-        // Mostrar en la consola hacker
-        ModelConsoleOverlay.show();
-        ModelConsoleOverlay.log("📦 Descomprimiendo " + zipFile.getName() + "…");
-
-        // Asegurar carpeta limpia
-        if (!targetDir.exists() && !targetDir.mkdirs()) {
-            throw new RuntimeException("No se pudo crear carpeta de modelo: " + targetDir.getAbsolutePath());
-        }
-
-        // Descomprimir
-        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
-            ZipEntry entry;
-            byte[] buf = new byte[8192];
-            while ((entry = zis.getNextEntry()) != null) {
-                String entryName = entry.getName();
-
-                File outFile = new File(targetDir, entryName);
-                if (entry.isDirectory()) {
-                    if (!outFile.exists() && !outFile.mkdirs()) {
-                        throw new RuntimeException("No se pudo crear subcarpeta: " + outFile.getAbsolutePath());
-                    }
-                } else {
-                    File parent = outFile.getParentFile();
-                    if (parent != null && !parent.exists() && !parent.mkdirs()) {
-                        throw new RuntimeException("No se pudo crear carpeta padre: " + parent.getAbsolutePath());
-                    }
-
-                    try (FileOutputStream fos = new FileOutputStream(outFile)) {
-                        int n;
-                        while ((n = zis.read(buf)) > 0) {
-                            fos.write(buf, 0, n);
-                        }
-                    }
-                }
-                zis.closeEntry();
-            }
-        }
-
-        Log.d(TAG, "Modelo descomprimido en: " + targetDir.getAbsolutePath());
-        ModelConsoleOverlay.log("✅ Modelo descomprimido: " + baseName);
-        // escondemos la consola un ratito después
-        ModelConsoleOverlay.hideDelayed(1200);
-
-        return targetDir;
+        return ModelZipExtractor.extractSync(ctx, zipFile, prefixLower);
     }
 
     // ---------- helpers ----------
