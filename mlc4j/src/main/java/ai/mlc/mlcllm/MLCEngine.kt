@@ -31,10 +31,18 @@ class MLCEngine {
     init {
         state = EngineState()
         jsonFFIEngine = JSONFFIEngine()
+
+        // ✅ LOG CLAVE: esto te dirá en Logcat si TVM/MLC está cargando o fallando, y por qué.
+        android.util.Log.i(
+            "SALVE",
+            "TVM available=${jsonFFIEngine.isAvailable()} reason=${jsonFFIEngine.getInitFailure()}"
+        )
+
         if (!jsonFFIEngine.isAvailable()) {
             val reason = jsonFFIEngine.getInitFailure() ?: "unknown error"
             throw IllegalStateException("MLC runtime unavailable: $reason")
         }
+
         chat = Chat(jsonFFIEngine, state)
 
         jsonFFIEngine.initBackgroundEngine { result ->
