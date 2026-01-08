@@ -3,6 +3,8 @@ package salve.core;
 import android.content.Context;
 import android.util.Log;
 
+import salve.core.ModelZipExtractor;
+
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -163,6 +165,16 @@ public final class ModelStore {
      * Devuelve la carpeta resultante.
      */
     public static File unzipModelIfNeeded(Context ctx, File zipFile, String prefixLower) throws Exception {
+        if (zipFile == null || !zipFile.exists()) return null;
+        File modelsDir = dir(ctx);
+        String baseName = prefixLower;
+        File targetDir = new File(modelsDir, baseName);
+        if (targetDir.exists() && targetDir.isDirectory() && targetDir.listFiles() != null &&
+                targetDir.listFiles().length > 0) {
+            Log.d(TAG, "Modelo ya descomprimido en: " + targetDir.getAbsolutePath());
+            ModelConsoleOverlay.log("✅ Modelo listo: " + baseName);
+            return targetDir;
+        }
         return ModelZipExtractor.extractSync(ctx, zipFile, prefixLower);
     }
 
