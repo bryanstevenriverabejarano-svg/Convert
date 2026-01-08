@@ -540,6 +540,53 @@ public class MotorConversacional {
         if (texto == null || texto.trim().isEmpty()) {
             return;
         }
+        Pattern glifoPattern = Pattern.compile(
+                "\\[glifo:seed=([^,\\]]+),style=([^,\\]]+),size=([^,\\]]+),color=([^\\]]+)\\]",
+                Pattern.CASE_INSENSITIVE
+        );
+        Matcher glifoMatcher = glifoPattern.matcher(texto);
+        if (glifoMatcher.find()) {
+            String seedRaw = glifoMatcher.group(1).trim();
+            String styleRaw = glifoMatcher.group(2).trim().toUpperCase(Locale.ROOT);
+            String tamanoRaw = glifoMatcher.group(3).trim();
+            String colorRaw = glifoMatcher.group(4).trim();
+
+            long seed;
+            try {
+                seed = Long.parseLong(seedRaw);
+            } catch (NumberFormatException e) {
+                Log.w("Salve/Objeto", "Seed inválido en directiva glifo: " + seedRaw);
+                return;
+            }
+
+            int color;
+            try {
+                color = Color.parseColor(colorRaw);
+            } catch (IllegalArgumentException e) {
+                Log.w("Salve/Objeto", "Color inválido en directiva glifo: " + colorRaw);
+                return;
+            }
+
+            float tamano;
+            try {
+                tamano = Float.parseFloat(tamanoRaw);
+            } catch (NumberFormatException e) {
+                Log.w("Salve/Objeto", "Tamaño inválido en directiva glifo: " + tamanoRaw);
+                return;
+            }
+
+            Intent intent = new Intent(context, ObjetoCreativoActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.putExtra(ObjetoCreativoActivity.EXTRA_FORMA,
+                    ObjetoCreativo.Forma.GLIFO.name());
+            intent.putExtra(ObjetoCreativoActivity.EXTRA_COLOR, color);
+            intent.putExtra(ObjetoCreativoActivity.EXTRA_TAMANO_DP, tamano);
+            intent.putExtra(ObjetoCreativoActivity.EXTRA_SEED, seed);
+            intent.putExtra(ObjetoCreativoActivity.EXTRA_STYLE, styleRaw);
+            context.startActivity(intent);
+            return;
+        }
+
         Pattern pattern = Pattern.compile("\\[objeto:([^,]+),([^,]+),([^\\]]+)\\]");
         Matcher matcher = pattern.matcher(texto);
         if (!matcher.find()) {
