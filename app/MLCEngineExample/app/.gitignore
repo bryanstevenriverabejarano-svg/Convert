@@ -1,2 +1,33 @@
-/build
-/src/main/libs
+# ===== ANDROID / GRADLE =====
+.gradle/
+build/
+**/build/
+out/
+.cxx/
+.externalNativeBuild/
+intermediates/
+
+# ===== ANDROID STUDIO / INTELLIJ =====
+.idea/
+*.iml
+.kotlin/
+
+# ===== LOCAL CONFIG =====
+local.properties
+*.log
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== MLC / MODELS / BINARIES =====
+**/*.so
+**/*.aar
+**/*.jar
+**/*.bin
+**/*.gguf
+**/*.pt
+**/*.onnx
+**/*.tflite
+**/assets/models/
+**/src/main/assets/models/
