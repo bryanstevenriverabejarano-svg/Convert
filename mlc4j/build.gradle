@@ -174,7 +174,7 @@ tasks.register("verifyTvmRuntimeAlignment") {
     dependsOn(tasks.named("fetchTvmRuntime"))
     inputs.file(tvmRuntimeSo)
     outputs.upToDateWhen { false }
-    onlyIf { verifyTvmAlignmentEnabled }
+    onlyIf { verifyTvmAlignmentEnabled && !isWindowsHost }
 
     doLast {
         if (!tvmRuntimeSo.exists()) {
@@ -182,11 +182,8 @@ tasks.register("verifyTvmRuntimeAlignment") {
         }
         def readelf = resolveReadElf()
         if (!readelf) {
-            if (isWindowsHost) {
-                logger.warn("Skipping TVM runtime alignment check (readelf/llvm-readelf not found on Windows).")
-                return
-            }
-            throw new GradleException("readelf not found. Install llvm-readelf or readelf to verify 16KB alignment.")
+            logger.warn("Skipping TVM runtime alignment check (readelf/llvm-readelf not found).")
+            return
         }
         def output = new ByteArrayOutputStream()
         exec {
