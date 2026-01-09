@@ -31,6 +31,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import android.annotation.SuppressLint;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
@@ -73,7 +74,6 @@ import salve.core.DiarioSecreto;
 import salve.core.GrafoRecuerdos;
 import salve.core.MemoriaEmocional;
 import salve.core.ModelConsoleOverlay;
-import salve.core.ModelDownloader;
 import salve.core.ModelStore;
 import salve.core.MotorConversacional;
 import salve.core.SalveLLM;
@@ -84,6 +84,7 @@ import salve.data.sync.CloudSyncManager;
 import salve.data.sync.SyncWorker;
 import salve.services.BurbujaFlotanteService;
 import salve.services.CamaraService;
+import salve.presentation.viewmodel.ModelDownloadViewModel;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -112,8 +113,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISO_CAMARA = 123;
     private static final int REQ_POST_NOTIF = 1001;               // request code notificaciones
 
-    // ===== DESCARGA DE MODELOS (handle para cancelación opcional) =====
-    private ModelDownloader.TaskHandle modelsTask;
+    // ===== DESCARGA DE MODELOS =====
+    private ModelDownloadViewModel modelDownloadViewModel;
     private ActivityResultLauncher<String> audioPermissionLauncher;
 
     // ===== VERIFICACIÓN DE MODELOS LLM (por carpetas) =====
@@ -637,8 +638,7 @@ public class MainActivity extends AppCompatActivity {
         }
         // <<< aquí no tocamos MotorConversacional internamente, sólo dejamos la info preparada
 
-        // Habilita overlay propio de ModelDownloader (si Activity visible)
-        ModelDownloader.enableAutoOverlay(this);
+        modelDownloadViewModel = new ViewModelProvider(this).get(ModelDownloadViewModel.class);
 
         // Permiso POST_NOTIFICATIONS (Android 13+), sin abrir Ajustes automáticamente
         ensureNotificationPermission();
@@ -1292,12 +1292,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        // Cancelar descarga de modelos si sigue activa
-        if (modelsTask != null) {
-            modelsTask.cancel();
-            modelsTask = null;
-        }
-
         stopService(new Intent(this, CamaraService.class));
         stopService(new Intent(this, BurbujaFlotanteService.class));
         super.onDestroy();
@@ -1437,133 +1431,15 @@ public class MainActivity extends AppCompatActivity {
             ModelConsoleOverlay.log("Sin conexión, no puedo descargar modelos.");
             ModelConsoleOverlay.hideDelayed(2000);
             return;
-        } else {
-            Log.d("SalveDL", "Conexión: " + net);
         }
+        Log.d("SalveDL", "Conexión: " + net);
 
-        boolean needDownload;
-
-        // Prepara consola
         ModelConsoleOverlay.clear();
         ModelConsoleOverlay.show();
         ModelConsoleOverlay.log("Conexión detectada: " + net);
-        ModelConsoleOverlay.log("Comprobando modelos locales (precheck)...");
+        ModelConsoleOverlay.log("Delegando descarga al WorkManager...");
 
-        // 1) Precheck: mirar si falta algo sin descargar nada
-        try (InputStream pre = getAssets().open("config/models.json")) {
-            needDownload = ModelDownloader.precheckAll(this, pre);
-        } catch (Exception e) {
-            Log.e("SalveDL", "Error en precheck de modelos", e);
-            ModelConsoleOverlay.log("Error en precheck: " + e.getMessage());
-            needDownload = true; // ante duda, intentamos descargar
-        }
-
-        if (!needDownload) {
-            Log.d("SalveDL", "Modelos ya presentes. No se descargan de nuevo.");
-            ModelConsoleOverlay.log("Modelos ya presentes. Revisando descompresión (sin nuevas descargas)…");
-
-            // 🔄 Hacer la preparación de zips en un hilo de fondo
-            new Thread(() -> {
-                try {
-                    // Trabajo pesado: leer zips y descomprimir
-                    prepararDesdeZipsExistentes();
-                } catch (Exception e) {
-                    Log.e("SalveDL", "Error preparando modelos locales desde zips", e);
-                    ModelConsoleOverlay.log("✖ Error preparando modelos locales: " + e.getMessage());
-                }
-
-                // Volvemos a la parte "visible" (UI) después del trabajo pesado
-                runOnUiThread(() -> {
-                    checkModelsAndNotify();
-                    ModelConsoleOverlay.log("Modelos listos.");
-                    ModelConsoleOverlay.hideDelayed(2500);
-                });
-            }).start();
-
-            return;
-        }
-
-
-        ModelConsoleOverlay.log("Faltan modelos o hay que reparar. Iniciando descarga...");
-
-        // 2) Lanzar descarga asíncrona (sin bloquear y con overlay)
-        try {
-            InputStream json = getAssets().open("config/models.json");
-            modelsTask = ModelDownloader.downloadAllAsync(this, json, new ModelDownloader.Listener() {
-                @Override
-                public void onProgress(String id, int percent) {
-                    Log.d("SalveDL", id + " → " + percent + "%");
-                    ModelConsoleOverlay.log(id + " → " + percent + "%");
-                }
-
-                @Override
-                public void onComplete(String id, File file) {
-                    // Se ha descargado COMPLETO el zip de este modelo.
-                    Log.d("SalveDL", id + " completado en " + file.getAbsolutePath());
-                    ModelConsoleOverlay.show();
-                    ModelConsoleOverlay.log("✔ Descarga completada: " + id);
-                    ModelConsoleOverlay.log(id + " → preparando modelo (descompresión si hace falta)…");
-
-                    // Descomprimir / preparar carpeta final
-                    File finalDir = null;
-                    try {
-                        finalDir = ModelStore.ensureModelFolder(MainActivity.this, file, id);
-                    } catch (Exception e) {
-                        Log.e("SalveDL", "Error descomprimiendo modelo " + id, e);
-                        ModelConsoleOverlay.log("✖ Error descomprimiendo " + id + ": " + e.getMessage());
-                    }
-
-                    File finalDirCopy = finalDir;
-                    runOnUiThread(() -> {
-                        if (finalDirCopy != null && finalDirCopy.exists()) {
-                            Toast.makeText(
-                                    MainActivity.this,
-                                    "Modelo preparado: " + id,
-                                    Toast.LENGTH_SHORT
-                            ).show();
-                        }
-                        checkModelsAndNotify();
-                        try {
-                            SalveLLM.getInstance(MainActivity.this).forceReloadModel();
-                            Log.d("SalveLLM", "forceReloadModel() tras onComplete de descarga");
-                        } catch (Exception e) {
-                            Log.e("SalveLLM", "Recarga fallida tras onComplete", e);
-                        }
-                    });
-                }
-
-                @Override
-                public void onError(String id, Exception e) {
-                    String msg = String.valueOf(e);
-                    Log.e("SalveDL", "Error " + id + ": " + msg, e);
-                    Toast.makeText(MainActivity.this,
-                            "Error descargando " + id + ": " + msg,
-                            Toast.LENGTH_LONG).show();
-                    ModelConsoleOverlay.log("✖ Error " + id + ": " + msg);
-                }
-
-                @Override
-                public void onAllDone() {
-                    Log.d("SalveDL", "Todas las descargas de modelos han terminado.");
-                    ModelConsoleOverlay.log("Todas las descargas han terminado. Modelos preparados.");
-                    checkModelsAndNotify();
-                    try {
-                        SalveLLM.getInstance(MainActivity.this).forceReloadModel();
-                        Log.d("SalveLLM", "forceReloadModel() tras onAllDone");
-                    } catch (Exception e) {
-                        Log.e("SalveLLM", "Recarga fallida tras onAllDone", e);
-                    }
-                    ModelConsoleOverlay.hideDelayed(2500);
-                }
-            });
-        } catch (Exception e) {
-            Log.e("SalveDL", "No pude abrir assets/config/models.json (¿ruta mal o falta el archivo?)", e);
-            Toast.makeText(MainActivity.this,
-                    "Falta config/models.json en assets",
-                    Toast.LENGTH_LONG).show();
-            ModelConsoleOverlay.log("Falta config/models.json en assets.");
-            ModelConsoleOverlay.hideDelayed(2500);
-        }
+        modelDownloadViewModel.startDownload();
     }
 
     /** Devuelve "Wi-Fi", "Datos móviles", "otra" o null si no hay red */

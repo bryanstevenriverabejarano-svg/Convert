@@ -20,8 +20,6 @@ import androidx.work.WorkerParameters;
 
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -126,36 +124,15 @@ public class ThinkWorker extends Worker {
             safeCloudLog("think_error", "Organizacion LLM: " + e.getMessage());
         }
 
-        // 5) DESCARGA DE MODELOS LLM con reanudación (usa tu ModelDownloader)
-        try (InputStream is = ctx.getAssets().open("config/models.json")) {
+        // 5) DESCARGA DE MODELOS LLM vía WorkManager dedicado
+        try {
             setForegroundAsync(makeForeground(0, "Preparando descargas LLM…"));
-
-            ModelDownloader.downloadAll(ctx, is, new ModelDownloader.Listener() {
-                @Override
-                public void onProgress(String id, int percent) {
-                    // Actualiza notificación y progreso de WorkManager (con TIPO!)
-                    setForegroundAsync(makeForeground(percent, "Descargando " + id));
-                    setProgressAsync(new Data.Builder()
-                            .putString("id", id)
-                            .putInt("percent", percent)
-                            .build());
-                }
-
-                @Override
-                public void onComplete(String id, File file) {
-                    // Verificación opcional
-                }
-
-                @Override
-                public void onError(String id, Exception e) {
-                    Log.e(TAG, "DL error " + id, e);
-                }
-
-                @Override
-                public void onAllDone() {
-                    setForegroundAsync(makeForeground(100, "Modelos listos"));
-                }
-            });
+            androidx.work.WorkManager.getInstance(ctx)
+                    .enqueueUniqueWork(
+                            salve.work.ModelDownloadWorker.UNIQUE_WORK_NAME,
+                            androidx.work.ExistingWorkPolicy.KEEP,
+                            new androidx.work.OneTimeWorkRequest.Builder(salve.work.ModelDownloadWorker.class).build()
+                    );
         } catch (Exception e) {
             Log.e(TAG, "Descarga LLM", e);
             safeCloudLog("think_error", "LLM: " + e.getMessage());
