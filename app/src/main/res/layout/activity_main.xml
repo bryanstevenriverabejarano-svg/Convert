@@ -169,4 +169,10 @@
 
         </LinearLayout>
     </LinearLayout>
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/downloadOverlayContainer"
+        android:name="salve.presentation.ui.DownloadOverlayFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 </RelativeLayout>
