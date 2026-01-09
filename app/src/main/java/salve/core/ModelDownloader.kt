@@ -16,7 +16,6 @@ import okio.Buffer
 import okio.ForwardingSource
 import okio.Source
 import okio.buffer
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.InputStream
@@ -27,48 +26,72 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 /**
- * Descarga modelos definidos en assets/config/models.json a:
- *   /Android/data/<pkg>/files/models/<filename>
+ * ModelDownloader descarga modelos definidos en `assets/config/models.json` a:
+ *   `/Android/data/<pkg>/files/models/<filename>`.
  *
- * - Reanudación por Range
- * - Redirecciones 30x (incl. 307/308)
- * - Evita re-descargar si ya existe (>=1MB)
- * - Checksum SHA-256 (streaming)
- * - Chequeo de espacio libre con margen
+ * La clase soporta reanudación mediante encabezados Range, redirecciones 30x,
+ * verificación de checksum SHA‑256 en streaming, y comprobación de espacio libre
+ * antes de iniciar la descarga. Además, emite eventos de progreso a través de un
+ * [kotlinx.coroutines.flow.Flow] para que la interfaz pueda reaccionar en
+ * tiempo real.
  */
 class ModelDownloader(
     private val client: OkHttpClient = NetworkModule.provideOkHttpClient(),
     private val bufferSize: Int = DEFAULT_BUFFER_SIZE
 ) {
-    fun downloadAll(context: Context, jsonStream: InputStream): Flow<DownloadEvent> {
-        return flow {
+
+    /**
+     * Descarga todos los modelos indicados en el JSON proporcionado. Devuelve
+     * un [Flow] que emite eventos de tipo [DownloadEvent] durante el proceso.
+     *
+     * @param context Contexto de Android utilizado para resolver rutas.
+     * @param jsonStream Flujo de entrada del fichero JSON de configuración.
+     */
+    fun downloadAll(context: Context, jsonStream: InputStream): Flow<DownloadEvent> =
+        flow {
             val items = loadItems(jsonStream)
             val total = items.size
 
+            // Asegura que la carpeta de modelos exista antes de empezar.
             val base = modelsDir(context)
             if (!base.exists() && !base.mkdirs()) {
                 throw RuntimeException("No se pudo crear carpeta: ${base.absolutePath}")
             }
 
+            // Recorre cada elemento y descarga si fuera necesario.
             for ((index, item) in items.withIndex()) {
+                // Notifica inicio de la descarga de un modelo.
                 emit(DownloadEvent.Started(item.id, index + 1, total))
                 try {
-                    val file = downloadOne(context, item, index + 1, total, emit)
+                    // Llama a downloadOne y repropaga eventos de progreso.
+                    val file = downloadOne(context, item, index + 1, total) { event ->
+                        emit(event)
+                    }
+                    // Notifica que el modelo actual se ha descargado completamente.
                     emit(DownloadEvent.Completed(item.id, file))
                 } catch (e: Exception) {
+                    // Notifica error en la descarga de este modelo.
                     emit(DownloadEvent.Error(item.id, e))
                 }
             }
+            // Notifica que todas las descargas han terminado.
             emit(DownloadEvent.AllDone)
         }.flowOn(Dispatchers.IO)
-    }
 
+    /**
+     * Verifica de forma síncrona si faltan archivos por descargar o si están
+     * corruptos según el SHA‑256. Devuelve `true` si detecta que falta
+     * alguno, y `false` cuando todo está presente y válido. Se expone
+     * públicamente una versión estática para compatibilidad con código Java.
+     */
     suspend fun precheckAll(context: Context, jsonStream: InputStream): Boolean {
         return try {
             val items = loadItems(jsonStream)
             for (item in items) {
                 val out = outputFor(context, item.filename)
+                // Considera que falta si no existe o es demasiado pequeño.
                 if (!out.exists() || out.length() <= MIN_FILE_BYTES) return true
+                // Si se especifica checksum, verifica que coincida.
                 if (!item.sha256.isNullOrBlank()) {
                     val got = sha256Hex(out)
                     if (!equalsHex(item.sha256, got)) return true
@@ -83,6 +106,17 @@ class ModelDownloader(
         }
     }
 
+    /**
+     * Descarga un único archivo de modelo. Emite eventos de progreso a través
+     * del callback proporcionado. Devuelve el archivo final una vez
+     * completada la descarga y validación del checksum.
+     *
+     * @param context Contexto de Android utilizado para resolver rutas.
+     * @param item Información del modelo a descargar.
+     * @param index Índice del modelo actual (para eventos de progreso).
+     * @param total Número total de modelos (para eventos de progreso).
+     * @param emit Callback de emisión de eventos de progreso.
+     */
     private suspend fun downloadOne(
         context: Context,
         item: ModelItem,
@@ -93,6 +127,7 @@ class ModelDownloader(
         val out = outputFor(context, item.filename)
         val expectedSize = item.sizeBytes
 
+        // Si existe y parece válido, omite la descarga.
         if (out.exists() && out.length() > MIN_FILE_BYTES) {
             if (!item.sha256.isNullOrBlank()) {
                 val got = sha256Hex(out)
@@ -104,6 +139,7 @@ class ModelDownloader(
             }
         }
 
+        // Comprueba espacio libre antes de descargar.
         ensureFreeSpace(context, expectedSize, out)
 
         val existing = if (out.exists()) out.length() else 0L
@@ -114,6 +150,7 @@ class ModelDownloader(
         val request = requestBuilder.build()
 
         client.newCall(request).execute().use { response ->
+            // Si el servidor responde 416 (rango no válido), reinicia.
             if (response.code == HTTP_REQUESTED_RANGE_NOT_SATISFIABLE) {
                 if (out.exists()) {
                     out.delete()
@@ -166,11 +203,19 @@ class ModelDownloader(
         }
     }
 
+    /**
+     * Calcula el tamaño total esperado de la descarga teniendo en cuenta un
+     * posible reanudado (código 206) o un cuerpo de longitud desconocida.
+     */
     private fun computeTotalBytes(existing: Long, body: ResponseBody, response: Response): Long {
         val length = body.contentLength()
         return if (response.code == 206 && length > 0) existing + length else length
     }
 
+    /**
+     * Verifica si hay espacio suficiente para descargar el archivo. Lanza
+     * RuntimeException si no se cumple.
+     */
     private fun ensureFreeSpace(context: Context, expectedSize: Long, out: File) {
         val sizeToCheck = if (expectedSize > 0) expectedSize else out.length()
         val requirement = StorageSpaceUtil.calculateRequirement(sizeToCheck, out.parentFile ?: modelsDir(context))
@@ -187,6 +232,9 @@ class ModelDownloader(
         }
     }
 
+    /**
+     * Analiza el JSON de configuración y devuelve una lista de [ModelItem].
+     */
     private fun loadItems(jsonStream: InputStream): List<ModelItem> {
         val raw = jsonStream.readBytes()
         val root = JSONObject(String(raw))
@@ -203,16 +251,29 @@ class ModelDownloader(
         }
     }
 
+    /**
+     * Obtiene una cadena opcional de un [JSONObject] si existe.
+     */
     private fun optStringOrNull(obj: JSONObject, key: String): String? {
         return if (obj.has(key)) obj.optString(key, null) else null
     }
 
+    /**
+     * Devuelve el directorio donde se almacenan los modelos.
+     */
     private fun modelsDir(context: Context): File = ModelStore.dir(context)
 
+    /**
+     * Devuelve el archivo de salida para un nombre de fichero dado.
+     */
     private fun outputFor(context: Context, fileNameFromUrl: String): File {
         return File(modelsDir(context), fileNameFromUrl)
     }
 
+    /**
+     * Extrae un nombre de fichero a partir de una URL. Si la URL no contiene
+     * nombre de archivo, usa el `fallbackId` con extensión `.zip`.
+     */
     private fun fileNameFromUrl(url: String, fallbackId: String): String {
         return try {
             val path = URL(url).path
@@ -223,6 +284,9 @@ class ModelDownloader(
         }
     }
 
+    /**
+     * Calcula el SHA‑256 de un archivo y lo devuelve en hexadecimal.
+     */
     private fun sha256Hex(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->
@@ -236,10 +300,16 @@ class ModelDownloader(
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
+    /**
+     * Compara dos cadenas hexadecimales ignorando mayúsculas y espacios.
+     */
     private fun equalsHex(expected: String, actual: String): Boolean {
         return expected.trim().equals(actual.trim(), ignoreCase = true)
     }
 
+    /**
+     * Información de un modelo: id, URL, nombre de archivo, tamaño y checksum opcional.
+     */
     data class ModelItem(
         val id: String,
         val url: String,
@@ -248,8 +318,14 @@ class ModelDownloader(
         val sha256: String?
     )
 
+    /**
+     * Representa los distintos eventos que se pueden producir durante la
+     * descarga de modelos.
+     */
     sealed class DownloadEvent {
+        /** Inicio de la descarga de un modelo. */
         data class Started(val id: String, val index: Int, val total: Int) : DownloadEvent()
+        /** Progreso de descarga. */
         data class Progress(
             val id: String,
             val index: Int,
@@ -258,8 +334,11 @@ class ModelDownloader(
             val totalBytes: Long,
             val mbPerSec: Double
         ) : DownloadEvent()
+        /** Descarga completada de un modelo. */
         data class Completed(val id: String, val file: File) : DownloadEvent()
+        /** Error durante la descarga. */
         data class Error(val id: String, val error: Exception) : DownloadEvent()
+        /** Todas las descargas han finalizado. */
         data object AllDone : DownloadEvent()
     }
 
@@ -270,6 +349,9 @@ class ModelDownloader(
         private const val HTTP_REQUESTED_RANGE_NOT_SATISFIABLE = 416
         private const val DELETE_ON_BAD_CHECKSUM = true
 
+        /**
+         * Versión estática de [precheckAll] para compatibilidad con código Java.
+         */
         @JvmStatic
         fun precheckAll(context: Context, jsonStream: InputStream): Boolean {
             return runBlocking { ModelDownloader().precheckAll(context, jsonStream) }
@@ -277,6 +359,9 @@ class ModelDownloader(
     }
 }
 
+/**
+ * Proporciona instancias de [OkHttpClient] con configuración predeterminada.
+ */
 object NetworkModule {
     private const val CONNECT_TIMEOUT_MS = 25_000L
     private const val READ_TIMEOUT_MS = 25_000L
@@ -293,6 +378,9 @@ object NetworkModule {
     }
 }
 
+/**
+ * Interceptor que calcula el SHA‑256 mientras se lee el cuerpo de la respuesta.
+ */
 private class ChecksumInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val response = chain.proceed(chain.request())
@@ -303,6 +391,9 @@ private class ChecksumInterceptor : Interceptor {
     }
 }
 
+/**
+ * Cuerpo de respuesta que calcula el digest del contenido a medida que se lee.
+ */
 private class DigestingResponseBody(
     private val delegate: ResponseBody,
     private val digest: MessageDigest
@@ -312,9 +403,7 @@ private class DigestingResponseBody(
         private set
 
     override fun contentType() = delegate.contentType()
-
     override fun contentLength() = delegate.contentLength()
-
     override fun source(): okio.BufferedSource = bufferedSource
 
     private fun source(source: Source): Source {
