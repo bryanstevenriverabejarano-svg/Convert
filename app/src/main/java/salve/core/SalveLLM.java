@@ -134,16 +134,26 @@ public class SalveLLM {
             );
         }
 
-        if (!isModelLibPresent(effectiveDir, this.modelLib)) {
-            File fallback = findFirstSoRecursive(effectiveDir);
-            if (fallback != null) {
-                this.modelLib = fallback.getName();
-                Log.w(TAG, "No se encontró model_lib exacto. Usando .so detectado: " + this.modelLib);
-            } else {
-                throw new IllegalStateException(
-                        "No se encontró la librería del modelo (" + this.modelLib + ") en " + effectiveDir.getAbsolutePath()
-                );
+        // Verificar si model_lib es un .so local (model://) o una librería de sistema (system://).
+        // Solo verificamos existencia de archivo para .so locales; las system libs están
+        // precompiladas en el runtime TVM y no existen como archivos en la carpeta del modelo.
+        if (this.modelLib.endsWith(".so")) {
+            // Es un .so local → debe existir en la carpeta del modelo
+            if (!isModelLibPresent(effectiveDir, this.modelLib)) {
+                File fallback = findFirstSoRecursive(effectiveDir);
+                if (fallback != null) {
+                    this.modelLib = fallback.getName();
+                    Log.w(TAG, "No se encontró model_lib exacto. Usando .so detectado: " + this.modelLib);
+                } else {
+                    throw new IllegalStateException(
+                            "No se encontró la librería del modelo (" + this.modelLib + ") en " + effectiveDir.getAbsolutePath()
+                    );
+                }
             }
+        } else {
+            // Es una system lib (ej: "Phi-4-mini-instruct-q4f16_1-android-arm64")
+            // No necesita existir como archivo: se resuelve via system:// en el runtime TVM.
+            Log.d(TAG, "model_lib es system lib (no .so local): " + this.modelLib);
         }
 
         Log.d(TAG, "Modelo configurado: path=" + this.modelPath + " lib=" + this.modelLib);
@@ -348,10 +358,21 @@ public class SalveLLM {
     public synchronized void forceReloadModel() {
         engineInitialized = false;
         modelAvailable = false;
+
+        // Resetear BasicLocalLlm para que pueda reinicializarse con un nuevo modelo.
+        // Sin esto, BasicLocalLlm.init() retorna inmediatamente si ya fue inicializado,
+        // o queda roto permanentemente si la primera inicialización falló.
+        try {
+            BasicLocalLlm.reset();
+        } catch (Exception e) {
+            Log.w(TAG, "Error reseteando BasicLocalLlm (no fatal)", e);
+        }
+
         try {
             reloadModelInfoFromPrefs();
             initEngineIfNeeded();
             modelAvailable = true;
+            Log.i(TAG, "forceReloadModel OK — modelo cargado: " + modelPath);
         } catch (Exception e) {
             Log.e(TAG, "Error al recargar modelo en forceReloadModel()", e);
             modelPath = null;
