@@ -2,7 +2,6 @@ package salve.core;
 
 import android.util.Log;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,18 +32,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Arquitecto: Proyecto Salve
  */
-public class ColaMensajesCognitivos {
+public class ColamensajesCognitivos {
 
     private static final String TAG = "Salve/Cola";
 
     // Singleton
-    private static volatile ColaMensajesCognitivos instance;
+    private static volatile ColamensajesCognitivos instance;
 
-    public static ColaMensajesCognitivos getInstance() {
+    public static ColamensajesCognitivos getInstance() {
         if (instance == null) {
-            synchronized (ColaMensajesCognitivos.class) {
+            synchronized (ColamensajesCognitivos.class) {
                 if (instance == null) {
-                    instance = new ColaMensajesCognitivos();
+                    instance = new ColamensajesCognitivos();
                 }
             }
         }
@@ -81,7 +80,7 @@ public class ColaMensajesCognitivos {
     /** Indica si hay una tarea ejecutándose ahora mismo */
     private final AtomicBoolean ejecutando = new AtomicBoolean(false);
 
-    private ColaMensajesCognitivos() {
+    private ColamensajesCognitivos() {
         Log.d(TAG, "Cola de mensajes cognitivos inicializada.");
     }
 

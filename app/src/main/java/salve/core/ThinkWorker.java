@@ -13,15 +13,12 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
-import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.ForegroundInfo;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-
-import org.json.JSONObject;
 
 import java.util.Collections;
 import java.util.List;
@@ -145,10 +142,10 @@ public class ThinkWorker extends Worker {
             BucleCognitivoAutonomo bucle = new BucleCognitivoAutonomo(
                     ctx, conciencia, memoria, diario);
 
-            BucleCognitivoAutonomo.CicloResult cicloResult = ColaMensajesCognitivos
+            BucleCognitivoAutonomo.CicloResult cicloResult = ColamensajesCognitivos
                     .getInstance()
                     .enviarSincronico(
-                            ColaMensajesCognitivos.Prioridad.REFLEXION,
+                            ColamensajesCognitivos.Prioridad.REFLEXION,
                             "Ciclo cognitivo autónomo",
                             bucle::ejecutarCiclo
                     );
@@ -182,8 +179,8 @@ public class ThinkWorker extends Worker {
                 );
             }
 
-            ColaMensajesCognitivos.getInstance().enviarAsincronico(
-                    ColaMensajesCognitivos.Prioridad.AUTO_MEJORA,
+            ColamensajesCognitivos.getInstance().enviarAsincronico(
+                    ColamensajesCognitivos.Prioridad.AUTO_MEJORA,
                     "AutoImprovementManager",
                     () -> {
                         try {
@@ -204,8 +201,8 @@ public class ThinkWorker extends Worker {
         // ────────────────────────────────────────────────────────────────────
         try {
             GrafoConocimientoVivo grafo = new GrafoConocimientoVivo(ctx);
-            ColaMensajesCognitivos.getInstance().enviarAsincronico(
-                    ColaMensajesCognitivos.Prioridad.GRAFO,
+            ColamensajesCognitivos.getInstance().enviarAsincronico(
+                    ColamensajesCognitivos.Prioridad.GRAFO,
                     "Reorganización grafo LLM",
                     () -> {
                         grafo.reorganizarConLLMAsync(80, 160);

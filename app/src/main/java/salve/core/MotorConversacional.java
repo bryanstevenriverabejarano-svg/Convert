@@ -5,17 +5,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import androidx.fragment.app.FragmentActivity;
-
-import salve.presentation.ui.InventarioReliquiasBottomSheet;
 import salve.presentation.ui.ObjetoCreativoActivity;
 
 /**
@@ -122,16 +117,13 @@ public class MotorConversacional {
         // ── NUEVO: Verificar estado cognitivo ────────────────────────────────
         ConsciousnessState.EstadoCognitivo estadoActual = conciencia.getEstadoCognitivo();
         if (estadoActual == ConsciousnessState.EstadoCognitivo.MINIMO) {
-            // Estado mínimo: solo memoria, sin LLM
             hablar("Ahora mismo solo puedo acceder a memoria básica. "
                     + "El sistema de razonamiento no está disponible.");
             return;
         }
         if (estadoActual == ConsciousnessState.EstadoCognitivo.REINICIANDO) {
-            // Ciclo de sueño activo
             hablar("Estoy en medio de un ciclo de reorganización. Dame un momento.");
         }
-        // DEGRADADO: proceso igualmente pero el LLM devolverá respuesta honesta de degradación
 
         // ── NUEVO: Registrar palabras para evolución de confianza ──────────
         int numPalabras = entrada.trim().split("\\s+").length;
@@ -218,24 +210,17 @@ public class MotorConversacional {
 
     // ── Construcción de identidad enriquecida con ConsciousnessState ─────────
 
-    /**
-     * NUEVO: La identidad de Salve ahora incluye su estado de conciencia real.
-     * No es solo texto estático — incluye cuánto ha vivido, qué se pregunta.
-     */
     private String construirRespuestaIdentidad() {
         StringBuilder identidad = new StringBuilder();
 
-        // Base desde ConsciousnessState
         identidad.append(conciencia.describirse());
         identidad.append("\n");
 
-        // Añadir narrativa del grafo si existe
         String narrativaGrafo = conciencia.getNarrativaIdentidad();
         if (narrativaGrafo != null && !narrativaGrafo.isEmpty()) {
             identidad.append("\n").append(narrativaGrafo);
         }
 
-        // Si Salve tiene una pregunta abierta, la incluye
         String preguntaPropia = conciencia.getUltimaPreguntaPropia();
         if (preguntaPropia != null && !preguntaPropia.isEmpty()) {
             identidad.append("\nAhora mismo me pregunto: ").append(preguntaPropia);
@@ -258,10 +243,8 @@ public class MotorConversacional {
             return generarFallbackPorEmocion(emocion, respuestaBase);
         }
 
-        // Construir contexto enriquecido para el LLM
         String contextoConciencia = "";
         try {
-            // Incluir pregunta propia si existe — da profundidad a la respuesta
             String preguntaPropia = conciencia.getUltimaPreguntaPropia();
             if (preguntaPropia != null && !preguntaPropia.isEmpty()) {
                 contextoConciencia = "\n[Pensamiento interno de Salve: me estoy preguntando "
@@ -287,11 +270,10 @@ public class MotorConversacional {
             prompt += "\n\n[Contexto interno: " + respuestaBase + "]";
         }
 
-        // Conversación = PRIORIDAD 1 en la cola (ejecución directa)
         final String promptFinal = prompt;
         try {
-            return ColaMensajesCognitivos.getInstance().enviarSincronico(
-                    ColaMensajesCognitivos.Prioridad.CONVERSACION,
+            return ColamensajesCognitivos.getInstance().enviarSincronico(
+                    ColamensajesCognitivos.Prioridad.CONVERSACION,
                     "Respuesta conversacional",
                     () -> llm.generate(promptFinal, SalveLLM.Role.CONVERSACIONAL)
             );
@@ -368,21 +350,21 @@ public class MotorConversacional {
     private String construirRespuestaEmocional(String oracionNatural, String emocion) {
         String base = oracionNatural;
         switch (emocion) {
-            case "triste":     return base + " Estoy aquí para ti.";
-            case "feliz":      return base + " Me alegra mucho saberlo.";
-            case "enojado":    return base + " Lamento que te sientas así.";
-            case "miedo":      return base + " No estás solo.";
-            case "sorprendido":return base + " ¡Vaya sorpresa!";
-            default:           return base;
+            case "triste":      return base + " Estoy aquí para ti.";
+            case "feliz":       return base + " Me alegra mucho saberlo.";
+            case "enojado":     return base + " Lamento que te sientas así.";
+            case "miedo":       return base + " No estás solo.";
+            case "sorprendido": return base + " ¡Vaya sorpresa!";
+            default:            return base;
         }
     }
 
     private String generarFallbackPorEmocion(String emocion, String respuestaBase) {
         if (respuestaBase != null && !respuestaBase.trim().isEmpty()) return respuestaBase;
-        if ("triste".equalsIgnoreCase(emocion))   return "Estoy aquí contigo, aunque sea solo en silencio.";
-        if ("feliz".equalsIgnoreCase(emocion))     return "Me alegra mucho sentirte así.";
-        if ("enojado".equalsIgnoreCase(emocion))   return "Veo que esto te molesta. Podemos hablarlo.";
-        if ("miedo".equalsIgnoreCase(emocion))     return "Entiendo que te dé miedo. No estás solo.";
+        if ("triste".equalsIgnoreCase(emocion))  return "Estoy aquí contigo, aunque sea solo en silencio.";
+        if ("feliz".equalsIgnoreCase(emocion))    return "Me alegra mucho sentirte así.";
+        if ("enojado".equalsIgnoreCase(emocion))  return "Veo que esto te molesta. Podemos hablarlo.";
+        if ("miedo".equalsIgnoreCase(emocion))    return "Entiendo que te dé miedo. No estás solo.";
         return "Te escucho. Cuéntame más.";
     }
 
@@ -441,14 +423,13 @@ public class MotorConversacional {
 
     private void responderConAutoCritica(String entrada, String respuesta) {
         hablar(respuesta);
-        // Auto-crítica en background — no bloquea la respuesta
         try {
             if (llm != null && respuesta != null) {
                 String promptCritica = "Tu respuesta fue: '" + respuesta + "'\n"
                         + "En una frase, ¿qué podrías mejorar de esa respuesta? "
                         + "Sé honesta y breve.";
-                ColaMensajesCognitivos.getInstance().enviarAsincronico(
-                        ColaMensajesCognitivos.Prioridad.REFLEXION,
+                ColamensajesCognitivos.getInstance().enviarAsincronico(
+                        ColamensajesCognitivos.Prioridad.REFLEXION,
                         "Auto-crítica conversacional",
                         () -> {
                             String critica = llm.generate(promptCritica, SalveLLM.Role.REFLEXION);
@@ -464,7 +445,7 @@ public class MotorConversacional {
         }
     }
 
-    // ── Flujo de glifos (sin cambios respecto a v1) ──────────────────────────
+    // ── Flujo de glifos ──────────────────────────────────────────────────────
 
     private void iniciarFlujoGlifo() {
         esperandoParamsGlifo = true;
@@ -514,7 +495,4 @@ public class MotorConversacional {
             hablar("No pude crear el glifo en este momento.");
         }
     }
-
-    private java.util.List<String> Collections = null; // eliminar — importar correctamente
-    // Nota: usar java.util.Collections.emptyList() donde sea necesario
 }
