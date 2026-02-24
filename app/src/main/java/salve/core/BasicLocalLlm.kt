@@ -15,13 +15,33 @@ import kotlinx.coroutines.runBlocking
  */
 object BasicLocalLlm {
 
-    private val engine: MLCEngine by lazy { MLCEngine() }
+    // Engine mutable — permite reintentar creación si la primera vez falla.
+    // (by lazy cachea permanentemente los fallos, impidiendo recuperación.)
+    private var engine: MLCEngine? = null
 
     @Volatile
     private var initialized: Boolean = false
 
     @JvmStatic
     fun isInitialized(): Boolean = initialized
+
+    /**
+     * Resetea el estado interno para permitir una re-inicialización completa.
+     * Llamar antes de init() cuando se quiera recargar el modelo.
+     */
+    @JvmStatic
+    @Synchronized
+    fun reset() {
+        Log.i(TAG, "reset() — liberando motor MLC para permitir recarga")
+        initialized = false
+        val current = engine
+        if (current != null) {
+            try {
+                current.unload()
+            } catch (_: Exception) { }
+        }
+        engine = null
+    }
 
     /**
      * Inicializa el motor con el modelo ya descargado.
@@ -35,12 +55,19 @@ object BasicLocalLlm {
         if (initialized) return
 
         runBlocking {
-            val engineInstance = try {
-                engine
-            } catch (e: Exception) {
-                initialized = false
-                throw e
+            // Crear engine si no existe (retryable — no cacheamos fallos)
+            var engineInstance = engine
+            if (engineInstance == null) {
+                engineInstance = try {
+                    MLCEngine()
+                } catch (e: Exception) {
+                    Log.e(TAG, "No se pudo crear MLCEngine", e)
+                    initialized = false
+                    throw e
+                }
+                engine = engineInstance
             }
+
             // Por si hubiese algo cargado antes
             try {
                 engineInstance.unload()
@@ -72,9 +99,12 @@ object BasicLocalLlm {
             return "El modelo local aún no está inicializado en BasicLocalLlm."
         }
 
+        val currentEngine = engine
+            ?: return "El motor MLC no está creado. Llama a init() primero."
+
         return runBlocking {
             val responses = try {
-                engine.chat.completions.create(
+                currentEngine.chat.completions.create(
                     messages = messages,
                     stream_options = OpenAIProtocol.StreamOptions(include_usage = true)
                 )
