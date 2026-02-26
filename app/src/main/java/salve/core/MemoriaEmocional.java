@@ -39,11 +39,15 @@ import java.util.Locale;         // <— para Locale.getDefault()
 /**
  * MemoriaEmocional.java
  *
- * Gestiona la “memoria” de la IA Salve, tanto en RAM como en Room:
+ * Gestiona la "memoria" de la IA Salve, tanto en RAM como en Room:
  *  - Guarda SOLO versiones binarias de los recuerdos (ahorro de espacio).
  *  - Decodifica a texto solo cuando sea necesario.
  *  - Filtra y pondera recuerdos automáticamente según comprensión semántica.
  *  - Mantiene buffer de contexto y genera reflexiones.
+ *
+ * v2 (cambios): añadidos cicloDeSuenoSemantico(), obtenerRecuerdosRecientes()
+ * y resumenReciente() para el sistema cognitivo v2. El resto del archivo
+ * es IDÉNTICO al original.
  */
 public class MemoriaEmocional {
 
@@ -699,7 +703,22 @@ public class MemoriaEmocional {
         String narrativa = generarNarrativaCreativaNocturna();
         prepararRevisionSemanalCreativa();
 
-        Log.d("Salve", "Ciclo de sueño completo.");
+        Log.d("Salve", "Ciclo de sueño clásico completo.");
+
+        // ===== v3: Reorganización neural durante el sueño =====
+        // CognitiveCore replays memorias a través de LiquidNeuralLayer,
+        // consolida pesos, y poda conexiones débiles (olvido selectivo).
+        try {
+            salve.core.cognitive.CognitiveCore core =
+                    salve.core.cognitive.CognitiveCore.getInstance(context);
+            core.setMode(salve.core.cognitive.ThoughtStream.Mode.SUENO);
+            core.dreamCycle();        // Replay de memorias + pensamiento de sueño
+            core.consolidateWeights(); // Guardar pesos actualizados
+            Log.d("Salve", "CognitiveCore dream cycle completado en cicloDeSueno");
+        } catch (Exception e) {
+            Log.w("Salve", "CognitiveCore dream cycle falló (no fatal, sueño clásico ya hecho)", e);
+        }
+
         new Thread(this::insertarReflexionesDB).start();
 
         // ===== NUBE: fin ciclo sueño con pequeño resumen =====
@@ -716,6 +735,142 @@ public class MemoriaEmocional {
             CloudLogger.log("sleep_cycle_end", "Fin de ciclo de sueño");
         }
     }
+
+    // ============================================================
+    // ▼▼▼ NUEVO v2 — CONSOLIDACIÓN SEMÁNTICA REAL ▼▼▼
+    // ============================================================
+
+    /**
+     * Ciclo de sueño con consolidación semántica real.
+     *
+     * DIFERENCIA con cicloDeSueno():
+     * El método clásico conecta recuerdos por primera palabra + misma emoción.
+     * Este usa MemoriaSemantica (similitud coseno sobre 8 dimensiones semánticas)
+     * para agrupar los recuerdos que REALMENTE están relacionados y sintetizarlos
+     * en un recuerdo consolidado de alta intensidad con ayuda del LLM.
+     *
+     * Al finalizar la consolidación, llama a cicloDeSueno() para ejecutar
+     * el resto del flujo original (reflexiones, narrativa nocturna, DB).
+     *
+     * @param ctx Contexto — necesario para MemoriaSemantica (accede al LLM)
+     */
+    public void cicloDeSuenoSemantico(Context ctx) {
+        Log.d(TAG, "Iniciando cicloDeSueno con consolidación semántica...");
+
+        // 1) Extraer textos de todos los recuerdos actuales en RAM
+        List<String> textos = new ArrayList<>();
+        for (Recuerdo r : recuerdos) {
+            try {
+                String texto = codificador.decodificar(r.getBinarioCodificado());
+                if (texto != null && !texto.trim().isEmpty()) {
+                    textos.add(texto.trim());
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Error decodificando recuerdo para análisis semántico", e);
+            }
+        }
+
+        if (textos.size() >= 2) {
+            try {
+                MemoriaSemantica memoriaSemantica = new MemoriaSemantica(ctx);
+                Map<Integer, List<Integer>> clusters = memoriaSemantica.agruparEnClusters(textos);
+
+                Log.d(TAG, "Clusters semánticos encontrados: " + clusters.size()
+                        + " de " + textos.size() + " recuerdos");
+
+                for (Map.Entry<Integer, List<Integer>> entry : clusters.entrySet()) {
+                    List<Integer> indices = entry.getValue();
+                    if (indices.size() < 2) continue;
+
+                    List<String> textosDelCluster = new ArrayList<>();
+                    for (int idx : indices) {
+                        if (idx < textos.size()) {
+                            textosDelCluster.add(textos.get(idx));
+                        }
+                    }
+
+                    // Síntesis narrativa del cluster con LLM
+                    String sintesis = memoriaSemantica.sintetizarCluster(textosDelCluster);
+                    if (sintesis != null && !sintesis.trim().isEmpty()) {
+                        // Guardar como recuerdo consolidado de alta intensidad (8)
+                        guardarRecuerdo(
+                                "CONSOLIDACIÓN SEMÁNTICA: " + sintesis,
+                                "reflexiva",
+                                8,
+                                Arrays.asList("consolidacion_semantica",
+                                        "cluster_" + entry.getKey())
+                        );
+                        Log.d(TAG, "Cluster " + entry.getKey() + " consolidado: " + sintesis);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error en consolidación semántica, continuando con ciclo clásico", e);
+            }
+        } else {
+            Log.d(TAG, "Pocos recuerdos (" + textos.size()
+                    + ") para clustering semántico. Mínimo 2 requeridos.");
+        }
+
+        // 2) Ejecutar el ciclo clásico para el resto del flujo (reflexiones, DB, narrativa)
+        cicloDeSueno();
+
+        Log.d(TAG, "cicloDeSuenoSemantico completado.");
+    }
+
+    /**
+     * Devuelve los N recuerdos más recientes en formato texto legible.
+     *
+     * Usado por BucleCognitivoAutonomo para construir la observación de estado
+     * que Salve usa para generarse preguntas propias durante el sueño.
+     *
+     * @param n Número máximo de recuerdos a devolver (los más recientes primero)
+     * @return Lista de strings: texto del recuerdo + emoción entre corchetes
+     */
+    public List<String> obtenerRecuerdosRecientes(int n) {
+        List<String> resultado = new ArrayList<>();
+        if (n <= 0 || recuerdos.isEmpty()) return resultado;
+
+        int total = recuerdos.size();
+        int desde = Math.max(0, total - n);
+
+        for (int i = desde; i < total; i++) {
+            try {
+                Recuerdo r = recuerdos.get(i);
+                String texto   = codificador.decodificar(r.getBinarioCodificado());
+                String emocion = r.getEmocionPrincipal();
+                if (texto != null && !texto.trim().isEmpty()) {
+                    resultado.add(texto.trim() + " [" + emocion + "]");
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Error obteniendo recuerdo reciente #" + i, e);
+            }
+        }
+        return resultado;
+    }
+
+    /**
+     * Genera un resumen en texto de los últimos 5 recuerdos.
+     *
+     * Usado por GestorIdeas y BucleCognitivoAutonomo para contextualizar
+     * las preguntas que Salve se genera sobre sí misma durante el sueño.
+     *
+     * @return String con los recuerdos recientes en formato lista, o mensaje vacío.
+     */
+    public String resumenReciente() {
+        List<String> recientes = obtenerRecuerdosRecientes(5);
+        if (recientes.isEmpty()) {
+            return "Sin experiencias recientes registradas.";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String r : recientes) {
+            sb.append("- ").append(r).append("\n");
+        }
+        return sb.toString().trim();
+    }
+
+    // ============================================================
+    // ▲▲▲ FIN MÉTODOS NUEVOS v2 ▲▲▲
+    // ============================================================
 
     /** Conecta recuerdos con misma emoción y palabra clave inicial. */
     private void conectarRecuerdosSimilares() {

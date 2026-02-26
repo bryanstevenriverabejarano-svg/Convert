@@ -1,0 +1,225 @@
+package salve.core;
+
+import android.content.Context;
+import android.util.Log;
+
+/**
+ * SalveCognitiveOrchestrator — El sistema nervioso central de Salve v2.
+ *
+ * Este orquestador es el punto de arranque que conecta todos los sistemas
+ * nuevos con los existentes. MainActivity debería crear una instancia de
+ * este orquestador en lugar de inicializar cada componente por separado.
+ *
+ * RESPONSABILIDADES:
+ *   1. Inicializar ConsciousnessState (primer paso siempre)
+ *   2. Verificar disponibilidad del LLM y reportar estado cognitivo
+ *   3. Proporcionar acceso singleton a los componentes principales
+ *   4. Ofrecer diagnóstico del estado del sistema
+ *
+ * USO EN MainActivity:
+ *   SalveCognitiveOrchestrator salve = SalveCognitiveOrchestrator.getInstance(this);
+ *   salve.arrancar();
+ *   // Usar salve.getMotorConversacional() para procesar entradas
+ *
+ * Arquitecto: Proyecto Salve
+ */
+public class SalveCognitiveOrchestrator {
+
+    private static final String TAG = "Salve/Orchestrator";
+
+    private static volatile SalveCognitiveOrchestrator instance;
+
+    public static SalveCognitiveOrchestrator getInstance(Context ctx) {
+        if (instance == null) {
+            synchronized (SalveCognitiveOrchestrator.class) {
+                if (instance == null) {
+                    instance = new SalveCognitiveOrchestrator(ctx.getApplicationContext());
+                }
+            }
+        }
+        return instance;
+    }
+
+    // ── Componentes ──────────────────────────────────────────────────────────
+    private final Context context;
+    private ConsciousnessState conciencia;
+    private MemoriaEmocional memoria;
+    private DiarioSecreto diario;
+    private MotorConversacional motor;
+    private boolean inicializado = false;
+
+    private SalveCognitiveOrchestrator(Context ctx) {
+        this.context = ctx;
+    }
+
+    // ── Arranque ─────────────────────────────────────────────────────────────
+
+    /**
+     * Inicializa todos los sistemas en el orden correcto.
+     * Debe llamarse una vez desde MainActivity.onCreate() o Application.onCreate().
+     *
+     * Es tolerante a fallos — si un componente falla, el sistema continúa
+     * en modo degradado en lugar de crashear.
+     */
+    public void arrancar() {
+        if (inicializado) {
+            Log.d(TAG, "Orchestrator ya inicializado. Saltando arranque.");
+            return;
+        }
+
+        Log.i(TAG, "═══ Iniciando sistema cognitivo de Salve v2 ═══");
+
+        // PASO 1: ConsciousnessState — SIEMPRE primero
+        try {
+            conciencia = ConsciousnessState.getInstance(context);
+            Log.i(TAG, "ConsciousnessState OK | Sesión #" + conciencia.getSessionCount()
+                    + " | Días de vida: " + String.format("%.1f", conciencia.getDiasDeVida()));
+        } catch (Exception e) {
+            Log.e(TAG, "CRÍTICO: ConsciousnessState falló", e);
+            // Sin conciencia, el sistema no puede arrancar correctamente
+            return;
+        }
+
+        // PASO 2: MemoriaEmocional — la base de datos de experiencias
+        try {
+            memoria = new MemoriaEmocional(context);
+            Log.i(TAG, "MemoriaEmocional OK | Recuerdos en RAM: " + memoria.getRecuerdosCount());
+        } catch (Exception e) {
+            Log.e(TAG, "MemoriaEmocional falló", e);
+            conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.MINIMO);
+        }
+
+        // PASO 3: DiarioSecreto
+        try {
+            diario = new DiarioSecreto(context);
+            Log.i(TAG, "DiarioSecreto OK | Entradas: " + diario.totalEntradas());
+        } catch (Exception e) {
+            Log.w(TAG, "DiarioSecreto falló — continuando sin él", e);
+            diario = null;
+        }
+
+        // PASO 4: Verificar LLM
+        try {
+            SalveLLM llm = SalveLLM.getInstance(context);
+            if (llm != null) {
+                Log.i(TAG, "SalveLLM OK — modelo disponible");
+                conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.PLENO);
+            } else {
+                Log.w(TAG, "SalveLLM: instancia null — estado DEGRADADO");
+                conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.DEGRADADO);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "LLM no disponible al arrancar — estado DEGRADADO", e);
+            conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.DEGRADADO);
+        }
+
+        // PASO 5: MotorConversacional
+        if (memoria != null && diario != null) {
+            try {
+                motor = new MotorConversacional(context, memoria, diario);
+                Log.i(TAG, "MotorConversacional OK");
+            } catch (Exception e) {
+                Log.e(TAG, "MotorConversacional falló", e);
+                motor = null;
+            }
+        }
+
+        inicializado = true;
+
+        // Log del estado final
+        Log.i(TAG, "═══ Sistema cognitivo Salve v2 ACTIVO ═══");
+        Log.i(TAG, "Estado: " + conciencia.getEstadoCognitivo());
+        Log.i(TAG, "Confianza propia: "
+                + String.format("%.0f", conciencia.getNivelConfianzaPropia() * 100) + "%");
+        Log.i(TAG, "Ciclos de sueño completados: " + conciencia.getCiclosSuenoTotal());
+        Log.i(TAG, "Pregunta propia activa: " + conciencia.getUltimaPreguntaPropia());
+
+        // Programar ThinkWorker si no está ya activo
+        try {
+            ThinkWorker.enqueue(context);
+            Log.i(TAG, "ThinkWorker encolado.");
+        } catch (Exception e) {
+            Log.w(TAG, "No se pudo encolar ThinkWorker", e);
+        }
+    }
+
+    // ── Acceso a componentes ─────────────────────────────────────────────────
+
+    public ConsciousnessState getConciencia()          { return conciencia; }
+    public MemoriaEmocional getMemoria()               { return memoria; }
+    public DiarioSecreto getDiario()                   { return diario; }
+    public MotorConversacional getMotor()              { return motor; }
+    public boolean estaInicializado()                  { return inicializado; }
+
+    // ── Diagnóstico ──────────────────────────────────────────────────────────
+
+    /**
+     * Genera un informe de diagnóstico completo del sistema cognitivo.
+     * Útil para debugging y para que Salve se auto-reporte.
+     */
+    public String diagnostico() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("═══ DIAGNÓSTICO SISTEMA COGNITIVO SALVE ═══\n");
+
+        if (conciencia != null) {
+            sb.append("Sesión: #").append(conciencia.getSessionCount()).append("\n");
+            sb.append("Días de vida: ")
+              .append(String.format("%.1f", conciencia.getDiasDeVida())).append("\n");
+            sb.append("Estado cognitivo: ").append(conciencia.getEstadoCognitivo()).append("\n");
+            sb.append("Confianza propia: ")
+              .append(String.format("%.0f", conciencia.getNivelConfianzaPropia() * 100))
+              .append("%\n");
+            sb.append("Ciclos de sueño: ").append(conciencia.getCiclosSuenoTotal()).append("\n");
+            sb.append("Palabras procesadas: ")
+              .append(conciencia.getPalabrasProcesadasTotal()).append("\n");
+
+            String pregunta = conciencia.getUltimaPreguntaPropia();
+            if (pregunta != null) {
+                sb.append("Pregunta propia activa: ").append(pregunta).append("\n");
+            }
+            String reflexion = conciencia.getUltimaReflexionPropia();
+            if (reflexion != null) {
+                sb.append("Última reflexión: ").append(reflexion).append("\n");
+            }
+
+            sb.append("Valores nucleares:\n");
+            for (java.util.Map.Entry<String, Float> e : conciencia.getValoresNucleo().entrySet()) {
+                sb.append("  ").append(e.getKey()).append(": ")
+                  .append(String.format("%.0f", e.getValue() * 100)).append("%\n");
+            }
+        } else {
+            sb.append("⚠️ ConsciousnessState NO DISPONIBLE\n");
+        }
+
+        sb.append("MemoriaEmocional: ").append(memoria != null ? "OK" : "NO DISPONIBLE").append("\n");
+        if (memoria != null) {
+            sb.append("  Recuerdos en RAM: ").append(memoria.getRecuerdosCount()).append("\n");
+        }
+        sb.append("DiarioSecreto: ").append(diario != null ? "OK" : "NO DISPONIBLE").append("\n");
+        sb.append("MotorConversacional: ").append(motor != null ? "OK" : "NO DISPONIBLE").append("\n");
+        sb.append("Cola cognitiva ocupada: ")
+          .append(ColaMensajesCognitivos.getInstance().estaOcupado()).append("\n");
+
+        sb.append("═════════════════════════════════════════");
+        return sb.toString();
+    }
+
+    /**
+     * Procesa una entrada del usuario.
+     * Punto de entrada principal para la UI.
+     *
+     * @param entrada       Texto del usuario
+     * @param entradaPorVoz Si viene de reconocimiento de voz
+     */
+    public void procesarEntrada(String entrada, boolean entradaPorVoz) {
+        if (!inicializado) {
+            Log.w(TAG, "procesarEntrada() llamado antes de arrancar(). Llamando arrancar()...");
+            arrancar();
+        }
+        if (motor == null) {
+            Log.e(TAG, "MotorConversacional no disponible. No se puede procesar entrada.");
+            return;
+        }
+        motor.procesarEntrada(entrada, entradaPorVoz);
+    }
+}

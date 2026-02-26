@@ -33,6 +33,10 @@ import java.util.concurrent.Executors;
  *    - Proponer categorías sobre el grafo.
  *    - Agrupar nodos bajo esas categorías.
  *    - Generar un resumen de identidad cognitiva.
+ *
+ * v2: añadido campo ultimaNarrativaIdentidad y método obtenerNarrativaIdentidad()
+ * para que ThinkWorker pueda propagar la identidad generada por el LLM
+ * a ConsciousnessState y que persista entre sesiones.
  */
 public class GrafoConocimientoVivo {
 
@@ -45,6 +49,16 @@ public class GrafoConocimientoVivo {
 
     // ✅ Acceso al LLM local
     private final SalveLLM llm;
+
+    // ▼▼▼ NUEVO v2 ▼▼▼
+    /**
+     * Última narrativa de identidad generada por el LLM al reorganizar el grafo.
+     * Se actualiza en aplicarOrganizacionLLM() cada vez que el LLM devuelve
+     * un campo "identidad_resumen". Es volatile para lectura segura desde
+     * ThinkWorker (hilo distinto al executor interno).
+     */
+    private volatile String ultimaNarrativaIdentidad = null;
+    // ▲▲▲ FIN NUEVO v2 ▲▲▲
 
     public GrafoConocimientoVivo(Context context) throws Exception {
         this.context = context == null ? null : context.getApplicationContext();
@@ -356,7 +370,7 @@ public class GrafoConocimientoVivo {
     }
 
     // =====================================================================
-    //  ✅ NUEVO: ORGANIZACIÓN ASISTIDA POR LLM
+    //  ✅ ORGANIZACIÓN ASISTIDA POR LLM
     // =====================================================================
 
     /**
@@ -366,6 +380,7 @@ public class GrafoConocimientoVivo {
      *  - un pequeño resumen de identidad
      *
      * El resultado se materializa como nodos "categoria_llm" y relaciones "agrupa".
+     * v2: también actualiza ultimaNarrativaIdentidad con el campo identidad_resumen.
      */
     public void reorganizarConLLMAsync(int maxNodos, int maxRelaciones) {
         executor.execute(() -> {
@@ -466,6 +481,9 @@ public class GrafoConocimientoVivo {
      * - Crea nodos de categoría_llm.
      * - Crea relaciones 'agrupa' desde cada categoría a los nodos listados.
      * - Registra opcionalmente un nodo de identidad sintetizada.
+     *
+     * v2: además guarda el identidad_resumen en ultimaNarrativaIdentidad
+     * para que ThinkWorker lo pueda propagar a ConsciousnessState.
      */
     private void aplicarOrganizacionLLM(JSONObject out) {
         try {
@@ -514,6 +532,11 @@ public class GrafoConocimientoVivo {
                         Arrays.asList("llm_identidad", "auto_concepto"),
                         9
                 );
+
+                // ▼▼▼ NUEVO v2: persistir para ConsciousnessState ▼▼▼
+                ultimaNarrativaIdentidad = identidad.trim();
+                Log.d(TAG, "Narrativa de identidad actualizada: " + ultimaNarrativaIdentidad);
+                // ▲▲▲ FIN NUEVO v2 ▲▲▲
             }
 
         } catch (Exception e) {
@@ -521,8 +544,24 @@ public class GrafoConocimientoVivo {
         }
     }
 
+    // ▼▼▼ NUEVO v2 ▼▼▼
     /**
-     * Intenta extraer el JSON “puro” de una respuesta del LLM que pueda venir
+     * Devuelve la última narrativa de identidad que el LLM generó al reorganizar
+     * el grafo. Refleja lo que el sistema infiere sobre quién es Salve a partir
+     * de su propio conocimiento acumulado.
+     *
+     * ThinkWorker la lee y la propaga a ConsciousnessState para que persista
+     * entre sesiones y esté disponible en el contexto conversacional.
+     *
+     * @return Narrativa de identidad, o null si aún no se ha generado ninguna.
+     */
+    public String obtenerNarrativaIdentidad() {
+        return ultimaNarrativaIdentidad;
+    }
+    // ▲▲▲ FIN NUEVO v2 ▲▲▲
+
+    /**
+     * Intenta extraer el JSON "puro" de una respuesta del LLM que pueda venir
      * envuelta en texto. Busca el primer '{' y el último '}'.
      */
     private String extractJson(String raw) {
