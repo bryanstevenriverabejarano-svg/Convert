@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import salve.core.cognitive.CognitiveCore;
+import salve.core.cognitive.ThoughtStream;
 import salve.data.util.CloudLogger;
 
 /**
@@ -131,6 +133,33 @@ public class ThinkWorker extends Worker {
                 Log.e(TAG, "CicloDeSueno clásico también falló", e2);
                 safeCloudLog("think_error", "Sueño: " + e2.getMessage());
             }
+        }
+
+        // ────────────────────────────────────────────────────────────────────
+        // PASO 2.5: Pensamiento en reposo — Sustrato Cognitivo Experimental
+        // CognitiveCore piensa en silencio durante inactividad.
+        // El LLM NO participa aquí — es pensamiento neural puro.
+        // ────────────────────────────────────────────────────────────────────
+        try {
+            CognitiveCore core = CognitiveCore.getInstance(ctx);
+            core.setMode(ThoughtStream.Mode.REPOSO);
+            core.backgroundThink(30); // 30 segundos de pensamiento en silencio
+            safeCloudLog("think_info", "CognitiveCore reposo completado");
+        } catch (Exception e) {
+            Log.w(TAG, "CognitiveCore background think falló (no fatal)", e);
+            safeCloudLog("think_error", "CognitiveCore: " + e.getMessage());
+        }
+
+        // ────────────────────────────────────────────────────────────────────
+        // PASO 2.6: Consolidación de aprendizaje neural
+        // Guarda pesos actualizados de LiquidNeuralLayer y estado completo
+        // ────────────────────────────────────────────────────────────────────
+        try {
+            CognitiveCore core = CognitiveCore.getInstance(ctx);
+            core.consolidate();
+            safeCloudLog("think_info", "CognitiveCore consolidación completada");
+        } catch (Exception e) {
+            Log.w(TAG, "CognitiveCore consolidación falló (no fatal)", e);
         }
 
         // ────────────────────────────────────────────────────────────────────

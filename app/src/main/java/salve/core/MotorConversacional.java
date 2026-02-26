@@ -6,11 +6,14 @@ import android.content.SharedPreferences;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
+import salve.core.cognitive.CognitiveCore;
+import salve.core.cognitive.ThoughtStream;
 import salve.presentation.ui.ObjetoCreativoActivity;
 
 /**
@@ -32,6 +35,13 @@ import salve.presentation.ui.ObjetoCreativoActivity;
  *
  * 4. Mantenemos toda la arquitectura existente del MotorConversacional original
  *    (glifos, intenciones, TTS, etc.) para no romper nada.
+ *
+ * v3: Integración con CognitiveCore — sustrato cognitivo experimental.
+ *   El LLM pasa de ser el CEREBRO a ser la BOCA:
+ *   - CognitiveCore.perceive() carga la entrada en el sustrato
+ *   - CognitiveCore.process() ejecuta pensamiento real (LiquidNeuralLayer + PatternFormation)
+ *   - CognitiveCore.verbalize() traduce el estado cognitivo a lenguaje
+ *   - Si el sustrato falla, el flujo LLM anterior funciona como fallback
  */
 public class MotorConversacional {
 
@@ -44,7 +54,8 @@ public class MotorConversacional {
     private final ModuloInterpretacionSemantica moduloInterpretacion;
     private final ModuloComprension moduloComprension;
     private final SalveLLM llm;
-    private final ConsciousnessState conciencia;          // ← NUEVO
+    private final ConsciousnessState conciencia;          // ← v2
+    private final CognitiveCore cognitiveCore;            // ← v3: sustrato cognitivo
 
     // ==== UTILIDADES ====
     private final SharedPreferences preferencias;
@@ -91,6 +102,16 @@ public class MotorConversacional {
             conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.DEGRADADO);
         }
         this.llm = tmpLlm;
+
+        // Blindar CognitiveCore — sustrato cognitivo experimental
+        CognitiveCore tmpCore = null;
+        try {
+            tmpCore = CognitiveCore.getInstance(context);
+            Log.d("Salve/Cognitive", "CognitiveCore inicializado en MotorConversacional");
+        } catch (Exception e) {
+            Log.w("Salve/Cognitive", "CognitiveCore no disponible. Flujo clásico activo.", e);
+        }
+        this.cognitiveCore = tmpCore;
 
         this.preferencias = context.getSharedPreferences("config_salve", Context.MODE_PRIVATE);
 
@@ -193,13 +214,49 @@ public class MotorConversacional {
             respuestaBase = resumenAccion;
         }
 
-        // 8) Generar respuesta final con LLM (PRIORIDAD MÁXIMA en la cola)
-        String etiquetaContextoFinal = (esPreguntaIdentidad && etiquetaIdentidad != null)
-                ? etiquetaIdentidad : intent.type.name();
+        // ── v3: SUSTRATO COGNITIVO — El cerebro REAL de Salve ────────────
+        // Intentar generar respuesta con CognitiveCore primero.
+        // Si funciona, el LLM solo sirve como verbalizador (la BOCA).
+        // Si falla, el flujo clásico LLM actúa como fallback.
+        String respuesta = null;
+        if (cognitiveCore != null) {
+            try {
+                // Construir lista de conceptos detectados
+                List<String> conceptosDetectados = new ArrayList<>();
+                if (bestConcept != null) conceptosDetectados.add(bestConcept);
+                if (semantica != null && !semantica.isEmpty()) conceptosDetectados.add(semantica);
 
-        String respuesta = generarRespuestaConversacional(
-                entrada, entradaPorVoz, emocionDetectada,
-                bestConcept, bestScore, respuestaBase, etiquetaContextoFinal);
+                // Percibir: cargar entrada en el sustrato cognitivo
+                cognitiveCore.perceive(entrada, emocionDetectada, conceptosDetectados);
+
+                // Pensar: 5 ticks de procesamiento cognitivo real
+                cognitiveCore.process(5);
+
+                // Decidir: evaluar si hay conclusiones del razonamiento
+                String decision = cognitiveCore.decide();
+
+                // Verbalizar: traducir estado cognitivo a lenguaje natural
+                respuesta = cognitiveCore.verbalize(entrada, emocionDetectada, respuestaBase);
+
+                if (respuesta != null && !respuesta.trim().isEmpty()) {
+                    Log.d("Salve/Cognitive", "Respuesta del sustrato cognitivo: "
+                            + respuesta.substring(0, Math.min(50, respuesta.length())) + "...");
+                }
+            } catch (Exception e) {
+                Log.w("Salve/Cognitive", "CognitiveCore falló, usando flujo clásico", e);
+                respuesta = null; // Forzar fallback al flujo clásico
+            }
+        }
+
+        // ── Flujo clásico (fallback si CognitiveCore no produjo respuesta) ──
+        if (respuesta == null || respuesta.trim().isEmpty()) {
+            String etiquetaContextoFinal = (esPreguntaIdentidad && etiquetaIdentidad != null)
+                    ? etiquetaIdentidad : intent.type.name();
+
+            respuesta = generarRespuestaConversacional(
+                    entrada, entradaPorVoz, emocionDetectada,
+                    bestConcept, bestScore, respuestaBase, etiquetaContextoFinal);
+        }
 
         if (respuesta == null || respuesta.trim().isEmpty()) {
             respuesta = generarFallbackPorEmocion(emocionDetectada, respuestaBase);
@@ -423,8 +480,21 @@ public class MotorConversacional {
 
     private void responderConAutoCritica(String entrada, String respuesta) {
         hablar(respuesta);
+
+        // v3: Enviar señal de refuerzo al sustrato cognitivo
+        // Por defecto, refuerzo moderado positivo (la respuesta se dio)
+        // La AutoCritica puede ajustar esto si detecta problemas
+        if (cognitiveCore != null) {
+            try {
+                cognitiveCore.reinforce(0.3f); // Refuerzo moderado positivo
+            } catch (Exception e) {
+                Log.w("Salve/Cognitive", "Refuerzo cognitivo falló", e);
+            }
+        }
+
         try {
             if (llm != null && respuesta != null) {
+                final String respuestaFinal = respuesta;
                 String promptCritica = "Tu respuesta fue: '" + respuesta + "'\n"
                         + "En una frase, ¿qué podrías mejorar de esa respuesta? "
                         + "Sé honesta y breve.";
@@ -435,6 +505,17 @@ public class MotorConversacional {
                             String critica = llm.generate(promptCritica, SalveLLM.Role.REFLEXION);
                             if (critica != null && !critica.trim().isEmpty()) {
                                 diario.escribirAutoCritica(critica);
+                                // v3: Si la crítica es severa, ajustar refuerzo negativo
+                                if (cognitiveCore != null) {
+                                    try {
+                                        String criticaLower = critica.toLowerCase();
+                                        if (criticaLower.contains("deficiente")
+                                                || criticaLower.contains("mejorar mucho")
+                                                || criticaLower.contains("incorrecta")) {
+                                            cognitiveCore.reinforce(-0.2f);
+                                        }
+                                    } catch (Exception ignore) {}
+                                }
                             }
                             return null;
                         }

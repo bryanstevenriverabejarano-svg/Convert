@@ -703,7 +703,22 @@ public class MemoriaEmocional {
         String narrativa = generarNarrativaCreativaNocturna();
         prepararRevisionSemanalCreativa();
 
-        Log.d("Salve", "Ciclo de sueño completo.");
+        Log.d("Salve", "Ciclo de sueño clásico completo.");
+
+        // ===== v3: Reorganización neural durante el sueño =====
+        // CognitiveCore replays memorias a través de LiquidNeuralLayer,
+        // consolida pesos, y poda conexiones débiles (olvido selectivo).
+        try {
+            salve.core.cognitive.CognitiveCore core =
+                    salve.core.cognitive.CognitiveCore.getInstance(context);
+            core.setMode(salve.core.cognitive.ThoughtStream.Mode.SUENO);
+            core.dreamCycle();        // Replay de memorias + pensamiento de sueño
+            core.consolidateWeights(); // Guardar pesos actualizados
+            Log.d("Salve", "CognitiveCore dream cycle completado en cicloDeSueno");
+        } catch (Exception e) {
+            Log.w("Salve", "CognitiveCore dream cycle falló (no fatal, sueño clásico ya hecho)", e);
+        }
+
         new Thread(this::insertarReflexionesDB).start();
 
         // ===== NUBE: fin ciclo sueño con pequeño resumen =====
