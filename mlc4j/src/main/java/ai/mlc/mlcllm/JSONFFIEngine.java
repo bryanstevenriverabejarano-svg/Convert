@@ -40,7 +40,7 @@ public class JSONFFIEngine {
         try {
             LibInfo.ensureLoaded();
             ready = true;
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
             Log.e(TAG, "TVM runtime init failed; JSON FFI disabled.", e);
             failure = e.getMessage();
         }
