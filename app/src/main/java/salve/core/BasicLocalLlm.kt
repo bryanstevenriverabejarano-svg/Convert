@@ -60,10 +60,10 @@ object BasicLocalLlm {
             if (engineInstance == null) {
                 engineInstance = try {
                     MLCEngine()
-                } catch (e: Exception) {
-                    Log.e(TAG, "No se pudo crear MLCEngine", e)
+                } catch (e: Throwable) {
+                    Log.e(TAG, "No se pudo crear MLCEngine. Se usará modo sin TVM.", e)
                     initialized = false
-                    throw e
+                    return@runBlocking
                 }
                 engine = engineInstance
             }
@@ -80,9 +80,10 @@ object BasicLocalLlm {
                 engineInstance.reload(modelPath, modelLib)
                 Log.i(TAG, "MLC runtime cargado con modelPath=$modelPath modelLib=$modelLib")
                 initialized = true
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                Log.e(TAG, "No se pudo recargar el modelo MLC. Se mantiene modo sin TVM.", e)
                 initialized = false
-                throw e
+                return@runBlocking
             }
         }
     }
