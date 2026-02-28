@@ -1,50 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Root is wrap_content so it only covers what it shows (no full-screen touch block) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/overlayRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#80000000"
+    android:layout_height="wrap_content"
+    android:background="#222222"
+    android:orientation="vertical"
+    android:padding="16dp"
     android:visibility="gone">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/overlayTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:background="#222222"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:text="Descargando modelos…"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/overlayTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Descargando modelos…"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+    <ProgressBar
+        android:id="@+id/overlayProgress"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:max="100" />
 
-        <ProgressBar
-            android:id="@+id/overlayProgress"
-            style="@android:style/Widget.ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:max="100" />
+    <TextView
+        android:id="@+id/overlayMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#CCCCCC"
+        android:textSize="14sp" />
 
-        <TextView
-            android:id="@+id/overlayMessage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="#CCCCCC"
-            android:textSize="14sp" />
+    <TextView
+        android:id="@+id/overlayStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#8BC34A"
+        android:textSize="14sp" />
 
-        <TextView
-            android:id="@+id/overlayStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="#8BC34A"
-            android:textSize="14sp" />
-    </LinearLayout>
-</FrameLayout>
+    <!-- Visible only in error state so the user can dismiss and keep using the app -->
+    <Button
+        android:id="@+id/overlayCloseButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_gravity="end"
+        android:text="Continuar sin modelos"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#555555"
+        android:visibility="gone" />
+
+</LinearLayout>

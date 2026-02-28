@@ -35,10 +35,17 @@ class ModelDownloadRepository(
                         )
                     }
                     is ModelDownloader.DownloadEvent.Completed -> {
-                        val prepared = withContext(Dispatchers.IO) {
-                            ModelStore.ensureModelFolder(context, event.file, event.id)
+                        // ensureModelFolder throws Exception — catch it so a zip-extraction
+                        // failure doesn't propagate out of the flow and crash the Worker.
+                        val prepared = try {
+                            withContext(Dispatchers.IO) {
+                                ModelStore.ensureModelFolder(context, event.file, event.id)
+                            }
+                        } catch (e: Exception) {
+                            trySend(ModelDownloadEvent.Error(event.id, e))
+                            null
                         }
-                        trySend(ModelDownloadEvent.Prepared(event.id, prepared))
+                        if (prepared != null) trySend(ModelDownloadEvent.Prepared(event.id, prepared))
                     }
                     is ModelDownloader.DownloadEvent.Error -> {
                         trySend(ModelDownloadEvent.Error(event.id, event.error))

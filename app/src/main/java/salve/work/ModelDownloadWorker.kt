@@ -33,34 +33,61 @@ class ModelDownloadWorker(
         }
 
         ensureNotificationChannel()
-        setForeground(createForegroundInfo("Iniciando descarga…"))
+        // setForeground can throw on some devices/OS versions; treat it as non-fatal.
+        try {
+            setForeground(createForegroundInfo("Iniciando descarga…"))
+        } catch (e: Exception) {
+            android.util.Log.w("ModelDownloadWorker", "setForeground failed (continuing): ${e.message}")
+        }
 
-        repository.downloadAndPrepareModels(applicationContext, jsonBytes).collect { event ->
-            when (event) {
-                is ModelDownloadEvent.Started -> {
-                    updateProgress(event.id, 0, "Descargando ${event.id}")
-                }
-                is ModelDownloadEvent.Progress -> {
-                    val percent = if (event.totalBytes > 0) {
-                        ((event.bytes * 100) / event.totalBytes).toInt()
-                    } else {
-                        0
+        // Collect the download flow.  Any exception that escapes would otherwise flip
+        // the WorkInfo to FAILED and show the blocking error overlay — we don't want
+        // that for transient failures, so we catch and surface them as progress messages.
+        try {
+            repository.downloadAndPrepareModels(applicationContext, jsonBytes).collect { event ->
+                when (event) {
+                    is ModelDownloadEvent.Started -> {
+                        updateProgress(event.id, 0, "Descargando ${event.id}")
                     }
-                    updateProgress(event.id, percent, "${event.id}: $percent%")
-                }
-                is ModelDownloadEvent.Prepared -> {
-                    updateProgress(event.id, 100, "${event.id} preparado")
-                }
-                is ModelDownloadEvent.Error -> {
-                    updateProgress(event.id, 0, "Error en ${event.id}: ${event.error.message}")
-                }
-                ModelDownloadEvent.AllReady -> {
-                    updateProgress(null, 100, "Modelos listos")
-                }
-                ModelDownloadEvent.AllDone -> {
-                    updateProgress(null, 100, "Descarga finalizada")
+                    is ModelDownloadEvent.Progress -> {
+                        val percent = if (event.totalBytes > 0) {
+                            ((event.bytes * 100) / event.totalBytes).toInt()
+                        } else {
+                            0
+                        }
+                        updateProgress(event.id, percent, "${event.id}: $percent%")
+                    }
+                    is ModelDownloadEvent.Prepared -> {
+                        updateProgress(event.id, 100, "${event.id} preparado")
+                    }
+                    is ModelDownloadEvent.Error -> {
+                        // Individual model failure — log it but let the worker succeed
+                        // so the app stays usable in degraded mode.
+                        android.util.Log.e(
+                            "ModelDownloadWorker",
+                            "Error descargando ${event.id}",
+                            event.error
+                        )
+                        updateProgress(event.id, 0, "Error en ${event.id}: ${event.error.message}")
+                    }
+                    ModelDownloadEvent.AllReady -> {
+                        updateProgress(null, 100, "Modelos listos")
+                    }
+                    ModelDownloadEvent.AllDone -> {
+                        updateProgress(null, 100, "Descarga finalizada")
+                    }
                 }
             }
+        } catch (e: Exception) {
+            // Unexpected exception from the flow itself (e.g. network infrastructure failure).
+            // Return success anyway so WorkInfo stays SUCCEEDED and the overlay doesn't block.
+            android.util.Log.e("ModelDownloadWorker", "Error inesperado en flujo de descarga", e)
+            setProgressAsync(
+                workDataOf(
+                    KEY_STATUS to "error",
+                    KEY_MESSAGE to "Error inesperado: ${e.message}"
+                )
+            )
         }
 
         return Result.success()
