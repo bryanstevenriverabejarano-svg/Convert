@@ -27,10 +27,19 @@ class DownloadOverlayFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        binding.overlayCloseButton.setOnClickListener {
+            binding.overlayRoot.visibility = View.GONE
+        }
+
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            // Remove any pending auto-hide callbacks when state changes
+            binding.overlayRoot.removeCallbacks(null)
+
             when (state) {
                 is DownloadUiState.Idle -> {
                     binding.overlayRoot.visibility = View.GONE
+                    binding.overlayCloseButton.visibility = View.GONE
                 }
                 is DownloadUiState.Running -> {
                     binding.overlayRoot.visibility = View.VISIBLE
@@ -38,6 +47,7 @@ class DownloadOverlayFragment : Fragment() {
                     binding.overlayProgress.progress = state.percent
                     binding.overlayMessage.text = state.message ?: ""
                     binding.overlayStatus.text = state.modelId ?: ""
+                    binding.overlayCloseButton.visibility = View.GONE
                 }
                 is DownloadUiState.Success -> {
                     binding.overlayRoot.visibility = View.VISIBLE
@@ -45,6 +55,11 @@ class DownloadOverlayFragment : Fragment() {
                     binding.overlayProgress.progress = 100
                     binding.overlayMessage.text = state.message ?: "Descarga completada"
                     binding.overlayStatus.text = ""
+                    binding.overlayCloseButton.visibility = View.GONE
+                    // Auto-hide after 3 s so the success banner doesn't linger
+                    binding.overlayRoot.postDelayed({
+                        if (_binding != null) binding.overlayRoot.visibility = View.GONE
+                    }, 3_000L)
                 }
                 is DownloadUiState.Error -> {
                     binding.overlayRoot.visibility = View.VISIBLE
@@ -52,6 +67,8 @@ class DownloadOverlayFragment : Fragment() {
                     binding.overlayProgress.progress = 0
                     binding.overlayMessage.text = state.message
                     binding.overlayStatus.text = ""
+                    // Show the dismiss button so the user can keep using the app
+                    binding.overlayCloseButton.visibility = View.VISIBLE
                 }
             }
         }
