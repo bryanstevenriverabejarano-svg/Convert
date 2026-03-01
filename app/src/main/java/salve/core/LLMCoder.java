@@ -1,37 +1,21 @@
 package salve.core;
 
 import android.content.Context;
+import android.util.Log;
 
 /**
- * LLMCoder es un componente experimental encargado de generar código de forma
- * autónoma a partir de descripciones de alto nivel. Este stub no incluye
- * llamadas a modelos externos, pero define la interfaz necesaria para que
- * en el futuro se integre un LLM de programación (por ejemplo, Code Llama
- * u otro modelo de lenguaje especializado en código). La idea es permitir
- * que Salve proponga fragmentos de código o parches que puedan ser
- * evaluados y aplicados, impulsando su auto‑mejora.
+ * LLMCoder — Componente encargado de generar código y proponer mejoras.
+ * Ahora integrado con GeminiService para una capacidad de programación real.
  */
 public class LLMCoder {
-
+    private static final String TAG = "Salve/LLMCoder";
     private static LLMCoder instance;
-
-    /**
-     * Referencia al contexto de la aplicación. Se almacena para futuras
-     * extensiones donde pueda ser necesario acceder a recursos o preferencias.
-     */
     private final Context context;
 
     private LLMCoder(Context ctx) {
         this.context = ctx.getApplicationContext();
     }
 
-    /**
-     * Obtiene la instancia singleton de LLMCoder. Utiliza inicialización
-     * perezosa para retrasar la construcción hasta el primer uso.
-     *
-     * @param ctx Contexto de Android.
-     * @return la instancia global de LLMCoder
-     */
     public static synchronized LLMCoder getInstance(Context ctx) {
         if (instance == null) {
             instance = new LLMCoder(ctx);
@@ -40,69 +24,81 @@ public class LLMCoder {
     }
 
     /**
-     * Genera código fuente a partir de una descripción en lenguaje natural.
-     * Este método es un stub: actualmente devuelve un fragmento de código
-     * comentado que describe la tarea solicitada. En una implementación
-     * real, se llamaría a un modelo de lenguaje grande entrenado en
-     * programación para producir código compilable en el lenguaje solicitado.
-     *
-     * @param description Descripción de alto nivel de lo que debe hacer el código.
-     * @param language    Lenguaje de programación deseado (por ejemplo, "Java").
-     * @return Cadena con el código fuente generado o un comentario indicativo.
+     * Genera código fuente a partir de una descripción.
+     * Intenta usar Gemini primero por su superioridad en programación.
      */
     public String generateCode(String description, String language) {
-        try {
-            // Construye un prompt para el LLM. Se pide únicamente código sin explicaciones.
-            String prompt = "Eres un generador de código. Genera un fragmento de código en "
-                    + language
-                    + " que cumpla con la siguiente tarea:\n"
-                    + description
-                    + "\nDevuelve solo el código, sin explicaciones adicionales.";
-            SalveLLM llm = SalveLLM.getInstance(context);
-            String result = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
-            // Si el resultado es vacío o contiene el mensaje de error, devolvemos el stub anterior
-            if (result == null || result.trim().isEmpty() || result.contains("[SalveLLM]")) {
-                return "// No se pudo generar código con el LLM.\n"
-                        + "// Descripción: " + description + "\n"
-                        + "// Lenguaje: " + language;
+        String prompt = "Eres un experto programador. Genera un fragmento de código en "
+                + language + " para la siguiente tarea:\n"
+                + description + "\n"
+                + "Responde ÚNICAMENTE con el código, sin explicaciones.";
+
+        // 1. Intentar con Gemini (Cerebro Superior)
+        GeminiService gemini = GeminiService.getInstance(context);
+        if (gemini.isAvailable()) {
+            String code = gemini.generateSync(prompt);
+            if (code != null && !code.trim().isEmpty()) {
+                Log.d(TAG, "Código generado exitosamente con Gemini");
+                return cleanCode(code);
             }
-            return result.trim();
-        } catch (Exception e) {
-            return "// Error al generar código: " + e.getMessage() + "\n"
-                    + "// Descripción: " + description + "\n"
-                    + "// Lenguaje: " + language;
         }
+
+        // 2. Fallback al LLM Local
+        try {
+            SalveLLM llm = SalveLLM.getInstance(context);
+            if (llm != null) {
+                String result = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
+                if (isValidResponse(result)) {
+                    return cleanCode(result);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error en fallback local de generateCode", e);
+        }
+
+        return "// No se pudo generar el código. Verifica la conexión o el modelo local.\n"
+                + "// Tarea: " + description;
     }
 
     /**
-     * Genera una propuesta de corrección para un issue detectado durante
-     * el análisis de código. Se utiliza para sugerir cambios concretos
-     * relacionados con problemas encontrados en métodos existentes.
-     *
-     * @param issueDescription Descripción textual del problema a resolver.
-     * @param className        Nombre de la clase donde se detectó el problema.
-     * @return Cadena que contiene un parche de ejemplo o sugerencia de solución.
+     * Genera una propuesta de corrección (parche).
      */
     public String generateFix(String issueDescription, String className) {
-        try {
-            String prompt = "Eres un asistente que sugiere correcciones de código. "
-                    + "Debes proporcionar un parche en Java para corregir el siguiente problema:\n"
-                    + issueDescription
-                    + "\nen la clase "
-                    + className
-                    + ". Devuelve solo el código actualizado sin explicaciones.";
-            SalveLLM llm = SalveLLM.getInstance(context);
-            String result = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
-            if (result == null || result.trim().isEmpty() || result.contains("[SalveLLM]")) {
-                return "// No se pudo generar una corrección con el LLM.\n"
-                        + "// Clase: " + className + "\n"
-                        + "// Problema: " + issueDescription;
+        String prompt = "Como asistente de mejora continua, corrige el siguiente problema en la clase "
+                + className + ":\n" + issueDescription + "\n"
+                + "Devuelve solo el código corregido de los métodos afectados.";
+
+        GeminiService gemini = GeminiService.getInstance(context);
+        if (gemini.isAvailable()) {
+            String fix = gemini.generateSync(prompt);
+            if (fix != null && !fix.trim().isEmpty()) {
+                return cleanCode(fix);
             }
-            return result.trim();
-        } catch (Exception e) {
-            return "// Error al generar corrección: " + e.getMessage() + "\n"
-                    + "// Clase: " + className + "\n"
-                    + "// Problema: " + issueDescription;
         }
+
+        // Fallback local
+        try {
+            SalveLLM llm = SalveLLM.getInstance(context);
+            if (llm != null) {
+                String result = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
+                if (isValidResponse(result)) {
+                    return cleanCode(result);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error en fallback local de generateFix", e);
+        }
+
+        return "// No se pudo generar la corrección.";
+    }
+
+    private String cleanCode(String raw) {
+        if (raw == null) return "";
+        // Quitar bloques de código markdown si existen (```java ... ```)
+        return raw.replaceAll("(?s)```[a-zA-Z]*\\n?(.*?)\\n?```", "$1").trim();
+    }
+
+    private boolean isValidResponse(String res) {
+        return res != null && !res.trim().isEmpty() && !res.contains("[SalveLLM]");
     }
 }

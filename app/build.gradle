@@ -65,6 +65,9 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'com.squareup.okhttp3:okhttp:5.3.2'
 
+    // Google AI SDK (Gemini)
+    implementation 'com.google.android.generativeai:generativeai:0.9.0'
+
     implementation fileTree(
             dir: 'src/main/libs',
             include: ['*.jar'],
