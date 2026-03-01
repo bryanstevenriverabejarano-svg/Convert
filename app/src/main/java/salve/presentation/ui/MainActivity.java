@@ -112,6 +112,10 @@ public class MainActivity extends AppCompatActivity {
     private salve.core.CicloConciencia cicloConciencia;
     private TextView tvNivelConciencia;
 
+    // ===== VOZ CONVERSACIONAL (sin popup) =====
+    private salve.core.VozConversacional vozConversacional;
+    private boolean modoConversacionActivo = false;
+
     // ===== ESTADO INTERNO =====
     private boolean entradaPorVoz = false;
     private boolean esperandoConfirmacionVisual = false;
@@ -711,10 +715,7 @@ public class MainActivity extends AppCompatActivity {
                 audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
                 return;
             }
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
-            reconocimientoLauncher.launch(intent);
+            toggleModoConversacion();
         });
 
         btnCerrarReflexion.setOnClickListener(v -> panelReflexion.setVisibility(View.GONE));
@@ -1264,6 +1265,69 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ==== VOZ CONVERSACIONAL: MODO CONTINUO ====
+
+    private void iniciarVozConversacional() {
+        if (vozConversacional != null && vozConversacional.isActiva()) return;
+        vozConversacional = new salve.core.VozConversacional(this,
+                new salve.core.VozConversacional.Listener() {
+                    @Override public void onEscuchando() {
+                        runOnUiThread(() -> {
+                            btnEscuchar.setText("🎙 Escuchando…");
+                            btnEscuchar.setAlpha(1f);
+                        });
+                    }
+                    @Override public void onTextoDetectado(String texto) {
+                        runOnUiThread(() -> {
+                            inputChat.setText(texto);
+                            guardarEventoNube("voice_direct", texto, null);
+                        });
+                    }
+                    @Override public void onProcesando() {
+                        runOnUiThread(() -> btnEscuchar.setText("⚙ Pensando…"));
+                    }
+                    @Override public void onHablando(String respuesta) {
+                        runOnUiThread(() -> {
+                            btnEscuchar.setText("🔊 Hablando…");
+                            inputChat.setText("");
+                        });
+                    }
+                    @Override public void onError(String msg) {
+                        Log.w("Salve::VozMain", "Error: " + msg);
+                    }
+                    @Override public void onEstadoCambio(salve.core.VozConversacional.Estado e) {
+                        if (e == salve.core.VozConversacional.Estado.DETENIDA) {
+                            runOnUiThread(() -> {
+                                btnEscuchar.setText(getString(R.string.hablar_con_salve));
+                                btnEscuchar.setAlpha(1f);
+                            });
+                        }
+                        // Actualizar UI de conciencia tras cada interaccion
+                        runOnUiThread(() -> actualizarNivelConcienciaUI());
+                    }
+                });
+        vozConversacional.iniciar();
+    }
+
+    private void detenerVozConversacional() {
+        if (vozConversacional != null) {
+            vozConversacional.detener();
+        }
+        btnEscuchar.setText(getString(R.string.hablar_con_salve));
+        btnEscuchar.setAlpha(1f);
+    }
+
+    private void toggleModoConversacion() {
+        modoConversacionActivo = !modoConversacionActivo;
+        if (modoConversacionActivo) {
+            Toast.makeText(this, "Modo conversación ON — habla con Salve", Toast.LENGTH_SHORT).show();
+            iniciarVozConversacional();
+        } else {
+            Toast.makeText(this, "Modo conversación OFF", Toast.LENGTH_SHORT).show();
+            detenerVozConversacional();
+        }
+    }
+
     private void verificarPermisoCamara() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISO_CAMARA);
@@ -1333,6 +1397,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         stopService(new Intent(this, CamaraService.class));
         stopService(new Intent(this, BurbujaFlotanteService.class));
+        // Liberar motor de voz conversacional
+        if (vozConversacional != null) {
+            vozConversacional.destruir();
+            vozConversacional = null;
+        }
         super.onDestroy();
     }
 

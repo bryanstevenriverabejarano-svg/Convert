@@ -27,6 +27,7 @@ import android.widget.Toast;
 import com.salve.app.R;
 import salve.core.MemoriaEmocional;
 import salve.core.TTSManager;
+import salve.core.VozConversacional;
 import salve.services.SalveApplication;
 
 import java.util.ArrayList;
@@ -62,6 +63,9 @@ public class BurbujaFlotanteService extends Service {
     private SharedPreferences preferencias;
     private MemoriaEmocional memoria;
 
+    // ── Motor de voz conversacional (nueva integración) ──────────────────────
+    private VozConversacional vozConversacional;
+
     // ── Gestión de audio (foco + TTS) ───────────────────────────────────────
     private AudioManager audioManager;
     private AudioFocusRequest focusRequest;
@@ -84,6 +88,26 @@ public class BurbujaFlotanteService extends Service {
         // 2) Inicializa IA y TTS
         memoria     = new MemoriaEmocional(getApplicationContext());
         ttsManager  = SalveApplication.getTTS();
+
+        // 2b) Motor de voz conversacional — reemplaza escucha pasiva básica
+        vozConversacional = new VozConversacional(getApplicationContext(),
+                new VozConversacional.Listener() {
+                    @Override public void onEscuchando() {
+                        Log.d("Salve::Burbuja", "Escuchando...");
+                    }
+                    @Override public void onTextoDetectado(String texto) {
+                        Log.d("Salve::Burbuja", "Oí: " + texto);
+                    }
+                    @Override public void onProcesando() {
+                        Log.d("Salve::Burbuja", "Procesando...");
+                    }
+                    @Override public void onHablando(String respuesta) {
+                        Log.d("Salve::Burbuja", "Hablando: " + respuesta);
+                    }
+                    @Override public void onError(String msg) {
+                        Log.w("Salve::Burbuja", "Error voz: " + msg);
+                    }
+                });
 
         // 3) Configura AudioManager y foco compatible
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -128,16 +152,17 @@ public class BurbujaFlotanteService extends Service {
         ImageView micIcon = burbujaView.findViewById(R.id.icono_mic);
         ImageView vozIcon = burbujaView.findViewById(R.id.icono_voz);
 
-        // Tocar micrófono: toggle escucha pasiva
+        // Tocar micrófono: toggle conversacion continua
         micIcon.setOnClickListener(v -> {
             escuchaPasivaActiva = !escuchaPasivaActiva;
             micIcon.setAlpha(escuchaPasivaActiva ? 1f : 0.4f);
             if (escuchaPasivaActiva) {
-                hablar("Escucha pasiva activada");
-                iniciarEscuchaPasiva();
+                // Usar VozConversacional en lugar de escucha básica
+                hablar("Conversación activada. Te escucho.");
+                vozConversacional.iniciar();
             } else {
-                hablar("Escucha pasiva desactivada");
-                detenerEscuchaPasiva();
+                hablar("Conversación desactivada.");
+                vozConversacional.detener();
             }
         });
 
@@ -296,5 +321,9 @@ public class BurbujaFlotanteService extends Service {
         }
         // Detener reconocimiento
         detenerEscuchaPasiva();
+        // Destruir motor de voz conversacional
+        if (vozConversacional != null) {
+            vozConversacional.destruir();
+        }
     }
 }
