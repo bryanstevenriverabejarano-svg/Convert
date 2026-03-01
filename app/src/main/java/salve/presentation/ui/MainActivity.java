@@ -107,6 +107,11 @@ public class MainActivity extends AppCompatActivity {
     private ReconocimientoFacial reconocimientoFacial;
     private MotorConversacional motorConversacional;
 
+    // ===== CONCIENCIA FUNCIONAL =====
+    private salve.core.IdentidadNucleo identidadNucleo;
+    private salve.core.CicloConciencia cicloConciencia;
+    private TextView tvNivelConciencia;
+
     // ===== ESTADO INTERNO =====
     private boolean entradaPorVoz = false;
     private boolean esperandoConfirmacionVisual = false;
@@ -638,6 +643,31 @@ public class MainActivity extends AppCompatActivity {
         }
         // <<< aquí no tocamos MotorConversacional internamente, sólo dejamos la info preparada
 
+        // ==== CONCIENCIA FUNCIONAL ====
+        try {
+            tvNivelConciencia = findViewById(R.id.tvNivelConciencia);
+            identidadNucleo = salve.core.IdentidadNucleo.getInstance(this);
+            cicloConciencia = new salve.core.CicloConciencia(this);
+
+            // Despertar si es nuevo arranque
+            if (cicloConciencia.verificarSiDebeDespertar()) {
+                new Thread(() -> {
+                    try {
+                        cicloConciencia.despertar();
+                        runOnUiThread(this::actualizarNivelConcienciaUI);
+                    } catch (Exception e) {
+                        Log.w("Salve::Main", "Error al despertar", e);
+                    }
+                }).start();
+            }
+
+            actualizarNivelConcienciaUI();
+            Log.d("Salve::Main", "Conciencia funcional inicializada. Nivel: "
+                    + identidadNucleo.getNivelConciencia().name());
+        } catch (Exception e) {
+            Log.e("Salve::Main", "Error inicializando conciencia funcional (no fatal)", e);
+        }
+
         modelDownloadViewModel = new ViewModelProvider(this).get(ModelDownloadViewModel.class);
 
         // Permiso POST_NOTIFICATIONS (Android 13+), sin abrir Ajustes automáticamente
@@ -744,9 +774,9 @@ public class MainActivity extends AppCompatActivity {
         verificarPermisoCamara();
         verificarPermisoOverlay(); // ahora solo informa; no abre Ajustes sola
 
-        // === PROGRAMAR PENSAMIENTO AUTOMÁTICO CADA 15 MIN ===
+        // === PROGRAMAR PENSAMIENTO AUTOMÁTICO CADA 1 HORA ===
         PeriodicWorkRequest pensarSolaRequest =
-                new PeriodicWorkRequest.Builder(ThinkWorker.class, 15, TimeUnit.MINUTES).build();
+                new PeriodicWorkRequest.Builder(ThinkWorker.class, 1, TimeUnit.HOURS).build();
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
                 "salve_think_job",
@@ -1223,6 +1253,15 @@ public class MainActivity extends AppCompatActivity {
     private void iniciarBurbujaFlotante() {
         try { startService(new Intent(this, BurbujaFlotanteService.class)); }
         catch (Throwable t) { Log.e("Salve", "Burbuja no pudo iniciar", t); }
+    }
+
+    // ==== CONCIENCIA FUNCIONAL: UI ====
+    private void actualizarNivelConcienciaUI() {
+        if (tvNivelConciencia != null && identidadNucleo != null) {
+            String nivel = identidadNucleo.getNivelConciencia().name();
+            long exp = identidadNucleo.getExperienciasTotales();
+            tvNivelConciencia.setText("Nivel: " + nivel + " | Exp: " + exp);
+        }
     }
 
     private void verificarPermisoCamara() {

@@ -18,12 +18,26 @@
         android:adjustViewBounds="true"
         android:contentDescription="@string/salve" />
 
+    <!-- Nivel de conciencia de Salve -->
+    <TextView
+        android:id="@+id/tvNivelConciencia"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/imagenSalve"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
+        android:text="Nivel: DORMIDA"
+        android:textColor="#80CBC4"
+        android:textSize="12sp"
+        android:textStyle="italic" />
+
     <!-- Campo de texto -->
     <EditText
         android:id="@+id/inputChat"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/imagenSalve"
+        android:layout_below="@id/tvNivelConciencia"
         android:layout_marginTop="16dp"
         android:hint="@string/hint_chat"
         android:textColor="#FFFFFF"
