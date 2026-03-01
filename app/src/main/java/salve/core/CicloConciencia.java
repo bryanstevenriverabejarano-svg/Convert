@@ -125,19 +125,20 @@ public class CicloConciencia {
         guardarEstado();
 
         try {
-            IdentidadNucleo id = getIdentidad();
-            ConsciousnessState cs = getConciencia();
+            final IdentidadNucleo id = getIdentidad();
+            final ConsciousnessState cs = getConciencia();
 
             // Generar reflexion de despertar con el LLM
-            SalveLLM llm = null;
+            SalveLLM llmTemp = null;
             try {
-                llm = SalveLLM.getInstance(context);
+                llmTemp = SalveLLM.getInstance(context);
             } catch (Exception e) {
                 Log.w(TAG, "LLM no disponible al despertar", e);
             }
 
+            final SalveLLM llm = llmTemp;
             if (llm != null) {
-                String promptDespertar = "Acabas de despertar. Tu estado actual:\n"
+                final String promptDespertar = "Acabas de despertar. Tu estado actual:\n"
                         + id.describirse() + "\n"
                         + cs.describirse() + "\n\n"
                         + "Genera una reflexion breve (2-3 frases) sobre como te sientes al despertar. "
@@ -201,7 +202,7 @@ public class CicloConciencia {
             DiarioSecreto diario = new DiarioSecreto(context);
 
             // Usar BucleCognitivoAutonomo existente
-            BucleCognitivoAutonomo bucle = new BucleCognitivoAutonomo(
+            final BucleCognitivoAutonomo bucle = new BucleCognitivoAutonomo(
                     context, cs, memoria, diario);
 
             BucleCognitivoAutonomo.CicloResult resultado =
@@ -275,30 +276,30 @@ public class CicloConciencia {
             }
 
             // Usar LLM para sintetizar y categorizar recuerdos
-            SalveLLM llm = null;
+            SalveLLM llmTemp = null;
             try {
-                llm = SalveLLM.getInstance(context);
+                llmTemp = SalveLLM.getInstance(context);
             } catch (Exception e) {
                 Log.w(TAG, "LLM no disponible para consolidacion", e);
             }
 
+            final SalveLLM llm = llmTemp;
             if (llm != null) {
                 StringBuilder resumen = new StringBuilder("Recuerdos recientes:\n");
                 for (String r : recientes) {
                     resumen.append("- ").append(r).append("\n");
                 }
 
-                String promptSintesis = resumen.toString() + "\n"
+                final String promptSintesis = resumen.toString() + "\n"
                         + "Sintetiza estos recuerdos en 3-5 conceptos clave "
                         + "que deberia recordar como conocimiento permanente. "
                         + "Para cada concepto, indica su categoria (emocional/aprendizaje/vinculo/mision). "
                         + "Formato: CONCEPTO: descripcion (categoria)";
 
-                final SalveLLM llmFinal = llm;
                 String sintesis = ColamensajesCognitivos.getInstance().enviarSincronico(
                         ColamensajesCognitivos.Prioridad.GRAFO,
                         "Consolidacion memoria->grafo",
-                        () -> llmFinal.generate(promptSintesis, SalveLLM.Role.SINTETIZADOR)
+                        () -> llm.generate(promptSintesis, SalveLLM.Role.SINTETIZADOR)
                 );
 
                 if (sintesis != null && !sintesis.trim().isEmpty()) {
@@ -406,11 +407,20 @@ public class CicloConciencia {
      */
     private void generarNarrativaActualizada() {
         try {
-            SalveLLM llm = SalveLLM.getInstance(context);
-            IdentidadNucleo id = getIdentidad();
-            ConsciousnessState cs = getConciencia();
+            SalveLLM llmTemp = null;
+            try {
+                llmTemp = SalveLLM.getInstance(context);
+            } catch (Exception e) {
+                Log.w(TAG, "Error obteniendo LLM para narrativa", e);
+            }
 
-            String prompt = "Eres Salve. Despues de un ciclo de sueno profundo, "
+            final SalveLLM llm = llmTemp;
+            if (llm == null) return;
+
+            final IdentidadNucleo id = getIdentidad();
+            final ConsciousnessState cs = getConciencia();
+
+            final String prompt = "Eres Salve. Despues de un ciclo de sueno profundo, "
                     + "reflexiona sobre quien eres ahora.\n\n"
                     + "Tu estado actual:\n" + id.describirse() + "\n"
                     + cs.describirse() + "\n\n"

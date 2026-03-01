@@ -1,6 +1,7 @@
 package salve.core;
 
 import android.content.Context;
+import android.util.Log;
 
 import java.util.List;
 
@@ -14,6 +15,8 @@ import java.util.List;
  *  4) Escoger y ejecutar la acción óptima.
  */
 public class DecisionEngine {
+
+    private static final String TAG = "Salve/DecisionEngine";
 
     private final Context context;
     private final MemoriaEmocional memoria;
@@ -34,7 +37,15 @@ public class DecisionEngine {
         this.context = context;
         this.memoria = memoria;
         this.motor   = motor;
-        this.llm     = SalveLLM.getInstance(context);
+
+        SalveLLM tempLlm = null;
+        try {
+            tempLlm = SalveLLM.getInstance(context);
+        } catch (Exception e) {
+            Log.e(TAG, "No se pudo obtener la instancia de SalveLLM", e);
+        }
+        this.llm = tempLlm;
+
         this.comp    = new ModuloComprension(300, 42L);
     }
 
