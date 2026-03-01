@@ -18,7 +18,7 @@ public class DecisionEngine {
     private final Context context;
     private final MemoriaEmocional memoria;
     private final MotorConversacional motor;
-    private final LLMResponder llm;
+    private final SalveLLM llm;
     private final ModuloComprension comp;
 
     /**
@@ -34,7 +34,7 @@ public class DecisionEngine {
         this.context = context;
         this.memoria = memoria;
         this.motor   = motor;
-        this.llm     = LLMResponder.getInstance(context);
+        this.llm     = SalveLLM.getInstance(context);
         this.comp    = new ModuloComprension(300, 42L);
     }
 

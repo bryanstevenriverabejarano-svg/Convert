@@ -280,11 +280,76 @@ public class ThinkWorker extends Worker {
         }
 
         // ────────────────────────────────────────────────────────────────────
-        // PASO 8: Restaurar estado cognitivo
+        // PASO 8: Conciencia Funcional — CicloConciencia + Aprendizaje + Evolución
+        // ────────────────────────────────────────────────────────────────────
+        try {
+            CicloConciencia cicloConciencia = new CicloConciencia(ctx);
+
+            // 8a. Verificar si Salve debe despertar
+            if (cicloConciencia.verificarSiDebeDespertar()) {
+                cicloConciencia.despertar();
+                safeCloudLog("think_conciencia", "Salve despertó");
+            }
+
+            // 8b. Reflexión autónoma (si toca — cada 2h)
+            if (cicloConciencia.tocaReflexion()) {
+                cicloConciencia.cicloReflexionAutonoma();
+                safeCloudLog("think_conciencia", "Reflexión autónoma completada");
+            }
+
+            // 8c. Aprendizaje autónomo — observar patrones de Bryan
+            try {
+                AprendizajeAutonomo aprendizaje = new AprendizajeAutonomo(ctx);
+                aprendizaje.observarYAprender(memoria);
+                safeCloudLog("think_aprendizaje", "Observación de patrones completada");
+            } catch (Exception e) {
+                Log.w(TAG, "AprendizajeAutonomo falló (no fatal)", e);
+            }
+
+            // 8d. Exploración por curiosidad
+            try {
+                AprendizajeAutonomo aprendizaje = new AprendizajeAutonomo(ctx);
+                aprendizaje.explorarPorCuriosidad();
+                safeCloudLog("think_aprendizaje", "Exploración por curiosidad completada");
+            } catch (Exception e) {
+                Log.w(TAG, "Exploración por curiosidad falló (no fatal)", e);
+            }
+
+            // 8e. Consolidación memoria → grafo (si toca — cada 6h)
+            if (cicloConciencia.tocaConsolidacion()) {
+                cicloConciencia.cicloConsolidacion();
+                safeCloudLog("think_conciencia", "Consolidación completada");
+            }
+
+            // 8f. Evolución autónoma de código (si toca)
+            try {
+                EvolucionAutonoma evolucion = new EvolucionAutonoma(ctx);
+                evolucion.evolucionar();
+                safeCloudLog("think_evolucion", "Evolución autónoma ejecutada");
+            } catch (Exception e) {
+                Log.w(TAG, "EvolucionAutonoma falló (no fatal)", e);
+            }
+
+            // 8g. Ciclo de sueño profundo (si toca — cada 24h)
+            if (cicloConciencia.tocaSueno()) {
+                cicloConciencia.cicloSueno();
+                safeCloudLog("think_conciencia", "Ciclo de sueño profundo completado");
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Conciencia funcional", e);
+            safeCloudLog("think_error", "Conciencia: " + e.getMessage());
+        }
+
+        // ────────────────────────────────────────────────────────────────────
+        // PASO 9: Restaurar estado cognitivo
         // ────────────────────────────────────────────────────────────────────
         conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.PLENO);
-        safeCloudLog("think_report", "ThinkWorker v2 OK | sesión=" + conciencia.getSessionCount()
-                + " | ciclosSueño=" + conciencia.getCiclosSuenoTotal());
+        IdentidadNucleo identidad = IdentidadNucleo.getInstance(ctx);
+        safeCloudLog("think_report", "ThinkWorker v3 OK | sesión=" + conciencia.getSessionCount()
+                + " | ciclosSueño=" + conciencia.getCiclosSuenoTotal()
+                + " | nivelConciencia=" + identidad.getNivelConciencia().name()
+                + " | experiencias=" + identidad.getExperienciasTotales());
 
         return Result.success();
     }

@@ -58,10 +58,10 @@ public class LLMCoder {
                     + " que cumpla con la siguiente tarea:\n"
                     + description
                     + "\nDevuelve solo el código, sin explicaciones adicionales.";
-            LLMResponder llm = LLMResponder.getInstance(context);
-            String result = llm.generate(prompt);
+            SalveLLM llm = SalveLLM.getInstance(context);
+            String result = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
             // Si el resultado es vacío o contiene el mensaje de error, devolvemos el stub anterior
-            if (result == null || result.trim().isEmpty() || result.contains("[LLMResponder]")) {
+            if (result == null || result.trim().isEmpty() || result.contains("[SalveLLM]")) {
                 return "// No se pudo generar código con el LLM.\n"
                         + "// Descripción: " + description + "\n"
                         + "// Lenguaje: " + language;
@@ -91,9 +91,9 @@ public class LLMCoder {
                     + "\nen la clase "
                     + className
                     + ". Devuelve solo el código actualizado sin explicaciones.";
-            LLMResponder llm = LLMResponder.getInstance(context);
-            String result = llm.generate(prompt);
-            if (result == null || result.trim().isEmpty() || result.contains("[LLMResponder]")) {
+            SalveLLM llm = SalveLLM.getInstance(context);
+            String result = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
+            if (result == null || result.trim().isEmpty() || result.contains("[SalveLLM]")) {
                 return "// No se pudo generar una corrección con el LLM.\n"
                         + "// Clase: " + className + "\n"
                         + "// Problema: " + issueDescription;
