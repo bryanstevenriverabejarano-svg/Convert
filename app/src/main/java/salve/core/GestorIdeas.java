@@ -19,13 +19,17 @@ import java.util.List;
 public class GestorIdeas {
     private final Context context;
     private final MemoriaEmocional memoria;
-    private final LLMResponder llm;
+    private SalveLLM llm;
     private final CreativityManifest manifest;
 
     public GestorIdeas(Context ctx) {
         this.context = ctx.getApplicationContext();
         this.memoria = new MemoriaEmocional(ctx);
-        this.llm = LLMResponder.getInstance(ctx);
+        try {
+            this.llm = SalveLLM.getInstance(ctx);
+        } catch (Exception e) {
+            this.llm = null;
+        }
         this.manifest = CreativityManifest.getInstance(ctx);
     }
 
@@ -48,7 +52,7 @@ public class GestorIdeas {
                 + "Proporciona " + n + " sugerencias concretas para mejorar un sistema con las siguientes características:\n"
                 + descripcionBreve + "\n"
                 + "Presenta cada sugerencia en una línea, con un tono inspirador y en español.";
-        String raw = llm.generate(prompt);
+        String raw = (llm != null) ? llm.generate(prompt, SalveLLM.Role.CREADOR) : null;
         if (raw == null || raw.trim().isEmpty()) {
             return Collections.emptyList();
         }

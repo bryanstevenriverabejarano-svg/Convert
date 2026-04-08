@@ -13,6 +13,7 @@
 
     <!-- Reflexiones -->
     <string name="ver_reflexion">Ver Reflexión</string>
+    <string name="ver_grafo">Ver Mi Mente</string>
     <string name="titulo_reflexion">Reflexión %1$d</string>
     <string name="contenido_reflexion">Aquí aparecerá la reflexión</string>
     <string name="cerrar">Cerrar</string>

@@ -200,7 +200,28 @@ public class IntentRecognizer {
         }
 
         // --------------------------------------------------------
-        // 7) NINGUNO → intentamos con el LLM (si existe)
+        // 7) BUSCAR_WEB (NUEVA INTENCIÓN)
+        // --------------------------------------------------------
+        if (text.matches(".*\\b(qu[eé] es|busca|investiga|quien es|qui[eé]n es)\\b.*")
+                || text.matches(".*\\b(qu[eé] significa|significado de)\\b.*")
+                || text.matches(".*\\b(mimetiza|copia a gemini|aprende de gemini)\\b.*")) {
+
+            Intent i = new Intent(IntentType.BUSCAR_WEB);
+            // Intentar extraer el término
+            String termino = text.replaceFirst(".*?(?:qu[eé] es|busca|investiga|quien es|qui[eé]n es|qu[eé] significa|significado de|mimetiza|copia a gemini|aprende de gemini)\\s+", "").trim();
+            
+            if (text.contains("mimetiza") || text.contains("copia") || text.contains("aprende de gemini")) {
+                i.slots.put("mimetismo", "true");
+            }
+
+            if (!termino.isEmpty()) {
+                i.slots.put("termino", termino);
+                return i;
+            }
+        }
+
+        // --------------------------------------------------------
+        // 8) NINGUNO → intentamos con el LLM (si existe)
         // --------------------------------------------------------
         Intent fromLLM = llmFallback(input);
         if (fromLLM != null) {

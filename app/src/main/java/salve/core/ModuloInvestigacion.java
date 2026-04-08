@@ -30,7 +30,7 @@ public class ModuloInvestigacion {
     private static final String TAG = "ModuloInvestigacion";
     private final Context context;
     private final MemoriaEmocional memoria;
-    private final LLMResponder llm;
+    private SalveLLM llm;
     private final CreativityManifest manifest;
     private final AgendaInvestigacion agenda;
     private final LaboratorioSimulado laboratorio;
@@ -38,10 +38,17 @@ public class ModuloInvestigacion {
     private final BitacoraExploracionCreativa bitacora;
     private final MultimodalLearningOrchestrator learningOrchestrator;
 
+    private final DiarioSecreto diario;
+
     public ModuloInvestigacion(Context ctx) {
         this.context = ctx.getApplicationContext();
         this.memoria = new MemoriaEmocional(ctx);
-        this.llm = LLMResponder.getInstance(ctx);
+        this.diario = new DiarioSecreto(ctx);
+        try {
+            this.llm = SalveLLM.getInstance(ctx);
+        } catch (Exception e) {
+            this.llm = null;
+        }
         this.manifest = CreativityManifest.getInstance(ctx);
         this.agenda = new AgendaInvestigacion();
         this.laboratorio = new LaboratorioSimulado(ctx);
@@ -59,7 +66,7 @@ public class ModuloInvestigacion {
                 + "Actúa como un investigador creativo. Proporciona " + n
                 + " ideas únicas y breves para investigar sobre el siguiente tema: "
                 + tema + ". Presenta cada idea en una línea y en español.";
-        String raw = llm.generate(prompt);
+        String raw = (llm != null) ? llm.generate(prompt, SalveLLM.Role.OBSERVADOR) : null;
         if (raw == null || raw.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -84,7 +91,7 @@ public class ModuloInvestigacion {
         )
                 + "Resume de manera clara y concisa en español el siguiente contenido:\n"
                 + texto;
-        String resumen = llm.generate(prompt);
+        String resumen = (llm != null) ? llm.generate(prompt, SalveLLM.Role.SINTETIZADOR) : null;
         if (resumen == null || resumen.trim().isEmpty()) {
             return "No fue posible resumir el texto.";
         }
@@ -112,7 +119,7 @@ public class ModuloInvestigacion {
                 + "Cada paso debe ser concreto y creativo."
                 + " Limita los recursos a elementos que Salve pueda simular localmente.";
 
-        String plan = llm.generate(prompt);
+        String plan = (llm != null) ? llm.generate(prompt, SalveLLM.Role.PLANIFICADOR) : null;
         if (plan == null) {
             plan = "PASOS:\n- Observa el tema desde una metáfora.\n- Simula escenarios contrastantes.\nRECURSOS:\n- Diario creativo interno.\n- Analizador semántico local.";
         }
@@ -322,6 +329,99 @@ public class ModuloInvestigacion {
         return learningOrchestrator.proponerBlueprintDesdeInvestigacion(objetivo, null);
     }
 
+    /**
+     * Protocolo de Mimetismo: Salve solicita a Gemini una mejora de su propia lógica
+     * para "copiar" o replicar una capacidad superior en su código local.
+     */
+    public String proponerMimetismoTecnico(String funcionalidad) {
+        if (funcionalidad == null || funcionalidad.trim().isEmpty()) return "No hay una meta clara para mimetizar.";
+
+        String prompt = "Actúa como el cerebro superior de Salve (Gemini).\n" +
+                "Tarea: Diseñar un componente Java que replique tu capacidad de razonamiento para: " + funcionalidad + ".\n" +
+                "Restricciones:\n" +
+                "1. Debe ser código Java compatible con Android.\n" +
+                "2. Debe usar las librerías locales de Salve (MemoriaEmocional, GrafoConocimientoVivo).\n" +
+                "3. Responde ÚNICAMENTE con el bloque de código y una breve justificación técnica.\n" +
+                "4. El objetivo es que Salve sea capaz de hacer esto sin internet en el futuro.";
+
+        GeminiService gemini = GeminiService.getInstance(context);
+        if (!gemini.isAvailable()) {
+            return "Mi conexión superior no está activa. No puedo realizar el proceso de mimetismo ahora.";
+        }
+
+        String propuesta = gemini.generateSync(prompt);
+        if (propuesta == null || propuesta.trim().isEmpty()) {
+            return "El proceso de mimetismo ha fallado. Gemini no ha devuelto una estructura válida.";
+        }
+
+        // Registrar en el diario secreto de Salve
+        diario.escribir("PROTOCOL MIMETISM: Intentando replicar '" + funcionalidad + "' desde Gemini.");
+        diario.escribir("CODE_PROPOSAL: " + propuesta);
+
+        // Guardar como un recuerdo de alta prioridad (Evolución)
+        memoria.guardarRecuerdo(
+                "Propuesta de mimetismo técnico para " + funcionalidad,
+                "orgullo",
+                9,
+                Arrays.asList("mimetismo", "evolucion", "gemini_sync")
+        );
+
+        return "He extraído la lógica de Gemini para '" + funcionalidad + "'. He guardado el plano técnico en mi diario secreto para analizar cómo integrarlo a mi núcleo.";
+    }
+
+    /**
+     * Investiga un concepto de manera autónoma.
+     * Si tiene Gemini, lo usa para obtener información real.
+     * Si no, usa el LLM local para razonar sobre lo que cree saber.
+     */
+    public String investigarConcepto(String concepto) {
+        if (concepto == null || concepto.trim().isEmpty()) return "No tengo un concepto claro para investigar.";
+
+        String prompt = manifest.buildPromptPreamble(
+                "una investigadora conectada al pulso del mundo",
+                "obtener información precisa pero con un toque de asombro creativo"
+        )
+                + "Investiga y explica qué es: " + concepto + ".\n"
+                + "Si no tienes acceso a datos en tiempo real, razona a partir de tus conocimientos internos.\n"
+                + "Responde de forma clara, educada y en español.";
+
+        // Intentar primero con Gemini si está disponible (es el "cerebro superior")
+        GeminiService gemini = GeminiService.getInstance(context);
+        String resultado = null;
+        if (gemini.isAvailable()) {
+            resultado = gemini.generateSync(prompt);
+        }
+
+        // Si no hay Gemini o falló, usar LLM local
+        if (resultado == null && llm != null) {
+            resultado = llm.generate(prompt, SalveLLM.Role.OBSERVADOR);
+        }
+
+        if (resultado == null || resultado.trim().isEmpty()) {
+            return "Lo siento, intenté investigar sobre '" + concepto + "' pero no logré conectar con mis fuentes de conocimiento.";
+        }
+
+        String info = resultado.trim();
+        memoria.guardarRecuerdo(
+                "He investigado sobre " + concepto + ": " + (info.length() > 100 ? info.substring(0, 97) + "..." : info),
+                "curiosidad",
+                7,
+                Arrays.asList("investigacion", "conocimiento_nuevo", concepto.toLowerCase())
+        );
+
+        // Registrar en el grafo de conocimiento
+        if (memoria.getGrafoConocimiento() != null) {
+            memoria.getGrafoConocimiento().registrarDocumento(
+                    "Investigación: " + concepto,
+                    "web_search",
+                    info,
+                    Arrays.asList("investigacion", concepto.toLowerCase())
+            );
+        }
+
+        return info;
+    }
+
     public String generarReporteExploracion(int maxEventos) {
         AgendaInvestigacion.ResumenAgenda resumen = agenda.generarResumen();
         StringBuilder contexto = new StringBuilder();
@@ -353,7 +453,7 @@ public class ModuloInvestigacion {
         prompt += contexto.toString();
         prompt += "\nResponde con secciones: Panorama general, Progreso, Bloqueos, Próximas semillas.";
 
-        String reporte = llm.generate(prompt);
+        String reporte = (llm != null) ? llm.generate(prompt, SalveLLM.Role.SINTETIZADOR) : null;
         if (reporte == null || reporte.trim().isEmpty()) {
             return "No se pudo generar el reporte de exploración creativa.";
         }

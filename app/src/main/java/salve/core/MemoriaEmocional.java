@@ -653,6 +653,30 @@ public class MemoriaEmocional {
         new Thread(() -> insertarRecuerdoDB(r)).start();
         zonaReservada.registrarIntensidad(intensidad);
 
+        // ===== PUENTE DE IMPORTANCIA: Integración con el Grafo en tiempo real =====
+        if (intensidad >= 8) {
+            Log.i(TAG, "Recuerdo de alta intensidad (" + intensidad + ") detectado. Integrando en Grafo de inmediato.");
+            if (grafoConocimiento != null) {
+                new Thread(() -> {
+                    try {
+                        grafoConocimiento.registrarHallazgoCreativo(
+                                texto,
+                                tipo,
+                                etiquetas,
+                                "Emoción intensa: " + tipo,
+                                (double) intensidad / 10.0
+                        );
+                        // Disparar una mini-reorganización si es muy crítico
+                        if (intensidad >= 10) {
+                            grafoConocimiento.reorganizarConLLMAsync(20, 40);
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Error en puente de importancia", e);
+                    }
+                }).start();
+            }
+        }
+
         // ===== NUBE: recuerdo guardado manualmente =====
         CloudLogger.log("memoria_manual", texto, intensidad);
     }

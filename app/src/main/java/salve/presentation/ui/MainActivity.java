@@ -731,9 +731,20 @@ public class MainActivity extends AppCompatActivity {
         // FAB rosa
         btnMostrarReflexion.setOnClickListener(v -> mostrarSiguienteReflexion());
 
-        // NUEVO botón morado grande "Ver reflexión" (si existe en el layout)
+        // NUEVO botón para ver el Grafo (Mente de Salve)
         if (btnReflexiones != null) {
-            btnReflexiones.setOnClickListener(v -> mostrarSiguienteReflexion());
+            btnReflexiones.setOnClickListener(v -> {
+                File htmlFile = memoria.getGrafoConocimiento().exportarVisorOffline(50, 100);
+                if (htmlFile != null && htmlFile.exists()) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", htmlFile);
+                    intent.setDataAndType(uri, "text/html");
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(this, "Aún no hay suficiente conocimiento para el grafo.", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
 
         // === REGISTRAR SELECTOR DE IMÁGENES ===

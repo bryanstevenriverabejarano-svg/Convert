@@ -40,12 +40,16 @@ public class ObservatorioTendencias {
     }
 
     private final Map<String, List<Fuente>> fuentesPorCategoria;
-    private final LLMResponder llm;
+    private SalveLLM llm;
     private final CreativityManifest manifest;
 
     public ObservatorioTendencias(Context context) {
         this.fuentesPorCategoria = new HashMap<>();
-        this.llm = LLMResponder.getInstance(context);
+        try {
+            this.llm = SalveLLM.getInstance(context);
+        } catch (Exception e) {
+            this.llm = null;
+        }
         this.manifest = CreativityManifest.getInstance(context);
     }
 
@@ -91,7 +95,7 @@ public class ObservatorioTendencias {
                 + "3. Recomendaciones creativas para Salve\n"
                 + "4. Pregunta inspiradora\n";
 
-        String informe = llm.generate(prompt);
+        String informe = (llm != null) ? llm.generate(prompt, SalveLLM.Role.OBSERVADOR) : null;
         if (informe == null || informe.trim().isEmpty()) {
             return "El observatorio no pudo generar un informe en este momento.";
         }

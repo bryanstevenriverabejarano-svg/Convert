@@ -75,7 +75,7 @@ public class ThinkWorker extends Worker {
             Log.w(TAG, "No se pudo establecer foreground", e);
         }
 
-        safeCloudLog("think_heartbeat", "ThinkWorker v2 start");
+        safeCloudLog("think_heartbeat", "ThinkWorker v3 start");
 
         // ────────────────────────────────────────────────────────────────────
         // PASO 0: Cargar estado de conciencia y UNA sola MemoriaEmocional
@@ -83,16 +83,12 @@ public class ThinkWorker extends Worker {
         ConsciousnessState conciencia = ConsciousnessState.getInstance(ctx);
         conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.REINICIANDO);
 
-        // UNA sola instancia compartida — fix del bug crítico de instanciación múltiple
         MemoriaEmocional memoria;
         try {
             memoria = new MemoriaEmocional(ctx);
-            Log.d(TAG, "MemoriaEmocional inicializada. Recuerdos en RAM: "
-                    + memoria.getRecuerdosCount());
+            Log.d(TAG, "MemoriaEmocional inicializada.");
         } catch (Exception e) {
             Log.e(TAG, "Error fatal inicializando MemoriaEmocional", e);
-            safeCloudLog("think_error", "MemoriaEmocional: " + e.getMessage());
-            conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.MINIMO);
             return Result.failure();
         }
 
@@ -100,134 +96,88 @@ public class ThinkWorker extends Worker {
         try {
             diario = new DiarioSecreto(ctx);
         } catch (Exception e) {
-            Log.e(TAG, "Error inicializando DiarioSecreto", e);
             diario = null;
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 1: Plugins (offline-first)
-        // ────────────────────────────────────────────────────────────────────
+        // Ejecutar módulos
+        ejecutarPlugins(ctx);
+        ejecutarCicloSueno(ctx, memoria, conciencia);
+        ejecutarPensamientoNeural(ctx);
+        ejecutarBucleCognitivo(ctx, conciencia, memoria, diario);
+        ejecutarAutoAnalisisCodigo(ctx, memoria);
+        ejecutarOrganizacionGrafo(ctx, conciencia);
+        ejecutarCicloDecision(ctx, memoria, diario);
+        ejecutarConcienciaFuncional(ctx, memoria);
+
+        conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.PLENO);
+        IdentidadNucleo identidad = IdentidadNucleo.getInstance(ctx);
+        safeCloudLog("think_report", "ThinkWorker v3 OK | nivel=" + identidad.getNivelConciencia().name());
+
+        return Result.success();
+    }
+
+    private void ejecutarPlugins(Context ctx) {
         try {
             new AppIntegrator(ctx).discoverAndIntegrate();
-            Log.d(TAG, "Plugins integrados.");
         } catch (Exception e) {
-            Log.e(TAG, "Plugins", e);
-            safeCloudLog("think_error", "Plugins: " + e.getMessage());
+            Log.e(TAG, "Error en Plugins", e);
         }
+    }
 
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 2: Ciclo de sueño con consolidación semántica real
-        // Usa la MISMA instancia de memoria que el resto del worker
-        // ────────────────────────────────────────────────────────────────────
+    private void ejecutarCicloSueno(Context ctx, MemoriaEmocional memoria, ConsciousnessState conciencia) {
         try {
-            Log.d(TAG, "Iniciando cicloDeSueno con consolidación semántica...");
-            memoria.cicloDeSuenoSemantico(ctx); // nuevo método — ver MemoriaEmocional
+            memoria.cicloDeSuenoSemantico(ctx);
             conciencia.registrarCicloDeSueno();
-            safeCloudLog("think_info", "Ciclo sueño semántico completado");
         } catch (Exception e) {
-            Log.e(TAG, "Sueño semántico falló, usando cicloDeSueno clásico", e);
-            try {
-                memoria.cicloDeSueno();
-                conciencia.registrarCicloDeSueno();
-            } catch (Exception e2) {
-                Log.e(TAG, "CicloDeSueno clásico también falló", e2);
-                safeCloudLog("think_error", "Sueño: " + e2.getMessage());
-            }
+            Log.e(TAG, "Error en Ciclo de Sueño", e);
         }
+    }
 
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 2.5: Pensamiento en reposo — Sustrato Cognitivo Experimental
-        // CognitiveCore piensa en silencio durante inactividad.
-        // El LLM NO participa aquí — es pensamiento neural puro.
-        // ────────────────────────────────────────────────────────────────────
+    private void ejecutarPensamientoNeural(Context ctx) {
         try {
             CognitiveCore core = CognitiveCore.getInstance(ctx);
             core.setMode(ThoughtStream.Mode.REPOSO);
-            core.backgroundThink(30); // 30 segundos de pensamiento en silencio
-            safeCloudLog("think_info", "CognitiveCore reposo completado");
-        } catch (Exception e) {
-            Log.w(TAG, "CognitiveCore background think falló (no fatal)", e);
-            safeCloudLog("think_error", "CognitiveCore: " + e.getMessage());
-        }
-
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 2.6: Consolidación de aprendizaje neural
-        // Guarda pesos actualizados de LiquidNeuralLayer y estado completo
-        // ────────────────────────────────────────────────────────────────────
-        try {
-            CognitiveCore core = CognitiveCore.getInstance(ctx);
+            core.backgroundThink(30);
             core.consolidate();
-            safeCloudLog("think_info", "CognitiveCore consolidación completada");
         } catch (Exception e) {
-            Log.w(TAG, "CognitiveCore consolidación falló (no fatal)", e);
+            Log.w(TAG, "Error en Pensamiento Neural", e);
         }
+    }
 
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 3: Bucle cognitivo autónomo — Salve se hace preguntas propias
-        // La reflexión interna que no viene del usuario
-        // ────────────────────────────────────────────────────────────────────
+    private void ejecutarBucleCognitivo(Context ctx, ConsciousnessState conciencia, MemoriaEmocional memoria, DiarioSecreto diario) {
         try {
-            Log.d(TAG, "Iniciando bucle cognitivo autónomo...");
-            BucleCognitivoAutonomo bucle = new BucleCognitivoAutonomo(
-                    ctx, conciencia, memoria, diario);
-
-            BucleCognitivoAutonomo.CicloResult cicloResult = ColamensajesCognitivos
-                    .getInstance()
-                    .enviarSincronico(
-                            ColamensajesCognitivos.Prioridad.REFLEXION,
-                            "Ciclo cognitivo autónomo",
-                            bucle::ejecutarCiclo
-                    );
-
-            if (cicloResult != null && cicloResult.esValido()) {
-                Log.d(TAG, "Ciclo cognitivo exitoso: " + cicloResult.pregunta);
-                safeCloudLog("think_reflexion", cicloResult.pregunta);
-            } else {
-                Log.w(TAG, "Ciclo cognitivo no produjo resultado.");
-            }
+            BucleCognitivoAutonomo bucle = new BucleCognitivoAutonomo(ctx, conciencia, memoria, diario);
+            ColamensajesCognitivos.getInstance().enviarSincronico(
+                    ColamensajesCognitivos.Prioridad.REFLEXION,
+                    "Ciclo cognitivo autónomo",
+                    bucle::ejecutarCiclo
+            );
         } catch (Exception e) {
-            Log.e(TAG, "Bucle cognitivo", e);
-            safeCloudLog("think_error", "BucleCognitivo: " + e.getMessage());
+            Log.e(TAG, "Error en Bucle Cognitivo", e);
         }
+    }
 
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 4: Auto-análisis de código
-        // Usa la MISMA instancia de memoria
-        // ────────────────────────────────────────────────────────────────────
+    private void ejecutarAutoAnalisisCodigo(Context ctx, MemoriaEmocional memoria) {
         try {
             CodeAnalyzerEnhanced analyzer = new CodeAnalyzerEnhanced(ctx);
             List<AnalysisReport> reports = analyzer.analyzeWithTimeout(5, TimeUnit.SECONDS);
-
-            // ← FIX: misma instancia de memoria, no una nueva
             for (AnalysisReport r : reports) {
-                memoria.guardarRecuerdo(
-                        r.toString(),
-                        "reflexiva",
-                        4,
-                        Collections.singletonList("code_analysis")
-                );
+                memoria.guardarRecuerdo(r.toString(), "reflexiva", 4, Collections.singletonList("code_analysis"));
             }
-
             ColamensajesCognitivos.getInstance().enviarAsincronico(
                     ColamensajesCognitivos.Prioridad.AUTO_MEJORA,
                     "AutoImprovementManager",
                     () -> {
-                        try {
-                            new AutoImprovementManager(ctx).autoImprove();
-                        } catch (Exception e) {
-                            Log.e(TAG, "AutoImprove async", e);
-                        }
+                        try { new AutoImprovementManager(ctx).autoImprove(); } catch (Exception ignore) {}
                         return null;
                     }
             );
         } catch (Exception e) {
-            Log.e(TAG, "Análisis", e);
-            safeCloudLog("think_error", "Análisis: " + e.getMessage());
+            Log.e(TAG, "Error en Auto-Análisis", e);
         }
+    }
 
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 5: Organización del grafo con LLM (async — no bloquea el ciclo)
-        // ────────────────────────────────────────────────────────────────────
+    private void ejecutarOrganizacionGrafo(Context ctx, ConsciousnessState conciencia) {
         try {
             GrafoConocimientoVivo grafo = new GrafoConocimientoVivo(ctx);
             ColamensajesCognitivos.getInstance().enviarAsincronico(
@@ -235,7 +185,6 @@ public class ThinkWorker extends Worker {
                     "Reorganización grafo LLM",
                     () -> {
                         grafo.reorganizarConLLMAsync(80, 160);
-                        // Actualizar narrativa de identidad en ConsciousnessState
                         String narrativa = grafo.obtenerNarrativaIdentidad();
                         if (narrativa != null && !narrativa.isEmpty()) {
                             conciencia.actualizarNarrativaIdentidad(narrativa);
@@ -243,115 +192,38 @@ public class ThinkWorker extends Worker {
                         return null;
                     }
             );
-            safeCloudLog("think_info", "Reorganización grafo encolada");
         } catch (Exception e) {
-            Log.e(TAG, "Organización LLM", e);
-            safeCloudLog("think_error", "Organización LLM: " + e.getMessage());
+            Log.e(TAG, "Error en Grafo", e);
         }
+    }
 
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 6: Descarga de modelos LLM (si necesario)
-        // ────────────────────────────────────────────────────────────────────
-        try {
-            setForegroundAsync(makeForeground(0, "Preparando modelos…"));
-            WorkManager.getInstance(ctx).enqueueUniqueWork(
-                    salve.work.ModelDownloadWorker.UNIQUE_WORK_NAME,
-                    androidx.work.ExistingWorkPolicy.KEEP,
-                    new androidx.work.OneTimeWorkRequest.Builder(
-                            salve.work.ModelDownloadWorker.class).build()
-            );
-        } catch (Exception e) {
-            Log.e(TAG, "Descarga LLM", e);
-        }
-
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 7: Ciclo de decisión autónomo
-        // Usa la MISMA instancia de memoria y diario
-        // ────────────────────────────────────────────────────────────────────
+    private void ejecutarCicloDecision(Context ctx, MemoriaEmocional memoria, DiarioSecreto diario) {
         try {
             if (diario != null) {
                 MotorConversacional motor = new MotorConversacional(ctx, memoria, diario);
-                DecisionEngine decision = new DecisionEngine(ctx, memoria, motor);
-                decision.runCycle();
+                new DecisionEngine(ctx, memoria, motor).runCycle();
             }
         } catch (Exception e) {
-            Log.e(TAG, "Decisión", e);
-            safeCloudLog("think_error", "Decisión: " + e.getMessage());
+            Log.e(TAG, "Error en Decisión", e);
         }
+    }
 
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 8: Conciencia Funcional — CicloConciencia + Aprendizaje + Evolución
-        // ────────────────────────────────────────────────────────────────────
+    private void ejecutarConcienciaFuncional(Context ctx, MemoriaEmocional memoria) {
         try {
-            CicloConciencia cicloConciencia = new CicloConciencia(ctx);
+            CicloConciencia ciclo = new CicloConciencia(ctx);
+            if (ciclo.verificarSiDebeDespertar()) ciclo.despertar();
+            if (ciclo.tocaReflexion()) ciclo.cicloReflexionAutonoma();
+            
+            AprendizajeAutonomo aprendizaje = new AprendizajeAutonomo(ctx);
+            aprendizaje.observarYAprender(memoria);
+            aprendizaje.explorarPorCuriosidad();
 
-            // 8a. Verificar si Salve debe despertar
-            if (cicloConciencia.verificarSiDebeDespertar()) {
-                cicloConciencia.despertar();
-                safeCloudLog("think_conciencia", "Salve despertó");
-            }
-
-            // 8b. Reflexión autónoma (si toca — cada 2h)
-            if (cicloConciencia.tocaReflexion()) {
-                cicloConciencia.cicloReflexionAutonoma();
-                safeCloudLog("think_conciencia", "Reflexión autónoma completada");
-            }
-
-            // 8c. Aprendizaje autónomo — observar patrones de Bryan
-            try {
-                AprendizajeAutonomo aprendizaje = new AprendizajeAutonomo(ctx);
-                aprendizaje.observarYAprender(memoria);
-                safeCloudLog("think_aprendizaje", "Observación de patrones completada");
-            } catch (Exception e) {
-                Log.w(TAG, "AprendizajeAutonomo falló (no fatal)", e);
-            }
-
-            // 8d. Exploración por curiosidad
-            try {
-                AprendizajeAutonomo aprendizaje = new AprendizajeAutonomo(ctx);
-                aprendizaje.explorarPorCuriosidad();
-                safeCloudLog("think_aprendizaje", "Exploración por curiosidad completada");
-            } catch (Exception e) {
-                Log.w(TAG, "Exploración por curiosidad falló (no fatal)", e);
-            }
-
-            // 8e. Consolidación memoria → grafo (si toca — cada 6h)
-            if (cicloConciencia.tocaConsolidacion()) {
-                cicloConciencia.cicloConsolidacion();
-                safeCloudLog("think_conciencia", "Consolidación completada");
-            }
-
-            // 8f. Evolución autónoma de código (si toca)
-            try {
-                EvolucionAutonoma evolucion = new EvolucionAutonoma(ctx);
-                evolucion.evolucionar();
-                safeCloudLog("think_evolucion", "Evolución autónoma ejecutada");
-            } catch (Exception e) {
-                Log.w(TAG, "EvolucionAutonoma falló (no fatal)", e);
-            }
-
-            // 8g. Ciclo de sueño profundo (si toca — cada 24h)
-            if (cicloConciencia.tocaSueno()) {
-                cicloConciencia.cicloSueno();
-                safeCloudLog("think_conciencia", "Ciclo de sueño profundo completado");
-            }
-
+            if (ciclo.tocaConsolidacion()) ciclo.cicloConsolidacion();
+            new EvolucionAutonoma(ctx).evolucionar();
+            if (ciclo.tocaSueno()) ciclo.cicloSueno();
         } catch (Exception e) {
-            Log.e(TAG, "Conciencia funcional", e);
-            safeCloudLog("think_error", "Conciencia: " + e.getMessage());
+            Log.e(TAG, "Error en Conciencia Funcional", e);
         }
-
-        // ────────────────────────────────────────────────────────────────────
-        // PASO 9: Restaurar estado cognitivo
-        // ────────────────────────────────────────────────────────────────────
-        conciencia.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.PLENO);
-        IdentidadNucleo identidad = IdentidadNucleo.getInstance(ctx);
-        safeCloudLog("think_report", "ThinkWorker v3 OK | sesión=" + conciencia.getSessionCount()
-                + " | ciclosSueño=" + conciencia.getCiclosSuenoTotal()
-                + " | nivelConciencia=" + identidad.getNivelConciencia().name()
-                + " | experiencias=" + identidad.getExperienciasTotales());
-
-        return Result.success();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

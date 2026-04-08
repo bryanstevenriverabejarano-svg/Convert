@@ -13,6 +13,7 @@ public enum IntentType {
     RECORDAR_POR_TEXTO,
     RECORDAR_POR_EMOCION,
     OBTENER_REFLEXION,
+    BUSCAR_WEB,       // Nueva intención para investigación externa
     NINGUNO,          // antes era DESCONOCIDO en tu switch
     DESCONOCIDO       // si lo necesitas como alias
 }

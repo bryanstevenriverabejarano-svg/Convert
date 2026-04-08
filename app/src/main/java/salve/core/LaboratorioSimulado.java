@@ -10,11 +10,15 @@ import android.content.Context;
  */
 public class LaboratorioSimulado {
 
-    private final LLMResponder llm;
+    private SalveLLM llm;
     private final CreativityManifest manifest;
 
     public LaboratorioSimulado(Context context) {
-        this.llm = LLMResponder.getInstance(context);
+        try {
+            this.llm = SalveLLM.getInstance(context);
+        } catch (Exception e) {
+            this.llm = null;
+        }
         this.manifest = CreativityManifest.getInstance(context);
     }
 
@@ -37,7 +41,7 @@ public class LaboratorioSimulado {
         prompt.append("Describe:\n - cómo se ejecutaría en el laboratorio simulado,\n - resultados observados,\n - qué nueva pregunta surge.\n");
         prompt.append("Cierra con una metáfora breve sobre la creatividad en juego.");
 
-        String narrativa = llm.generate(prompt.toString());
+        String narrativa = (llm != null) ? llm.generate(prompt.toString(), SalveLLM.Role.CREADOR) : null;
         if (narrativa == null) {
             narrativa = "El laboratorio silencioso aún no cantó sus resultados.";
         }
