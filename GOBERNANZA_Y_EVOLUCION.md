@@ -98,3 +98,18 @@ Una versión evoluciona cuando mejora resultados reproducibles sin aumentar inci
 exactitud, mejores fuentes, menos alucinaciones, más tareas completadas con consentimiento,
 menor exposición de datos y rollback probado. La autonomía, el número de archivos generados o
 la frecuencia de actividad no son por sí mismos indicadores de inteligencia.
+
+## Capacidades de red implementadas
+
+- La lectura web acepta exclusivamente HTTPS y fuentes de conocimiento incluidas en una
+  allowlist. Rechaza hosts locales, dominios parecidos, puertos personalizados y redirecciones.
+- Las respuestas web tienen timeout, tipo de contenido permitido y un límite de tamaño antes de
+  entrar en la memoria de trabajo.
+- Las descargas de modelos requieren una aprobación humana explícita y una URL perteneciente al
+  catálogo de hosts autorizado. La selección realizada por el LLM no cuenta como aprobación.
+- El integrador ya no examina ni carga plugins desde APK de otras aplicaciones instaladas. Solo
+  considera almacenamiento privado de Salve y su propio APK.
+
+Estas medidas ofrecen acceso a Internet y extensibilidad acotada, no permiso para descargar o
+ejecutar cualquier contenido. La siguiente iteración debe implementar firmas de plugins, hashes
+de modelos, procedencia de fuentes y una pantalla de aprobaciones de una sola ejecución.

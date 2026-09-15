@@ -1,8 +1,6 @@
 package salve.core;
 import dalvik.system.DexClassLoader;
 import android.content.Context;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.util.Log;
 
 import androidx.room.Room;
@@ -20,7 +18,7 @@ import java.util.Set;
 /**
  * AppIntegrator.java
  * ------------------
- * Escanea múltiples orígenes (Room, APK propio, otros APKs instalados
+ * Escanea unicamente orígenes controlados por la app (Room, APK propio
  * y directorio interno) para descubrir plugins dinámicos,
  * los carga con DexClassLoader, los registra en PluginManager
  * y persiste o limpia sus metadatos en Room.
@@ -57,8 +55,7 @@ public class AppIntegrator {
      * 1) Carga plugins ya en Room.
      * 2) Escanea directorio interno /files/plugins.
      * 3) Escanea el APK propio.
-     * 4) Escanea otras apps instaladas.
-     * 5) Limpia plugins obsoletos de Room.
+     * 4) Limpia plugins obsoletos de Room.
      */
     public void discoverAndIntegrate() {
         // Recoger todos los nombres vistos para evitar duplicados
@@ -98,10 +95,8 @@ public class AppIntegrator {
         // 3) Escanear el APK propio
         scanApkForPlugins(context.getPackageCodePath(), seenNames);
 
-        // 4) Escanear otras apps instaladas
-        scanInstalledAppsForPlugins(seenNames);
-
-        // 5) Eliminar registros de plugins ya no descubiertos
+        // 4) Eliminar registros de plugins ya no descubiertos. Nunca se carga
+        // codigo desde APKs de terceros instalados en el dispositivo.
         removeObsoletePlugins(seenNames);
     }
 
@@ -202,20 +197,6 @@ public class AppIntegrator {
             }
         } catch (IOException | ReflectiveOperationException e) {
             Log.w(TAG, "No se encontró índice o error en APK: " + apkPath, e);
-        }
-    }
-
-    /**
-     * Recorre todas las aplicaciones instaladas y trata cada APK
-     * como fuente de plugins embebidos.
-     */
-    private void scanInstalledAppsForPlugins(Set<String> seenNames) {
-        PackageManager pm = context.getPackageManager();
-        List<ApplicationInfo> apps = pm.getInstalledApplications(0);
-        for (ApplicationInfo ai : apps) {
-            // Omitir la propia aplicación
-            if (ai.packageName.equals(context.getPackageName())) continue;
-            scanApkForPlugins(ai.sourceDir, seenNames);
         }
     }
 

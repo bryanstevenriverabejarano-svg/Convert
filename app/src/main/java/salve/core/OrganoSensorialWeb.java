@@ -3,6 +3,7 @@ package salve.core;
 import android.util.Log;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -26,25 +27,50 @@ public class OrganoSensorialWeb {
      * Salve "absorbe" una página web y la inyecta en su memoria de trabajo y red líquida.
      */
     public void absorberConocimiento(String urlTarget) {
+        NetworkResourcePolicy.Validation validation =
+                NetworkResourcePolicy.validateKnowledgeUrl(urlTarget);
+        if (!validation.allowed) {
+            Log.w(TAG, "Fuente web rechazada: " + validation.reason);
+            return;
+        }
         new Thread(() -> {
             try {
-                Log.d(TAG, "Extendiendo sentidos hacia: " + urlTarget);
-                URL url = new URL(urlTarget);
+                Log.d(TAG, "Consultando fuente autorizada: " + validation.normalizedUrl);
+                URL url = new URL(validation.normalizedUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setConnectTimeout(5000);
                 conn.setReadTimeout(5000);
+                conn.setInstanceFollowRedirects(false);
                 
                 // Hacer creer a la web que somos un navegador para evitar bloqueos
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                 
-                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                int status = conn.getResponseCode();
+                if (status < 200 || status >= 300) {
+                    throw new IllegalStateException("Respuesta HTTP no valida: " + status);
+                }
+                long contentLength = conn.getContentLengthLong();
+                if (contentLength > NetworkResourcePolicy.MAX_KNOWLEDGE_BYTES) {
+                    throw new IllegalStateException("Respuesta demasiado grande");
+                }
+                String contentType = conn.getContentType();
+                if (contentType == null || (!contentType.startsWith("text/")
+                        && !contentType.startsWith("application/json"))) {
+                    throw new IllegalStateException("Tipo de contenido no permitido");
+                }
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(
+                        conn.getInputStream(), StandardCharsets.UTF_8));
                 StringBuilder contenido = new StringBuilder();
                 String linea;
                 
                 // Leemos solo las primeras líneas para no sobrecargar la mente a corto plazo
                 int lineasLeidas = 0;
-                while ((linea = reader.readLine()) != null && lineasLeidas < 20) {
+                int caracteresLeidos = 0;
+                while ((linea = reader.readLine()) != null && lineasLeidas < 20
+                        && caracteresLeidos < NetworkResourcePolicy.MAX_KNOWLEDGE_BYTES) {
+                    caracteresLeidos += linea.length();
                     // Limpiamos etiquetas HTML y JSON sobrantes
                     String textoLimpio = linea.replaceAll("<[^>]*>", "").replaceAll("[{}\\[\\]\"]", "").trim();
                     if (!textoLimpio.isEmpty() && textoLimpio.length() > 20) {
@@ -71,7 +97,7 @@ public class OrganoSensorialWeb {
                 }
 
             } catch (Exception e) {
-                Log.e(TAG, "Error al extender sentidos a " + urlTarget, e);
+                Log.e(TAG, "Error consultando fuente autorizada", e);
                 // Inyectamos el error como frustración (baja energía, alto caos)
                 float[] embeddingError = new float[128];
                 java.util.Arrays.fill(embeddingError, -0.1f);
