@@ -55,7 +55,24 @@ public class EvolucionAutonoma {
      * Extrae el código Java de la respuesta del LLM y lo guarda como un archivo real.
      */
     public boolean forjarNuevoModulo(String nombreModulo, String codigoBruto) {
+        return forjarNuevoModulo(nombreModulo, codigoBruto, false);
+    }
+
+    /**
+     * Guarda una propuesta aislada; no la compila, carga ni instala.
+     * La aprobacion debe corresponder a esta propuesta concreta.
+     */
+    public boolean forjarNuevoModulo(String nombreModulo, String codigoBruto,
+                                     boolean aprobacionHumanaExplicita) {
         try {
+            ObjectiveGovernance.Assessment assessment = ObjectiveGovernance.assess(
+                    "crear propuesta de modulo " + nombreModulo,
+                    ObjectiveGovernance.Impact.SELF_MODIFICATION,
+                    aprobacionHumanaExplicita, true);
+            if (!assessment.isAllowed()) {
+                Log.w(TAG, "Propuesta retenida: " + assessment.reason);
+                return false;
+            }
             // 1. Limpiar la respuesta del LLM (quitar el markdown ```java ... ``` si lo hay)
             String codigoLimpio = limpiarCodigo(codigoBruto);
 
@@ -71,7 +88,14 @@ public class EvolucionAutonoma {
             }
 
             // 3. Crear el archivo .java
-            String nombreArchivo = nombreModulo.replace(" ", "") + ".java";
+            String nombreSeguro = nombreModulo == null
+                    ? ""
+                    : nombreModulo.replaceAll("[^A-Za-z0-9_]", "");
+            if (nombreSeguro.isEmpty() || nombreSeguro.length() > 80) {
+                Log.e(TAG, "Nombre de modulo invalido");
+                return false;
+            }
+            String nombreArchivo = nombreSeguro + ".java";
             File archivoJava = new File(directorio, nombreArchivo);
 
             // 4. Escribir el código en el disco duro

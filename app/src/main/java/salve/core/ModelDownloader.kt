@@ -150,6 +150,10 @@ class ModelDownloader(
         val request = requestBuilder.build()
 
         client.newCall(request).execute().use { response ->
+            val finalUrlValidation = NetworkResourcePolicy.validateModelUrl(response.request.url.toString())
+            if (!finalUrlValidation.allowed) {
+                throw RuntimeException("Redirección a fuente no autorizada: ${finalUrlValidation.reason}")
+            }
             // Si el servidor responde 416 (rango no válido), reinicia.
             if (response.code == HTTP_REQUESTED_RANGE_NOT_SATISFIABLE) {
                 if (out.exists()) {
@@ -243,11 +247,16 @@ class ModelDownloader(
             val it = items.getJSONObject(idx)
             val id = it.getString("id")
             val url = it.getString("url")
+            val urlValidation = NetworkResourcePolicy.validateModelUrl(url)
+            require(urlValidation.allowed) { "Fuente de modelo no autorizada: ${urlValidation.reason}" }
             val filename = it.optString("filename").takeIf { name -> name.isNotBlank() }
                 ?: fileNameFromUrl(url, id)
+            require(filename.matches(Regex("[A-Za-z0-9._-]{1,160}"))) {
+                "Nombre de archivo de modelo invalido"
+            }
             val sizeBytes = it.optLong("sizeBytes", -1L)
             val sha256 = optStringOrNull(it, "sha256")
-            ModelItem(id, url, filename, sizeBytes, sha256)
+            ModelItem(id, urlValidation.normalizedUrl, filename, sizeBytes, sha256)
         }
     }
 

@@ -35,6 +35,22 @@ public class BuscadorDescargadorModelos {
      * Salve busca un modelo que considere necesario para su evolución y lo descarga.
      */
     public void buscarYDescargarModeloAutonomo(String razon) {
+        buscarYDescargarModelo(razon, false);
+    }
+
+    /**
+     * Busca una opcion compatible. La descarga solo se encola cuando una persona
+     * aprobo especificamente esta operacion; una reflexion del LLM no es aprobacion.
+     */
+    public void buscarYDescargarModelo(String razon, boolean aprobacionHumanaExplicita) {
+        ObjectiveGovernance.Assessment assessment = ObjectiveGovernance.assess(
+                razon, ObjectiveGovernance.Impact.SENSITIVE_DATA,
+                aprobacionHumanaExplicita, true);
+        if (!assessment.isAllowed()) {
+            Log.w(TAG, "Descarga de modelo retenida: " + assessment.reason);
+            CloudLogger.log("INFO", "Descarga pendiente de aprobacion humana especifica.");
+            return;
+        }
         Log.i(TAG, "Iniciando búsqueda autónoma de modelo por: " + razon);
         CloudLogger.log("INFO", "Buscando un nuevo cerebro en la red. Razón: " + razon);
 
@@ -92,12 +108,17 @@ public class BuscadorDescargadorModelos {
     }
 
     private void dispararDescarga(String id, String url) {
+        NetworkResourcePolicy.Validation validation = NetworkResourcePolicy.validateModelUrl(url);
+        if (!validation.allowed) {
+            Log.w(TAG, "Descarga rechazada: " + validation.reason);
+            return;
+        }
         Log.i(TAG, "Disparando descarga de: " + url);
         
         // Aquí usamos WorkManager para que la descarga sea robusta
         Data inputData = new Data.Builder()
                 .putString("model_id", id)
-                .putString("model_url", url)
+                .putString("model_url", validation.normalizedUrl)
                 .build();
 
         OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(ModelDownloadWorker.class)

@@ -534,6 +534,14 @@ public class MotorConversacional {
             return;
         }
 
+        // Preguntas informativas: buscar evidencia real antes de responder.
+        // El trabajo se ejecuta en la cola cognitiva y conserva fuentes en memoria.
+        if (parecePreguntaInformativa(inputLower)) {
+            new AgenteInvestigadorRecursivo(llm, this, diario, memoria)
+                    .investigarHastaEntender(entrada);
+            return;
+        }
+
         ConsciousnessState.EstadoCognitivo estadoActual = conciencia.getEstadoCognitivo();
         boolean estadoCritico = (estadoActual == ConsciousnessState.EstadoCognitivo.MINIMO);
 
@@ -632,6 +640,20 @@ public class MotorConversacional {
         }
 
         responderConAutoCritica(entrada, respuesta);
+    }
+
+    private boolean parecePreguntaInformativa(String input) {
+        if (input == null || input.trim().split("\\s+").length < 3) return false;
+        return input.contains("?")
+                || input.startsWith("qué ") || input.startsWith("que ")
+                || input.startsWith("quién ") || input.startsWith("quien ")
+                || input.startsWith("cuándo ") || input.startsWith("cuando ")
+                || input.startsWith("dónde ") || input.startsWith("donde ")
+                || input.startsWith("por qué ") || input.startsWith("por que ")
+                || input.startsWith("cómo ") || input.startsWith("como ")
+                || input.startsWith("cuál ") || input.startsWith("cual ")
+                || input.startsWith("busca ") || input.startsWith("investiga ")
+                || input.startsWith("explícame ") || input.startsWith("explicame ");
     }
 
     private boolean procesarProtocolosEspeciales(String input, String original) {
