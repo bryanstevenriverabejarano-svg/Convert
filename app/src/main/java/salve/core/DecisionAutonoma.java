@@ -100,6 +100,17 @@ public class DecisionAutonoma {
         Log.d(TAG, "Ejecutando decision: " + tipo.name() + " | contexto: "
                 + (contexto != null ? contexto.substring(0, Math.min(50, contexto.length())) : "null"));
 
+        ObjectiveGovernance.Impact impacto = impactoDe(tipo);
+        ObjectiveGovernance.Assessment assessment = ObjectiveGovernance.assess(
+                contexto, impacto, false, true);
+        if (!assessment.isAllowed()) {
+            Log.w(TAG, "Decision retenida por gobernanza: " + assessment.reason);
+            if (assessment.verdict == ObjectiveGovernance.Verdict.REQUIRE_HUMAN_APPROVAL) {
+                notificacion.notificarInsight("Propuesta pendiente de aprobacion: " + tipo.name());
+            }
+            return;
+        }
+
         try {
             switch (tipo) {
                 case APRENDER_CONCEPTO:
@@ -139,6 +150,22 @@ public class DecisionAutonoma {
 
         } catch (Exception e) {
             Log.e(TAG, "Error ejecutando decision: " + tipo.name(), e);
+        }
+    }
+
+    private ObjectiveGovernance.Impact impactoDe(TipoDecision tipo) {
+        switch (tipo) {
+            case MEJORAR_CODIGO:
+                return ObjectiveGovernance.Impact.SELF_MODIFICATION;
+            case COMUNICAR_INSIGHT:
+                return ObjectiveGovernance.Impact.EXTERNAL_COMMUNICATION;
+            case INVESTIGAR_TEMA:
+                return ObjectiveGovernance.Impact.SENSITIVE_DATA;
+            case APRENDER_CONCEPTO:
+            case CONSOLIDAR_MEMORIA:
+            case NINGUNA:
+            default:
+                return ObjectiveGovernance.Impact.LOCAL_REFLECTION;
         }
     }
 
