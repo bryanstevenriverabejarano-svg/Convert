@@ -52,10 +52,12 @@ public class DecisionEngine {
      */
     public List<String> generatePlans() {
         if (gemini.isAvailable()) {
-            String prompt = "Actúa como el motor de decisiones de Salve. Analiza este contexto:\n"
+            String prompt = "Actúa como el motor de decisiones de Salve.\n"
+                    + ObjectiveGovernance.constitutionForPrompt() + "\n\nAnaliza este contexto:\n"
                     + "MEMORIA RECIENTE:\n" + memoria.resumenReciente() + "\n"
                     + "MISIONES:\n" + memoria.getMisiones() + "\n\n"
-                    + "Propón 3 planes de acción cortos separados por comas (ej: consolidar_memoria, investigar_hacking, saludar_a_bryan).";
+                    + "Propón 3 planes locales y reversibles separados por comas "
+                    + "(ej: consolidar_memoria, resumir_aprendizaje, preparar_propuesta).";
 
             String resp = gemini.generateSync(prompt);
             if (resp != null && !resp.trim().isEmpty()) {
@@ -106,6 +108,12 @@ public class DecisionEngine {
 
     public void executePlan(String plan) {
         Log.d(TAG, "Ejecutando plan: " + plan);
+        ObjectiveGovernance.Assessment assessment = ObjectiveGovernance.assess(
+                plan, ObjectiveGovernance.Impact.LOCAL_REFLECTION, false, true);
+        if (!assessment.isAllowed()) {
+            Log.w(TAG, "Plan bloqueado por gobernanza: " + assessment.reason);
+            return;
+        }
         if (plan.contains("consolidar_memoria")) {
             memoria.consolidarMemoriaCortoPlazoAvanzada();
             motor.hablar("He organizado mis recuerdos recientes para no olvidar lo importante.");
