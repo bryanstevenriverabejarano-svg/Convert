@@ -113,3 +113,15 @@ la frecuencia de actividad no son por sí mismos indicadores de inteligencia.
 Estas medidas ofrecen acceso a Internet y extensibilidad acotada, no permiso para descargar o
 ejecutar cualquier contenido. La siguiente iteración debe implementar firmas de plugins, hashes
 de modelos, procedencia de fuentes y una pantalla de aprobaciones de una sola ejecución.
+
+### Investigación dirigida desde conversaciones
+
+Las preguntas informativas del usuario activan una investigación asíncrona. Salve busca hasta
+tres artículos relacionados mediante la API de Wikipedia, recupera sus introducciones, razona
+solo sobre ese contexto y responde conservando referencias numeradas y URL. Cada fuente se
+almacena por separado en `MemoriaEmocional` con consulta, título, URL, extracto y etiquetas de
+procedencia; la síntesis se guarda como aprendizaje con fuentes.
+
+La respuesta debe considerarse una síntesis fundamentada, no una verdad absoluta. Para temas
+médicos, legales, financieros, actuales o controvertidos todavía se requieren fuentes primarias,
+fechas, contraste independiente y revisión humana antes de actuar.
