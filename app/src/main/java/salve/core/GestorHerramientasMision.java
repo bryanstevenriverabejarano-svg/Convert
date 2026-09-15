@@ -25,6 +25,13 @@ public class GestorHerramientasMision {
      */
     public void forjarHerramientaParaMision(String misionDescripcion, MotorConversacional motor) {
         Log.i(TAG, "Forjando herramienta para: " + misionDescripcion);
+        ObjectiveGovernance.Assessment assessment = ObjectiveGovernance.assess(
+                misionDescripcion, ObjectiveGovernance.Impact.SELF_MODIFICATION, false, true);
+        if (!assessment.isAllowed()) {
+            Log.w(TAG, "Forja detenida: " + assessment.reason);
+            motor.hablar("Puedo diseñar esa herramienta, pero necesito tu aprobación explícita antes de crear archivos.");
+            return;
+        }
         
         ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.REFLEXION, "ForjaHerramienta", () -> {
             // 1. Preguntar al LLM qué clase Java necesita

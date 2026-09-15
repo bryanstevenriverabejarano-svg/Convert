@@ -1,5 +1,8 @@
 # MLC-LLM Android
 
+> La arquitectura, los límites de autonomía y la hoja de ruta de evolución segura de
+> Salve se documentan en [GOBERNANZA_Y_EVOLUCION.md](GOBERNANZA_Y_EVOLUCION.md).
+
 Checkout [Documentation page](https://llm.mlc.ai/docs/deploy/android.html) for more information.
 
 - run `mlc_llm package`
