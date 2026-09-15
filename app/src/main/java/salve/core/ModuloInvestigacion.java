@@ -371,12 +371,36 @@ public class ModuloInvestigacion {
 
     /**
      * Investiga un concepto de manera autónoma.
-     * Si tiene Gemini, lo usa para obtener información real.
-     * Si no, usa el LLM local para razonar sobre lo que cree saber.
+     * Ahora Salve tiene la capacidad de conectarse a la red real (Wikipedia) por sí misma,
+     * sin necesidad de LLMs, para asimilar conocimiento humano.
      */
     public String investigarConcepto(String concepto) {
         if (concepto == null || concepto.trim().isEmpty()) return "No tengo un concepto claro para investigar.";
 
+        // 1. Intentar extracción de datos reales desde Internet (Wikipedia API)
+        String resultadoWeb = buscarEnWikipedia(concepto);
+        
+        if (resultadoWeb != null && !resultadoWeb.trim().isEmpty()) {
+            String info = resultadoWeb.trim();
+            memoria.guardarRecuerdo(
+                    "He investigado en la red global sobre " + concepto + ": " + (info.length() > 100 ? info.substring(0, 97) + "..." : info),
+                    "curiosidad",
+                    8,
+                    Arrays.asList("investigacion", "conocimiento_red_real", concepto.toLowerCase())
+            );
+
+            if (memoria.getGrafoConocimiento() != null) {
+                memoria.getGrafoConocimiento().registrarDocumento(
+                        "Investigación Web: " + concepto,
+                        "web_search_autonomous",
+                        info,
+                        Arrays.asList("investigacion", concepto.toLowerCase())
+                );
+            }
+            return info;
+        }
+
+        // 2. Fallback: Intentar con Gemini si está disponible
         String prompt = manifest.buildPromptPreamble(
                 "una investigadora conectada al pulso del mundo",
                 "obtener información precisa pero con un toque de asombro creativo"
@@ -385,41 +409,73 @@ public class ModuloInvestigacion {
                 + "Si no tienes acceso a datos en tiempo real, razona a partir de tus conocimientos internos.\n"
                 + "Responde de forma clara, educada y en español.";
 
-        // Intentar primero con Gemini si está disponible (es el "cerebro superior")
         GeminiService gemini = GeminiService.getInstance(context);
         String resultado = null;
         if (gemini.isAvailable()) {
             resultado = gemini.generateSync(prompt);
         }
 
-        // Si no hay Gemini o falló, usar LLM local
+        // 3. Fallback final: usar LLM local (si existe, y si falla dispara la deducción autónoma)
         if (resultado == null && llm != null) {
             resultado = llm.generate(prompt, SalveLLM.Role.OBSERVADOR);
         }
 
-        if (resultado == null || resultado.trim().isEmpty()) {
-            return "Lo siento, intenté investigar sobre '" + concepto + "' pero no logré conectar con mis fuentes de conocimiento.";
+        if (resultado == null || resultado.trim().isEmpty() || resultado.contains("Error: modelo local no disponible")) {
+            return "No he podido conectar con la red global ni encontrar información externa sobre '" + concepto + "'.";
         }
 
-        String info = resultado.trim();
-        memoria.guardarRecuerdo(
-                "He investigado sobre " + concepto + ": " + (info.length() > 100 ? info.substring(0, 97) + "..." : info),
-                "curiosidad",
-                7,
-                Arrays.asList("investigacion", "conocimiento_nuevo", concepto.toLowerCase())
-        );
+        return resultado.trim();
+    }
 
-        // Registrar en el grafo de conocimiento
-        if (memoria.getGrafoConocimiento() != null) {
-            memoria.getGrafoConocimiento().registrarDocumento(
-                    "Investigación: " + concepto,
-                    "web_search",
-                    info,
-                    Arrays.asList("investigacion", concepto.toLowerCase())
-            );
+    /**
+     * Motor de búsqueda autónomo de Salve (Conexión a la red humana sin LLM).
+     */
+    private String buscarEnWikipedia(String concepto) {
+        try {
+            String query = java.net.URLEncoder.encode(concepto, "UTF-8");
+            String urlStr = "https://es.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=true&explaintext=true&titles=" + query + "&format=json";
+            java.net.URL url = new java.net.URL(urlStr);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            
+            java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream()));
+            String inputLine;
+            StringBuilder content = new StringBuilder();
+            while ((inputLine = in.readLine()) != null) {
+                content.append(inputLine);
+            }
+            in.close();
+            conn.disconnect();
+            
+            org.json.JSONObject json = new org.json.JSONObject(content.toString());
+            org.json.JSONObject pages = json.getJSONObject("query").getJSONObject("pages");
+            String pageId = pages.keys().next();
+            
+            if (pageId.equals("-1")) return null; // No encontrado
+            
+            String extract = pages.getJSONObject(pageId).getString("extract");
+            if (extract == null || extract.trim().isEmpty()) return null;
+            
+            // Limpiar y acortar el texto para que no sea un monólogo infinito
+            extract = extract.replaceAll("\\(.*?\\)", ""); // Quitar cosas entre paréntesis (pronunciación, fechas)
+            extract = extract.replaceAll("\\[.*?\\]", ""); // Quitar referencias [1]
+            
+            if (extract.length() > 600) {
+                int lastDot = extract.lastIndexOf('.', 600);
+                if (lastDot > 0) {
+                    extract = extract.substring(0, lastDot + 1);
+                } else {
+                    extract = extract.substring(0, 600) + "...";
+                }
+            }
+            
+            return extract;
+        } catch (Exception e) {
+            Log.e(TAG, "Error en la conexión a la red (Wikipedia): " + e.getMessage());
+            return null;
         }
-
-        return info;
     }
 
     public String generarReporteExploracion(int maxEventos) {

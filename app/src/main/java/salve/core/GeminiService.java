@@ -2,6 +2,7 @@ package salve.core;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.util.Log;
 
 import com.google.ai.client.generativeai.GenerativeModel;
@@ -10,6 +11,7 @@ import com.google.ai.client.generativeai.type.Content;
 import com.google.ai.client.generativeai.type.GenerateContentResponse;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -73,18 +75,31 @@ public class GeminiService {
      * Genera una respuesta síncrona (bloqueante) usando Gemini.
      */
     public String generateSync(String prompt) {
+        return generateSync(prompt, null);
+    }
+
+    /**
+     * Genera una respuesta síncrona incluyendo una secuencia de imágenes (frames).
+     */
+    public String generateSync(String prompt, List<Bitmap> frames) {
         if (model == null) return null;
 
         try {
-            Content content = new Content.Builder()
-                    .addText(prompt)
-                    .build();
+            Content.Builder contentBuilder = new Content.Builder();
+            contentBuilder.addText(prompt);
 
+            if (frames != null && !frames.isEmpty()) {
+                for (Bitmap frame : frames) {
+                    contentBuilder.addImage(frame);
+                }
+            }
+
+            Content content = contentBuilder.build();
             ListenableFuture<GenerateContentResponse> future = model.generateContent(content);
             GenerateContentResponse response = future.get(); // Bloqueante
             return response.getText();
         } catch (Exception e) {
-            Log.e(TAG, "Error generating content with Gemini", e);
+            Log.e(TAG, "Error generating multimodal content with Gemini", e);
             return null;
         }
     }

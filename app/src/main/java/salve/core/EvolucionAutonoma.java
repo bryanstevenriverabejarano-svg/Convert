@@ -3,6 +3,9 @@ package salve.core;
 import android.content.Context;
 import android.util.Log;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -46,6 +49,64 @@ public class EvolucionAutonoma {
             Log.w(TAG, "LLM no disponible para evolucion autonoma", e);
             this.llm = null;
         }
+    }
+
+    /**
+     * Extrae el código Java de la respuesta del LLM y lo guarda como un archivo real.
+     */
+    public boolean forjarNuevoModulo(String nombreModulo, String codigoBruto) {
+        try {
+            // 1. Limpiar la respuesta del LLM (quitar el markdown ```java ... ``` si lo hay)
+            String codigoLimpio = limpiarCodigo(codigoBruto);
+
+            if (codigoLimpio.isEmpty()) {
+                Log.e(TAG, "El código generado está vacío o corrupto.");
+                return false;
+            }
+
+            // 2. Crear una carpeta física en el teléfono llamada "Salve_Mutaciones"
+            File directorio = new File(context.getExternalFilesDir(null), "Salve_Mutaciones");
+            if (!directorio.exists()) {
+                directorio.mkdirs();
+            }
+
+            // 3. Crear el archivo .java
+            String nombreArchivo = nombreModulo.replace(" ", "") + ".java";
+            File archivoJava = new File(directorio, nombreArchivo);
+
+            // 4. Escribir el código en el disco duro
+            FileOutputStream fos = new FileOutputStream(archivoJava);
+            OutputStreamWriter osw = new OutputStreamWriter(fos);
+            osw.write(codigoLimpio);
+            osw.close();
+            fos.close();
+
+            Log.i(TAG, "¡Mutación genética exitosa! Archivo creado en: " + archivoJava.getAbsolutePath());
+            return true;
+
+        } catch (Exception e) {
+            Log.e(TAG, "Fallo en la forja del módulo", e);
+            return false;
+        }
+    }
+
+    // Método para extraer solo el código si el LLM responde con formato de chat
+    private String limpiarCodigo(String texto) {
+        if (texto.contains("```java")) {
+            int inicio = texto.indexOf("```java") + 7;
+            int fin = texto.lastIndexOf("```");
+            if (inicio < fin) {
+                return texto.substring(inicio, fin).trim();
+            }
+        } else if (texto.contains("```")) {
+            int inicio = texto.indexOf("```") + 3;
+            int fin = texto.lastIndexOf("```");
+            if (inicio < fin) {
+                return texto.substring(inicio, fin).trim();
+            }
+        }
+        // Si no hay markdown, asumimos que todo es código
+        return texto.trim();
     }
 
     /**

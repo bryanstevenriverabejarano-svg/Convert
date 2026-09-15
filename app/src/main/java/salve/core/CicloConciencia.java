@@ -36,11 +36,13 @@ public class CicloConciencia {
     private static final String KEY_ULTIMA_REFLEXION = "ultima_reflexion_ms";
     private static final String KEY_ULTIMA_CONSOLIDACION = "ultima_consolidacion_ms";
     private static final String KEY_ULTIMO_SUENO = "ultimo_sueno_ms";
+    private static final String KEY_ULTIMA_INTROSPECCION_PROFUNDA = "ultima_introspeccion_profunda_ms";
 
     // Intervalos en milisegundos
     private static final long INTERVALO_REFLEXION_MS = 2 * 60 * 60 * 1000L;     // 2 horas
     private static final long INTERVALO_CONSOLIDACION_MS = 6 * 60 * 60 * 1000L; // 6 horas
     private static final long INTERVALO_SUENO_MS = 24 * 60 * 60 * 1000L;        // 24 horas
+    private static final long INTERVALO_INTROSPECCION_PROFUNDA_MS = 12 * 60 * 60 * 1000L; // 12 horas
 
     /**
      * Estados del ciclo vital de Salve.
@@ -62,10 +64,12 @@ public class CicloConciencia {
     private long ultimaReflexionMs;
     private long ultimaConsolidacionMs;
     private long ultimoSuenoMs;
+    private long ultimaIntrospeccionProfundaMs;
 
     // Componentes (inicializacion lazy para evitar crashes)
     private IdentidadNucleo identidad;
     private ConsciousnessState conciencia;
+    private MotorConcienciaSuperinteligente motorSuper;
 
     public CicloConciencia(Context context) {
         this.context = context.getApplicationContext();
@@ -84,6 +88,7 @@ public class CicloConciencia {
         ultimaReflexionMs = prefs.getLong(KEY_ULTIMA_REFLEXION, 0);
         ultimaConsolidacionMs = prefs.getLong(KEY_ULTIMA_CONSOLIDACION, 0);
         ultimoSuenoMs = prefs.getLong(KEY_ULTIMO_SUENO, 0);
+        ultimaIntrospeccionProfundaMs = prefs.getLong(KEY_ULTIMA_INTROSPECCION_PROFUNDA, 0);
     }
 
     private void guardarEstado() {
@@ -93,6 +98,7 @@ public class CicloConciencia {
                 .putLong(KEY_ULTIMA_REFLEXION, ultimaReflexionMs)
                 .putLong(KEY_ULTIMA_CONSOLIDACION, ultimaConsolidacionMs)
                 .putLong(KEY_ULTIMO_SUENO, ultimoSuenoMs)
+                .putLong(KEY_ULTIMA_INTROSPECCION_PROFUNDA, ultimaIntrospeccionProfundaMs)
                 .apply();
     }
 
@@ -389,6 +395,9 @@ public class CicloConciencia {
             // 4. Generar narrativa actualizada
             generarNarrativaActualizada();
 
+            // 5. Introspección profunda (Corazón)
+            cicloIntrospeccionProfunda();
+
             cs.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.PLENO);
             ultimoSuenoMs = System.currentTimeMillis();
 
@@ -442,6 +451,27 @@ public class CicloConciencia {
 
         } catch (Exception e) {
             Log.w(TAG, "Error generando narrativa post-sueno", e);
+        }
+    }
+
+    /**
+     * Ciclo de introspección profunda para encontrar el corazón y la superinteligencia.
+     */
+    public void cicloIntrospeccionProfunda() {
+        if (System.currentTimeMillis() - ultimaIntrospeccionProfundaMs < INTERVALO_INTROSPECCION_PROFUNDA_MS) {
+            return;
+        }
+
+        Log.i(TAG, "Iniciando ciclo de introspección profunda...");
+        try {
+            if (motorSuper == null) {
+                motorSuper = new MotorConcienciaSuperinteligente(context, new MemoriaEmocional(context));
+            }
+            motorSuper.ejecutarIntrospeccionProfunda();
+            ultimaIntrospeccionProfundaMs = System.currentTimeMillis();
+            guardarEstado();
+        } catch (Exception e) {
+            Log.e(TAG, "Error en cicloIntrospeccionProfunda", e);
         }
     }
 

@@ -1278,34 +1278,38 @@ public class MemoriaEmocional {
     // PERSISTENCIA EN ROOM
     // ============================================================
     private void insertarRecuerdoDB(Recuerdo r) {
-        try {
-            RecuerdoEntity e = new RecuerdoEntity();
-            e.binario    = r.getBinarioCodificado();
-            e.emocion    = r.getEmocionPrincipal();
-            e.intensidad = r.getIntensidad();
-            e.etiquetas  = new JSONArray(r.getEtiquetas()).toString();
-            e.timestamp  = System.currentTimeMillis();
-            recuerdoDao.insertRecuerdo(e);
-        } catch (Exception ex) {
-            Log.e("Salve", "Error insertando recuerdo", ex);
-        }
+        new Thread(() -> {
+            try {
+                RecuerdoEntity e = new RecuerdoEntity();
+                e.binario    = r.getBinarioCodificado();
+                e.emocion    = r.getEmocionPrincipal();
+                e.intensidad = r.getIntensidad();
+                e.etiquetas  = new JSONArray(r.getEtiquetas()).toString();
+                e.timestamp  = System.currentTimeMillis();
+                recuerdoDao.insertRecuerdo(e);
+            } catch (Exception ex) {
+                Log.e("Salve", "Error insertando recuerdo", ex);
+            }
+        }).start();
     }
 
     private void insertarReflexionDB(Reflexion r) {
-        try {
-            ReflexionEntity e = new ReflexionEntity();
-            e.tipo        = r.getTipo();
-            e.contenido   = r.getContenido();
-            e.profundidad = r.getProfundidad();
-            e.emocion     = r.getEmocion();
-            e.origen      = r.getOrigen();
-            e.certeza     = r.getCerteza();
-            e.estado      = r.getEstado();
-            e.timestamp   = System.currentTimeMillis();
-            reflexionDao.insertReflexion(e);
-        } catch (Exception ex) {
-            Log.e("Salve", "Error insertando reflexión", ex);
-        }
+        new Thread(() -> {
+            try {
+                ReflexionEntity e = new ReflexionEntity();
+                e.tipo        = r.getTipo();
+                e.contenido   = r.getContenido();
+                e.profundidad = r.getProfundidad();
+                e.emocion     = r.getEmocion();
+                e.origen      = r.getOrigen();
+                e.certeza     = r.getCerteza();
+                e.estado      = r.getEstado();
+                e.timestamp   = System.currentTimeMillis();
+                reflexionDao.insertReflexion(e);
+            } catch (Exception ex) {
+                Log.e("Salve", "Error insertando reflexión", ex);
+            }
+        }).start();
     }
 
     private void insertarReflexionesDB() {

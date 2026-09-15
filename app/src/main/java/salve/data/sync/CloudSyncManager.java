@@ -49,21 +49,23 @@ public final class CloudSyncManager {
     // ENCOLAR (OFFLINE) - EVENTOS JSON
     // --------------------------------------------------------------------
 
-    /** Guarda directamente un JSON en la cola local (Room). */
+    /** Guarda directamente un JSON en la cola local (Room) en un hilo de fondo. */
     public static void enqueue(Context ctx, String jsonPayload) {
-        try {
-            MemoriaDatabase db = MemoriaDatabase.getInstance(ctx);
-            SyncEventDao dao   = db.syncEventDao();
+        new Thread(() -> {
+            try {
+                MemoriaDatabase db = MemoriaDatabase.getInstance(ctx);
+                SyncEventDao dao   = db.syncEventDao();
 
-            SyncEventEntity e = new SyncEventEntity();
-            e.payload   = jsonPayload;
-            e.createdAt = System.currentTimeMillis();
-            e.tries     = 0;
+                SyncEventEntity e = new SyncEventEntity();
+                e.payload   = jsonPayload;
+                e.createdAt = System.currentTimeMillis();
+                e.tries     = 0;
 
-            dao.insert(e);
-        } catch (Exception ex) {
-            Log.e(TAG, "enqueue error", ex);
-        }
+                dao.insert(e);
+            } catch (Exception ex) {
+                Log.e(TAG, "enqueue error", ex);
+            }
+        }).start();
     }
 
     /** Helper: construye un JSON estándar y lo encola. */

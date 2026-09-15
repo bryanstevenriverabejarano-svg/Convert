@@ -10,12 +10,12 @@
     <!-- Imagen de Salve centrada verticalmente -->
     <ImageView
         android:id="@+id/imagenSalve"
-        android:layout_width="250dp"
-        android:layout_height="wrap_content"
+        android:layout_width="350dp"
+        android:layout_height="400dp"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="50dp"
+        android:layout_marginTop="10dp"
         android:src="@drawable/salve_imagen"
-        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
         android:contentDescription="@string/salve" />
 
     <!-- Nivel de conciencia de Salve -->

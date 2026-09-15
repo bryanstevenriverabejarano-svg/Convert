@@ -24,6 +24,8 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import salve.data.util.CloudLogger;
+
 /**
  * Administra el grafo de conocimiento vivo propuesto en la fase 3.1 del plan.
  * Consolida nodos y relaciones provenientes de recuerdos, experimentos y
@@ -422,6 +424,10 @@ public class GrafoConocimientoVivo {
 
                 // 3) Llamada al LLM local (usando el campo llm)
                 String raw = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
+                
+                // 🟢 TRAZA DE EVOLUCIÓN: Informar al usuario de que estamos usando el LLM para evolucionar
+                CloudLogger.log("INFO", "Evolución: Gemma-3 está reorganizando mis recuerdos y consolidando mi identidad.");
+                Log.i(TAG, "🟢 Gemma-3 (LLM) está procesando el grafo para evolucionar recuerdos.");
 
                 if (raw == null || raw.trim().isEmpty()) {
                     Log.w(TAG, "reorganizarConLLM: respuesta vacía del LLM");

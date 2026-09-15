@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
@@ -70,7 +71,17 @@
             android:name="salve.presentation.ui.ObjetoCreativoActivity"
             android:exported="false" />
 
-        <!-- Servicio foreground interno de WorkManager, necesario en Android 12+ -->
+        <activity
+            android:name="salve.presentation.ui.GaleriaVisualActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
+        <service
+            android:name="salve.core.CicloConcienciaService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:exported="false"
@@ -83,10 +94,17 @@
             android:exported="false" />
 
         <service
-            android:name="salve.services.CamaraService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="camera" />
+            android:name="salve.services.SalveAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:label="Sistema Motor de Salve"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/acceso_salve" />
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"

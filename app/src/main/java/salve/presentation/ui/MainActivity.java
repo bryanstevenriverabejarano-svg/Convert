@@ -75,6 +75,7 @@ import salve.core.GrafoRecuerdos;
 import salve.core.MemoriaEmocional;
 import salve.core.ModelConsoleOverlay;
 import salve.core.ModelStore;
+import salve.core.ModuloInvestigacion;
 import salve.core.MotorConversacional;
 import salve.core.SalveLLM;
 import salve.core.PdfGenerator;
@@ -83,7 +84,8 @@ import salve.core.ThinkWorker;
 import salve.data.sync.CloudSyncManager;
 import salve.data.sync.SyncWorker;
 import salve.services.BurbujaFlotanteService;
-import salve.services.CamaraService;
+import salve.services.SistemaSensorial;
+import salve.services.VideoAnalysisManager;
 import salve.presentation.viewmodel.ModelDownloadViewModel;
 
 public class MainActivity extends AppCompatActivity {
@@ -107,6 +109,12 @@ public class MainActivity extends AppCompatActivity {
     private ReconocimientoFacial reconocimientoFacial;
     private MotorConversacional motorConversacional;
 
+    private ModuloInvestigacion investigacion;
+    private SistemaSensorial sensores;
+    
+    // ===== CEREBRO Y OÍDOS =====
+    private android.speech.SpeechRecognizer speechRecognizer;
+    
     // ===== CONCIENCIA FUNCIONAL =====
     private salve.core.IdentidadNucleo identidadNucleo;
     private salve.core.CicloConciencia cicloConciencia;
@@ -147,12 +155,17 @@ public class MainActivity extends AppCompatActivity {
         File extApp = getExternalFilesDir(null);
         if (extApp != null) roots.add(new File(extApp, MODELS_DIR));
 
-        // Descargas públicas (legacy/conveniencia)
+        // Descargas públicas y carpetas de otras apps de IA
         try {
+            File sdcard = Environment.getExternalStorageDirectory();
+            roots.add(sdcard); // 🟢 ESCANEO TOTAL
+            
             File pubDownloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            if (pubDownloads != null) roots.add(new File(pubDownloads, "Salve/models"));
-            // Compat antigua
-            roots.add(new File(Environment.getExternalStorageDirectory(), "Download/Salve/models"));
+            if (pubDownloads != null) {
+                roots.add(pubDownloads); // 🟢 Escanear toda la carpeta descargas
+                roots.add(new File(pubDownloads, "Salve/models"));
+                roots.add(new File(pubDownloads, "MEGA Downloads")); 
+            }
         } catch (Throwable ignored) {}
 
         return roots;
@@ -231,40 +244,49 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Recorre recursivamente 'dir' y añade todos los modelos encontrados:
      * - Carpetas que parezcan modelos MLC (looksLikeModelDir)
-     * - Archivos .gguf
+     * - Archivos .gguf, .litertlm, .task
+     * USA UN LÍMITE DE PROFUNDIDAD PARA EVITAR CRASHES
      */
-    private static void scanGguf(File dir, List<File> out) {
-        if (dir == null || !dir.exists()) return;
+    private static void scanGguf(File dir, List<File> out, int depth) {
+        if (dir == null || !dir.exists() || depth > 8) return;
 
         if (dir.isDirectory()) {
             // Si la carpeta ya parece un modelo MLC, la añadimos
             if (looksLikeModelDir(dir)) {
                 out.add(dir);
-                // Podemos seguir bajando por si hay más modelos dentro
             }
 
             File[] list = dir.listFiles();
             if (list == null) return;
             for (File f : list) {
                 if (f.isDirectory()) {
-                    scanGguf(f, out);
-                } else if (f.getName().toLowerCase(Locale.ROOT).endsWith(".gguf")) {
-                    out.add(f);
+                    // Evitar carpetas de sistema pesadas
+                    String n = f.getName().toLowerCase(Locale.ROOT);
+                    if (n.equals("android") || n.equals("data") || n.equals("obb")) continue;
+                    scanGguf(f, out, depth + 1);
+                } else {
+                    String name = f.getName().toLowerCase(Locale.ROOT);
+                    if (name.endsWith(".gguf") || name.endsWith(".litertlm") || name.endsWith(".task")) {
+                        out.add(f);
+                    }
                 }
             }
-        } else if (dir.getName().toLowerCase(Locale.ROOT).endsWith(".gguf")) {
-            out.add(dir);
+        } else {
+            String name = dir.getName().toLowerCase(Locale.ROOT);
+            if (name.endsWith(".gguf") || name.endsWith(".litertlm") || name.endsWith(".task")) {
+                out.add(dir);
+            }
         }
     }
 
-    /** Busca modelos (carpetas -MLC o archivos .gguf) en todas las raíces conocidas, sin duplicar rutas. */
+    /** Busca modelos en todas las raíces conocidas, sin duplicar rutas. */
     private List<File> findAllGgufAllRoots() {
         List<File> out = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         for (File root : getModelRoots()) {
             if (root == null || !root.exists()) continue;
             List<File> temp = new ArrayList<>();
-            scanGguf(root, temp);
+            scanGguf(root, temp, 0);
             for (File f : temp) {
                 String key = f.getAbsolutePath();
                 if (!seen.contains(key)) {
@@ -316,12 +338,18 @@ public class MainActivity extends AppCompatActivity {
     private boolean checkModelsAndNotify() {
         List<File> modelos = findAllGgufAllRoots();
 
-        // Filtrar sólo aquellos que tienen mlc-chat-config.json
+        // Filtrar sólo aquellos que tienen mlc-chat-config.json o son archivos directos soportados
         List<File> compatibles = new ArrayList<>();
         for (File f : modelos) {
-            File dir = f.isDirectory() ? f : f.getParentFile();
-            if (dir != null && hasMlcConfig(dir)) {
-                compatibles.add(f.isDirectory() ? f : dir);
+            if (f.isFile()) {
+                String name = f.getName().toLowerCase(Locale.ROOT);
+                if (name.endsWith(".gguf") || name.endsWith(".litertlm") || name.endsWith(".task")) {
+                    compatibles.add(f);
+                }
+            } else if (f.isDirectory()) {
+                if (hasMlcConfig(f)) {
+                    compatibles.add(f);
+                }
             }
         }
 
@@ -333,11 +361,11 @@ public class MainActivity extends AppCompatActivity {
             String report = msg.toString();
             Log.d("SalveDL/Status", report);
 
-            Toast.makeText(
+            runOnUiThread(() -> Toast.makeText(
                     this,
-                    "Aún no hay modelos MLC listos. Cuando termine la descarga desaparecerá este aviso.",
+                    "Aún no hay modelos listos. Busca en MEGA Downloads o espera la descarga.",
                     Toast.LENGTH_SHORT
-            ).show();
+            ).show());
 
             return false;
         }
@@ -345,6 +373,28 @@ public class MainActivity extends AppCompatActivity {
         // Orden sugerido: por tamaño (carpetas o archivos) descendente
         compatibles.sort((a, b) -> Long.compare(modelSize(b), modelSize(a)));
         File elegido = compatibles.get(0);
+
+        // 🟢 TRASLADO AUTOMÁTICO: Si el modelo está fuera de la app, intentamos traerlo dentro
+        File rootInterna = getModelsRoot();
+        if (!elegido.getAbsolutePath().startsWith(getFilesDir().getAbsolutePath())) {
+            Log.i("SalveLLM", "Detectado modelo externo: " + elegido.getAbsolutePath() + ". Iniciando traslado a carpeta segura...");
+            File destino = new File(rootInterna, elegido.getName());
+            
+            new Thread(() -> {
+                boolean exito = false;
+                if (elegido.isDirectory()) {
+                    exito = moveDirWithFallback(elegido, destino);
+                } else {
+                    exito = moveFileWithFallback(elegido, destino);
+                }
+                
+                if (exito) {
+                    Log.i("SalveLLM", "Traslado completado con éxito a: " + destino.getAbsolutePath());
+                    savePreferredModel(destino);
+                    try { SalveLLM.getInstance(getApplicationContext()).forceReloadModel(); } catch(Exception ignored){}
+                }
+            }).start();
+        }
 
         // 💾 Persistir la elección para que el motor lo cargue
         savePreferredModel(elegido);
@@ -376,20 +426,23 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    /** Lista de modelos detectados agrupados por carpeta padre (para diagnóstico del módulo temporal). */
+    /** Lista de modelos detectados agrupados por carpeta padre o nombre de archivo (para diagnóstico). */
     private Map<String, File> collectLocalModels() {
         List<File> modelos = findAllGgufAllRoots();
         Map<String, File> found = new LinkedHashMap<>();
 
         for (File f : modelos) {
-            File dir = f.isDirectory() ? f : f.getParentFile();
-            if (dir == null || !hasMlcConfig(dir)) continue;
-
             String key;
-            if (f.isDirectory()) {
+            if (f.isFile()) {
+                String name = f.getName().toLowerCase(Locale.ROOT);
+                if (!name.endsWith(".gguf") && !name.endsWith(".litertlm") && !name.endsWith(".task")) {
+                    continue;
+                }
+                key = f.getName();
+            } else if (f.isDirectory() && hasMlcConfig(f)) {
                 key = f.getName();
             } else {
-                key = (f.getParentFile() != null) ? f.getParentFile().getName() : f.getName();
+                continue;
             }
 
             if (!found.containsKey(key)) {
@@ -584,6 +637,65 @@ public class MainActivity extends AppCompatActivity {
     // ===== SELECTOR DE MÚLTIPLES IMÁGENES PARA CREAR PDF =====
     private ActivityResultLauncher<String[]> multiImagePicker;
 
+    private void iniciarEscuchaContinua() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+        }
+        speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this);
+        
+        Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+        
+        speechRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
+            @Override
+            public void onReadyForSpeech(Bundle params) {}
+
+            @Override
+            public void onBeginningOfSpeech() {}
+
+            @Override
+            public void onRmsChanged(float rmsdB) {}
+
+            @Override
+            public void onBufferReceived(byte[] buffer) {}
+
+            @Override
+            public void onEndOfSpeech() {}
+
+            @Override
+            public void onError(int error) {
+                Log.e("Salve/Oidos", "Error escuchando: " + error);
+                // Ya no reiniciamos automáticamente por respeto a la privacidad y batería
+            }
+
+            @Override
+            public void onResults(Bundle results) {
+                ArrayList<String> matches = results.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
+                if (matches != null && !matches.isEmpty()) {
+                    String escuchado = matches.get(0);
+                    Log.d("Salve/Oidos", "Escuchado: " + escuchado);
+                    // Procesarlo como si fuera un mensaje del usuario
+                    runOnUiThread(() -> {
+                        inputChat.setText(escuchado);
+                        btnEnviarMensaje.performClick();
+                    });
+                }
+                // Ya no reiniciamos la escucha automáticamente
+            }
+
+            @Override
+            public void onPartialResults(Bundle partialResults) {}
+
+            @Override
+            public void onEvent(int eventType, Bundle params) {}
+        });
+
+        speechRecognizer.startListening(intent);
+        Toast.makeText(this, "Salve te está escuchando continuamente...", Toast.LENGTH_SHORT).show();
+    }
+
     // ============================================================
     //                 CICLO DE VIDA: onCreate
     // ============================================================
@@ -591,6 +703,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        
+        // ¡Al arrancar, encendemos el Ciclo de Conciencia (24/7) y pedimos permisos
+        Intent serviceIntent = new Intent(this, salve.core.CicloConcienciaService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+
+        solicitarPermisos();
 
         // **Inicializar PDFBox para Android**
         PDFBoxResourceLoader.init(getApplicationContext());
@@ -628,11 +750,21 @@ public class MainActivity extends AppCompatActivity {
 
         updateAudioPermissionState();
 
-        // ==== INICIALIZAR LÓGICA ====
+        // ==== INICIALIZAR LÓGICA ORACULAR ====
         memoria              = new MemoriaEmocional(this);
         diario               = new DiarioSecreto(this);
+        sensores             = new SistemaSensorial(this); // Inicializar sensores de hardware
         reconocimientoFacial = new ReconocimientoFacial(this);
         motorConversacional  = new MotorConversacional(this, memoria, diario);
+
+        // Conectar la voz de Salve a la pantalla para que puedas leerla siempre
+        motorConversacional.setListener(texto -> {
+            runOnUiThread(() -> {
+                tituloReflexion.setText("Salve dice:");
+                textoReflexion.setText(texto);
+                panelReflexion.setVisibility(View.VISIBLE);
+            });
+        });
 
         // >>> LLM LOCAL: sólo informativo por ahora (el motor puede leer esta ruta con getPreferredModelPath)
         String preferredModel = getPreferredModelPath(this);
@@ -692,8 +824,10 @@ public class MainActivity extends AppCompatActivity {
                 inputChat.setText("");
 
                 // Actualizar grafo tras mensaje TEXTO del usuario
-                GrafoRecuerdos.generar(this);
-                CloudSyncManager.uploadGrafoBundle(this);
+                new Thread(() -> {
+                    GrafoRecuerdos.generar(getApplicationContext());
+                    CloudSyncManager.uploadGrafoBundle(getApplicationContext());
+                }).start();
             }
         });
 
@@ -711,10 +845,11 @@ public class MainActivity extends AppCompatActivity {
                 audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
                 return;
             }
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
-            reconocimientoLauncher.launch(intent);
+            if (speechRecognizer == null) {
+                iniciarEscuchaContinua();
+            } else {
+                Toast.makeText(this, "Ya te estoy escuchando, creador.", Toast.LENGTH_SHORT).show();
+            }
         });
 
         btnCerrarReflexion.setOnClickListener(v -> panelReflexion.setVisibility(View.GONE));
@@ -724,8 +859,8 @@ public class MainActivity extends AppCompatActivity {
             inputChat.setText(getString(R.string.respuesta_reflexion, reflexion));
             panelReflexion.setVisibility(View.GONE);
 
-            GrafoRecuerdos.generar(this);
-            CloudSyncManager.uploadGrafoBundle(this);
+            GrafoRecuerdos.generar(getApplicationContext());
+            CloudSyncManager.uploadGrafoBundle(getApplicationContext());
         });
 
         // FAB rosa
@@ -734,16 +869,30 @@ public class MainActivity extends AppCompatActivity {
         // NUEVO botón para ver el Grafo (Mente de Salve)
         if (btnReflexiones != null) {
             btnReflexiones.setOnClickListener(v -> {
-                File htmlFile = memoria.getGrafoConocimiento().exportarVisorOffline(50, 100);
-                if (htmlFile != null && htmlFile.exists()) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", htmlFile);
-                    intent.setDataAndType(uri, "text/html");
-                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    startActivity(intent);
-                } else {
-                    Toast.makeText(this, "Aún no hay suficiente conocimiento para el grafo.", Toast.LENGTH_SHORT).show();
-                }
+                String[] opciones = {"Grafo de Textos (Teoría)", "Galería Semántica (Visual)"};
+                new AlertDialog.Builder(this)
+                        .setTitle("¿Qué parte de la mente deseas ver?")
+                        .setItems(opciones, (dialog, which) -> {
+                            if (which == 0) {
+                                // Grafo de nodos normal
+                                File htmlFile = memoria.getGrafoConocimiento().exportarVisorOffline(50, 100);
+                                if (htmlFile != null && htmlFile.exists()) {
+                                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                                    Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", htmlFile);
+                                    intent.setDataAndType(uri, "text/html");
+                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                    startActivity(intent);
+                                } else {
+                                    Toast.makeText(this, "Aún no hay suficiente conocimiento para el grafo.", Toast.LENGTH_SHORT).show();
+                                }
+                            } else if (which == 1) {
+                                // Galería Visual (Hipocampo)
+                                Intent intent = new Intent(this, GaleriaVisualActivity.class);
+                                startActivity(intent);
+                            }
+                        })
+                        .setNegativeButton("Cancelar", null)
+                        .show();
             });
         }
 
@@ -764,8 +913,10 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(this, "PDF creado: " + pdf.getAbsolutePath(), Toast.LENGTH_LONG).show();
                         compartirPdf(pdf);
 
-                        GrafoRecuerdos.generar(this);
-                        CloudSyncManager.uploadGrafoBundle(this);
+                        new Thread(() -> {
+                            GrafoRecuerdos.generar(getApplicationContext());
+                            CloudSyncManager.uploadGrafoBundle(getApplicationContext());
+                        }).start();
                     } catch (Exception e) {
                         Toast.makeText(this, "Error creando PDF: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         Log.e("Salve/PDF", "Error", e);
@@ -822,8 +973,8 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Activa las notificaciones para ver el progreso en segundo plano.", Toast.LENGTH_LONG).show();
         }
 
-        // Comprobación visible del estado de los modelos (todas las rutas)
-        checkModelsAndNotify();
+        // Comprobación visible del estado de los modelos (en segundo plano)
+        new Thread(this::checkModelsAndNotify).start();
 
         // Log extra para ver siempre qué modelo local quedó elegido
         String preferredModel = getPreferredModelPath(this);
@@ -869,8 +1020,8 @@ public class MainActivity extends AppCompatActivity {
             String resp = getString(R.string.salve_gestiona);
             motorConversacional.hablar(sanitizeForSpeech(resp));
             guardarEventoNube("respuesta_modulo_temporal", resp, null);
-            GrafoRecuerdos.generar(this);
-            CloudSyncManager.uploadGrafoBundle(this);
+            GrafoRecuerdos.generar(getApplicationContext());
+            CloudSyncManager.uploadGrafoBundle(getApplicationContext());
             return true;
         }
 
@@ -878,8 +1029,8 @@ public class MainActivity extends AppCompatActivity {
             String resp = getString(R.string.salve_lema);
             motorConversacional.hablar(sanitizeForSpeech(resp));
             guardarEventoNube("respuesta_modulo_temporal", resp, null);
-            GrafoRecuerdos.generar(this);
-            CloudSyncManager.uploadGrafoBundle(this);
+            GrafoRecuerdos.generar(getApplicationContext());
+            CloudSyncManager.uploadGrafoBundle(getApplicationContext());
             return true;
         }
 
@@ -892,7 +1043,9 @@ public class MainActivity extends AppCompatActivity {
         if (preguntaModelo) {
             Map<String, File> modelos = collectLocalModels();
             if (modelos.isEmpty()) {
-                String resp = "No encuentro modelos locales aún. Revisa 'files/models' o espera la descarga.";
+                String resp = "No encuentro modelos locales todavía, Bryan. " +
+                        "Si tienes modelos de otras apps (como MLC Chat), puedes copiarlos a la carpeta 'Download/Salve/models' y los detectaré al instante. " +
+                        "Actualmente busco en Descargas, /Salve/models y en mis archivos internos.";
                 motorConversacional.hablar(sanitizeForSpeech(resp));
                 guardarEventoNube("llm_diag", resp, null);
                 return true;
@@ -905,9 +1058,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                String resp = "Modelos detectados: " + modelos.keySet() +
-                        ". Usaría: " + (elegido != null ? elegido.getName() : "desconocido") +
-                        ". Si me oyes offline con respuestas elaboradas, estoy usando el LLM local.";
+                String resp = "He detectado estos cerebros locales: " + modelos.keySet() +
+                        ". Estoy usando preferentemente: " + (elegido != null ? elegido.getName() : "el motor básico") +
+                        ". Mis capacidades cognitivas aumentarán si añades más modelos en 'Download/Salve/models'. " +
+                        "\n\n🟢 ESTADO DE EVOLUCIÓN: Estoy usando a Gemma-3 para reorganizar mi grafo de memoria y consolidar mi identidad.";
                 motorConversacional.hablar(sanitizeForSpeech(resp));
                 guardarEventoNube("llm_diag", resp, null);
                 return true;
@@ -946,8 +1100,8 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "PDF creado: " + pdf.getAbsolutePath(), Toast.LENGTH_LONG).show();
             compartirPdf(pdf);
 
-            GrafoRecuerdos.generar(this);
-            CloudSyncManager.uploadGrafoBundle(this);
+            GrafoRecuerdos.generar(getApplicationContext());
+            CloudSyncManager.uploadGrafoBundle(getApplicationContext());
         } catch (Exception e) {
             Toast.makeText(this, "Error creando PDF: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
@@ -1075,8 +1229,8 @@ public class MainActivity extends AppCompatActivity {
             speakTextInChunks(texto);
             guardarAprendizaje("pdf_compartido", texto);
 
-            GrafoRecuerdos.generar(this);
-            CloudSyncManager.uploadGrafoBundle(this);
+            GrafoRecuerdos.generar(getApplicationContext());
+            CloudSyncManager.uploadGrafoBundle(getApplicationContext());
 
         } catch (Exception e) {
             Toast.makeText(this, "Error leyendo PDF: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -1249,6 +1403,27 @@ public class MainActivity extends AppCompatActivity {
         ) == PackageManager.PERMISSION_GRANTED;
     }
 
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(
+                this, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void solicitarPermisos() {
+        String[] permisos = new String[]{
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.CAMERA
+        };
+        
+        if (!hasAudioPermission() || !hasCameraPermission()) {
+            ActivityCompat.requestPermissions(this, permisos, 100);
+        } else {
+            // Si ya tiene permisos, encendemos a Salve
+            iniciarEscuchaContinua();
+            iniciarCamaraService();
+        }
+    }
+
     private void updateAudioPermissionState() {
         boolean granted = hasAudioPermission();
         btnEscuchar.setEnabled(true);
@@ -1284,12 +1459,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void iniciarCamaraService() {
-        try {
-            startService(new Intent(this, CamaraService.class));
-            Log.d("Salve", "Servicio de cámara iniciado.");
-        } catch (Throwable t) {
-            Log.e("Salve", "CamaraService no pudo iniciar", t);
-        }
+        // A petición del usuario, Salve ya NO activa la cámara en segundo plano de forma continua.
+        // Solo la usará cuando se invoque lanzarCamaraParaVerificacion()
+        Log.d("Salve", "Servicio de cámara continuo desactivado por privacidad.");
     }
 
     private void lanzarCamaraParaVerificacion() {
@@ -1327,7 +1499,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISO_CAMARA) {
+        if (requestCode == 100) {
+            boolean allGranted = true;
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            if (allGranted) {
+                iniciarEscuchaContinua();
+                iniciarCamaraService();
+            } else {
+                Log.e("Salve", "Salve no puede funcionar correctamente sin permisos.");
+            }
+        } else if (requestCode == PERMISO_CAMARA) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 iniciarCamaraService();
             }
@@ -1342,7 +1528,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        stopService(new Intent(this, CamaraService.class));
+        // stopService(new Intent(this, CamaraService.class));
         stopService(new Intent(this, BurbujaFlotanteService.class));
         super.onDestroy();
     }

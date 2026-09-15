@@ -215,15 +215,21 @@ public class Verbalizer {
         if (emotionalPart != null) {
             response.append(emotionalPart);
         }
+        
+        // Evitar redundancia si thoughtPart ya contiene lo que está pensando
         if (thoughtPart != null && !thoughtPart.isEmpty()) {
             if (response.length() > 0) response.append(" ");
             response.append(thoughtPart);
         }
 
-        // Si el contenido consciente tiene informacion relevante
+        // Enriquecimiento basado en conciencia (solo si la respuesta es muy corta y no es redundante)
         if (state.consciousContent != null && !state.consciousContent.isEmpty()
-                && response.length() < 50) {
-            response.append(" Estoy pensando en: ").append(state.consciousContent).append(".");
+                && response.length() < 40) {
+            // Limpiamos los porcentajes técnicos para el usuario
+            String cleanContent = state.consciousContent.replaceAll("\\(\\d+%%\\)", "").trim();
+            if (!cleanContent.isEmpty() && (thoughtPart == null || !thoughtPart.contains(cleanContent))) {
+                response.append(" En mi mente ronda: ").append(cleanContent).append(".");
+            }
         }
 
         String result = response.toString().trim();
