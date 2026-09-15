@@ -270,6 +270,11 @@ public class ConsciousnessState {
         persistir();
     }
 
+    /** Alias para setEstadoCognitivo facilitando la semántica de 'cambio' */
+    public void cambiarEstado(EstadoCognitivo estado) {
+        setEstadoCognitivo(estado);
+    }
+
     /**
      * Actualiza un valor nuclear de Salve.
      * Delta puede ser positivo o negativo. Se clampea entre 0.0 y 1.0.

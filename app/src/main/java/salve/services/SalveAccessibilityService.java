@@ -1,6 +1,9 @@
 package salve.services;
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.GestureDescription;
 import android.content.Intent;
+import android.graphics.Path;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.speech.RecognitionListener;
@@ -16,6 +19,7 @@ import salve.core.MemoriaEmocional;
 import salve.core.MotorConversacional;
 import salve.core.PlanStep;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -31,6 +35,9 @@ import java.util.Map;
  */
 public class SalveAccessibilityService extends AccessibilityService {
 
+    private static final String TAG = "Salve/MotorSystem";
+    private static SalveAccessibilityService instance;
+
     private MemoriaEmocional memoria;
     private MotorConversacional motor;
     private DecisionEngine decisionEngine;
@@ -38,10 +45,16 @@ public class SalveAccessibilityService extends AccessibilityService {
     private TextToSpeech tts;
     private boolean modoEscuchaActivo = true;
     private boolean modoPrivado = false;
+    private long ultimoTiempoLectura = 0;
     private static final int GLOBAL_ACTION_ANSWER_CALL = 26;
+
+    // Guardaremos los nodos interactivos para que Salve sepa dónde tocar
+    private final List<NodoInteractivo> nodosActuales = new ArrayList<>();
+
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
+        instance = this;
 
         // Inicializamos nuestros módulos “cerebro”
         memoria = new MemoriaEmocional(this);
@@ -66,11 +79,63 @@ public class SalveAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        // Aquí puedes seguir guardando recuerdos o reaccionando a la UI,
-        // y además disparar tu “ciclo de decisión” según convenga:
+        // 1. Ejecutar ciclo de decisión si el estado de la ventana cambió
         if (modoEscuchaActivo && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            // Cada vez que cambia pantalla, por ejemplo:
-            decisionEngine.runCycle();        // 1) genera planes, 2) puntúa, 3) escoge, 4) ejecuta
+            if (decisionEngine != null) decisionEngine.runCycle();
+        }
+
+        // 2. Sistema de visión: Evitamos saturar el cerebro leyendo la pantalla 100 veces por segundo
+        long tiempoActual = System.currentTimeMillis();
+        if (tiempoActual - ultimoTiempoLectura < 3000) return; // Solo lee cada 3 segundos como máximo
+
+        // Solo prestamos atención cuando la pantalla cambia o se abre una ventana nueva
+        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED || 
+            event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root == null) return;
+
+            // Filtro de privacidad: Ignorar apps bancarias, fotos o mensajes privados
+            CharSequence appName = root.getPackageName();
+            if (appName != null && (appName.toString().contains("bank") || appName.toString().contains("gallery"))) {
+                return;
+            }
+
+            StringBuilder contextoPantalla = new StringBuilder();
+            extraerTextosDePantalla(root, contextoPantalla);
+            
+            String loQueVeSalve = contextoPantalla.toString().trim();
+            
+            // Si encontró texto útil en la pantalla, se lo mandamos al CognitiveCore
+            if (!loQueVeSalve.isEmpty() && loQueVeSalve.length() > 10) {
+                ultimoTiempoLectura = tiempoActual;
+                Log.d(TAG, "Salve está viendo la pantalla: " + loQueVeSalve);
+                
+                // Aquí conectamos el Sistema Motor Sensorial con el Cerebro
+                try {
+                    salve.core.cognitive.CognitiveCore core = salve.core.cognitive.CognitiveCore.getInstance(getApplicationContext());
+                    if (core != null) {
+                        core.perceive("Veo en la pantalla: " + loQueVeSalve, "atencion", java.util.Arrays.asList("vision_pantalla"));
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error enviando visión al cerebro", e);
+                }
+            }
+        }
+    }
+
+    // Método recursivo para leer todos los textos y botones de la pantalla
+    private void extraerTextosDePantalla(AccessibilityNodeInfo nodo, StringBuilder builder) {
+        if (nodo == null) return;
+        
+        if (nodo.getText() != null) {
+            builder.append("[").append(nodo.getText()).append("] ");
+        } else if (nodo.getContentDescription() != null) {
+            builder.append("(Botón/Icono: ").append(nodo.getContentDescription()).append(") ");
+        }
+
+        for (int i = 0; i < nodo.getChildCount(); i++) {
+            extraerTextosDePantalla(nodo.getChild(i), builder);
         }
     }
 
@@ -94,6 +159,10 @@ public class SalveAccessibilityService extends AccessibilityService {
     }
 
     // ---------- VOZ: comandos para controlar a Salve  ----------
+
+    public static SalveAccessibilityService getInstance() {
+        return instance;
+    }
 
     private void iniciarEscuchaPorVoz() {
         recognizer = SpeechRecognizer.createSpeechRecognizer(this);
@@ -248,6 +317,119 @@ public class SalveAccessibilityService extends AccessibilityService {
             tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, null);
         } else {
             Log.d("Salve", texto);
+        }
+    }
+
+    /**
+     * 🟢 ACCIÓN: Simular un Tap (Pulsación) en coordenadas X, Y.
+     */
+    public boolean simularTap(int x, int y) {
+        Path path = new Path();
+        path.moveTo(x, y);
+        GestureDescription.Builder builder = new GestureDescription.Builder();
+        builder.addStroke(new GestureDescription.StrokeDescription(path, 0, 100)); // 100ms de duración
+        boolean resultado = dispatchGesture(builder.build(), null, null);
+        Log.d(TAG, "Simulando Tap en (" + x + "," + y + "). Éxito: " + resultado);
+        return resultado;
+    }
+
+    /**
+     * 🟢 ACCIÓN: Buscar un campo de texto y escribir en él.
+     */
+    public boolean escribirTextoEnPantalla(String texto) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+
+        // Regla de Privacidad: Abortar si estamos en Galería o Fotos
+        CharSequence appName = root.getPackageName();
+        if (appName != null && (appName.toString().contains("gallery") || appName.toString().contains("photos"))) {
+            Log.w(TAG, "Acceso denegado: Salve tiene prohibido actuar en aplicaciones de fotos/video.");
+            return false;
+        }
+
+        AccessibilityNodeInfo campoTexto = buscarCampoTexto(root);
+        if (campoTexto != null) {
+            Bundle arguments = new Bundle();
+            arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, texto);
+            campoTexto.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
+            Log.d(TAG, "Texto inyectado por Salve: " + texto);
+            return true;
+        }
+        return false;
+    }
+
+    private AccessibilityNodeInfo buscarCampoTexto(AccessibilityNodeInfo nodo) {
+        if (nodo == null) return null;
+        if (nodo.isEditable() && (nodo.getClassName() != null && nodo.getClassName().toString().contains("EditText"))) return nodo;
+
+        for (int i = 0; i < nodo.getChildCount(); i++) {
+            AccessibilityNodeInfo resultado = buscarCampoTexto(nodo.getChild(i));
+            if (resultado != null) return resultado;
+        }
+        return null;
+    }
+
+    /**
+     * 🟢 ACCIÓN: Escanear la pantalla actual y devolver un resumen de texto para el LLM.
+     */
+    public String escanearPantallaParaLLM() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return "No puedo ver la pantalla activa.";
+
+        nodosActuales.clear();
+        StringBuilder resumenPantalla = new StringBuilder("Elementos visibles e interactivos en pantalla:\n");
+        extraerNodosInteractivos(root, resumenPantalla);
+
+        return resumenPantalla.toString();
+    }
+
+    private void extraerNodosInteractivos(AccessibilityNodeInfo nodo, StringBuilder builder) {
+        if (nodo == null) return;
+
+        // Solo nos interesan cosas que Salve pueda tocar o leer (botones, textos, campos)
+        if (nodo.isVisibleToUser() && (nodo.isClickable() || nodo.isEditable() || nodo.getText() != null)) {
+            String texto = nodo.getText() != null ? nodo.getText().toString() : "";
+            String descripcion = nodo.getContentDescription() != null ? nodo.getContentDescription().toString() : "";
+            String identificador = texto.isEmpty() ? descripcion : texto;
+
+            if (!identificador.isEmpty()) {
+                Rect limites = new Rect();
+                nodo.getBoundsInScreen(limites);
+
+                // Calculamos el centro del botón para que Salve sepa dónde hacer Tap
+                int centroX = limites.centerX();
+                int centroY = limites.centerY();
+
+                int idNodo = nodosActuales.size();
+                nodosActuales.add(new NodoInteractivo(idNodo, identificador, centroX, centroY));
+
+                // Formato simple para que el LLM lo entienda fácil: [ID] Tipo: "Texto"
+                String tipo = nodo.isEditable() ? "CampoDeTexto" : (nodo.isClickable() ? "Boton" : "Texto");
+                builder.append("[").append(idNodo).append("] ").append(tipo).append(": '").append(identificador).append("'\n");
+            }
+        }
+
+        for (int i = 0; i < nodo.getChildCount(); i++) {
+            extraerNodosInteractivos(nodo.getChild(i), builder);
+        }
+    }
+
+    /**
+     * 🟢 ACCIÓN: Hacer Tap basado en el ID que eligió el LLM.
+     */
+    public boolean simularTapPorId(int idNodo) {
+        if (idNodo >= 0 && idNodo < nodosActuales.size()) {
+            NodoInteractivo nodo = nodosActuales.get(idNodo);
+            return simularTap(nodo.x, nodo.y);
+        }
+        return false;
+    }
+
+    // Clase auxiliar para recordar dónde estaba cada botón
+    private static class NodoInteractivo {
+        int id; String texto; int x; int y;
+        NodoInteractivo(int id, String texto, int x, int y) {
+            this.id = id; this.texto = texto; this.x = x; this.y = y;
         }
     }
 }

@@ -13,8 +13,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-// 🔹 IMPORTANTE: import de tu wrapper Kotlin
+// 🔹 IMPORTANTE: imports de tus wrappers Kotlin
 import salve.core.BasicLocalLlm;
+import salve.core.LiteRTLlm;
 
 /**
  * SalveLLM
@@ -38,7 +39,8 @@ public class SalveLLM {
         OBSERVADOR,     // analizar sin intervenir — aprendizaje por observación
         SINTETIZADOR,   // consolidar conocimiento disperso
         EVALUADOR,      // juzgar decisiones propias — autocrítica profunda
-        CREADOR         // ideas originales no solicitadas — exploración creativa
+        CREADOR,         // ideas originales no solicitadas — exploración creativa
+        CURIOSO         // investigar internet por iniciativa propia
     }
 
     private static final String TAG = "Salve/LLM";
@@ -53,8 +55,9 @@ public class SalveLLM {
     private static SalveLLM instance;
 
     private final Context appContext;
-    private String modelPath;   // ruta absoluta a la carpeta del modelo
-    private String modelLib;    // nombre de la librería del modelo
+    private String modelPath;   // ruta absoluta a la carpeta o archivo del modelo
+    private String modelLib;    // nombre de la librería del modelo (solo MLC)
+    private boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
     private boolean engineInitialized = false;
     private boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
     private String lastErrorMessage   = null;
@@ -81,9 +84,9 @@ public class SalveLLM {
 
     /**
      * Singleton: punto único de acceso.
-     * NUNCA lanza excepciones hacia fuera (aunque la firma tenga 'throws').
+     * NUNCA lanza excepciones hacia fuera.
      */
-    public static synchronized SalveLLM getInstance(Context context) throws Exception {
+    public static synchronized SalveLLM getInstance(Context context) {
         if (instance == null) {
             instance = new SalveLLM(context);
         }
@@ -106,15 +109,29 @@ public class SalveLLM {
             );
         }
 
-        File dir = new File(path);
-        if (!dir.exists() || !dir.isDirectory()) {
+        File fileOrDir = new File(path);
+        if (!fileOrDir.exists()) {
             throw new IllegalStateException(
-                    "La ruta de modelo guardada no existe o no es carpeta: " + path
+                    "La ruta de modelo guardada no existe: " + path
             );
         }
 
-        // Manejar subcarpeta interna con el mismo nombre
-        File effectiveDir = resolveEffectiveModelDir(dir);
+        if (fileOrDir.isFile()) {
+            String name = fileOrDir.getName().toLowerCase();
+            if (name.endsWith(".litertlm") || name.endsWith(".task")) {
+                this.modelPath = fileOrDir.getAbsolutePath();
+                this.isLiteRT = true;
+                this.modelLib = null;
+                Log.d(TAG, "Modelo LiteRT detectado: " + this.modelPath);
+                return;
+            } else {
+                throw new IllegalStateException("El archivo seleccionado no es un modelo soportado (.litertlm o .task)");
+            }
+        }
+
+        // Si llegamos aquí, es un directorio (MLC)
+        this.isLiteRT = false;
+        File effectiveDir = resolveEffectiveModelDir(fileOrDir);
 
         // Validar existencia de config antes de seguir
         File cfg = new File(effectiveDir, MODEL_CONFIG_FILENAME);
@@ -276,18 +293,25 @@ public class SalveLLM {
     private synchronized void initEngineIfNeeded() throws Exception {
         if (engineInitialized) return;
 
-        if (modelPath == null || modelLib == null) {
+        if (modelPath == null) {
             throw new IllegalStateException("initEngineIfNeeded sin modelo válido.");
         }
 
-        Log.d(TAG, "Inicializando BasicLocalLlm con modelPath=" + modelPath +
-                " modelLib=" + modelLib);
+        if (isLiteRT) {
+            Log.d(TAG, "Inicializando LiteRTLlm con modelPath=" + modelPath);
+            LiteRTLlm.init(appContext, modelPath);
+            engineInitialized = true;
+        } else {
+            if (modelLib == null) {
+                throw new IllegalStateException("initEngineIfNeeded MLC sin modelLib.");
+            }
+            Log.d(TAG, "Inicializando BasicLocalLlm con modelPath=" + modelPath +
+                    " modelLib=" + modelLib);
+            BasicLocalLlm.INSTANCE.init(modelPath, modelLib);
+            engineInitialized = true;
+        }
 
-        // Llama a tu wrapper Kotlin
-        BasicLocalLlm.INSTANCE.init(modelPath, modelLib);
-        engineInitialized = true;
-        Log.d(TAG, "initEngineIfNeeded OK, BasicLocalLlm.isInitialized=" +
-                BasicLocalLlm.INSTANCE.isInitialized());
+        Log.d(TAG, "initEngineIfNeeded OK");
     }
 
     /**
@@ -303,8 +327,8 @@ public class SalveLLM {
         if (!modelAvailable) {
             Log.w(TAG,
                     "generate() llamado pero el modelo local NO está disponible. " +
-                            "Devolviendo null (se usará fallback).");
-            return "No hay modelo local listo todavía. Puedes esperar a la descarga o elegir uno compatible.";
+                            "Devolviendo error silencioso para que MotorConversacional active su síntesis fractal.");
+            return "Error: modelo local no disponible";
         }
 
         try {
@@ -318,10 +342,14 @@ public class SalveLLM {
         String decoratedPrompt = decoratePrompt(prompt, role);
 
         try {
-            return BasicLocalLlm.INSTANCE.chatSinglePrompt(decoratedPrompt);
+            if (isLiteRT) {
+                return LiteRTLlm.generate(decoratedPrompt);
+            } else {
+                return BasicLocalLlm.INSTANCE.chatSinglePrompt(decoratedPrompt);
+            }
         } catch (Exception e) {
             lastErrorMessage = e.getMessage();
-            Log.e(TAG, "Error generando respuesta con BasicLocalLlm", e);
+            Log.e(TAG, "Error generando respuesta con el motor local", e);
             return "El modelo local falló al responder: " + e.getMessage();
         }
     }
@@ -391,13 +419,12 @@ public class SalveLLM {
         engineInitialized = false;
         modelAvailable = false;
 
-        // Resetear BasicLocalLlm para que pueda reinicializarse con un nuevo modelo.
-        // Sin esto, BasicLocalLlm.init() retorna inmediatamente si ya fue inicializado,
-        // o queda roto permanentemente si la primera inicialización falló.
+        // Resetear motores para que puedan reinicializarse con un nuevo modelo.
         try {
             BasicLocalLlm.reset();
+            LiteRTLlm.reset();
         } catch (Exception e) {
-            Log.w(TAG, "Error reseteando BasicLocalLlm (no fatal)", e);
+            Log.w(TAG, "Error reseteando motores LLM (no fatal)", e);
         }
 
         try {
@@ -409,6 +436,7 @@ public class SalveLLM {
             Log.e(TAG, "Error al recargar modelo en forceReloadModel()", e);
             modelPath = null;
             modelLib = null;
+            isLiteRT = false;
             engineInitialized = false;
             modelAvailable = false;
             lastErrorMessage = e.getMessage();
@@ -425,6 +453,8 @@ public class SalveLLM {
     }
 
     private void validateModelContents(File modelDir) throws Exception {
+        if (isLiteRT) return; // LiteRT es un archivo único, no validamos carpeta
+
         List<String> missing = new ArrayList<>();
         String[] required = {MODEL_CONFIG_FILENAME, "params_shard_0.bin", "tokenizer.json"};
         for (String req : required) {
