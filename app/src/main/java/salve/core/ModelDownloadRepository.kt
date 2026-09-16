@@ -45,7 +45,14 @@ class ModelDownloadRepository(
                             trySend(ModelDownloadEvent.Error(event.id, e))
                             null
                         }
-                        if (prepared != null) trySend(ModelDownloadEvent.Prepared(event.id, prepared))
+                        if (prepared != null) {
+                            context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE)
+                                .edit()
+                                .putString("llm_model_path", prepared.absolutePath)
+                                .apply()
+                            SalveLLM.getInstance(context).forceReloadModel()
+                            trySend(ModelDownloadEvent.Prepared(event.id, prepared))
+                        }
                     }
                     is ModelDownloader.DownloadEvent.Error -> {
                         trySend(ModelDownloadEvent.Error(event.id, event.error))

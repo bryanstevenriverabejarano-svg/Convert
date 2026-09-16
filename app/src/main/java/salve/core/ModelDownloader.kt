@@ -89,6 +89,15 @@ class ModelDownloader(
             val items = loadItems(jsonStream)
             for (item in items) {
                 val out = outputFor(context, item.filename)
+                if (item.huggingFaceRepo != null) {
+                    val ready = File(out, READY_MARKER)
+                    val config = File(out, "mlc-chat-config.json")
+                    val shard = out.listFiles()?.any {
+                        it.name.startsWith("params_shard_") && it.name.endsWith(".bin") && it.length() > 0
+                    } == true
+                    if (!ready.exists() || !config.exists() || !shard) return true
+                    continue
+                }
                 // Considera que falta si no existe o es demasiado pequeño.
                 if (!out.exists() || out.length() <= MIN_FILE_BYTES) return true
                 // Si se especifica checksum, verifica que coincida.
@@ -124,6 +133,9 @@ class ModelDownloader(
         total: Int,
         emit: suspend (DownloadEvent) -> Unit
     ): File {
+        if (item.huggingFaceRepo != null) {
+            return downloadHuggingFaceRepo(context, item, index, total, emit)
+        }
         val out = outputFor(context, item.filename)
         val expectedSize = item.sizeBytes
 
@@ -208,6 +220,122 @@ class ModelDownloader(
     }
 
     /**
+     * Descarga un repositorio MLC de Hugging Face archivo por archivo. Los repositorios
+     * MLC no son ZIP: apuntar a la pagina del repositorio descargaba HTML y producia el
+     * falso error de "modelo incompatible". La API oficial proporciona el manifiesto y
+     * cada fichero se obtiene desde /resolve/main/ conservando su estructura.
+     */
+    private suspend fun downloadHuggingFaceRepo(
+        context: Context,
+        item: ModelItem,
+        index: Int,
+        total: Int,
+        emit: suspend (DownloadEvent) -> Unit
+    ): File {
+        val repo = requireNotNull(item.huggingFaceRepo)
+        require(repo.matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"))) {
+            "Identificador de Hugging Face invalido"
+        }
+        val target = File(modelsDir(context), item.filename)
+        if (!target.exists() && !target.mkdirs()) {
+            throw RuntimeException("No se pudo crear ${target.absolutePath}")
+        }
+
+        val manifestRequest = Request.Builder()
+            .url("https://huggingface.co/api/models/$repo")
+            .build()
+        val files = client.newCall(manifestRequest).execute().use { response ->
+            if (!response.isSuccessful) throw RuntimeException("Hugging Face HTTP ${response.code}")
+            val root = JSONObject(response.body?.string() ?: throw RuntimeException("Manifiesto vacio"))
+            val siblings = root.getJSONArray("siblings")
+            (0 until siblings.length()).mapNotNull { position ->
+                siblings.getJSONObject(position).optString("rfilename")
+                    .takeIf(::isRequiredMlcFile)
+            }
+        }
+        require(files.any { it == "mlc-chat-config.json" } && files.any { it.startsWith("params_shard_") }) {
+            "El repositorio no contiene un modelo MLC completo"
+        }
+
+        for ((fileIndex, relativePath) in files.withIndex()) {
+            require(!relativePath.startsWith("/") && !relativePath.split('/').contains("..")) {
+                "Ruta insegura en el manifiesto"
+            }
+            val destination = File(target, relativePath)
+            destination.parentFile?.mkdirs()
+            val encodedPath = relativePath.split('/').joinToString("/") {
+                java.net.URLEncoder.encode(it, "UTF-8").replace("+", "%20")
+            }
+            val url = "https://huggingface.co/$repo/resolve/main/$encodedPath?download=true"
+            downloadRepoFile(url, destination) { bytes, expected, mbPerSec ->
+                emit(
+                    DownloadEvent.Progress(
+                        item.id,
+                        index,
+                        total,
+                        bytes,
+                        expected,
+                        mbPerSec
+                    )
+                )
+            }
+            Log.d(TAG, "MLC ${fileIndex + 1}/${files.size}: $relativePath")
+        }
+        File(target, READY_MARKER).writeText(repo)
+        return target
+    }
+
+    private suspend fun downloadRepoFile(
+        url: String,
+        out: File,
+        progress: suspend (Long, Long, Double) -> Unit
+    ) {
+        val existing = if (out.exists()) out.length() else 0L
+        val builder = Request.Builder().url(url)
+        if (existing > 0) builder.header("Range", "bytes=$existing-")
+        client.newCall(builder.build()).execute().use { response ->
+            if (response.code == HTTP_REQUESTED_RANGE_NOT_SATISFIABLE) return
+            if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code} al descargar $url")
+            val append = existing > 0 && response.code == 206
+            val initial = if (append) existing else 0L
+            val body = response.body ?: throw RuntimeException("Respuesta sin cuerpo")
+            val expected = if (body.contentLength() > 0) initial + body.contentLength() else -1L
+            ensureFreeSpaceForBytes(out, if (body.contentLength() > 0) body.contentLength() else 0L)
+            var written = initial
+            val started = System.nanoTime()
+            body.byteStream().use { input ->
+                java.io.FileOutputStream(out, append).buffered(bufferSize).use { output ->
+                    val buffer = ByteArray(bufferSize)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                        written += count
+                        val seconds = max(1e-6, (System.nanoTime() - started) / 1_000_000_000.0)
+                        progress(written, expected, (written - initial) / (1024.0 * 1024.0) / seconds)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun ensureFreeSpaceForBytes(out: File, bytes: Long) {
+        if (bytes <= 0) return
+        val available = out.parentFile?.usableSpace ?: 0L
+        if (available < bytes + 256L * 1024L * 1024L) {
+            throw RuntimeException("Espacio insuficiente para completar el modelo")
+        }
+    }
+
+    private fun isRequiredMlcFile(path: String): Boolean {
+        val name = path.substringAfterLast('/')
+        return name == "mlc-chat-config.json" || name == "ndarray-cache.json" ||
+            name.startsWith("params_shard_") && name.endsWith(".bin") ||
+            name.startsWith("tokenizer") || name == "tokenizer.model" ||
+            name == "special_tokens_map.json" || name == "generation_config.json"
+    }
+
+    /**
      * Calcula el tamaño total esperado de la descarga teniendo en cuenta un
      * posible reanudado (código 206) o un cuerpo de longitud desconocida.
      */
@@ -246,17 +374,22 @@ class ModelDownloader(
         return (0 until items.length()).map { idx ->
             val it = items.getJSONObject(idx)
             val id = it.getString("id")
-            val url = it.getString("url")
-            val urlValidation = NetworkResourcePolicy.validateModelUrl(url)
-            require(urlValidation.allowed) { "Fuente de modelo no autorizada: ${urlValidation.reason}" }
+            val repo = optStringOrNull(it, "huggingFaceRepo")
+            val url = it.optString("url")
+            require(repo != null || url.isNotBlank()) { "El modelo necesita url o huggingFaceRepo" }
+            val normalizedUrl = if (repo == null) {
+                val validation = NetworkResourcePolicy.validateModelUrl(url)
+                require(validation.allowed) { "Fuente de modelo no autorizada: ${validation.reason}" }
+                validation.normalizedUrl
+            } else "https://huggingface.co/$repo"
             val filename = it.optString("filename").takeIf { name -> name.isNotBlank() }
-                ?: fileNameFromUrl(url, id)
+                ?: if (repo != null) id else fileNameFromUrl(url, id)
             require(filename.matches(Regex("[A-Za-z0-9._-]{1,160}"))) {
                 "Nombre de archivo de modelo invalido"
             }
             val sizeBytes = it.optLong("sizeBytes", -1L)
             val sha256 = optStringOrNull(it, "sha256")
-            ModelItem(id, urlValidation.normalizedUrl, filename, sizeBytes, sha256)
+            ModelItem(id, normalizedUrl, filename, sizeBytes, sha256, repo)
         }
     }
 
@@ -324,7 +457,8 @@ class ModelDownloader(
         val url: String,
         val filename: String,
         val sizeBytes: Long,
-        val sha256: String?
+        val sha256: String?,
+        val huggingFaceRepo: String? = null
     )
 
     /**
@@ -357,6 +491,7 @@ class ModelDownloader(
         private const val MIN_FILE_BYTES = 1L shl 20
         private const val HTTP_REQUESTED_RANGE_NOT_SATISFIABLE = 416
         private const val DELETE_ON_BAD_CHECKSUM = true
+        private const val READY_MARKER = ".salve-model-ready"
 
         /**
          * Versión estática de [precheckAll] para compatibilidad con código Java.

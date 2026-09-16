@@ -14,7 +14,8 @@ public final class NetworkResourcePolicy {
     public static final long MAX_KNOWLEDGE_BYTES = 1_000_000L;
 
     private static final Set<String> MODEL_HOSTS = immutableSet(
-            "huggingface.co", "cdn-lfs.huggingface.co", "arzenit.com");
+            "huggingface.co", "cdn-lfs.huggingface.co", "cdn-lfs.hf.co",
+            "cas-bridge.xethub.hf.co", "arzenit.com");
 
     private NetworkResourcePolicy() { }
 

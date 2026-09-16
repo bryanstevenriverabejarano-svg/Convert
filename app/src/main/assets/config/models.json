@@ -1,10 +1,9 @@
 {
   "items": [
     {
-      "id": "qwen2.5-0.5b-instruct",
-      "url": "https://arzenit.com/models/Qwen2.5-0.5B-Instruct-q4f16_1-MLC.zip",
-      "filename": "Qwen2.5-0.5B-Instruct-q4f16_1-MLC.zip",
-      "extract": true
+      "id": "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",
+      "huggingFaceRepo": "mlc-ai/Qwen2.5-0.5B-Instruct-q4f16_1-MLC",
+      "filename": "Qwen2.5-0.5B-Instruct-q4f16_1-MLC"
     }
   ]
 }

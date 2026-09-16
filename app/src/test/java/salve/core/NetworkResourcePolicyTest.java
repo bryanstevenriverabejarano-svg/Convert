@@ -30,6 +30,8 @@ public class NetworkResourcePolicyTest {
     public void separatesModelAndKnowledgeAllowLists() {
         assertTrue(NetworkResourcePolicy.validateModelUrl(
                 "https://huggingface.co/model/file.bin").allowed);
+        assertTrue(NetworkResourcePolicy.validateModelUrl(
+                "https://cas-bridge.xethub.hf.co/model/file.bin").allowed);
         assertTrue(NetworkResourcePolicy.validateKnowledgeUrl(
                 "https://huggingface.co/model/file.bin").allowed);
         assertFalse(NetworkResourcePolicy.validateModelUrl(
