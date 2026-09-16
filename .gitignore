@@ -1,6 +1,7 @@
 .idea/
 .gradle/
 local.properties
+!local.properties.example
 /build/
 /app/build/
 build/

@@ -3,6 +3,36 @@
 > La arquitectura, los límites de autonomía y la hoja de ruta de evolución segura de
 > Salve se documentan en [GOBERNANZA_Y_EVOLUCION.md](GOBERNANZA_Y_EVOLUCION.md).
 
+## Preparar el Android SDK
+
+El proyecto compila con Android API 36. En Linux se puede instalar y configurar el
+SDK necesario de forma reproducible desde la raíz del repositorio:
+
+```bash
+./scripts/setup-android-sdk.sh
+source ~/.config/convert/android-sdk-env.sh
+./gradlew tasks
+```
+
+El instalador descarga las herramientas oficiales de línea de comandos, acepta las
+licencias e instala `platform-tools`, `platforms;android-36` y
+`build-tools;36.0.0`. También genera el archivo local (no versionado)
+`local.properties` con `sdk.dir` y un archivo de entorno que define tanto
+`ANDROID_HOME` como `ANDROID_SDK_ROOT`.
+
+La ruta predeterminada es `/opt/android-sdk`. Si el usuario no puede escribir ahí
+o prefiere guardar el SDK en su directorio personal, puede elegir otra antes de
+ejecutar el instalador:
+
+```bash
+ANDROID_SDK_ROOT="$HOME/Android/Sdk" ./scripts/setup-android-sdk.sh
+```
+
+Para una instalación ya existente no hace falta descargar nada: se ejecuta el
+mismo comando indicando su ruta y el script reutiliza `sdkmanager`. Como alternativa
+manual, se puede copiar `local.properties.example` a `local.properties` y cambiar
+`sdk.dir` por la ruta absoluta real del SDK.
+
 ## Investigación web
 
 Salve puede leer hasta tres URLs HTTPS públicas incluidas en una pregunta. Si no se incluye

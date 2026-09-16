@@ -1,0 +1,3 @@
+# Copia este archivo como local.properties o ejecuta scripts/setup-android-sdk.sh.
+# Usa una ruta absoluta y propia de la máquina; no subas local.properties al repositorio.
+sdk.dir=/opt/android-sdk
