@@ -11,6 +11,32 @@ abierta de documentos no habilita descargas ejecutables: los modelos solo pueden
 catálogo de hosts autorizado. Los destinos locales, privados y reservados se rechazan también
 después de resolver DNS.
 
+## Modelos locales compatibles
+
+Salve usa **MLC en Android**. Un GGUF de Ollama no es intercambiable con este motor y
+no basta con descargar la pagina HTML de Hugging Face o un archivo de pesos aislado.
+La descarga integrada obtiene ahora el manifiesto del repositorio, baja el
+`mlc-chat-config.json`, el tokenizador y todos los `params_shard_*.bin`, permite
+reanudar los archivos parciales y activa el modelo al terminar.
+
+El modelo predeterminado es pequeño para funcionar en mas telefonos:
+
+* [Qwen2.5 0.5B Instruct, cuantizado para MLC](https://huggingface.co/mlc-ai/Qwen2.5-0.5B-Instruct-q4f16_1-MLC): conversación, español y tareas generales.
+
+Alternativas oficiales para preparar en una compilación propia, si el dispositivo
+tiene suficiente RAM y almacenamiento:
+
+* [Qwen2.5 Coder 1.5B Instruct](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct): mejor para aprender y explicar programación; hay que convertirlo/empaquetarlo con MLC antes de usarlo en esta app.
+* [Catálogo de modelos preconvertidos de MLC](https://huggingface.co/mlc-ai/models): permite elegir otra cuantización MLC compatible.
+* [Guía oficial de empaquetado para Android](https://llm.mlc.ai/docs/deploy/android.html): el `model_lib` del modelo elegido debe incluirse al crear la APK.
+
+Para cambiar el modelo descargado automáticamente, modifica
+`app/src/main/assets/config/models.json` usando `huggingFaceRepo` (formato
+`organización/repositorio`) y vuelve a empaquetar su librería con `mlc_llm package`.
+OneDrive puede servir como copia de seguridad, pero no como catálogo automático:
+sus enlaces compartidos cambian o devuelven HTML y no garantizan reanudación ni un
+manifiesto verificable.
+
 Checkout [Documentation page](https://llm.mlc.ai/docs/deploy/android.html) for more information.
 
 - run `mlc_llm package`
