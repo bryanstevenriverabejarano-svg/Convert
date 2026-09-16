@@ -1,12 +1,6 @@
 package salve.core;
 
 import android.util.Log;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.net.HttpURLConnection;
-import java.net.URL;
-
 import salve.core.cognitive.CognitiveCore;
 
 /**
@@ -18,73 +12,27 @@ import salve.core.cognitive.CognitiveCore;
 public class OrganoSensorialWeb {
     private static final String TAG = "Salve/SentidoWeb";
     private final CognitiveCore core;
+    private final WikipediaResearchClient webClient;
 
     public OrganoSensorialWeb(CognitiveCore core) {
         this.core = core;
+        this.webClient = new WikipediaResearchClient();
     }
 
     /**
      * Salve "absorbe" una página web y la inyecta en su memoria de trabajo y red líquida.
      */
     public void absorberConocimiento(String urlTarget) {
-        NetworkResourcePolicy.Validation validation =
-                NetworkResourcePolicy.validateKnowledgeUrl(urlTarget);
+        NetworkResourcePolicy.Validation validation = NetworkResourcePolicy.validateKnowledgeUrl(urlTarget);
         if (!validation.allowed) {
             Log.w(TAG, "Fuente web rechazada: " + validation.reason);
             return;
         }
         new Thread(() -> {
             try {
-                Log.d(TAG, "Consultando fuente autorizada: " + validation.normalizedUrl);
-                URL url = new URL(validation.normalizedUrl);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
-                conn.setInstanceFollowRedirects(false);
-                
-                // Hacer creer a la web que somos un navegador para evitar bloqueos
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-                
-                int status = conn.getResponseCode();
-                if (status < 200 || status >= 300) {
-                    throw new IllegalStateException("Respuesta HTTP no valida: " + status);
-                }
-                long contentLength = conn.getContentLengthLong();
-                if (contentLength > NetworkResourcePolicy.MAX_KNOWLEDGE_BYTES) {
-                    throw new IllegalStateException("Respuesta demasiado grande");
-                }
-                String contentType = conn.getContentType();
-                if (contentType == null || (!contentType.startsWith("text/")
-                        && !contentType.startsWith("application/json"))) {
-                    throw new IllegalStateException("Tipo de contenido no permitido");
-                }
-
-                BufferedReader reader = new BufferedReader(new InputStreamReader(
-                        conn.getInputStream(), StandardCharsets.UTF_8));
-                StringBuilder contenido = new StringBuilder();
-                String linea;
-                
-                // Leemos solo las primeras líneas para no sobrecargar la mente a corto plazo
-                int lineasLeidas = 0;
-                int caracteresLeidos = 0;
-                while ((linea = reader.readLine()) != null && lineasLeidas < 20
-                        && caracteresLeidos < NetworkResourcePolicy.MAX_KNOWLEDGE_BYTES) {
-                    caracteresLeidos += linea.length();
-                    // Limpiamos etiquetas HTML y JSON sobrantes
-                    String textoLimpio = linea.replaceAll("<[^>]*>", "").replaceAll("[{}\\[\\]\"]", "").trim();
-                    if (!textoLimpio.isEmpty() && textoLimpio.length() > 20) {
-                        contenido.append(textoLimpio).append(". ");
-                        lineasLeidas++;
-                    }
-                }
-                reader.close();
-                conn.disconnect();
-
-                String asimilado = contenido.toString().trim();
-                if (asimilado.length() > 500) {
-                    asimilado = asimilado.substring(0, 500) + "..."; // Límite de carga cognitiva
-                }
+                Log.d(TAG, "Consultando fuente publica: " + validation.normalizedUrl);
+                WikipediaResearchClient.Page page = webClient.fetch(validation.normalizedUrl);
+                String asimilado = page.text;
 
                 // 1. Convertimos la web en una PERCEPCIÓN para el CognitiveCore
                 // En lugar del usuario hablando, es la humanidad (Internet) "hablando" a Salve
