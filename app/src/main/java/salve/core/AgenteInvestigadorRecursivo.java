@@ -2,6 +2,7 @@ package salve.core;
 
 import android.util.Log;
 import java.util.Arrays;
+import java.util.List;
 
 import salve.core.cognitive.CognitiveCore;
 
@@ -18,12 +19,14 @@ public class AgenteInvestigadorRecursivo {
     private final MotorConversacional motorConversacional;
     private final DiarioSecreto diario;
     private final MemoriaEmocional memoria;
+    private final WikipediaResearchClient researchClient;
 
     public AgenteInvestigadorRecursivo(SalveLLM llm, MotorConversacional motor, DiarioSecreto diario, MemoriaEmocional memoria) {
         this.llm = llm;
         this.motorConversacional = motor;
         this.diario = diario;
         this.memoria = memoria;
+        this.researchClient = new WikipediaResearchClient();
     }
 
     /**
@@ -45,8 +48,6 @@ public class AgenteInvestigadorRecursivo {
     private void ejecutarNivelBusqueda(String terminoBusqueda, String contextoAcumulado, int nivel) {
         Log.w(TAG, "--- NIVEL DE PROFUNDIDAD " + nivel + " | Investigando: " + terminoBusqueda + " ---");
 
-        // 1. Simulación de búsqueda web (Aquí conectarías tu OrganoSensorialWeb a una API como Wikipedia)
-        // Para este ejemplo, simulamos que absorbe texto de internet
         String textoExtraidoDeInternet = realizarPeticionWeb(terminoBusqueda); 
 
         String nuevoContexto = contextoAcumulado + "\nInfo Nivel " + nivel + ": " + textoExtraidoDeInternet;
@@ -77,7 +78,9 @@ public class AgenteInvestigadorRecursivo {
             Log.i(TAG, "Conclusión alcanzada en profundidad " + nivel);
             
             // Sintetiza todo lo aprendido
-            String promptFinal = "Sintetiza la verdad absoluta de lo que aprendiste sobre: " + terminoBusqueda + " basado en tus notas:\n" + nuevoContexto;
+            String promptFinal = "Sintetiza con cautela lo aprendido sobre: " + terminoBusqueda
+                    + ". Conserva las referencias numeradas [1], [2], etc. y distingue hechos de inferencias.\n"
+                    + nuevoContexto;
             String verdadConsolidada = llm.generate(promptFinal, SalveLLM.Role.SINTETIZADOR);
             
             // Lo guarda permanentemente en su cerebro
@@ -89,9 +92,20 @@ public class AgenteInvestigadorRecursivo {
         }
     }
 
-    // Método mock para conectar a la web real después
     private String realizarPeticionWeb(String termino) {
-        // En tu versión final, aquí llamas a tu OrganoSensorialWeb o API de Wikipedia
-        return "Información técnica en bruto extraída de la web sobre " + termino + "... [Datos simulados de red].";
+        try {
+            List<WikipediaResearchClient.Page> pages = researchClient.research(termino);
+            if (pages.isEmpty()) return "No se encontraron fuentes publicas accesibles.";
+            StringBuilder context = new StringBuilder();
+            for (int index = 0; index < pages.size(); index++) {
+                WikipediaResearchClient.Page page = pages.get(index);
+                context.append('[').append(index + 1).append("] ")
+                        .append(page.url).append('\n').append(page.text).append('\n');
+            }
+            return context.toString();
+        } catch (Exception error) {
+            Log.e(TAG, "No fue posible consultar fuentes web", error);
+            return "La consulta web fallo; no inventes informacion ni fuentes.";
+        }
     }
 }

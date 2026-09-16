@@ -3,6 +3,14 @@
 > La arquitectura, los límites de autonomía y la hoja de ruta de evolución segura de
 > Salve se documentan en [GOBERNANZA_Y_EVOLUCION.md](GOBERNANZA_Y_EVOLUCION.md).
 
+## Investigación web
+
+Salve puede leer hasta tres URLs HTTPS públicas incluidas en una pregunta. Si no se incluye
+ninguna URL, Wikipedia sigue siendo el mecanismo gratuito de descubrimiento inicial. La lectura
+abierta de documentos no habilita descargas ejecutables: los modelos solo pueden proceder del
+catálogo de hosts autorizado. Los destinos locales, privados y reservados se rechazan también
+después de resolver DNS.
+
 Checkout [Documentation page](https://llm.mlc.ai/docs/deploy/android.html) for more information.
 
 - run `mlc_llm package`

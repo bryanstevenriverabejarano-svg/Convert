@@ -101,10 +101,12 @@ la frecuencia de actividad no son por sí mismos indicadores de inteligencia.
 
 ## Capacidades de red implementadas
 
-- La lectura web acepta exclusivamente HTTPS y fuentes de conocimiento incluidas en una
-  allowlist. Rechaza hosts locales, dominios parecidos, puertos personalizados y redirecciones.
+- La lectura de conocimiento acepta hasta tres páginas de cualquier hostname HTTPS público.
+  Cada destino y redirección se valida, se resuelve inmediatamente antes de conectar y se
+  rechaza si apunta al teléfono, loopback, redes privadas, CGNAT o rangos reservados.
 - Las respuestas web tienen timeout, tipo de contenido permitido y un límite de tamaño antes de
-  entrar en la memoria de trabajo.
+  entrar en la memoria de trabajo. Se eliminan scripts, estilos y HTML, y cada extracto queda
+  limitado a 2.500 caracteres. Sin URLs explícitas, Wikipedia actúa como buscador inicial.
 - Las descargas de modelos requieren una aprobación humana explícita y una URL perteneciente al
   catálogo de hosts autorizado. La selección realizada por el LLM no cuenta como aprobación.
 - El integrador ya no examina ni carga plugins desde APK de otras aplicaciones instaladas. Solo
