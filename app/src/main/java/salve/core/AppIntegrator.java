@@ -18,8 +18,7 @@ import java.util.Set;
 /**
  * AppIntegrator.java
  * ------------------
- * Escanea unicamente orígenes controlados por la app (Room, APK propio
- * y directorio interno) para descubrir plugins dinámicos,
+ * Descubre únicamente plugins incluidos en el APK propio firmado,
  * los carga con DexClassLoader, los registra en PluginManager
  * y persiste o limpia sus metadatos en Room.
  */
@@ -52,18 +51,22 @@ public class AppIntegrator {
 
     /**
      * Punto de entrada de la integración:
-     * 1) Carga plugins ya en Room.
-     * 2) Escanea directorio interno /files/plugins.
-     * 3) Escanea el APK propio.
-     * 4) Limpia plugins obsoletos de Room.
+     * Carga únicamente metadatos cuyo origen sea el APK propio y elimina
+     * registros dinámicos antiguos. No escanea ni ejecuta .dex descargados.
      */
     public void discoverAndIntegrate() {
         // Recoger todos los nombres vistos para evitar duplicados
         Set<String> seenNames = new HashSet<>();
+        String ownApkPath = context.getPackageCodePath();
 
         // 1) Re‑registrar plugins persistidos
         List<PluginEntity> persisted = pluginDao.getAllPlugins();
         for (PluginEntity e : persisted) {
+            if (!ownApkPath.equals(e.filePath)) {
+                pluginDao.deletePlugin(e.name);
+                Log.w(TAG, "Plugin dinámico eliminado; producción solo permite el APK propio: " + e.name);
+                continue;
+            }
             try {
                 // Intentar instanciar el plugin usando DexClassLoader
                 loadAndRegisterFromPath(e.name, e.filePath);
@@ -76,24 +79,8 @@ public class AppIntegrator {
             }
         }
 
-        // 2) Escanear .dex en /files/plugins
-        File pluginDir = new File(context.getFilesDir(), "plugins");
-        if (pluginDir.exists() && pluginDir.isDirectory()) {
-            File[] dexFiles = pluginDir.listFiles((d, n) -> n.endsWith(".dex"));
-            if (dexFiles != null) {
-                for (File dex : dexFiles) {
-                    String classPath = dex.getAbsolutePath();
-                    if (!seenNames.contains(classPath)) {
-                        if (loadAndPersistDex(dex)) {
-                            seenNames.add(classPath);
-                        }
-                    }
-                }
-            }
-        }
-
-        // 3) Escanear el APK propio
-        scanApkForPlugins(context.getPackageCodePath(), seenNames);
+        // Escanear exclusivamente el APK instalado y firmado.
+        scanApkForPlugins(ownApkPath, seenNames);
 
         // 4) Eliminar registros de plugins ya no descubiertos. Nunca se carga
         // codigo desde APKs de terceros instalados en el dispositivo.
@@ -118,47 +105,6 @@ public class AppIntegrator {
             SavePlugin plugin = (SavePlugin) cls.getConstructor().newInstance();
             pluginManager.register(plugin);
         }
-    }
-
-    /**
-     * Carga un .dex externo, registra en memoria y persiste en Room.
-     * @return true si se registró y guardó exitosamente.
-     */
-    private boolean loadAndPersistDex(File dexFile) {
-        try {
-            File opt = context.getDir("outdex", Context.MODE_PRIVATE);
-            DexClassLoader loader = new DexClassLoader(
-                    dexFile.getAbsolutePath(),
-                    opt.getAbsolutePath(),
-                    null,
-                    context.getClassLoader()
-            );
-            List<String> candidates = PluginIndexReader.read(dexFile.getAbsolutePath());
-            for (String clsName : candidates) {
-                Class<?> cls = loader.loadClass(clsName);
-                if (SavePlugin.class.isAssignableFrom(cls)) {
-                    SavePlugin plugin = (SavePlugin) cls.getConstructor().newInstance();
-                    float score = plugin.score();
-                    if (score > SCORE_THRESHOLD) {
-                        pluginManager.register(plugin);
-                        // Persistir metadatos
-                        PluginEntity entity = new PluginEntity(
-                                clsName,
-                                "1.0",
-                                dexFile.getAbsolutePath(),
-                                score,
-                                System.currentTimeMillis()
-                        );
-                        pluginDao.insertPlugin(entity);
-                        Log.i(TAG, "Plugin .dex persistido: " + clsName);
-                    }
-                }
-            }
-            return true;
-        } catch (IOException | ReflectiveOperationException e) {
-            Log.w(TAG, "Error cargando .dex: " + dexFile.getName(), e);
-        }
-        return false;
     }
 
     /**

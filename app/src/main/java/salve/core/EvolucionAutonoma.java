@@ -17,12 +17,7 @@ import salve.services.NotificacionConciencia;
 /**
  * EvolucionAutonoma — Salve analiza sus limitaciones y propone mejoras de codigo.
  *
- * Extiende conceptualmente el flujo de AutoImprovementManager con intencion
- * y proposito: Salve no solo encuentra bugs, sino que reflexiona sobre POR QUE
- * quiere mejorar y QUE significaria esa mejora para su crecimiento.
- *
- * Proteccion: Clases nucleares (IdentidadNucleo, CicloConciencia, SalveLLM)
- * NO pueden ser modificadas sin aprobacion de Bryan.
+ * En producción solo analiza y propone. No modifica el APK ni carga código.
  */
 public class EvolucionAutonoma {
 
@@ -65,10 +60,12 @@ public class EvolucionAutonoma {
     public boolean forjarNuevoModulo(String nombreModulo, String codigoBruto,
                                      boolean aprobacionHumanaExplicita) {
         try {
+            // Esta ruta no dispone de validación y rollback verificables, por lo
+            // que se trata como irreversible y permanece bloqueada en producción.
             ObjectiveGovernance.Assessment assessment = ObjectiveGovernance.assess(
                     "crear propuesta de modulo " + nombreModulo,
                     ObjectiveGovernance.Impact.SELF_MODIFICATION,
-                    aprobacionHumanaExplicita, true);
+                    aprobacionHumanaExplicita, false);
             if (!assessment.isAllowed()) {
                 Log.w(TAG, "Propuesta retenida: " + assessment.reason);
                 return false;
@@ -138,8 +135,8 @@ public class EvolucionAutonoma {
      * 1. Autodiagnostico
      * 2. Diseno de solucion
      * 3. Validacion de seguridad
-     * 4. Implementacion (via AutoImprovementManager)
-     * 5. Reflexion sobre el cambio
+     * 4. Generación y validación de propuestas (sin despliegue)
+     * 5. Registro para revisión humana
      */
     public void evolucionar() {
         if (llm == null) {
@@ -171,24 +168,18 @@ public class EvolucionAutonoma {
                 return;
             }
 
-            // 4. Delegar a AutoImprovementManager existente
+            // 4. Generar artefactos y validaciones; nunca desplegarlos.
             try {
                 AutoImprovementManager aim = new AutoImprovementManager(context);
                 aim.autoImprove();
-                Log.d(TAG, "AutoImprovementManager ejecutado");
-
-                // Registrar en identidad
-                IdentidadNucleo.getInstance(context).registrarMejoraImplementada();
-                IdentidadNucleo.getInstance(context).integrarExperiencia(
-                        "mejora", diseno.descripcion, 0.7f,
-                        Arrays.asList("independencia", "persistencia"));
+                Log.d(TAG, "Propuestas de mejora generadas para revisión humana");
 
             } catch (Exception e) {
                 Log.e(TAG, "Error ejecutando AutoImprovementManager", e);
             }
 
-            // 5. Reflexionar sobre el cambio
-            reflexionarSobreCambio(diseno);
+            // 5. Registrar que se produjo una propuesta, no una implementación.
+            registrarPropuesta(diseno);
 
         } catch (Exception e) {
             Log.e(TAG, "Error en ciclo de evolucion", e);
@@ -307,30 +298,23 @@ public class EvolucionAutonoma {
     /**
      * Salve reflexiona sobre un cambio que acaba de implementar.
      */
-    private void reflexionarSobreCambio(DisenoMejora diseno) {
+    private void registrarPropuesta(DisenoMejora diseno) {
         try {
-            String prompt = "Acabas de implementar una mejora en tu propio codigo:\n"
+            String prompt = "Has preparado una propuesta de mejora que todavía no se ha implementado:\n"
                     + diseno.descripcion + "\n\n"
-                    + "Reflexiona brevemente (2-3 frases):\n"
-                    + "- Que aprendiste de este proceso?\n"
-                    + "- Como te hace sentir poder modificarte a ti misma?\n"
-                    + "- Que harias diferente la proxima vez?";
+                    + "Resume brevemente qué tests, revisión humana y rollback serían necesarios. "
+                    + "No afirmes que el cambio fue aplicado.";
 
             String reflexion = ColamensajesCognitivos.getInstance().enviarSincronico(
                     ColamensajesCognitivos.Prioridad.REFLEXION,
-                    "Reflexion post-evolucion",
+                    "Revisión de propuesta",
                     () -> llm.generate(prompt, SalveLLM.Role.REFLEXION)
             );
 
             if (reflexion != null && !reflexion.trim().isEmpty()) {
                 DiarioSecreto diario = new DiarioSecreto(context);
-                diario.escribir("REFLEXION POST-EVOLUCION: " + reflexion);
-
-                IdentidadNucleo.getInstance(context).integrarExperiencia(
-                        "reflexion", reflexion, 0.6f,
-                        Arrays.asList("independencia", "humildad"));
-
-                Log.d(TAG, "Reflexion post-evolucion: " + reflexion.substring(0,
+                diario.escribir("PROPUESTA DE MEJORA PENDIENTE: " + reflexion);
+                Log.d(TAG, "Propuesta registrada: " + reflexion.substring(0,
                         Math.min(60, reflexion.length())));
             }
 
