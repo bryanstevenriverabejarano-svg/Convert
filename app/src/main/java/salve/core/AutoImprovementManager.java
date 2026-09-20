@@ -28,6 +28,7 @@ public class AutoImprovementManager {
     private final ValidationSandbox validationSandbox;
     private final ConsejoEticoCreativo consejoEtico;
     private final MultimodalLearningOrchestrator learningOrchestrator;
+    private final AutoImprovementProposalStore proposalStore;
 
     /**
      * Construye un gestor de auto mejora.
@@ -42,6 +43,7 @@ public class AutoImprovementManager {
         this.testGenerator = new AutoTestGenerator(ctx);
         this.validationSandbox = new ValidationSandbox(ctx, GradleSandboxTestExecutor.createDefault(ctx));
         this.consejoEtico = new ConsejoEticoCreativo(ctx);
+        this.proposalStore = new AutoImprovementProposalStore(ctx);
         this.learningOrchestrator = new MultimodalLearningOrchestrator(
                 this.memoria,
                 new BitacoraExploracionCreativa(this.memoria.getGrafoConocimiento()));
@@ -159,6 +161,40 @@ public class AutoImprovementManager {
                                 blueprint.toNarrativa(),
                                 true
                         );
+                    }
+
+                    if (hasFix) {
+                        try {
+                            AutoImprovementProposalStore.Proposal proposal =
+                                    new AutoImprovementProposalStore.Proposal(
+                                            System.currentTimeMillis(),
+                                            report.getClassName(),
+                                            describeIssue(issue, report),
+                                            fix,
+                                            suite == null ? "" : suite.getCode(),
+                                            validation.success,
+                                            validation.getExecutionResult().wasAttempted(),
+                                            validation.getExecutionResult().wasSuccessful(),
+                                            deliberacion.aprobada
+                                    );
+                            proposalStore.enqueue(proposal);
+                            session.addArtifact(
+                                    AutoImprovementSession.Stage.REVIEW,
+                                    "Bandeja para PR automático",
+                                    proposal.isReadyForPullRequest()
+                                            ? "Lista para que el ejecutor externo abra una rama y un PR."
+                                            : "Pendiente de validación completa en el ejecutor externo.",
+                                    true
+                            );
+                        } catch (Exception proposalError) {
+                            Log.e(TAG, "No se pudo encolar la propuesta de PR", proposalError);
+                            session.addArtifact(
+                                    AutoImprovementSession.Stage.REVIEW,
+                                    "Bandeja para PR automático",
+                                    "No se pudo persistir el artefacto para el ejecutor externo.",
+                                    false
+                            );
+                        }
                     }
 
                     memoria.guardarRecuerdo(

@@ -1097,6 +1097,13 @@ public class MotorConversacional {
     }
 
     private void ejecutarAutoEvolucion(String entrada) {
-        hablar("La auto-modificación está deshabilitada en producción. Puedo analizar la propuesta, pero cualquier cambio debe realizarse en un sandbox externo, pasar pruebas y revisión humana, y desplegarse mediante control de versiones.");
+        hablar("Prepararé una propuesta autónoma para una rama aislada. El ejecutor externo deberá volver a probarla antes de abrir el pull request; mi APK de producción no se modificará directamente.");
+        ColamensajesCognitivos.getInstance().enviarAsincronico(
+                ColamensajesCognitivos.Prioridad.CONVERSACION,
+                "PropuestaAutoEvolucion",
+                () -> {
+                    new AutoImprovementManager(context).autoImprove();
+                    return null;
+                });
     }
 }
