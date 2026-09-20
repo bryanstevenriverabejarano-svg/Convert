@@ -74,6 +74,18 @@ Este puente depende de `adb run-as`, por lo que está limitado deliberadamente a
 builds depurables. Las compilaciones de producción no deben exponer su
 almacenamiento privado mediante ADB.
 
+Para mantener el circuito activo en una estación de desarrollo conectada, puede
+usarse el modo supervisor:
+
+```bash
+python3 scripts/auto_improvement_adb_bridge.py --repo . --watch \
+  --interval-seconds 60 --max-consecutive-failures 3
+```
+
+Solo puede existir un supervisor por repositorio. Procesa una propuesta por
+ciclo, aplica retroceso exponencial tras errores y se detiene al alcanzar el
+límite configurado de fallos consecutivos.
+
 ## Modelos locales compatibles
 
 Salve usa **MLC en Android**. Un GGUF de Ollama no es intercambiable con este motor y

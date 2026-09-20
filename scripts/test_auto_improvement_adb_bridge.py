@@ -1,6 +1,7 @@
 import importlib.util
 import sys
 import unittest
+import tempfile
 from pathlib import Path
 from unittest import mock
 
@@ -49,6 +50,21 @@ class AdbBridgeTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             bridge.process_next("com.salve.app", None, Path("."), "main", False)
         archive.assert_not_called()
+
+    def test_rejects_second_supervisor_for_same_repo(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            with bridge.single_instance_lock(repo):
+                with self.assertRaises(bridge.BridgeError):
+                    with bridge.single_instance_lock(repo):
+                        pass
+
+    @mock.patch.object(bridge.time, "sleep")
+    @mock.patch.object(bridge, "process_next", side_effect=[RuntimeError("uno"), RuntimeError("dos")])
+    def test_supervisor_stops_after_failure_limit(self, _process, sleep):
+        with self.assertRaises(bridge.BridgeError):
+            bridge.supervise("com.salve.app", None, Path("."), "main", 5, 2)
+        sleep.assert_called_once_with(10)
 
 
 if __name__ == "__main__":

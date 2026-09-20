@@ -4,12 +4,16 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
+import fcntl
+import hashlib
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 import auto_improvement_runner
 
@@ -23,6 +27,28 @@ PROPOSAL_PATTERN = re.compile(r"[0-9]+-[0-9a-fA-F-]+\.json")
 
 class BridgeError(RuntimeError):
     pass
+
+
+@contextmanager
+def single_instance_lock(repo: Path):
+    identity = hashlib.sha256(str(repo.resolve()).encode("utf-8")).hexdigest()[:16]
+    lock_path = Path(tempfile.gettempdir()) / f"salve-auto-improvement-{identity}.lock"
+    handle = lock_path.open("a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise BridgeError("Ya existe un supervisor activo para este repositorio") from error
+        handle.seek(0)
+        handle.truncate()
+        handle.write(str(Path.cwd()))
+        handle.flush()
+        yield
+    finally:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            handle.close()
 
 
 def adb_prefix(serial: str | None) -> list[str]:
@@ -105,6 +131,32 @@ def process_next(package: str, serial: str | None, repo: Path, base: str, dry_ru
     return result
 
 
+def supervise(package: str,
+              serial: str | None,
+              repo: Path,
+              base: str,
+              interval_seconds: int,
+              max_consecutive_failures: int) -> None:
+    failures = 0
+    while True:
+        try:
+            result = process_next(package, serial, repo, base, False)
+            print(result, flush=True)
+            failures = 0
+            time.sleep(interval_seconds)
+        except KeyboardInterrupt:
+            return
+        except Exception as error:
+            failures += 1
+            print(f"Ciclo autónomo fallido ({failures}): {error}", file=sys.stderr, flush=True)
+            if failures >= max_consecutive_failures:
+                raise BridgeError(
+                    f"Supervisor detenido tras {failures} fallos consecutivos"
+                ) from error
+            delay = min(interval_seconds * (2 ** failures), 15 * 60)
+            time.sleep(delay)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path.cwd())
@@ -112,11 +164,31 @@ def main() -> int:
     parser.add_argument("--serial")
     parser.add_argument("--base", default="main")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--watch", action="store_true")
+    parser.add_argument("--interval-seconds", type=int, default=60)
+    parser.add_argument("--max-consecutive-failures", type=int, default=3)
     args = parser.parse_args()
     if not shutil.which("adb"):
         parser.error("adb no está disponible")
+    if args.watch and args.dry_run:
+        parser.error("--watch y --dry-run no pueden combinarse")
+    if args.interval_seconds < 5:
+        parser.error("--interval-seconds debe ser al menos 5")
+    if args.max_consecutive_failures < 1:
+        parser.error("--max-consecutive-failures debe ser al menos 1")
     try:
-        print(process_next(args.package, args.serial, args.repo, args.base, args.dry_run))
+        with single_instance_lock(args.repo):
+            if args.watch:
+                supervise(
+                    args.package,
+                    args.serial,
+                    args.repo,
+                    args.base,
+                    args.interval_seconds,
+                    args.max_consecutive_failures,
+                )
+            else:
+                print(process_next(args.package, args.serial, args.repo, args.base, args.dry_run))
     except (BridgeError, auto_improvement_runner.ProposalError, subprocess.CalledProcessError) as error:
         print(f"Puente detenido: {error}", file=sys.stderr)
         return 1
