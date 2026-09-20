@@ -3,6 +3,7 @@ package salve.data.db;
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
+import androidx.room.Transaction;
 
 import java.util.List;
 
@@ -32,4 +33,13 @@ public interface RecuerdoDao {
 
     @Query("SELECT * FROM recuerdos WHERE frase LIKE '%' || :palabraClave || '%' ORDER BY timestamp DESC LIMIT :limite")
     List<RecuerdoEntity> buscarRecientes(String palabraClave, int limite);
+
+    @Query("DELETE FROM recuerdos WHERE etiquetas LIKE '%' || :etiqueta || '%'")
+    void eliminarPorEtiqueta(String etiqueta);
+
+    @Transaction
+    default void reemplazarPorEtiqueta(String etiqueta, RecuerdoEntity recuerdo) {
+        eliminarPorEtiqueta(etiqueta);
+        insertRecuerdo(recuerdo);
+    }
 }

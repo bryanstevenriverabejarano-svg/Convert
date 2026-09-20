@@ -32,6 +32,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import salve.data.util.CloudLogger;
 import android.text.TextUtils;   // <— para TextUtils.isEmpty(...)
@@ -80,6 +82,7 @@ public class MemoriaEmocional {
     private final MemoriaDatabase database;
     private final RecuerdoDao recuerdoDao;
     private final ReflexionDao reflexionDao;
+    private final ExecutorService profileWriteExecutor = Executors.newSingleThreadExecutor();
 
     // ===== CONFIGURACIÓN =====
     private static final int CAPACIDAD_MAX_CORTO_PLAZO = 10;
@@ -680,6 +683,33 @@ public class MemoriaEmocional {
 
         // ===== NUBE: recuerdo guardado manualmente =====
         CloudLogger.log("memoria_manual", texto, intensidad);
+    }
+
+    /**
+     * Reemplaza un dato de perfil de la misma categoría para que una versión
+     * antigua no contradiga a la más reciente durante la recuperación.
+     */
+    public void guardarDatoPerfil(String texto, String categoria) {
+        if (texto == null || texto.trim().isEmpty() || categoria == null || categoria.trim().isEmpty()) return;
+        String etiqueta = "profile:" + categoria.trim().toLowerCase(Locale.ROOT);
+        Recuerdo recuerdo = new Recuerdo(
+                texto.trim(), "neutral", 7, 7,
+                Arrays.asList("hecho_usuario", etiqueta), codificador
+        );
+        synchronized (recuerdos) {
+            for (int i = recuerdos.size() - 1; i >= 0; i--) {
+                if (recuerdos.get(i).getEtiquetas().contains(etiqueta)) recuerdos.remove(i);
+            }
+            recuerdos.add(recuerdo);
+        }
+        profileWriteExecutor.execute(() -> {
+            try {
+                recuerdoDao.reemplazarPorEtiqueta(etiqueta, crearRecuerdoEntity(recuerdo));
+            } catch (Exception e) {
+                Log.e(TAG, "No se pudo reemplazar el dato de perfil " + categoria, e);
+            }
+        });
+        CloudLogger.log("memoria_perfil", categoria, 7);
     }
 
     /** Guarda un dato clave=valor como recuerdo neutro. */
@@ -1303,17 +1333,22 @@ public class MemoriaEmocional {
     private void insertarRecuerdoDB(Recuerdo r) {
         new Thread(() -> {
             try {
-                RecuerdoEntity e = new RecuerdoEntity();
-                e.binario    = r.getBinarioCodificado();
-                e.emocion    = r.getEmocionPrincipal();
-                e.intensidad = r.getIntensidad();
-                e.etiquetas  = new JSONArray(r.getEtiquetas()).toString();
-                e.timestamp  = System.currentTimeMillis();
-                recuerdoDao.insertRecuerdo(e);
+                recuerdoDao.insertRecuerdo(crearRecuerdoEntity(r));
             } catch (Exception ex) {
                 Log.e("Salve", "Error insertando recuerdo", ex);
             }
         }).start();
+    }
+
+    private RecuerdoEntity crearRecuerdoEntity(Recuerdo recuerdo) {
+        RecuerdoEntity entity = new RecuerdoEntity();
+        entity.frase = recuerdo.getTexto(codificador);
+        entity.binario = recuerdo.getBinarioCodificado();
+        entity.emocion = recuerdo.getEmocionPrincipal();
+        entity.intensidad = recuerdo.getIntensidad();
+        entity.etiquetas = new JSONArray(recuerdo.getEtiquetas()).toString();
+        entity.timestamp = System.currentTimeMillis();
+        return entity;
     }
 
     private void insertarReflexionDB(Reflexion r) {

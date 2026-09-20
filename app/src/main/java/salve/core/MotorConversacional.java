@@ -27,6 +27,7 @@ import salve.core.conversation.ReasoningPlan;
 import salve.core.conversation.ReasoningPlanner;
 import salve.core.conversation.ResponseLimiter;
 import salve.core.memory.MemoryWritePolicy;
+import salve.core.memory.MemoryProfileFact;
 import salve.core.tools.PendingToolAction;
 import salve.core.voice.VoiceResponsePolicy;
 import salve.presentation.ui.GaleriaVisualActivity;
@@ -600,9 +601,14 @@ public class MotorConversacional {
         );
         String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
                 + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext();
-        if (intent.type != IntentType.GUARDAR_RECUERDO && MemoryWritePolicy.shouldPersist(entrada)) {
-            memoria.guardarRecuerdo(entrada, emocionDetectada, 7,
-                    Arrays.asList("hecho_usuario", "declaracion_directa"));
+        if (intent.type != IntentType.GUARDAR_RECUERDO) {
+            MemoryProfileFact profileFact = MemoryWritePolicy.extractProfileFact(entrada);
+            if (profileFact != null) {
+                memoria.guardarDatoPerfil(profileFact.getStatement(), profileFact.getCategory());
+            } else if (MemoryWritePolicy.shouldPersist(entrada)) {
+                memoria.guardarRecuerdo(entrada, emocionDetectada, 7,
+                        Arrays.asList("hecho_usuario", "declaracion_directa"));
+            }
         }
         String resumenAccion = procesarIntencion(intent, entrada, emocionDetectada);
 
