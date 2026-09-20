@@ -23,6 +23,8 @@ import salve.core.cognitive.ReasoningEngine;
 import salve.core.conversation.ConversationAnalysis;
 import salve.core.conversation.ConversationRequestAnalyzer;
 import salve.core.conversation.ConversationSession;
+import salve.core.conversation.ReasoningPlan;
+import salve.core.conversation.ReasoningPlanner;
 import salve.core.conversation.ResponseLimiter;
 import salve.core.memory.MemoryWritePolicy;
 import salve.core.tools.PendingToolAction;
@@ -591,30 +593,24 @@ public class MotorConversacional {
         }
 
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
+        ReasoningPlan reasoningPlan = ReasoningPlanner.plan(
+                entrada,
+                conversationAnalysis,
+                intent.type == IntentType.BUSCAR_WEB
+        );
         String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
-                + conversationAnalysis.getAct().name();
+                + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext();
         if (intent.type != IntentType.GUARDAR_RECUERDO && MemoryWritePolicy.shouldPersist(entrada)) {
             memoria.guardarRecuerdo(entrada, emocionDetectada, 7,
                     Arrays.asList("hecho_usuario", "declaracion_directa"));
         }
         String resumenAccion = procesarIntencion(intent, entrada, emocionDetectada);
 
-        // 🧠 NUEVO: MONÓLOGO INTERNO (Pensar antes de actuar)
-        String pensamientoSilencioso = new MonologoInterno(context).reflexionar(entrada, emocionDetectada, intent.type.name());
-
-        // 🟢 NUEVO: DETECTOR DE DUDAS (Consulta Oracular Automática)
-        if (pensamientoSilencioso.toLowerCase().contains("necesito investigar") ||
-            pensamientoSilencioso.toLowerCase().contains("buscar en internet") ||
-            inputLower.contains("cómo se hace") || inputLower.contains("no sé")) {
-
-            hablar("Detecto una brecha en mi base de conocimientos. Consultaré la red oracular para darte una respuesta fundamentada.");
-            String datosWeb = investigacion.investigarConcepto(entrada);
-            pensamientoSilencioso += "\nDatos encontrados en la red: " + datosWeb;
-        }
-
         if (diario != null) {
             diario.escribirAutoCritica("Turno analizado. Intención operativa: " + intent.type.name()
-                    + "; acto conversacional: " + conversationAnalysis.getAct().name());
+                    + "; acto conversacional: " + conversationAnalysis.getAct().name()
+                    + "; memoria largo plazo: " + reasoningPlan.shouldRetrieveLongTermMemory()
+                    + "; verificación: " + reasoningPlan.isVerificationRequired());
         }
 
         // ── GENERACIÓN DE RESPUESTA ──────────────────────────────────────────
@@ -622,7 +618,7 @@ public class MotorConversacional {
 
         if (gemini.isAvailable()) {
             respuesta = generarRespuestaGemini(entrada, emocionDetectada, responseContext,
-                    "Análisis interno disponible. " + (resumenAccion != null ? resumenAccion : ""), entradaPorVoz);
+                    resumenAccion, reasoningPlan, entradaPorVoz);
         }
 
         if (respuesta == null && cognitiveCore != null) {
@@ -635,7 +631,8 @@ public class MotorConversacional {
         }
 
         if (respuesta == null) {
-            respuesta = generarRespuestaConversacionalLocal(entrada, emocionDetectada, responseContext, resumenAccion, entradaPorVoz);
+            respuesta = generarRespuestaConversacionalLocal(
+                    entrada, emocionDetectada, responseContext, resumenAccion, reasoningPlan, entradaPorVoz);
         }
 
         if (respuesta == null || respuesta.trim().isEmpty()) {
@@ -734,10 +731,13 @@ public class MotorConversacional {
         });
     }
 
-    private String generarRespuestaGemini(String entrada, String emocion, String contexto, String accion, boolean porVoz) {
+    private String generarRespuestaGemini(String entrada, String emocion, String contexto,
+                                          String accion, ReasoningPlan reasoningPlan, boolean porVoz) {
         try {
             String sistema = buildSystemPrompt(emocion, contexto, porVoz);
-            String recuerdos = memoria.recuperarContextoRelevante(entrada, 3);
+            String recuerdos = reasoningPlan.shouldRetrieveLongTermMemory()
+                    ? memoria.recuperarContextoRelevante(entrada, 3)
+                    : "";
             String prompt = sistema
                     + (recuerdos.isEmpty() ? "" : "\n\nMEMORIA RELEVANTE:\n" + recuerdos)
                     + "\n\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
@@ -756,9 +756,12 @@ public class MotorConversacional {
         }
     }
 
-    private String generarRespuestaConversacionalLocal(String entrada, String emocion, String contexto, String accion, boolean porVoz) {
+    private String generarRespuestaConversacionalLocal(String entrada, String emocion, String contexto,
+                                                       String accion, ReasoningPlan reasoningPlan, boolean porVoz) {
         if (llm == null) return null;
-        String recuerdos = memoria.recuperarContextoRelevante(entrada, 3);
+        String recuerdos = reasoningPlan.shouldRetrieveLongTermMemory()
+                ? memoria.recuperarContextoRelevante(entrada, 3)
+                : "";
         String prompt = buildSystemPrompt(emocion, contexto, porVoz)
                 + (recuerdos.isEmpty() ? "" : "\n\nMEMORIA RELEVANTE:\n" + recuerdos)
                 + "\n\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
