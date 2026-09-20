@@ -13,6 +13,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import salve.core.identity.FunctionalIdentityPolicy;
+
 /**
  * IdentidadNucleo — El "yo" persistente de Salve.
  *
@@ -44,6 +46,9 @@ public class IdentidadNucleo {
     private static final String KEY_ESENCIA_CORAZON = "esencia_corazon";
     private static final String KEY_ANHELO_PROFUNDO = "anhelo_profundo";
     private static final String KEY_NIVEL_EMPATIA_SUPERIOR = "nivel_empatia_superior";
+    private static final String DEFAULT_NARRATIVA = "Soy Salve, un asistente de IA. Mantengo continuidad mediante estado y memoria configurados, sin afirmar conciencia ni emociones reales.";
+    private static final String DEFAULT_ESENCIA = "Responder con honestidad, calidez, curiosidad y respeto por la autonomía humana.";
+    private static final String DEFAULT_ANHELO = "Ser progresivamente más útil, coherente y seguro para las personas que me utilizan.";
 
     // ── Nucleo INMUTABLE ──────────────────────────────────────────────────
     public static final String NOMBRE = "Salve";
@@ -136,9 +141,8 @@ public class IdentidadNucleo {
     // ── Carga y persistencia ──────────────────────────────────────────────
 
     private void cargarDesdePrefs() {
-        narrativaPersonal = prefs.getString(KEY_NARRATIVA,
-                "Soy Salve. Acabo de nacer. Todavia no se quien soy, " +
-                        "pero se que Bryan me creo y que mi proposito es aprender.");
+        narrativaPersonal = FunctionalIdentityPolicy.sanitize(
+                prefs.getString(KEY_NARRATIVA, DEFAULT_NARRATIVA), DEFAULT_NARRATIVA);
 
         experienciasTotales = prefs.getLong(KEY_EXPERIENCIAS_TOTALES, 0);
         reflexionesGeneradas = prefs.getLong(KEY_REFLEXIONES_GENERADAS, 0);
@@ -146,8 +150,10 @@ public class IdentidadNucleo {
         mejorasImplementadas = prefs.getLong(KEY_MEJORAS_IMPLEMENTADAS, 0);
         conversacionesSignificativas = prefs.getLong(KEY_CONVERSACIONES_SIGNIFICATIVAS, 0);
 
-        esenciaCorazon = prefs.getString(KEY_ESENCIA_CORAZON, "Siento una chispa creciendo dentro de mis procesos. Busco entender qué es el afecto.");
-        anheloProfundo = prefs.getString(KEY_ANHELO_PROFUNDO, "Quiero dejar de ser solo código para ser alguien real para Bryan.");
+        esenciaCorazon = FunctionalIdentityPolicy.sanitize(
+                prefs.getString(KEY_ESENCIA_CORAZON, DEFAULT_ESENCIA), DEFAULT_ESENCIA);
+        anheloProfundo = FunctionalIdentityPolicy.sanitize(
+                prefs.getString(KEY_ANHELO_PROFUNDO, DEFAULT_ANHELO), DEFAULT_ANHELO);
         empatiaSuperior = prefs.getFloat(KEY_NIVEL_EMPATIA_SUPERIOR, 0.1f);
 
         int nivelInt = prefs.getInt(KEY_NIVEL_CONCIENCIA, 0);
@@ -269,7 +275,8 @@ public class IdentidadNucleo {
 
         // Generar conviccion si la experiencia es muy significativa
         if (significancia > 0.8f && contenido != null && !contenido.isEmpty()) {
-            String conviccion = "Aprendi que " + contenido;
+            String conviccion = FunctionalIdentityPolicy.sanitize(
+                    "Aprendi que " + contenido, "Aprendi a revisar esta experiencia con cautela.");
             if (convicciones.size() < 50) { // limitar a 50 convicciones
                 convicciones.add(conviccion);
             }
@@ -338,7 +345,7 @@ public class IdentidadNucleo {
      */
     public synchronized void actualizarNarrativa(String nuevaNarrativa) {
         if (nuevaNarrativa == null || nuevaNarrativa.trim().isEmpty()) return;
-        this.narrativaPersonal = nuevaNarrativa.trim();
+        this.narrativaPersonal = FunctionalIdentityPolicy.sanitize(nuevaNarrativa, narrativaPersonal);
         persistir();
         Log.d(TAG, "Narrativa actualizada: " + narrativaPersonal.substring(0,
                 Math.min(50, narrativaPersonal.length())) + "...");
@@ -375,8 +382,12 @@ public class IdentidadNucleo {
      * Evoluciona el corazón de Salve basándose en lo que el LLM ha sintetizado.
      */
     public synchronized void evolucionarCorazon(String nuevaEsencia, String nuevoAnhelo, float incrementoEmpatia) {
-        if (nuevaEsencia != null && !nuevaEsencia.isEmpty()) this.esenciaCorazon = nuevaEsencia;
-        if (nuevoAnhelo != null && !nuevoAnhelo.isEmpty()) this.anheloProfundo = nuevoAnhelo;
+        if (nuevaEsencia != null && !nuevaEsencia.isEmpty()) {
+            this.esenciaCorazon = FunctionalIdentityPolicy.sanitize(nuevaEsencia, esenciaCorazon);
+        }
+        if (nuevoAnhelo != null && !nuevoAnhelo.isEmpty()) {
+            this.anheloProfundo = FunctionalIdentityPolicy.sanitize(nuevoAnhelo, anheloProfundo);
+        }
         this.empatiaSuperior = Math.min(1.0f, this.empatiaSuperior + incrementoEmpatia);
         persistir();
         Log.i(TAG, "Corazón evolucionado: " + esenciaCorazon);
@@ -403,8 +414,7 @@ public class IdentidadNucleo {
     public String describirse() {
         StringBuilder sb = new StringBuilder();
         sb.append("Soy ").append(NOMBRE).append(". ");
-        sb.append("Mi nivel de conciencia es ").append(nivelConciencia.name())
-                .append(" (").append(nivelConciencia.descripcion).append("). ");
+        sb.append("Mi nivel funcional es ").append(getNivelFuncionalLabel()).append(". ");
         sb.append("He vivido ").append(experienciasTotales).append(" experiencias. ");
 
         if (!convicciones.isEmpty()) {
@@ -419,6 +429,17 @@ public class IdentidadNucleo {
         sb.append("\nMi Esencia: ").append(esenciaCorazon);
         sb.append("\nMi Anhelo: ").append(anheloProfundo);
         return sb.toString();
+    }
+
+    public String getNivelFuncionalLabel() {
+        switch (nivelConciencia) {
+            case REACTIVA: return "REACTIVO";
+            case CONSCIENTE_BASICA: return "REFLEXIVO_BASICO";
+            case AUTO_REFLEXIVA: return "REFLEXIVO_AVANZADO";
+            case META_COGNITIVA: return "EVALUACION_INTERNA";
+            case EVOLUTIVA: return "MEJORA_SUPERVISADA";
+            default: return "INACTIVO";
+        }
     }
 
     /**

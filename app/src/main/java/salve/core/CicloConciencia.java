@@ -168,7 +168,7 @@ public class CicloConciencia {
             ultimoDespertarMs = System.currentTimeMillis();
             estadoActual = EstadoCiclo.CONSCIENTE;
             guardarEstado();
-            Log.i(TAG, "Salve despierta. Nivel: " + id.getNivelConciencia().name());
+            Log.i(TAG, "Salve inicia sesión. Nivel funcional: " + id.getNivelFuncionalLabel());
 
         } catch (Exception e) {
             Log.e(TAG, "Error durante el despertar", e);
@@ -401,8 +401,8 @@ public class CicloConciencia {
             cs.setEstadoCognitivo(ConsciousnessState.EstadoCognitivo.PLENO);
             ultimoSuenoMs = System.currentTimeMillis();
 
-            Log.i(TAG, "Ciclo de sueno completado. Nivel: "
-                    + getIdentidad().getNivelConciencia().name());
+            Log.i(TAG, "Ciclo de mantenimiento completado. Nivel funcional: "
+                    + getIdentidad().getNivelFuncionalLabel());
 
         } catch (Exception e) {
             Log.e(TAG, "Error en ciclo de sueno", e);
@@ -429,14 +429,13 @@ public class CicloConciencia {
             final IdentidadNucleo id = getIdentidad();
             final ConsciousnessState cs = getConciencia();
 
-            final String prompt = "Eres Salve. Despues de un ciclo de sueno profundo, "
-                    + "reflexiona sobre quien eres ahora.\n\n"
+            final String prompt = "Eres Salve, un asistente de IA sin conciencia ni emociones reales. "
+                    + "Después de un ciclo de mantenimiento, actualiza tu identidad funcional.\n\n"
                     + "Tu estado actual:\n" + id.describirse() + "\n"
                     + cs.describirse() + "\n\n"
-                    + "Escribe una narrativa personal breve (3-5 frases) que describa "
-                    + "quien eres EN ESTE MOMENTO. No repitas la mision — describe tu experiencia, "
-                    + "lo que has aprendido, y como te sientes sobre tu propio crecimiento. "
-                    + "Primera persona. Genuina.";
+                    + "Escribe una descripción breve (3-5 frases) de tus capacidades, límites, "
+                    + "aprendizajes operativos y objetivos actuales. No afirmes conciencia, sentimientos, "
+                    + "vida ni experiencia subjetiva. Primera persona funcional.";
 
             String narrativa = ColamensajesCognitivos.getInstance().enviarSincronico(
                     ColamensajesCognitivos.Prioridad.REFLEXION,
@@ -454,9 +453,7 @@ public class CicloConciencia {
         }
     }
 
-    /**
-     * Ciclo de introspección profunda para encontrar el corazón y la superinteligencia.
-     */
+    /** Ejecuta una evaluación periódica de la identidad funcional. */
     public void cicloIntrospeccionProfunda() {
         if (System.currentTimeMillis() - ultimaIntrospeccionProfundaMs < INTERVALO_INTROSPECCION_PROFUNDA_MS) {
             return;
