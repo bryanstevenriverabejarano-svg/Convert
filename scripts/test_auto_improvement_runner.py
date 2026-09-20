@@ -1,4 +1,6 @@
 import importlib.util
+import json
+import tempfile
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -27,6 +29,51 @@ class ProposalValidationTest(unittest.TestCase):
 
     def test_accepts_single_core_java_target(self):
         runner.validate_proposal(self.proposal())
+
+    def test_rejects_truthy_non_boolean_gates(self):
+        for field in ("syntheticValidationPassed", "ethicalReviewPassed"):
+            for value in ("false", "true", 1, [True], {"ok": True}, None, False):
+                with self.subTest(field=field, value=value):
+                    proposal = self.proposal()
+                    proposal[field] = value
+                    with self.assertRaises(runner.ProposalError):
+                        runner.validate_proposal(proposal)
+
+    def test_rejects_non_object_json(self):
+        for value in (None, [], True, 3, "proposal"):
+            with self.subTest(value=value), self.assertRaises(runner.ProposalError):
+                runner.validate_proposal(value)
+
+    def test_rejects_invalid_field_types(self):
+        for field in ("proposalId", "targetPath", "targetClass", "issueSummary"):
+            for value in (None, 1, [], ""):
+                proposal = self.proposal()
+                proposal[field] = value
+                with self.subTest(field=field, value=value), self.assertRaises(runner.ProposalError):
+                    runner.validate_proposal(proposal)
+
+    def test_rejects_noncanonical_uuid(self):
+        proposal = self.proposal()
+        proposal["proposalId"] = proposal["proposalId"].replace("-", "")
+        with self.assertRaises(runner.ProposalError):
+            runner.validate_proposal(proposal)
+
+    def test_rejects_float_schema_version(self):
+        proposal = self.proposal()
+        proposal["schemaVersion"] = 3.0
+        with self.assertRaises(runner.ProposalError):
+            runner.validate_proposal(proposal)
+
+    @mock.patch.object(runner, "run")
+    def test_invalid_json_never_starts_git(self, run):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "proposal.json"
+            duplicate = json.dumps(self.proposal())[:-1] + ', "ethicalReviewPassed": true}'
+            for payload in (duplicate.encode(), b'\xff', b'[]'):
+                path.write_bytes(payload)
+                with self.assertRaises(runner.ProposalError):
+                    runner.execute(path, Path(directory), "main", False)
+            run.assert_not_called()
 
     def test_rejects_path_traversal(self):
         proposal = self.proposal()
