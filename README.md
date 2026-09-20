@@ -59,6 +59,19 @@ Para comprobar la aplicación y las pruebas sin publicar ni crear el PR:
 python3 scripts/auto_improvement_runner.py /ruta/a/propuesta.json --repo . --dry-run
 ```
 
+En un dispositivo conectado con una compilación depurable, el puente ADB puede
+leer una propuesta directamente desde la bandeja privada. Procesa solo la más
+antigua y, después de crear correctamente el PR, la mueve a
+`files/auto-improvement/processed` para conservar la auditoría:
+
+```bash
+python3 scripts/auto_improvement_adb_bridge.py --repo .
+```
+
+Este puente depende de `adb run-as`, por lo que está limitado deliberadamente a
+builds depurables. Las compilaciones de producción no deben exponer su
+almacenamiento privado mediante ADB.
+
 ## Modelos locales compatibles
 
 Salve usa **MLC en Android**. Un GGUF de Ollama no es intercambiable con este motor y

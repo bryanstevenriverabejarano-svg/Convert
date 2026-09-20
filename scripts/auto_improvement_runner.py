@@ -122,6 +122,13 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
                 text=True,
                 capture_output=True,
             )
+            subprocess.run(
+                ["git", "branch", "-D", branch],
+                cwd=repo,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
 
 
 def main() -> int:
