@@ -26,6 +26,8 @@ import salve.core.conversation.ConversationSession;
 import salve.core.conversation.ReasoningPlan;
 import salve.core.conversation.ReasoningPlanner;
 import salve.core.conversation.ResponseLimiter;
+import salve.core.evaluation.ConversationQualityEvaluator;
+import salve.core.evaluation.TurnQualityAssessment;
 import salve.core.memory.MemoryWritePolicy;
 import salve.core.memory.MemoryProfileFact;
 import salve.core.memory.MemoryForgetRequest;
@@ -153,6 +155,7 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        long turnStartedAtNanos = System.nanoTime();
         boolean hasPriorContext = conversationSession.hasPriorContext();
         conversationSession.addUser(entrada);
 
@@ -646,6 +649,10 @@ public class MotorConversacional {
 
         // ── GENERACIÓN DE RESPUESTA ──────────────────────────────────────────
         String respuesta = null;
+        boolean fallbackUsed = false;
+        boolean roleLeakDetected = false;
+        boolean truncated = false;
+        boolean repetitionDetected = false;
 
         if (gemini.isAvailable()) {
             respuesta = generarRespuestaGemini(entrada, emocionDetectada, responseContext,
@@ -667,6 +674,7 @@ public class MotorConversacional {
         }
 
         if (respuesta == null || respuesta.trim().isEmpty()) {
+            fallbackUsed = true;
             respuesta = generarFallbackPorEmocion(emocionDetectada, resumenAccion);
         }
 
@@ -680,6 +688,7 @@ public class MotorConversacional {
 
         // 🟡 3. FRENO DE ALUCINACIONES
         if (respuesta.contains("USUARIO:") || respuesta.contains("Bryan:")) {
+            roleLeakDetected = true;
             int indiceCorte = respuesta.indexOf("USUARIO:");
             if (indiceCorte == -1) indiceCorte = respuesta.indexOf("Bryan:");
             respuesta = respuesta.substring(0, indiceCorte).trim();
@@ -689,18 +698,23 @@ public class MotorConversacional {
         // 🟡 4. GOBERNADOR DE LONGITUD
         int maxResponseChars = VoiceResponsePolicy.maxResponseChars(entradaPorVoz);
         if (respuesta.length() > maxResponseChars) {
+            truncated = true;
             Log.w(TAG, "Respuesta extensa; aplicando límite por frase.");
             respuesta = ResponseLimiter.limit(respuesta, maxResponseChars);
         }
 
         // 🔴 5. FILTRO ANTI-BUCLE
         if (esBucleRepetitivo(respuesta)) {
+            repetitionDetected = true;
             Log.e(TAG, "¡BUCLE DETECTADO! Cortocircuitando...");
-            reiniciarContextoLLM();
-            respuesta = "Sentí una anomalía de repetición en mis palabras. He reiniciado mi memoria a corto plazo para recuperarme.";
+            limpiarContextoConversacional();
+            respuesta = "Detecté una repetición anómala y reinicié el contexto de corto plazo para recuperarme.";
         }
 
-        responderConAutoCritica(entrada, respuesta);
+        long latencyMillis = (System.nanoTime() - turnStartedAtNanos) / 1_000_000L;
+        TurnQualityAssessment assessment = ConversationQualityEvaluator.evaluate(
+                respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
+        responderYRegistrarCalidad(entrada, respuesta, assessment);
     }
 
     private boolean procesarProtocolosEspeciales(String input, String original) {
@@ -883,18 +897,14 @@ public class MotorConversacional {
         }
     }
 
-    private void responderConAutoCritica(String entrada, String respuesta) {
+    private void responderYRegistrarCalidad(String entrada, String respuesta,
+                                            TurnQualityAssessment assessment) {
         hablar(respuesta);
         mensajesEnSesion++;
         identidad.integrarExperiencia("conversacion", entrada, 0.7f, Arrays.asList("empatia"));
-
-        if (llm != null && respuesta != null) {
-            ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.REFLEXION, "Auto-crítica", () -> {
-                String promptCritica = "Analiza tu respuesta: '" + respuesta + "'. Evalúa si fue mecánica.";
-                String critica = llm.generate(promptCritica, SalveLLM.Role.EVALUADOR);
-                if (critica != null && diario != null) diario.escribirAutoCritica(critica);
-                return null;
-            });
+        Log.i(TAG, assessment.toMetricsLog());
+        if (diario != null && !assessment.passed()) {
+            diario.escribirAutoCritica(assessment.toMetricsLog());
         }
     }
 
@@ -1040,12 +1050,13 @@ public class MotorConversacional {
     }
 
     public void reiniciarContextoLLM() {
-        if (llm != null) {
-            // El método exacto en SalveLLM según el outline es forceReloadModel o simplemente dejar que el historial se pierda si no se guarda.
-            // Si no existe limpiarContextoInterno, usaremos un Log y vaciaremos lo que podamos.
-            Log.i(TAG, "Mente limpiada de ruido.");
-        }
-        hablar("He purgado mi área de lenguaje. Mi mente está clara de nuevo.");
+        limpiarContextoConversacional();
+        hablar("He reiniciado el contexto de conversación a corto plazo.");
+    }
+
+    private void limpiarContextoConversacional() {
+        conversationSession.clear();
+        Log.i(TAG, "Contexto conversacional de corto plazo reiniciado.");
     }
 
     private void iniciarFlujoGlifo() { esperandoParamsGlifo = true; indiceParamGlifo = 0; hablar("Dime la semilla."); }
