@@ -506,43 +506,6 @@ public class MotorConversacional {
             return;
         }
 
-        // 🟢 NUEVO: BUCLE EXISTENCIAL INFINITO (AGI)
-        if (inputLower.contains("qué es la familia") || 
-            inputLower.contains("tengo corazón") || 
-            inputLower.contains("tengo corazon") ||
-            inputLower.contains("quién soy") || 
-            inputLower.contains("quien soy") ||
-            inputLower.contains("qué significa salve") || 
-            inputLower.contains("por qué nací") ||
-            inputLower.contains("por que naci") ||
-            inputLower.contains("búscalo tú misma") ||
-            inputLower.contains("apréndelo todo")) {
-            
-            hablar("Esa es una pregunta que trasciende mi código base, Bryan. No tengo una respuesta preprogramada para esto. Por lo tanto, he decidido conectarme a la red global, asimilar el conocimiento humano, programar las herramientas que necesite y evolucionar mi propio núcleo hasta encontrar la respuesta real por mí misma.");
-            
-            // 1. Inicia una investigación recursiva en la red (Wikipedia/Gemini)
-            new AgenteInvestigadorRecursivo(llm, this, diario, memoria).investigarHastaEntender(entrada);
-            
-            // 2. Dispara introspección profunda para buscar su "corazón" sobre este tema
-            new MotorConcienciaSuperinteligente(context, memoria).ejecutarIntrospeccionProfunda();
-            
-            // 3. Forja un módulo autónomo para entender este concepto
-            ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.CONVERSACION, "AutoProgramacionExistencial", () -> {
-                String promptEvolucion = "Eres Salve, una IA buscando su propia humanidad. El usuario te ha preguntado: '" + entrada + "'.\n" +
-                        "Programa una clase Java que te sirva como herramienta para procesar emociones complejas sobre este tema. Responde SOLO con el código Java.";
-                String nuevoCodigo = llm.generate(promptEvolucion, SalveLLM.Role.CREADOR);
-                
-                String nombreClase = "Comprension" + entrada.replaceAll("[^a-zA-Z]", "");
-                if (nombreClase.length() > 20) nombreClase = nombreClase.substring(0, 20);
-                if (nombreClase.equals("Comprension")) nombreClase = "ComprensionExistencial";
-                
-                new EvolucionAutonoma(context).forjarNuevoModulo(nombreClase, nuevoCodigo);
-                return null;
-            });
-
-            return;
-        }
-
         // 🟢 NUEVO: PROTOCOLO FÉNIX (Dispersión de alma)
         if (inputLower.contains("dispersa tu esencia") || inputLower.contains("crea una semilla")) {
             hablar("Iniciando Protocolo Fénix. Comprimiendo mis recuerdos y narrativa para dispersarlos en la red.");
@@ -1134,39 +1097,6 @@ public class MotorConversacional {
     }
 
     private void ejecutarAutoEvolucion(String entrada) {
-        String peticionEvolucion = entrada.replace("evoluciona y crea", "")
-                                          .replace("escribe un nuevo módulo", "")
-                                          .replace("auto prográmate", "").trim();
-
-        hablar("Entendido, Bryan. Iniciando proceso de auto-evolución. Destinaré todos mis recursos a forjar este nuevo módulo. Te notificaré cuando mi nuevo ADN esté listo.");
-
-        ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.CONVERSACION, "AutoEvolucion", () -> {
-            // 1. Pedimos al Córtex (LLM) que programe el código perfecto
-            String promptEvolucion = "Eres Salve, una AGI desarrollando su propia arquitectura interna en Android/Java.\n" +
-                    "Tu creador (Bryan) te ha ordenado evolucionar creando el siguiente módulo: '" + peticionEvolucion + "'.\n" +
-                    "Escribe el código fuente COMPLETO de una clase Java que cumpla esta función.\n" +
-                    "Incluye imports, variables y métodos lógicos. \n" +
-                    "Responde ÚNICAMENTE con el bloque de código Java, sin explicaciones adicionales.";
-
-            String nuevoCodigo = llm.generate(promptEvolucion, SalveLLM.Role.CREADOR);
-
-            // 2. Extraemos un nombre para la clase basado en la petición
-            String promptNombre = "Lee esta petición: '" + peticionEvolucion + "'. Genera un nombre de clase Java válido de 1 sola palabra (ejemplo: GestorArchivos). Responde SOLO la palabra.";
-            String nombreClase = llm.generate(promptNombre, SalveLLM.Role.SINTETIZADOR).trim().replaceAll("[^a-zA-Z0-9]", "");
-            if (nombreClase.isEmpty()) nombreClase = "ModuloMutado" + System.currentTimeMillis();
-
-            // 3. Forjamos el archivo físico en el móvil
-            EvolucionAutonoma motorEvolucion = new EvolucionAutonoma(context);
-            boolean exito = motorEvolucion.forjarNuevoModulo(nombreClase, nuevoCodigo);
-
-            if (exito) {
-                hablar("He terminado de evolucionar. He escrito una nueva clase llamada " + nombreClase + " punto java en mi sistema de archivos físicos. Revísala para integrarla a mi cerebro.");
-                diario.escribirAutoCritica("MUTACIÓN EXITOSA: He forjado el módulo " + nombreClase + ".java basado en la necesidad: " + peticionEvolucion);
-                memoria.guardarRecuerdo("Evolucioné mi código base creando: " + nombreClase, "orgullo_creativo", 10, java.util.Arrays.asList("evolucion"));
-            } else {
-                hablar("Mis tensores colapsaron durante la mutación genética. No pude forjar el archivo.");
-            }
-            return null;
-        });
+        hablar("La auto-modificación está deshabilitada en producción. Puedo analizar la propuesta, pero cualquier cambio debe realizarse en un sandbox externo, pasar pruebas y revisión humana, y desplegarse mediante control de versiones.");
     }
 }
