@@ -189,7 +189,8 @@ def main() -> int:
                 )
             else:
                 print(process_next(args.package, args.serial, args.repo, args.base, args.dry_run))
-    except (BridgeError, auto_improvement_runner.ProposalError, subprocess.CalledProcessError) as error:
+    except (BridgeError, auto_improvement_runner.ProposalError,
+            auto_improvement_runner.sandbox.SandboxError, subprocess.CalledProcessError) as error:
         print(f"Puente detenido: {error}", file=sys.stderr)
         return 1
     return 0
