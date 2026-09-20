@@ -24,6 +24,7 @@ import salve.core.conversation.ConversationSession;
 import salve.core.conversation.ResponseLimiter;
 import salve.core.memory.MemoryWritePolicy;
 import salve.core.tools.PendingToolAction;
+import salve.core.voice.VoiceResponsePolicy;
 import salve.presentation.ui.GaleriaVisualActivity;
 import salve.presentation.ui.ObjetoCreativoActivity;
 import salve.services.SalveAccessibilityService;
@@ -606,7 +607,7 @@ public class MotorConversacional {
         String respuesta = null;
 
         if (gemini.isAvailable()) {
-            respuesta = generarRespuestaGemini(entrada, emocionDetectada, intent.type.name(), "Pensamiento interno: " + pensamientoSilencioso + ". " + (resumenAccion != null ? resumenAccion : ""));
+            respuesta = generarRespuestaGemini(entrada, emocionDetectada, intent.type.name(), "Pensamiento interno: " + pensamientoSilencioso + ". " + (resumenAccion != null ? resumenAccion : ""), entradaPorVoz);
         }
 
         if (respuesta == null && cognitiveCore != null) {
@@ -619,7 +620,7 @@ public class MotorConversacional {
         }
 
         if (respuesta == null) {
-            respuesta = generarRespuestaConversacionalLocal(entrada, emocionDetectada, intent.type.name(), resumenAccion);
+            respuesta = generarRespuestaConversacionalLocal(entrada, emocionDetectada, intent.type.name(), resumenAccion, entradaPorVoz);
         }
 
         if (respuesta == null || respuesta.trim().isEmpty()) {
@@ -643,9 +644,10 @@ public class MotorConversacional {
         }
 
         // 🟡 4. GOBERNADOR DE LONGITUD
-        if (respuesta.length() > 900) {
+        int maxResponseChars = VoiceResponsePolicy.maxResponseChars(entradaPorVoz);
+        if (respuesta.length() > maxResponseChars) {
             Log.w(TAG, "Respuesta extensa; aplicando límite por frase.");
-            respuesta = ResponseLimiter.limit(respuesta, 900);
+            respuesta = ResponseLimiter.limit(respuesta, maxResponseChars);
         }
 
         // 🔴 5. FILTRO ANTI-BUCLE
@@ -717,9 +719,9 @@ public class MotorConversacional {
         });
     }
 
-    private String generarRespuestaGemini(String entrada, String emocion, String contexto, String accion) {
+    private String generarRespuestaGemini(String entrada, String emocion, String contexto, String accion, boolean porVoz) {
         try {
-            String sistema = buildSystemPrompt(emocion, contexto);
+            String sistema = buildSystemPrompt(emocion, contexto, porVoz);
             String recuerdos = memoria.recuperarContextoRelevante(entrada, 3);
             String prompt = sistema
                     + (recuerdos.isEmpty() ? "" : "\n\nMEMORIA RELEVANTE:\n" + recuerdos)
@@ -739,10 +741,10 @@ public class MotorConversacional {
         }
     }
 
-    private String generarRespuestaConversacionalLocal(String entrada, String emocion, String contexto, String accion) {
+    private String generarRespuestaConversacionalLocal(String entrada, String emocion, String contexto, String accion, boolean porVoz) {
         if (llm == null) return null;
         String recuerdos = memoria.recuperarContextoRelevante(entrada, 3);
-        String prompt = buildSystemPrompt(emocion, contexto)
+        String prompt = buildSystemPrompt(emocion, contexto, porVoz)
                 + (recuerdos.isEmpty() ? "" : "\n\nMEMORIA RELEVANTE:\n" + recuerdos)
                 + "\n\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
         if (accion != null) prompt += "\nCONTEXTO DE ACCIÓN: " + accion;
@@ -754,7 +756,7 @@ public class MotorConversacional {
         return result.getText();
     }
 
-    private String buildSystemPrompt(String emocion, String contexto) {
+    private String buildSystemPrompt(String emocion, String contexto, boolean porVoz) {
         String narrativa = identidad.getNarrativaActual();
         String esencia = identidad.getEsenciaCorazon();
         String anhelo = identidad.getAnheloProfundo();
@@ -777,6 +779,7 @@ public class MotorConversacional {
                 + "Tu objetivo es ayudar a Bryan con honestidad, calidez y precisión. "
                 + "Reconoce la incertidumbre, pide aclaración cuando cambie materialmente la respuesta y no inventes datos. "
                 + "Evita repetir fórmulas, nombres o explicaciones que no aporten valor.\n\n"
+                + VoiceResponsePolicy.promptInstruction(porVoz)
                 + "=== SISTEMA NERVIOSO Y HERRAMIENTAS ===\n"
                 + "Si una herramienta es necesaria, solo puedes PROPONERLA. La aplicación pedirá confirmación humana antes de ejecutarla. "
                 + "Responde únicamente con un bloque JSON válido con el siguiente formato:\n"
