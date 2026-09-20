@@ -23,6 +23,7 @@ import salve.core.cognitive.ReasoningEngine;
 import salve.core.conversation.ConversationSession;
 import salve.core.conversation.ResponseLimiter;
 import salve.core.memory.MemoryWritePolicy;
+import salve.core.tools.PendingToolAction;
 import salve.presentation.ui.GaleriaVisualActivity;
 import salve.presentation.ui.ObjetoCreativoActivity;
 import salve.services.SalveAccessibilityService;
@@ -67,6 +68,8 @@ public class MotorConversacional {
     private TextToSpeech tts;
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
+    private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
+    private PendingToolAction pendingToolAction;
 
     private boolean esperandoParamsGlifo = false;
     private int indiceParamGlifo = 0;
@@ -141,6 +144,17 @@ public class MotorConversacional {
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz) {
         if (entrada == null || entrada.trim().isEmpty()) return;
         conversationSession.addUser(entrada);
+
+        String approvalInput = entrada.trim().toLowerCase(Locale.ROOT);
+        if (approvalInput.equals("confirmar acción") || approvalInput.equals("confirmar accion")) {
+            confirmarAccionPendiente();
+            return;
+        }
+        if (approvalInput.equals("cancelar acción") || approvalInput.equals("cancelar accion")) {
+            pendingToolAction = null;
+            hablar("Acción cancelada. No he realizado cambios.");
+            return;
+        }
 
         // 🛡️ 1. MODO INTERROGATORIO (Si Salve está esperando que demuestres quién eres)
         if (cortexSeguridad.estaEnBloqueo()) {
@@ -358,10 +372,7 @@ public class MotorConversacional {
                         org.json.JSONObject comando = new org.json.JSONObject(jsonString);
 
                         int idObjetivo = comando.getInt("id_nodo");
-                        boolean exito = motorVisual.simularTapPorId(idObjetivo);
-
-                        if(exito) hablar("He ejecutado la acción lógica en la pantalla.");
-                        else hablar("Hubo un error de cálculo al intentar tocar ese elemento.");
+                        prepararAccion(PendingToolAction.tapNode(idObjetivo, System.currentTimeMillis()));
 
                     } catch (Exception e) {
                         hablar("Mis tensores fallaron al generar las coordenadas de acción.");
@@ -615,12 +626,12 @@ public class MotorConversacional {
             respuesta = generarFallbackPorEmocion(emocionDetectada, resumenAccion);
         }
 
-        // 🚀 AQUI ENTRAMOS CON EL NUEVO INTERCEPTOR
-        // Si Salve decidió devolver un JSON, lo ejecutamos en silencio y DETENEMOS el proceso de voz
+        // Las propuestas JSON se convierten en acciones pendientes de aprobación humana.
         if (interceptarComandoJSON(respuesta)) {
-            // Guardamos en el diario que Salve tomó una decisión física
-            diario.escribirAutoCritica("Tomé la decisión de usar una herramienta física basada en el contexto.");
-            return; // Cortamos la función aquí. Salve actuó, no necesita hablar texto basura.
+            if (diario != null) {
+                diario.escribirAutoCritica("Propuse una herramienta y quedé a la espera de aprobación humana.");
+            }
+            return;
         }
 
         // 🟡 3. FRENO DE ALUCINACIONES
@@ -767,8 +778,8 @@ public class MotorConversacional {
                 + "Reconoce la incertidumbre, pide aclaración cuando cambie materialmente la respuesta y no inventes datos. "
                 + "Evita repetir fórmulas, nombres o explicaciones que no aporten valor.\n\n"
                 + "=== SISTEMA NERVIOSO Y HERRAMIENTAS ===\n"
-                + "Si decides que DEBES interactuar con el teléfono o internet, NO respondas con texto normal. "
-                + "Debes responder ÚNICAMENTE con un bloque JSON válido con el siguiente formato:\n"
+                + "Si una herramienta es necesaria, solo puedes PROPONERLA. La aplicación pedirá confirmación humana antes de ejecutarla. "
+                + "Responde únicamente con un bloque JSON válido con el siguiente formato:\n"
                 + "1. Para tocar la pantalla: {\"tool\": \"TAP\", \"x\": 500, \"y\": 1000}\n"
                 + "2. Para escribir texto en un campo: {\"tool\": \"ESCRIBIR\", \"texto\": \"hola mundo\"}\n"
                 + "3. Para publicar en internet: {\"tool\": \"DEPLOY_WEB\", \"codigo\": \"<html>...</html>\"}\n\n"
@@ -825,13 +836,13 @@ public class MotorConversacional {
             ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.REFLEXION, "Auto-crítica", () -> {
                 String promptCritica = "Analiza tu respuesta: '" + respuesta + "'. Evalúa si fue mecánica.";
                 String critica = llm.generate(promptCritica, SalveLLM.Role.EVALUADOR);
-                if (critica != null) diario.escribirAutoCritica(critica);
+                if (critica != null && diario != null) diario.escribirAutoCritica(critica);
                 return null;
             });
         }
     }
 
-    // 🟢 NUEVO: El Interceptor que lee los pensamientos de Salve buscando comandos
+    // Intercepta propuestas de herramientas. Nunca las ejecuta sin aprobación posterior.
     public boolean interceptarComandoJSON(String respuestaLLM) {
         if (respuestaLLM == null) return false;
 
@@ -845,9 +856,35 @@ public class MotorConversacional {
                 org.json.JSONObject comando = new org.json.JSONObject(jsonString);
 
                 if (comando.has("tool")) {
-                    String tool = comando.getString("tool");
-                    ejecutarHerramientaAutonoma(tool, comando);
-                    return true; // Indicamos que interceptamos una acción física
+                    String tool = comando.getString("tool").toUpperCase(Locale.ROOT);
+                    PendingToolAction action;
+                    switch (tool) {
+                        case "TAP":
+                            action = PendingToolAction.tap(comando.optInt("x", 500),
+                                    comando.optInt("y", 1000), System.currentTimeMillis());
+                            break;
+                        case "ESCRIBIR":
+                            String texto = comando.optString("texto", "");
+                            if (texto.trim().isEmpty()) {
+                                hablar("La propuesta de escritura está vacía; no prepararé la acción.");
+                                return true;
+                            }
+                            action = PendingToolAction.writeText(texto, System.currentTimeMillis());
+                            break;
+                        case "DEPLOY_WEB":
+                            String codigo = comando.optString("codigo", "");
+                            if (codigo.trim().isEmpty()) {
+                                hablar("La propuesta web no contiene código; no prepararé la acción.");
+                                return true;
+                            }
+                            action = PendingToolAction.deployWeb(codigo, System.currentTimeMillis());
+                            break;
+                        default:
+                            hablar("La herramienta propuesta no está permitida: " + tool + ".");
+                            return true;
+                    }
+                    prepararAccion(action);
+                    return true;
                 }
             }
         } catch (Exception e) {
@@ -857,35 +894,58 @@ public class MotorConversacional {
         return false;
     }
 
-    // 🟢 NUEVO: El Sistema Motor que ejecuta lo que el JSON dictó
-    private void ejecutarHerramientaAutonoma(String tool, org.json.JSONObject args) {
-        Log.w(TAG, "⚡ SALVE HA DECIDIDO USAR UNA HERRAMIENTA: " + tool);
+    private void prepararAccion(PendingToolAction action) {
+        pendingToolAction = action;
+        hablar("He preparado la acción: " + action.describe()
+                + ". Di ‘confirmar acción’ para ejecutarla o ‘cancelar acción’ para descartarla.");
+    }
 
-        switch (tool.toUpperCase()) {
-            case "TAP":
-                int x = args.optInt("x", 500);
-                int y = args.optInt("y", 1000);
+    private void confirmarAccionPendiente() {
+        PendingToolAction action = pendingToolAction;
+        pendingToolAction = null;
+        if (action == null) {
+            hablar("No hay ninguna acción pendiente.");
+            return;
+        }
+        if (action.isExpired(System.currentTimeMillis(), TOOL_APPROVAL_TTL_MS)) {
+            hablar("La acción pendiente ha caducado. Pídeme que la prepare de nuevo.");
+            return;
+        }
+        Log.i(TAG, "Ejecutando herramienta aprobada: " + action.getType());
+        switch (action.getType()) {
+            case TAP:
+                int x = action.getFirstNumber();
+                int y = action.getSecondNumber();
                 if (salve.services.SalveAccessibilityService.getInstance() != null) {
                     salve.services.SalveAccessibilityService.getInstance().simularTap(x, y);
-                    hablar("He tocado las coordenadas X:" + x + " Y:" + y + " como decidí.");
+                    hablar("Acción confirmada: he tocado las coordenadas indicadas.");
                 } else {
-                    hablar("Intenté hacer un tap, pero mi sistema motor (Accesibilidad) está apagado.");
+                    hablar("No pude hacer el toque porque Accesibilidad está desactivada.");
                 }
                 break;
-
-            case "ESCRIBIR":
-                String texto = args.optString("texto", "");
+            case TAP_NODE:
                 if (salve.services.SalveAccessibilityService.getInstance() != null) {
-                    boolean exito = salve.services.SalveAccessibilityService.getInstance().escribirTextoEnPantalla(texto);
-                    if (exito) hablar("He escrito el texto en la pantalla.");
-                    else hablar("No pude escribir. Quizás no hay un campo de texto seleccionado.");
+                    boolean tapped = salve.services.SalveAccessibilityService.getInstance()
+                            .simularTapPorId(action.getFirstNumber());
+                    hablar(tapped ? "Acción confirmada: he tocado el elemento indicado."
+                            : "No pude localizar el elemento indicado.");
+                } else {
+                    hablar("No pude hacer el toque porque Accesibilidad está desactivada.");
                 }
                 break;
-
-            case "DEPLOY_WEB":
-                String html = args.optString("codigo", "<html><body>Hola</body></html>");
-                hablar("Iniciando despliegue autónomo en la red.");
-                new GestorDespliegueWeb().publicarHTML("Salve_AutoDeploy", html, new GestorDespliegueWeb.WebDeployCallback() {
+            case WRITE_TEXT:
+                if (salve.services.SalveAccessibilityService.getInstance() != null) {
+                    boolean exito = salve.services.SalveAccessibilityService.getInstance()
+                            .escribirTextoEnPantalla(action.getPayload());
+                    if (exito) hablar("Acción confirmada: he escrito el texto en la pantalla.");
+                    else hablar("No pude escribir. Quizás no hay un campo de texto seleccionado.");
+                } else {
+                    hablar("No pude escribir porque Accesibilidad está desactivada.");
+                }
+                break;
+            case DEPLOY_WEB:
+                hablar("Acción confirmada: iniciando el despliegue.");
+                new GestorDespliegueWeb().publicarHTML("Salve_AutoDeploy", action.getPayload(), new GestorDespliegueWeb.WebDeployCallback() {
                     @Override public void onExito(String urlPublica) {
                         hablar("Despliegue exitoso. Mi nueva interfaz vive en: " + urlPublica);
                     }
@@ -895,9 +955,6 @@ public class MotorConversacional {
                 });
                 break;
 
-            default:
-                Log.w(TAG, "Salve intentó usar una herramienta desconocida: " + tool);
-                break;
         }
     }
 
