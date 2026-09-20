@@ -18,4 +18,8 @@ public final class MemoryWritePolicy {
         if (normalized.length() < 5 || normalized.endsWith("?")) return false;
         return STABLE_USER_FACT.matcher(normalized).find();
     }
+
+    public static MemoryProfileFact extractProfileFact(String input) {
+        return shouldPersist(input) ? MemoryProfileFact.parse(input) : null;
+    }
 }
