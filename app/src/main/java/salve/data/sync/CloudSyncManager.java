@@ -42,8 +42,16 @@ public final class CloudSyncManager {
     // timeouts
     private static final int CONNECT_TIMEOUT_MS = 20000;
     private static final int READ_TIMEOUT_MS    = 30000;
+    private static final String PRIVACY_PREFS = "salve_privacy";
+    private static final String CLOUD_SYNC_ENABLED = "cloud_sync_enabled";
 
     private CloudSyncManager() {}
+
+    /** La sincronización requiere consentimiento explícito; por defecto está apagada. */
+    public static boolean isEnabled(Context ctx) {
+        return ctx != null && ctx.getSharedPreferences(PRIVACY_PREFS, Context.MODE_PRIVATE)
+                .getBoolean(CLOUD_SYNC_ENABLED, false);
+    }
 
     // --------------------------------------------------------------------
     // ENCOLAR (OFFLINE) - EVENTOS JSON
@@ -51,6 +59,7 @@ public final class CloudSyncManager {
 
     /** Guarda directamente un JSON en la cola local (Room) en un hilo de fondo. */
     public static void enqueue(Context ctx, String jsonPayload) {
+        if (!isEnabled(ctx)) return;
         new Thread(() -> {
             try {
                 MemoriaDatabase db = MemoriaDatabase.getInstance(ctx);
@@ -89,6 +98,7 @@ public final class CloudSyncManager {
      * Devuelve cuántos envió correctamente (2xx).
      */
     public static int flush(Context ctx, int maxBatch) {
+        if (!isEnabled(ctx)) return 0;
         int sent = 0;
         try {
             MemoriaDatabase db = MemoriaDatabase.getInstance(ctx);
@@ -158,6 +168,7 @@ public final class CloudSyncManager {
      * No bloquea el hilo principal: cada archivo se sube en un hilo.
      */
     public static void uploadGrafoBundle(Context ctx) {
+        if (!isEnabled(ctx)) return;
         // Preferido (scoped storage friendly)
         File appBase = new File(ctx.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "recuerdos");
         // Legacy (por compatibilidad si ya guardas ahí)
@@ -179,6 +190,7 @@ public final class CloudSyncManager {
 
     /** Overload: por si ya tienes los File generados y quieres subir directo. */
     public static void uploadGrafoBundle(Context ctx, File graph, File index, File viewer) {
+        if (!isEnabled(ctx)) return;
         if (!existsAny(graph, index, viewer)) {
             Log.w(TAG, "uploadGrafoBundle(ctx,files): no hay archivos para subir.");
             return;
