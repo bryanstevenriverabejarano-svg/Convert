@@ -27,25 +27,41 @@ def run(command: list[str], cwd: Path, *, capture: bool = False) -> subprocess.C
     return subprocess.run(command, cwd=cwd, check=True, text=True, capture_output=capture)
 
 
+def unique_fields(pairs: list[tuple[str, object]]) -> dict:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ProposalError(f"Campo JSON duplicado: {key}")
+        result[key] = value
+    return result
+
+
 def load_proposal(path: Path) -> dict:
     if not path.is_file() or path.stat().st_size > MAX_PROPOSAL_BYTES:
         raise ProposalError("La propuesta no existe o supera el tamaño permitido")
     try:
-        proposal = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+        proposal = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_fields)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise ProposalError(f"JSON de propuesta inválido: {error}") from error
     validate_proposal(proposal)
     return proposal
 
 
 def validate_proposal(proposal: dict) -> None:
-    if proposal.get("schemaVersion") != 3:
+    if not isinstance(proposal, dict):
+        raise ProposalError("La propuesta debe ser un objeto JSON")
+    if type(proposal.get("schemaVersion")) is not int or proposal["schemaVersion"] != 3:
         raise ProposalError("Versión de esquema no compatible")
+    for field in ("proposalId", "targetPath", "targetClass", "issueSummary"):
+        if not isinstance(proposal.get(field), str) or not proposal[field].strip():
+            raise ProposalError(f"Campo de texto inválido: {field}")
     try:
-        uuid.UUID(str(proposal.get("proposalId", "")))
+        parsed_id = uuid.UUID(proposal["proposalId"])
     except ValueError as error:
         raise ProposalError("Identificador de propuesta inválido") from error
-    target = PurePosixPath(str(proposal.get("targetPath", "")))
+    if str(parsed_id) != proposal["proposalId"]:
+        raise ProposalError("El UUID debe usar su representación canónica")
+    target = PurePosixPath(proposal["targetPath"])
     if target.is_absolute() or ".." in target.parts:
         raise ProposalError("Ruta objetivo insegura")
     try:
@@ -54,9 +70,9 @@ def validate_proposal(proposal: dict) -> None:
         raise ProposalError("La ruta queda fuera del núcleo permitido") from error
     if target.suffix != ".java":
         raise ProposalError("La propuesta solo puede modificar código Java del núcleo")
-    if not proposal.get("syntheticValidationPassed"):
+    if proposal.get("syntheticValidationPassed") is not True:
         raise ProposalError("La validación sintética de origen no fue superada")
-    if not proposal.get("ethicalReviewPassed"):
+    if proposal.get("ethicalReviewPassed") is not True:
         raise ProposalError("La revisión ética de origen no fue superada")
     patch = proposal.get("patch")
     if not isinstance(patch, str) or not patch.startswith("diff --git "):
