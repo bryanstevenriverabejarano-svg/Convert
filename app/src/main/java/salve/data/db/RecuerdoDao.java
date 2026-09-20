@@ -29,4 +29,7 @@ public interface RecuerdoDao {
      */
     @Query("SELECT * FROM recuerdos WHERE frase LIKE '%' || :palabraClave || '%'")
     List<RecuerdoEntity> filtrarRecuerdos(String palabraClave);
+
+    @Query("SELECT * FROM recuerdos WHERE frase LIKE '%' || :palabraClave || '%' ORDER BY timestamp DESC LIMIT :limite")
+    List<RecuerdoEntity> buscarRecientes(String palabraClave, int limite);
 }

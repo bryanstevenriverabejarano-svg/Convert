@@ -53,6 +53,15 @@ public final class CloudSyncManager {
                 .getBoolean(CLOUD_SYNC_ENABLED, false);
     }
 
+    /** Solo debe llamarse desde una acción visible y explícita del usuario. */
+    public static void setEnabled(Context ctx, boolean enabled) {
+        if (ctx == null) return;
+        ctx.getSharedPreferences(PRIVACY_PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(CLOUD_SYNC_ENABLED, enabled)
+                .apply();
+    }
+
     // --------------------------------------------------------------------
     // ENCOLAR (OFFLINE) - EVENTOS JSON
     // --------------------------------------------------------------------

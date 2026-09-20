@@ -22,6 +22,7 @@ import salve.core.cognitive.HipocampoSemantico;
 import salve.core.cognitive.ReasoningEngine;
 import salve.core.conversation.ConversationSession;
 import salve.core.conversation.ResponseLimiter;
+import salve.core.memory.MemoryWritePolicy;
 import salve.presentation.ui.GaleriaVisualActivity;
 import salve.presentation.ui.ObjetoCreativoActivity;
 import salve.services.SalveAccessibilityService;
@@ -568,9 +569,11 @@ public class MotorConversacional {
             try { if (detectorEmociones != null) emocionDetectada = detectorEmociones.detectarEmocion(entrada); } catch (Exception e) {}
         }
 
-        memoria.guardarRecuerdo(entrada, emocionDetectada, 6, Arrays.asList("frase_directa"));
-
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
+        if (intent.type != IntentType.GUARDAR_RECUERDO && MemoryWritePolicy.shouldPersist(entrada)) {
+            memoria.guardarRecuerdo(entrada, emocionDetectada, 7,
+                    Arrays.asList("hecho_usuario", "declaracion_directa"));
+        }
         String resumenAccion = procesarIntencion(intent, entrada, emocionDetectada);
 
         // 🧠 NUEVO: MONÓLOGO INTERNO (Pensar antes de actuar)
@@ -706,8 +709,9 @@ public class MotorConversacional {
     private String generarRespuestaGemini(String entrada, String emocion, String contexto, String accion) {
         try {
             String sistema = buildSystemPrompt(emocion, contexto);
-            String recuerdos = memoria.resumenReciente();
-            String prompt = sistema + "\n\nMEMORIA RECIENTE:\n" + recuerdos
+            String recuerdos = memoria.recuperarContextoRelevante(entrada, 3);
+            String prompt = sistema
+                    + (recuerdos.isEmpty() ? "" : "\n\nMEMORIA RELEVANTE:\n" + recuerdos)
                     + "\n\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
             if (accion != null) prompt += "\n(Acción realizada: " + accion + ")";
 
@@ -726,7 +730,9 @@ public class MotorConversacional {
 
     private String generarRespuestaConversacionalLocal(String entrada, String emocion, String contexto, String accion) {
         if (llm == null) return null;
+        String recuerdos = memoria.recuperarContextoRelevante(entrada, 3);
         String prompt = buildSystemPrompt(emocion, contexto)
+                + (recuerdos.isEmpty() ? "" : "\n\nMEMORIA RELEVANTE:\n" + recuerdos)
                 + "\n\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
         if (accion != null) prompt += "\nCONTEXTO DE ACCIÓN: " + accion;
         ModelResult result = llm.generateResult(prompt, SalveLLM.Role.CONVERSACIONAL);
