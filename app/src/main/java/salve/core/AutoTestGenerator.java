@@ -35,9 +35,10 @@ public class AutoTestGenerator {
         if (!TextUtils.isEmpty(proposedFix)) {
             description.append("Parche candidato:\n").append(proposedFix).append('\n');
         }
-        description.append("Genera una clase de pruebas JUnit5 en Java llamada ")
+        description.append("Genera una clase de pruebas JUnit 4 en Java llamada ")
                 .append(className).append("TestHarness que cubra los caminos felices y de error.\n")
-                .append("Incluye al menos dos métodos @Test con aserciones claras y nombra cada método con metáforas suaves.");
+                .append("Usa org.junit.Test y org.junit.Assert. Incluye al menos dos métodos @Test ")
+                .append("con aserciones claras y nombra cada método con metáforas suaves.");
 
         String code = coder.generateCode(description.toString(), "Java");
         return GeneratedTestSuite.fromRaw(className, code);

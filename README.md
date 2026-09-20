@@ -41,6 +41,24 @@ abierta de documentos no habilita descargas ejecutables: los modelos solo pueden
 catálogo de hosts autorizado. Los destinos locales, privados y reservados se rechazan también
 después de resolver DNS.
 
+## Ejecutor externo de auto-mejora
+
+Las propuestas creadas por Salve se guardan como JSON de esquema 2. Deben
+transferirse a un entorno de desarrollo aislado; el APK no contiene credenciales
+de GitHub. Con GitHub CLI autenticado y Gradle disponible, el ejecutor valida el
+objetivo, aplica el diff en un worktree temporal, ejecuta las pruebas y abre una
+rama y un pull request únicamente si todo termina correctamente:
+
+```bash
+python3 scripts/auto_improvement_runner.py /ruta/a/propuesta.json --repo .
+```
+
+Para comprobar la aplicación y las pruebas sin publicar ni crear el PR:
+
+```bash
+python3 scripts/auto_improvement_runner.py /ruta/a/propuesta.json --repo . --dry-run
+```
+
 ## Modelos locales compatibles
 
 Salve usa **MLC en Android**. Un GGUF de Ollama no es intercambiable con este motor y
