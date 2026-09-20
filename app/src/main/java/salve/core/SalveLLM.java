@@ -354,6 +354,26 @@ public class SalveLLM {
         }
     }
 
+    /** Variante tipada para consumidores que necesitan distinguir fallo de texto generado. */
+    public ModelResult generateResult(String prompt, Role role) {
+        long startedAt = System.currentTimeMillis();
+        if (!modelAvailable) {
+            return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
+                    "Modelo local no disponible", 0L);
+        }
+        String text = generate(prompt, role);
+        long latency = System.currentTimeMillis() - startedAt;
+        if (text == null || text.trim().isEmpty()) {
+            return ModelResult.failure(ModelResult.Status.ERROR,
+                    "El modelo devolvió una respuesta vacía", latency);
+        }
+        if (text.startsWith("No pude preparar el modelo local:")
+                || text.startsWith("El modelo local falló al responder:")) {
+            return ModelResult.failure(ModelResult.Status.ERROR, text, latency);
+        }
+        return ModelResult.success(text, latency);
+    }
+
     /**
      * Ajusta ligeramente el prompt según el rol.
      */

@@ -1530,6 +1530,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         // stopService(new Intent(this, CamaraService.class));
         stopService(new Intent(this, BurbujaFlotanteService.class));
+        if (motorConversacional != null) motorConversacional.shutdown();
+        if (speechRecognizer != null) speechRecognizer.destroy();
         super.onDestroy();
     }
 
@@ -1564,6 +1566,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void guardarEventoNube(String tipo, String contenido, Integer emocion) {
+        if (!CloudSyncManager.isEnabled(getApplicationContext())) {
+            Log.d("Salve/Nube", "Sincronización omitida: falta consentimiento explícito.");
+            return;
+        }
         try {
             JSONObject obj = new JSONObject();
             obj.put("type", tipo);

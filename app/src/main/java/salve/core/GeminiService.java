@@ -14,6 +14,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * GeminiService — Integración con Google Gemini AI.
@@ -82,7 +85,16 @@ public class GeminiService {
      * Genera una respuesta síncrona incluyendo una secuencia de imágenes (frames).
      */
     public String generateSync(String prompt, List<Bitmap> frames) {
-        if (model == null) return null;
+        ModelResult result = generateResultSync(prompt, frames);
+        return result.isSuccess() ? result.getText() : null;
+    }
+
+    public ModelResult generateResultSync(String prompt, List<Bitmap> frames) {
+        long startedAt = System.currentTimeMillis();
+        if (model == null) {
+            return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
+                    "Gemini no está configurado", 0L);
+        }
 
         try {
             Content.Builder contentBuilder = new Content.Builder();
@@ -96,11 +108,23 @@ public class GeminiService {
 
             Content content = contentBuilder.build();
             ListenableFuture<GenerateContentResponse> future = model.generateContent(content);
-            GenerateContentResponse response = future.get(); // Bloqueante
-            return response.getText();
+            GenerateContentResponse response = future.get(45, TimeUnit.SECONDS);
+            return ModelResult.success(response.getText(), elapsed(startedAt));
+        } catch (TimeoutException e) {
+            Log.w(TAG, "Gemini timeout", e);
+            return ModelResult.failure(ModelResult.Status.TIMEOUT, e.getMessage(), elapsed(startedAt));
+        } catch (CancellationException e) {
+            return ModelResult.failure(ModelResult.Status.CANCELLED, e.getMessage(), elapsed(startedAt));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return ModelResult.failure(ModelResult.Status.CANCELLED, e.getMessage(), elapsed(startedAt));
         } catch (Exception e) {
             Log.e(TAG, "Error generating multimodal content with Gemini", e);
-            return null;
+            return ModelResult.failure(ModelResult.Status.ERROR, e.getMessage(), elapsed(startedAt));
         }
+    }
+
+    private long elapsed(long startedAt) {
+        return System.currentTimeMillis() - startedAt;
     }
 }
