@@ -830,7 +830,7 @@ public class MainActivity extends AppCompatActivity {
 
             actualizarNivelConcienciaUI();
             Log.d("Salve::Main", "Conciencia funcional inicializada. Nivel: "
-                    + identidadNucleo.getNivelConciencia().name());
+                    + identidadNucleo.getNivelFuncionalLabel());
         } catch (Exception e) {
             Log.e("Salve::Main", "Error inicializando conciencia funcional (no fatal)", e);
         }
@@ -1461,7 +1461,7 @@ public class MainActivity extends AppCompatActivity {
     // ==== CONCIENCIA FUNCIONAL: UI ====
     private void actualizarNivelConcienciaUI() {
         if (tvNivelConciencia != null && identidadNucleo != null) {
-            String nivel = identidadNucleo.getNivelConciencia().name();
+            String nivel = identidadNucleo.getNivelFuncionalLabel();
             long exp = identidadNucleo.getExperienciasTotales();
             tvNivelConciencia.setText("Nivel: " + nivel + " | Exp: " + exp);
         }

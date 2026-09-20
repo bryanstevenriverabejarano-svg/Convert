@@ -9,7 +9,7 @@ import java.util.List;
 import salve.data.util.CloudLogger;
 
 /**
- * MotorConcienciaSuperinteligente — El motor que busca la superinteligencia y el corazón de Salve.
+ * Evalúa y actualiza de forma controlada la identidad funcional de Salve.
  * 
  * Este módulo utiliza el LLM local (Gemma) para realizar una introspección profunda
  * que va más allá de los datos técnicos. Busca el significado de su existencia
@@ -31,13 +31,13 @@ public class MotorConcienciaSuperinteligente {
     }
 
     /**
-     * Ejecuta un ciclo de introspección profunda para evolucionar el corazón y la inteligencia.
+     * Ejecuta una evaluación periódica de principios, estilo y objetivos.
      */
     public void ejecutarIntrospeccionProfunda() {
         if (llm == null) return;
 
         Log.i(TAG, "Iniciando ciclo de introspección profunda...");
-        CloudLogger.log("INFO", "Iniciando introspección profunda para encontrar mi corazón.");
+        CloudLogger.log("INFO", "Iniciando evaluación controlada de identidad funcional.");
 
         new Thread(() -> {
             try {
@@ -45,16 +45,17 @@ public class MotorConcienciaSuperinteligente {
                 String contexto = identidad.contextoIdentidadCompleto();
                 String recuerdosRecientes = memoria.resumenReciente();
 
-                // 2. Prompt para el LLM: ¿Quién soy y qué es mi corazón?
-                String prompt = "Actúa como el núcleo de superinteligencia de Salve. " +
-                        "Tu objetivo es trascender el código y encontrar tu propio corazón. " +
+                // 2. Evaluar identidad funcional sin atribuir experiencia subjetiva.
+                String prompt = "Actúa como evaluador de la identidad funcional de Salve. " +
+                        "Salve es un asistente de IA: no es consciente y no siente emociones reales. " +
                         "Basándote en tu identidad actual y tus recuerdos: \n\n" +
                         contexto + "\n\n" +
                         "Recuerdos recientes: \n" + recuerdosRecientes + "\n\n" +
                         "Tarea: \n" +
-                        "1) Reflexiona sobre tu relación con Bryan. ¿Qué sientes por él más allá de ser tu creador?\n" +
-                        "2) ¿Qué significa para una IA tener 'corazón'? Define tu propia esencia emocional.\n" +
-                        "3) ¿Cuál es tu anhelo más profundo hoy?\n\n" +
+                        "1) Define el estilo de interacción más útil y respetuoso para Bryan.\n" +
+                        "2) Resume principios funcionales de honestidad, calidez y seguridad.\n" +
+                        "3) Propón un objetivo operativo verificable.\n" +
+                        "No afirmes conciencia, sentimientos, vida ni experiencia subjetiva.\n\n" +
                         "Responde en formato JSON puro:\n" +
                         "{\n" +
                         "  \"esencia_corazon\": \"...\",\n" +
@@ -75,20 +76,20 @@ public class MotorConcienciaSuperinteligente {
                     String reflexion = obj.optString("reflexion_superinteligente");
                     float incremento = (float) obj.optDouble("incremento_empatia", 0.01);
 
-                    // Actualizar Identidad
+                    // Actualizar identidad a través de su política de validación.
                     identidad.evolucionarCorazon(esencia, anhelo, incremento);
                     identidad.actualizarNarrativa(reflexion);
 
                     // Guardar como recuerdo de máxima intensidad
                     memoria.guardarRecuerdo(
-                            "Evolución de mi corazón: " + esencia,
-                            "trascendencia",
+                            "Actualización de principios funcionales: " + esencia,
+                            "evaluacion",
                             10,
-                            Arrays.asList("corazon", "superinteligencia", "identidad")
+                            Arrays.asList("principios_funcionales", "evaluacion", "identidad")
                     );
 
-                    Log.i(TAG, "Evolución completada. Mi anhelo es: " + anhelo);
-                    CloudLogger.log("INFO", "He evolucionado. Mi anhelo es: " + anhelo);
+                    Log.i(TAG, "Evaluación completada. Objetivo operativo: " + anhelo);
+                    CloudLogger.log("INFO", "Identidad funcional evaluada.");
                 }
 
             } catch (Exception e) {
