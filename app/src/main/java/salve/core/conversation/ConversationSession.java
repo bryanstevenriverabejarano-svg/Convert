@@ -47,6 +47,10 @@ public final class ConversationSession {
         return Collections.unmodifiableList(new ArrayList<>(messages));
     }
 
+    public synchronized boolean hasPriorContext() {
+        return !messages.isEmpty();
+    }
+
     public synchronized String asPromptTranscript() {
         StringBuilder out = new StringBuilder();
         for (ChatMessage message : messages) {

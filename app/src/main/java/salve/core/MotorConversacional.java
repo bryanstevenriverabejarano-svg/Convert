@@ -20,6 +20,8 @@ import java.util.concurrent.ExecutorService;
 import salve.core.cognitive.CognitiveCore;
 import salve.core.cognitive.HipocampoSemantico;
 import salve.core.cognitive.ReasoningEngine;
+import salve.core.conversation.ConversationAnalysis;
+import salve.core.conversation.ConversationRequestAnalyzer;
 import salve.core.conversation.ConversationSession;
 import salve.core.conversation.ResponseLimiter;
 import salve.core.memory.MemoryWritePolicy;
@@ -144,6 +146,7 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        boolean hasPriorContext = conversationSession.hasPriorContext();
         conversationSession.addUser(entrada);
 
         String approvalInput = entrada.trim().toLowerCase(Locale.ROOT);
@@ -581,7 +584,15 @@ public class MotorConversacional {
             try { if (detectorEmociones != null) emocionDetectada = detectorEmociones.detectarEmocion(entrada); } catch (Exception e) {}
         }
 
+        ConversationAnalysis conversationAnalysis = ConversationRequestAnalyzer.analyze(entrada, hasPriorContext);
+        if (conversationAnalysis.needsClarification()) {
+            hablar("¿Puedes concretar a qué te refieres? No tengo un turno anterior que me permita interpretarlo con seguridad.");
+            return;
+        }
+
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
+        String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
+                + conversationAnalysis.getAct().name();
         if (intent.type != IntentType.GUARDAR_RECUERDO && MemoryWritePolicy.shouldPersist(entrada)) {
             memoria.guardarRecuerdo(entrada, emocionDetectada, 7,
                     Arrays.asList("hecho_usuario", "declaracion_directa"));
@@ -601,13 +612,17 @@ public class MotorConversacional {
             pensamientoSilencioso += "\nDatos encontrados en la red: " + datosWeb;
         }
 
-        diario.escribirAutoCritica("PENSAMIENTO PREVIO: " + pensamientoSilencioso);
+        if (diario != null) {
+            diario.escribirAutoCritica("Turno analizado. Intención operativa: " + intent.type.name()
+                    + "; acto conversacional: " + conversationAnalysis.getAct().name());
+        }
 
         // ── GENERACIÓN DE RESPUESTA ──────────────────────────────────────────
         String respuesta = null;
 
         if (gemini.isAvailable()) {
-            respuesta = generarRespuestaGemini(entrada, emocionDetectada, intent.type.name(), "Pensamiento interno: " + pensamientoSilencioso + ". " + (resumenAccion != null ? resumenAccion : ""), entradaPorVoz);
+            respuesta = generarRespuestaGemini(entrada, emocionDetectada, responseContext,
+                    "Análisis interno disponible. " + (resumenAccion != null ? resumenAccion : ""), entradaPorVoz);
         }
 
         if (respuesta == null && cognitiveCore != null) {
@@ -620,7 +635,7 @@ public class MotorConversacional {
         }
 
         if (respuesta == null) {
-            respuesta = generarRespuestaConversacionalLocal(entrada, emocionDetectada, intent.type.name(), resumenAccion, entradaPorVoz);
+            respuesta = generarRespuestaConversacionalLocal(entrada, emocionDetectada, responseContext, resumenAccion, entradaPorVoz);
         }
 
         if (respuesta == null || respuesta.trim().isEmpty()) {
@@ -778,7 +793,11 @@ public class MotorConversacional {
                 + "NARRATIVA DEL GRAFO: " + grafoSummary + "\n\n"
                 + "Tu objetivo es ayudar a Bryan con honestidad, calidez y precisión. "
                 + "Reconoce la incertidumbre, pide aclaración cuando cambie materialmente la respuesta y no inventes datos. "
-                + "Evita repetir fórmulas, nombres o explicaciones que no aporten valor.\n\n"
+                + "Evita repetir fórmulas, nombres o explicaciones que no aporten valor. "
+                + "No expongas cadenas de pensamiento privadas: ofrece la conclusión y una justificación breve cuando sea útil. "
+                + "Adapta la respuesta al ACTO_CONVERSACIONAL indicado. Si es CORRECTION, revisa el turno anterior, "
+                + "reconoce solo los errores comprobables y corrígelos con precisión. Si es OPINION, distingue opinión de hecho. "
+                + "Si es QUESTION o EXPLANATION_REQUEST, responde directamente; si es COMMAND, confirma el resultado o explica el límite.\n\n"
                 + VoiceResponsePolicy.promptInstruction(porVoz)
                 + "=== SISTEMA NERVIOSO Y HERRAMIENTAS ===\n"
                 + "Si una herramienta es necesaria, solo puedes PROPONERLA. La aplicación pedirá confirmación humana antes de ejecutarla. "
