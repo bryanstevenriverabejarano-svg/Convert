@@ -35,7 +35,7 @@ public interface RecuerdoDao {
     List<RecuerdoEntity> buscarRecientes(String palabraClave, int limite);
 
     @Query("DELETE FROM recuerdos WHERE etiquetas LIKE '%' || :etiqueta || '%'")
-    void eliminarPorEtiqueta(String etiqueta);
+    int eliminarPorEtiqueta(String etiqueta);
 
     @Transaction
     default void reemplazarPorEtiqueta(String etiqueta, RecuerdoEntity recuerdo) {

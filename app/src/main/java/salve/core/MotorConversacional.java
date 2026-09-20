@@ -28,6 +28,8 @@ import salve.core.conversation.ReasoningPlanner;
 import salve.core.conversation.ResponseLimiter;
 import salve.core.memory.MemoryWritePolicy;
 import salve.core.memory.MemoryProfileFact;
+import salve.core.memory.MemoryForgetRequest;
+import salve.core.memory.PendingMemoryDeletion;
 import salve.core.tools.PendingToolAction;
 import salve.core.voice.VoiceResponsePolicy;
 import salve.presentation.ui.GaleriaVisualActivity;
@@ -75,7 +77,9 @@ public class MotorConversacional {
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
     private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
+    private static final long MEMORY_DELETION_TTL_MS = 2 * 60 * 1000L;
     private PendingToolAction pendingToolAction;
+    private PendingMemoryDeletion pendingMemoryDeletion;
 
     private boolean esperandoParamsGlifo = false;
     private int indiceParamGlifo = 0;
@@ -153,8 +157,29 @@ public class MotorConversacional {
         conversationSession.addUser(entrada);
 
         String approvalInput = entrada.trim().toLowerCase(Locale.ROOT);
+        if (approvalInput.equals("confirmar olvido")) {
+            confirmarOlvidoPendiente();
+            return;
+        }
+        if (approvalInput.equals("cancelar olvido")) {
+            pendingMemoryDeletion = null;
+            hablar("Olvido cancelado. No he borrado ningún dato de tu perfil.");
+            return;
+        }
         if (approvalInput.equals("confirmar acción") || approvalInput.equals("confirmar accion")) {
             confirmarAccionPendiente();
+            return;
+        }
+
+        MemoryForgetRequest forgetRequest = MemoryForgetRequest.parse(entrada);
+        if (forgetRequest != null) {
+            pendingMemoryDeletion = new PendingMemoryDeletion(forgetRequest, System.currentTimeMillis());
+            hablar("Puedo borrar " + forgetRequest.getDescription()
+                    + " de la memoria de perfil. Di ‘confirmar olvido’ para borrarlo o ‘cancelar olvido’ para conservarlo.");
+            return;
+        }
+        if (MemoryForgetRequest.looksLikeForgetCommand(entrada)) {
+            hablar("No borraré recuerdos de forma amplia o ambigua. Indica una categoría concreta, como tu nombre, residencia, trabajo, objetivo, cumpleaños o una preferencia específica.");
             return;
         }
         if (approvalInput.equals("cancelar acción") || approvalInput.equals("cancelar accion")) {
@@ -1065,6 +1090,26 @@ public class MotorConversacional {
         String emo = intent.slots.get("emocion");
         if (emo != null) { List<String> res = memoria.recordarPorEmocion(emo); return res.isEmpty() ? null : "Recuerdo emocional: " + res.get(res.size() - 1); }
         return null;
+    }
+
+    private void confirmarOlvidoPendiente() {
+        if (pendingMemoryDeletion == null) {
+            hablar("No hay ningún olvido pendiente de confirmación.");
+            return;
+        }
+        PendingMemoryDeletion pending = pendingMemoryDeletion;
+        pendingMemoryDeletion = null;
+        if (pending.isExpired(System.currentTimeMillis(), MEMORY_DELETION_TTL_MS)) {
+            hablar("La solicitud de olvido ha caducado. Pídemela de nuevo si todavía quieres borrar ese dato.");
+            return;
+        }
+        MemoryForgetRequest request = pending.getRequest();
+        boolean deleted = memoria.eliminarDatoPerfil(request.getCategory());
+        if (deleted) {
+            hablar("He borrado " + request.getDescription() + " de la memoria de perfil.");
+        } else {
+            hablar("No encontré un dato de perfil etiquetado como " + request.getDescription() + ". No he borrado otros recuerdos.");
+        }
     }
 
     private String manejarAgregarMision(IntentRecognizer.Intent intent) {

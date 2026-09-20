@@ -712,6 +712,30 @@ public class MemoriaEmocional {
         CloudLogger.log("memoria_perfil", categoria, 7);
     }
 
+    /** Elimina únicamente una categoría de perfil etiquetada explícitamente. */
+    public boolean eliminarDatoPerfil(String categoria) {
+        if (categoria == null || categoria.trim().isEmpty()) return false;
+        String etiqueta = "profile:" + categoria.trim().toLowerCase(Locale.ROOT);
+        try {
+            return profileWriteExecutor.submit(() -> {
+                boolean removedFromMemory = false;
+                synchronized (recuerdos) {
+                    for (int i = recuerdos.size() - 1; i >= 0; i--) {
+                        if (recuerdos.get(i).getEtiquetas().contains(etiqueta)) {
+                            recuerdos.remove(i);
+                            removedFromMemory = true;
+                        }
+                    }
+                }
+                int removedFromDatabase = recuerdoDao.eliminarPorEtiqueta(etiqueta);
+                return removedFromMemory || removedFromDatabase > 0;
+            }).get(3, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            Log.e(TAG, "No se pudo eliminar el dato de perfil " + categoria, e);
+            return false;
+        }
+    }
+
     /** Guarda un dato clave=valor como recuerdo neutro. */
     public void guardarDato(String clave, String valor) {
         guardarRecuerdo(clave + " = " + valor,
