@@ -121,7 +121,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvNivelConciencia;
 
     // ===== ESTADO INTERNO =====
-    private boolean entradaPorVoz = false;
     private boolean esperandoConfirmacionVisual = false;
     private static final int PERMISO_CAMARA = 123;
     private static final int REQ_POST_NOTIF = 1001;               // request code notificaciones
@@ -587,20 +586,8 @@ public class MainActivity extends AppCompatActivity {
                             ArrayList<String> resultado =
                                     result.getData().getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                             if (resultado != null && !resultado.isEmpty()) {
-                                entradaPorVoz = true;
                                 String dicho = resultado.get(0);
-                                if (handleModuloTemporal(dicho)) {
-                                    guardarEventoNube("voice_message_modulo_temporal", dicho, null);
-                                    entradaPorVoz = false;
-                                    GrafoRecuerdos.generar(this);
-                                    CloudSyncManager.uploadGrafoBundle(this);
-                                } else {
-                                    motorConversacional.procesarEntrada(resultado.get(0), true);
-                                    guardarEventoNube("voice_message", resultado.get(0), null);
-                                    entradaPorVoz = false;
-                                    GrafoRecuerdos.generar(this);
-                                    CloudSyncManager.uploadGrafoBundle(this);
-                                }
+                                procesarMensajeUsuario(dicho, true);
                             }
                         } else {
                             Toast.makeText(this, "No pude escuchar tu voz. Revisa el permiso de micrófono.", Toast.LENGTH_SHORT).show();
@@ -646,14 +633,22 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
-        intent.putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 800L);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 500L);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 800L);
         
         speechRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
             @Override
-            public void onReadyForSpeech(Bundle params) {}
+            public void onReadyForSpeech(Bundle params) {
+                btnEscuchar.setText(R.string.escuchando);
+            }
 
             @Override
-            public void onBeginningOfSpeech() {}
+            public void onBeginningOfSpeech() {
+                inputChat.setHint(R.string.escuchando);
+            }
 
             @Override
             public void onRmsChanged(float rmsdB) {}
@@ -662,12 +657,18 @@ public class MainActivity extends AppCompatActivity {
             public void onBufferReceived(byte[] buffer) {}
 
             @Override
-            public void onEndOfSpeech() {}
+            public void onEndOfSpeech() {
+                btnEscuchar.setText(R.string.procesando_voz);
+            }
 
             @Override
             public void onError(int error) {
                 Log.e("Salve/Oidos", "Error escuchando: " + error);
-                // Ya no reiniciamos automáticamente por respeto a la privacidad y batería
+                finalizarEscucha();
+                if (error != android.speech.SpeechRecognizer.ERROR_CLIENT
+                        && error != android.speech.SpeechRecognizer.ERROR_NO_MATCH) {
+                    Toast.makeText(MainActivity.this, "No pude reconocer la voz. Inténtalo de nuevo.", Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
@@ -676,24 +677,58 @@ public class MainActivity extends AppCompatActivity {
                 if (matches != null && !matches.isEmpty()) {
                     String escuchado = matches.get(0);
                     Log.d("Salve/Oidos", "Escuchado: " + escuchado);
-                    // Procesarlo como si fuera un mensaje del usuario
-                    runOnUiThread(() -> {
-                        inputChat.setText(escuchado);
-                        btnEnviarMensaje.performClick();
-                    });
+                    finalizarEscucha();
+                    inputChat.setText(escuchado);
+                    procesarMensajeUsuario(escuchado, true);
+                } else {
+                    finalizarEscucha();
                 }
-                // Ya no reiniciamos la escucha automáticamente
             }
 
             @Override
-            public void onPartialResults(Bundle partialResults) {}
+            public void onPartialResults(Bundle partialResults) {
+                ArrayList<String> partials = partialResults.getStringArrayList(
+                        android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
+                if (partials != null && !partials.isEmpty()) {
+                    inputChat.setText(partials.get(0));
+                    inputChat.setSelection(inputChat.length());
+                }
+            }
 
             @Override
             public void onEvent(int eventType, Bundle params) {}
         });
 
         speechRecognizer.startListening(intent);
-        Toast.makeText(this, "Salve te está escuchando continuamente...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Salve te está escuchando…", Toast.LENGTH_SHORT).show();
+    }
+
+    private void finalizarEscucha() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+            speechRecognizer = null;
+        }
+        if (btnEscuchar != null) btnEscuchar.setText(R.string.hablar_con_salve);
+        if (inputChat != null) inputChat.setHint("");
+    }
+
+    private void procesarMensajeUsuario(String mensaje, boolean porVoz) {
+        if (mensaje == null || mensaje.trim().isEmpty()) return;
+        String limpio = mensaje.trim();
+        if (handleModuloTemporal(limpio)) {
+            guardarEventoNube(porVoz ? "voice_message_modulo_temporal" : "user_message_modulo_temporal",
+                    limpio, null);
+            inputChat.setText("");
+            return;
+        }
+
+        motorConversacional.procesarEntrada(limpio, porVoz);
+        guardarEventoNube(porVoz ? "voice_message" : "user_message", limpio, null);
+        inputChat.setText("");
+        new Thread(() -> {
+            GrafoRecuerdos.generar(getApplicationContext());
+            CloudSyncManager.uploadGrafoBundle(getApplicationContext());
+        }).start();
     }
 
     // ============================================================
@@ -808,27 +843,7 @@ public class MainActivity extends AppCompatActivity {
         // ==== LISTENERS ====
         btnEnviarMensaje.setOnClickListener(v -> {
             String mensaje = inputChat.getText().toString().trim();
-            if (!mensaje.isEmpty()) {
-                entradaPorVoz = false;
-
-                // Interceptar preguntas fijas / diagnóstico
-                if (handleModuloTemporal(mensaje)) {
-                    guardarEventoNube("user_message_modulo_temporal", mensaje, null);
-                    inputChat.setText("");
-                    return;
-                }
-
-                // Lógica original
-                motorConversacional.procesarEntrada(mensaje, entradaPorVoz);
-                guardarEventoNube("user_message", mensaje, null);
-                inputChat.setText("");
-
-                // Actualizar grafo tras mensaje TEXTO del usuario
-                new Thread(() -> {
-                    GrafoRecuerdos.generar(getApplicationContext());
-                    CloudSyncManager.uploadGrafoBundle(getApplicationContext());
-                }).start();
-            }
+            procesarMensajeUsuario(mensaje, false);
         });
 
         // Pulsación larga en el botón → menú PDF
@@ -848,7 +863,9 @@ public class MainActivity extends AppCompatActivity {
             if (speechRecognizer == null) {
                 iniciarEscuchaContinua();
             } else {
-                Toast.makeText(this, "Ya te estoy escuchando, creador.", Toast.LENGTH_SHORT).show();
+                speechRecognizer.cancel();
+                finalizarEscucha();
+                Toast.makeText(this, "Escucha cancelada.", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -1531,7 +1548,7 @@ public class MainActivity extends AppCompatActivity {
         // stopService(new Intent(this, CamaraService.class));
         stopService(new Intent(this, BurbujaFlotanteService.class));
         if (motorConversacional != null) motorConversacional.shutdown();
-        if (speechRecognizer != null) speechRecognizer.destroy();
+        finalizarEscucha();
         super.onDestroy();
     }
 

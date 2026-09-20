@@ -55,4 +55,6 @@ Nuestro lema es: Más seguro, conectado y humano. El futuro no es mañana — es
 
     <!-- Otros -->
     <string name="permiso_requerido_camara">Se requiere permiso para acceder a la cámara</string>
+    <string name="escuchando">Escuchando…</string>
+    <string name="procesando_voz">Procesando voz…</string>
 </resources>
