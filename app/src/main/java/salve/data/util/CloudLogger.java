@@ -1,5 +1,6 @@
 package salve.data.util;
 
+import android.content.Context;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -18,11 +19,27 @@ public final class CloudLogger {
     // === Config ===
     private static final String NUBE_ENDPOINT = "https://arzenit.com/salve_data.php";
     private static final String NUBE_SECRET   = "pon_aqui_tu_clave_larga"; // <-- cámbialo igual que en el PHP
+    private static volatile Context appContext;
 
     private CloudLogger() {}
 
+    public static void initialize(Context context) {
+        appContext = context == null ? null : context.getApplicationContext();
+    }
+
+    private static boolean hasConsent() {
+        Context context = appContext;
+        return context != null
+                && context.getSharedPreferences("salve_privacy", Context.MODE_PRIVATE)
+                .getBoolean("cloud_sync_enabled", false);
+    }
+
     /** Enviar un JSON (String) al servidor. */
     private static void enviar(String jsonPayload) {
+        if (!hasConsent()) {
+            Log.d("CloudLogger", "Evento no enviado: sincronización sin consentimiento.");
+            return;
+        }
         new Thread(() -> {
             HttpURLConnection conn = null;
             try {

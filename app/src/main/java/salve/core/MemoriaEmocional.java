@@ -7,6 +7,7 @@ import android.util.Log;
 import salve.data.db.MemoriaDatabase;
 import salve.data.db.RecuerdoDao;
 import salve.data.db.ReflexionDao;
+import salve.core.memory.MemoryQueryTerms;
 import salve.data.db.RecuerdoEntity;
 import salve.data.db.ReflexionEntity;
 
@@ -698,6 +699,28 @@ public class MemoriaEmocional {
                     + " | Intensidad: " + e.intensidad);
         }
         return out;
+    }
+
+    /** Recupera pocos recuerdos relacionados con la entrada actual. */
+    public String recuperarContextoRelevante(String consulta, int limite) {
+        if (limite <= 0) return "";
+        java.util.LinkedHashSet<String> encontrados = new java.util.LinkedHashSet<>();
+        for (String termino : MemoryQueryTerms.extract(consulta, 4)) {
+            try {
+                for (RecuerdoEntity entity : recuerdoDao.buscarRecientes(termino, limite)) {
+                    String texto = codificador.decodificar(entity.binario);
+                    if (texto != null && !texto.trim().isEmpty()) encontrados.add(texto.trim());
+                    if (encontrados.size() >= limite) break;
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "No se pudo recuperar memoria para: " + termino, e);
+            }
+            if (encontrados.size() >= limite) break;
+        }
+        if (encontrados.isEmpty()) return "";
+        StringBuilder out = new StringBuilder();
+        for (String recuerdo : encontrados) out.append("- ").append(recuerdo).append('\n');
+        return out.toString().trim();
     }
 
     /** Recupera de RAM recuerdos cuya emoción coincide. */
