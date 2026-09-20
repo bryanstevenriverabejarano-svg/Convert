@@ -1,5 +1,6 @@
 import importlib.util
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -14,7 +15,8 @@ class ProposalValidationTest(unittest.TestCase):
     def proposal(self):
         path = "app/src/main/java/salve/core/Example.java"
         return {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
+            "proposalId": "12345678-1234-4234-8234-123456789abc",
             "targetClass": "Example",
             "targetPath": path,
             "issueSummary": "Simplificar",
@@ -43,6 +45,20 @@ class ProposalValidationTest(unittest.TestCase):
         proposal["ethicalReviewPassed"] = False
         with self.assertRaises(runner.ProposalError):
             runner.validate_proposal(proposal)
+
+    def test_rejects_invalid_proposal_id(self):
+        proposal = self.proposal()
+        proposal["proposalId"] = "../../otro"
+        with self.assertRaises(runner.ProposalError):
+            runner.validate_proposal(proposal)
+
+    @mock.patch.object(runner, "run")
+    def test_finds_existing_pull_request(self, run):
+        run.return_value = mock.Mock(stdout='[{"url":"https://github.com/example/pr/7"}]')
+        self.assertEqual(
+            "https://github.com/example/pr/7",
+            runner.find_existing_pr(Path("."), "12345678-1234-4234-8234-123456789abc"),
+        )
 
 
 if __name__ == "__main__":

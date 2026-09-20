@@ -43,7 +43,9 @@ después de resolver DNS.
 
 ## Ejecutor externo de auto-mejora
 
-Las propuestas creadas por Salve se guardan como JSON de esquema 2. Deben
+Las propuestas creadas por Salve se guardan como JSON de esquema 3. Cada una
+incluye un UUID estable para que los reintentos detecten un PR ya creado y no lo
+dupliquen. Deben
 transferirse a un entorno de desarrollo aislado; el APK no contiene credenciales
 de GitHub. Con GitHub CLI autenticado y Gradle disponible, el ejecutor valida el
 objetivo, aplica el diff en un worktree temporal, ejecuta las pruebas y abre una

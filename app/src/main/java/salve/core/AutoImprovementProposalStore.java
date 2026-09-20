@@ -43,7 +43,7 @@ public final class AutoImprovementProposalStore {
             throw new IOException("No se pudo crear la bandeja de propuestas");
         }
 
-        String id = System.currentTimeMillis() + "-" + UUID.randomUUID();
+        String id = System.currentTimeMillis() + "-" + proposal.proposalId;
         File temporary = new File(outbox, id + ".json.tmp");
         File destination = new File(outbox, id + ".json");
         try (OutputStreamWriter writer = new OutputStreamWriter(
@@ -58,7 +58,8 @@ public final class AutoImprovementProposalStore {
     }
 
     public static final class Proposal {
-        public final int schemaVersion = 2;
+        public final int schemaVersion = 3;
+        public final String proposalId;
         public final long createdAtEpochMillis;
         public final String targetClass;
         public final String targetPath;
@@ -81,6 +82,7 @@ public final class AutoImprovementProposalStore {
                         boolean sandboxPassed,
                         boolean ethicalReviewPassed) {
             this.createdAtEpochMillis = createdAtEpochMillis;
+            this.proposalId = UUID.randomUUID().toString();
             this.targetClass = safe(targetClass);
             this.targetPath = safe(targetPath);
             this.issueSummary = safe(issueSummary);

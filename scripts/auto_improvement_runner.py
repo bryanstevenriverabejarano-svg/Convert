@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
+import uuid
 
 
 ALLOWED_SOURCE_ROOT = PurePosixPath("app/src/main/java/salve/core")
@@ -39,8 +39,12 @@ def load_proposal(path: Path) -> dict:
 
 
 def validate_proposal(proposal: dict) -> None:
-    if proposal.get("schemaVersion") != 2:
+    if proposal.get("schemaVersion") != 3:
         raise ProposalError("Versión de esquema no compatible")
+    try:
+        uuid.UUID(str(proposal.get("proposalId", "")))
+    except ValueError as error:
+        raise ProposalError("Identificador de propuesta inválido") from error
     target = PurePosixPath(str(proposal.get("targetPath", "")))
     if target.is_absolute() or ".." in target.parts:
         raise ProposalError("Ruta objetivo insegura")
@@ -80,12 +84,36 @@ def slug(value: str) -> str:
     return normalized[:40] or "change"
 
 
+def find_existing_pr(repo: Path, proposal_id: str) -> str | None:
+    result = run(
+        ["gh", "pr", "list", "--state", "all", "--limit", "1",
+         "--search", f'"salve-proposal-id:{proposal_id}" in:body', "--json", "url"],
+        repo,
+        capture=True,
+    )
+    try:
+        matches = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise ProposalError("GitHub devolvió una respuesta de deduplicación inválida") from error
+    if not isinstance(matches, list) or not matches:
+        return None
+    url = matches[0].get("url")
+    return url if isinstance(url, str) and url.startswith("https://") else None
+
+
 def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
     proposal = load_proposal(proposal_path)
     repo = repo.resolve()
     run(["git", "rev-parse", "--show-toplevel"], repo, capture=True)
+    if not dry_run:
+        existing_pr = find_existing_pr(repo, proposal["proposalId"])
+        if existing_pr:
+            return existing_pr
     run(["git", "fetch", "origin", base], repo)
-    branch = f"salve/auto-{int(time.time())}-{slug(proposal.get('targetClass', 'change'))}"
+    branch = (
+        f"salve/auto-{proposal['proposalId'][:8]}-"
+        f"{slug(proposal.get('targetClass', 'change'))}"
+    )
 
     with tempfile.TemporaryDirectory(prefix="salve-auto-") as temporary:
         worktree = Path(temporary) / "worktree"
@@ -105,7 +133,8 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
             body = (
                 "Propuesta generada autónomamente por Salve y validada en un worktree aislado.\n\n"
                 f"Diagnóstico:\n{proposal.get('issueSummary', '')}\n\n"
-                "Compuertas de origen aprobadas y suite completa ejecutada antes de publicar."
+                "Compuertas de origen aprobadas y suite completa ejecutada antes de publicar.\n\n"
+                f"salve-proposal-id:{proposal['proposalId']}"
             )
             result = run(
                 ["gh", "pr", "create", "--base", base, "--head", branch,
