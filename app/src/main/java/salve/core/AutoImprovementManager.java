@@ -169,6 +169,7 @@ public class AutoImprovementManager {
                                     new AutoImprovementProposalStore.Proposal(
                                             System.currentTimeMillis(),
                                             report.getClassName(),
+                                            "app/src/main/java/salve/core/" + report.getClassName() + ".java",
                                             describeIssue(issue, report),
                                             fix,
                                             suite == null ? "" : suite.getCode(),

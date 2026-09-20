@@ -23,7 +23,8 @@ public class AutoImprovementProposalStoreTest {
         assertFalse(new File(saved.getAbsolutePath() + ".tmp").exists());
         String json = new String(Files.readAllBytes(saved.toPath()), StandardCharsets.UTF_8);
         assertTrue(json.contains("\"targetClass\": \"salve.core.Example\""));
-        assertTrue(json.contains("\"patch\": \"class Example {}\""));
+        assertTrue(json.contains("\"schemaVersion\": 2"));
+        assertTrue(json.contains("\"targetPath\": \"app/src/main/java/salve/core/Example.java\""));
     }
 
     @Test
@@ -40,8 +41,9 @@ public class AutoImprovementProposalStoreTest {
         return new AutoImprovementProposalStore.Proposal(
                 1L,
                 "salve.core.Example",
+                "app/src/main/java/salve/core/Example.java",
                 "Simplificar método",
-                "class Example {}",
+                "diff --git a/app/src/main/java/salve/core/Example.java b/app/src/main/java/salve/core/Example.java\n",
                 "@Test public void example() {}",
                 syntheticPassed,
                 true,

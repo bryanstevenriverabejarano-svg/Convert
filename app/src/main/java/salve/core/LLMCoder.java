@@ -64,9 +64,13 @@ public class LLMCoder {
      * Genera una propuesta de corrección (parche).
      */
     public String generateFix(String issueDescription, String className) {
+        String sourcePath = "app/src/main/java/salve/core/" + className + ".java";
         String prompt = "Como asistente de mejora continua, corrige el siguiente problema en la clase "
                 + className + ":\n" + issueDescription + "\n"
-                + "Devuelve solo el código corregido de los métodos afectados.";
+                + "La ruta exacta del archivo es " + sourcePath + ".\n"
+                + "Devuelve exclusivamente un unified diff aplicable con git apply. "
+                + "El diff solo puede modificar esa ruta, debe incluir contexto suficiente y "
+                + "no debe contener bloques Markdown ni explicaciones.";
 
         GeminiService gemini = GeminiService.getInstance(context);
         if (gemini.isAvailable()) {

@@ -58,9 +58,10 @@ public final class AutoImprovementProposalStore {
     }
 
     public static final class Proposal {
-        public final int schemaVersion = 1;
+        public final int schemaVersion = 2;
         public final long createdAtEpochMillis;
         public final String targetClass;
+        public final String targetPath;
         public final String issueSummary;
         public final String patch;
         public final String generatedTests;
@@ -71,6 +72,7 @@ public final class AutoImprovementProposalStore {
 
         public Proposal(long createdAtEpochMillis,
                         String targetClass,
+                        String targetPath,
                         String issueSummary,
                         String patch,
                         String generatedTests,
@@ -80,6 +82,7 @@ public final class AutoImprovementProposalStore {
                         boolean ethicalReviewPassed) {
             this.createdAtEpochMillis = createdAtEpochMillis;
             this.targetClass = safe(targetClass);
+            this.targetPath = safe(targetPath);
             this.issueSummary = safe(issueSummary);
             this.patch = safe(patch);
             this.generatedTests = safe(generatedTests);
