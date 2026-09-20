@@ -13,6 +13,11 @@ import sys
 import tempfile
 import uuid
 
+if __package__:
+    from . import auto_improvement_sandbox as sandbox
+else:
+    import auto_improvement_sandbox as sandbox
+
 
 ALLOWED_SOURCE_ROOT = PurePosixPath("app/src/main/java/salve/core")
 MAX_PROPOSAL_BYTES = 1_000_000
@@ -125,6 +130,7 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
         existing_pr = find_existing_pr(repo, proposal["proposalId"])
         if existing_pr:
             return existing_pr
+    image = sandbox.configured_image()
     run(["git", "fetch", "origin", base], repo)
     branch = (
         f"salve/auto-{proposal['proposalId'][:8]}-"
@@ -134,27 +140,44 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
     with tempfile.TemporaryDirectory(prefix="salve-auto-") as temporary:
         worktree = Path(temporary) / "worktree"
         run(["git", "worktree", "add", "--detach", str(worktree), f"origin/{base}"], repo)
+        branch_created = False
         try:
-            run(["git", "switch", "-c", branch], worktree)
             patch_file = Path(temporary) / "proposal.patch"
             patch_file.write_text(proposal["patch"], encoding="utf-8")
-            run(["git", "apply", "--check", str(patch_file)], worktree)
-            run(["git", "apply", str(patch_file)], worktree)
-            run(["./gradlew", "testDebugUnitTest", "--no-daemon"], worktree)
+            run(["git", "apply", "--index", "--check", str(patch_file)], worktree)
+            run(["git", "apply", "--index", str(patch_file)], worktree)
+            changed = run(["git", "diff", "--cached", "--name-status", "--no-renames", "-z"],
+                          worktree, capture=True).stdout
+            if changed != "M\0" + proposal["targetPath"] + "\0":
+                raise ProposalError("El índice debe contener solo una modificación del objetivo")
+            entry = run(["git", "ls-files", "--stage", "--", proposal["targetPath"]],
+                        worktree, capture=True).stdout
+            if not entry.startswith("100644 "):
+                raise ProposalError("El objetivo debe seguir siendo un archivo Java regular")
+            tested_tree = run(["git", "write-tree"], worktree, capture=True).stdout.strip()
+            archive = Path(temporary) / "source.tar"
+            run(["git", "archive", "--format=tar", "--output=" + str(archive), tested_tree], worktree)
+            sandbox.run_sandbox(archive, image)
             if dry_run:
                 return branch
-            run(["git", "add", "--", proposal["targetPath"]], worktree)
+            run(["git", "switch", "-c", branch], worktree)
+            branch_created = True
             run(["git", "commit", "-m", f"Auto-mejora: {proposal['targetClass']}"], worktree)
+            committed_tree = run(["git", "rev-parse", "HEAD^{tree}"], worktree, capture=True).stdout.strip()
+            if committed_tree != tested_tree:
+                raise ProposalError("El commit difiere del árbol probado; no se publica")
             run(["git", "push", "--set-upstream", "origin", branch], worktree)
             body = (
-                "Propuesta generada autónomamente por Salve y validada en un worktree aislado.\n\n"
+                "Propuesta generada por Salve; tarea testDebugUnitTest ejecutada en Docker sin red.\n\n"
                 f"Diagnóstico:\n{proposal.get('issueSummary', '')}\n\n"
-                "Compuertas de origen aprobadas y suite completa ejecutada antes de publicar.\n\n"
+                f"Árbol probado: {tested_tree}\nImagen del sandbox: {image}\n\n"
                 f"salve-proposal-id:{proposal['proposalId']}"
             )
+            body_file = Path(temporary) / "pr-body.md"
+            body_file.write_text(body, encoding="utf-8")
             result = run(
                 ["gh", "pr", "create", "--base", base, "--head", branch,
-                 "--title", f"Auto-mejora: {proposal['targetClass']}", "--body", body],
+                 "--title", f"Auto-mejora: {proposal['targetClass']}", "--body-file", str(body_file)],
                 worktree,
                 capture=True,
             )
@@ -167,13 +190,14 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
                 text=True,
                 capture_output=True,
             )
-            subprocess.run(
-                ["git", "branch", "-D", branch],
-                cwd=repo,
-                check=False,
-                text=True,
-                capture_output=True,
-            )
+            if branch_created:
+                subprocess.run(
+                    ["git", "branch", "-D", branch],
+                    cwd=repo,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
 
 
 def main() -> int:
@@ -189,7 +213,9 @@ def main() -> int:
         parser.error("gh no está disponible o no está autenticado")
     try:
         result = execute(args.proposal.resolve(), args.repo, args.base, args.dry_run)
-    except (ProposalError, subprocess.CalledProcessError) as error:
+    except KeyboardInterrupt:
+        return 130
+    except (ProposalError, sandbox.SandboxError, subprocess.CalledProcessError) as error:
         print(f"Auto-mejora rechazada: {error}", file=sys.stderr)
         return 1
     print(result)

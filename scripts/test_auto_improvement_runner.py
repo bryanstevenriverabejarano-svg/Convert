@@ -2,11 +2,15 @@ import importlib.util
 import json
 import tempfile
 import unittest
+import sys
+import subprocess
+import tarfile
 from unittest import mock
 from pathlib import Path
 
 
 MODULE_PATH = Path(__file__).with_name("auto_improvement_runner.py")
+sys.path.insert(0, str(MODULE_PATH.parent))
 SPEC = importlib.util.spec_from_file_location("auto_improvement_runner", MODULE_PATH)
 runner = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
@@ -106,6 +110,130 @@ class ProposalValidationTest(unittest.TestCase):
             "https://github.com/example/pr/7",
             runner.find_existing_pr(Path("."), "12345678-1234-4234-8234-123456789abc"),
         )
+
+
+class RunnerIntegrationTest(unittest.TestCase):
+    """Git y worktrees reales; Docker y publicación GitHub simulados explícitamente."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        root = Path(self.temporary.name)
+        self.repo = root / "repo"
+        self.remote = root / "remote.git"
+        self.repo.mkdir()
+        self.git("init", "--initial-branch=main")
+        self.git("config", "user.email", "tests@example.invalid")
+        self.git("config", "user.name", "Salve tests")
+        self.target = "app/src/main/java/salve/core/Example.java"
+        target_file = self.repo / self.target
+        target_file.parent.mkdir(parents=True)
+        target_file.write_text("class Example { int value = 1; }\n")
+        # Si vuelve la ejecución directa, esta prueba revela el efecto en el host.
+        self.marker = root / "HOST_EXECUTED"
+        (self.repo / "gradlew").write_text(f"#!/bin/sh\ntouch '{self.marker}'\nexit 0\n")
+        (self.repo / "gradlew").chmod(0o755)
+        self.git("add", ".")
+        self.git("commit", "-m", "fixture")
+        self.git("init", "--bare", str(self.remote))
+        self.git("remote", "add", "origin", str(self.remote))
+        self.git("push", "origin", "main")
+        (self.repo / "HOST_SECRET").write_text("untracked credential fixture")
+        target_file.write_text("class Example { int value = 2; }\n")
+        patch = self.git("diff", "--", self.target)
+        self.git("checkout", "--", self.target)
+        self.proposal = ProposalValidationTest().proposal()
+        self.proposal["patch"] = patch
+        self.proposal_path = root / "proposal.json"
+        self.proposal_path.write_text(json.dumps(self.proposal))
+        self.branch = "salve/auto-12345678-example"
+        self.image = "sha256:" + "a" * 64
+        for patcher in (mock.patch.object(runner, "find_existing_pr", return_value=None),
+                        mock.patch.object(runner.sandbox, "configured_image", return_value=self.image)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.real_run = runner.run
+        self.pr_bodies = []
+
+    def git(self, *arguments):
+        return subprocess.run(["git", *arguments], cwd=self.repo, check=True,
+                              text=True, capture_output=True).stdout
+
+    def quiet_run(self, command, cwd, *, capture=False):
+        if command[0] == "gh":
+            self.assertEqual(["gh", "pr", "create"], command[:3])
+            self.pr_bodies.append(Path(command[command.index("--body-file") + 1]).read_text())
+            return subprocess.CompletedProcess(command, 0, "https://github.com/example/repo/pull/1\n")
+        return self.real_run(command, cwd, capture=True)
+
+    def assert_cleaned(self):
+        self.assertFalse(self.marker.exists(), "Gradle no debe ejecutarse en el host")
+        worktrees = self.git("worktree", "list", "--porcelain")
+        self.assertEqual(1, worktrees.count("worktree "))
+        self.assertEqual("untracked credential fixture", (self.repo / "HOST_SECRET").read_text())
+        self.assertEqual("class Example { int value = 1; }\n", (self.repo / self.target).read_text())
+
+    def test_snapshot_excludes_credentials_and_published_tree_matches(self):
+        def verify_snapshot(archive, image):
+            self.assertEqual(self.image, image)
+            with tarfile.open(archive) as snapshot:
+                self.assertNotIn("HOST_SECRET", snapshot.getnames())
+                self.assertFalse(any(".git" in Path(name).parts for name in snapshot.getnames()))
+                self.assertEqual(b"class Example { int value = 2; }\n",
+                                 snapshot.extractfile(self.target).read())
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox", side_effect=verify_snapshot):
+            url = runner.execute(self.proposal_path, self.repo, "main", False)
+        self.assertEqual("https://github.com/example/repo/pull/1", url)
+        tree = self.git("rev-parse", f"origin/{self.branch}^{{tree}}").strip()
+        self.assertIn(tree, self.pr_bodies[0])
+        self.assertIn(self.image, self.pr_bodies[0])
+        self.assert_cleaned()
+
+    def test_failed_sandbox_never_pushes_or_creates_pr(self):
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox", side_effect=runner.sandbox.SandboxError("failed")):
+            with self.assertRaises(runner.sandbox.SandboxError):
+                runner.execute(self.proposal_path, self.repo, "main", False)
+        self.assertEqual("", self.git("ls-remote", "--heads", "origin", self.branch))
+        self.assertEqual([], self.pr_bodies)
+        self.assert_cleaned()
+
+    def test_dry_run_validates_without_publication(self):
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox") as sandbox_run:
+            runner.execute(self.proposal_path, self.repo, "main", True)
+            sandbox_run.assert_called_once()
+        self.assertEqual("", self.git("ls-remote", "--heads", "origin", self.branch))
+        self.assertEqual([], self.pr_bodies)
+        self.assert_cleaned()
+
+    def test_preexisting_branch_is_not_deleted_on_collision(self):
+        self.git("branch", self.branch)
+        before = self.git("rev-parse", self.branch)
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox"):
+            with self.assertRaises(subprocess.CalledProcessError):
+                runner.execute(self.proposal_path, self.repo, "main", False)
+        self.assertEqual(before, self.git("rev-parse", self.branch))
+        self.assertEqual([], self.pr_bodies)
+        self.assert_cleaned()
+
+    def test_changed_commit_is_not_published(self):
+        def change_after_commit(command, cwd, **kwargs):
+            result = self.quiet_run(command, cwd, **kwargs)
+            if command[:2] == ["git", "commit"]:
+                (cwd / self.target).write_text("unvalidated change\n")
+                self.real_run(["git", "add", self.target], cwd, capture=True)
+                self.real_run(["git", "commit", "--amend", "--no-edit"], cwd, capture=True)
+            return result
+        with mock.patch.object(runner, "run", side_effect=change_after_commit), \
+                mock.patch.object(runner.sandbox, "run_sandbox"):
+            with self.assertRaises(runner.ProposalError):
+                runner.execute(self.proposal_path, self.repo, "main", False)
+        self.assertEqual("", self.git("ls-remote", "--heads", "origin", self.branch))
+        self.assertEqual([], self.pr_bodies)
+        self.assert_cleaned()
 
 
 if __name__ == "__main__":

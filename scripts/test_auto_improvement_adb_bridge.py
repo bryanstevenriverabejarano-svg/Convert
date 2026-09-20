@@ -66,6 +66,13 @@ class AdbBridgeTest(unittest.TestCase):
             bridge.supervise("com.salve.app", None, Path("."), "main", 5, 2)
         sleep.assert_called_once_with(10)
 
+    @mock.patch.object(bridge.time, "sleep")
+    @mock.patch.object(bridge, "process_next", side_effect=KeyboardInterrupt("sandbox detenido"))
+    def test_supervisor_does_not_retry_an_interrupted_sandbox(self, process, sleep):
+        bridge.supervise("com.salve.app", None, Path("."), "main", 5, 2)
+        process.assert_called_once()
+        sleep.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

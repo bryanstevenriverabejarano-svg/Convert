@@ -45,11 +45,15 @@ después de resolver DNS.
 
 Las propuestas creadas por Salve se guardan como JSON de esquema 3. Cada una
 incluye un UUID estable para que los reintentos detecten un PR ya creado y no lo
-dupliquen. Deben
-transferirse a un entorno de desarrollo aislado; el APK no contiene credenciales
-de GitHub. Con GitHub CLI autenticado y Gradle disponible, el ejecutor valida el
-objetivo, aplica el diff en un worktree temporal, ejecuta las pruebas y abre una
-rama y un pull request únicamente si todo termina correctamente:
+dupliquen. El ejecutor aplica el diff en un worktree temporal y exporta el árbol
+candidato a un contenedor Docker sin red. Git y GitHub CLI permanecen en la
+estación; el contenedor solo recibe un archivo de código versionado de lectura.
+Antes de utilizarlo, prepara la imagen y configura `SALVE_SANDBOX_IMAGE` según
+[la guía del sandbox](scripts/sandbox/README.md). Si falta Docker o la imagen,
+el runner se detiene: no ejecuta Gradle directamente en la estación.
+
+Tras ejecutar `testDebugUnitTest` en el contenedor, comprueba que el árbol del
+commit coincida con el probado y publica la rama y el PR:
 
 ```bash
 python3 scripts/auto_improvement_runner.py /ruta/a/propuesta.json --repo .
