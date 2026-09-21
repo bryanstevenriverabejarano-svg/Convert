@@ -80,7 +80,6 @@ import salve.core.ReconocimientoFacial;
 import salve.core.ThinkWorker;
 import salve.data.sync.CloudSyncManager;
 import salve.data.sync.SyncWorker;
-import salve.services.SistemaSensorial;
 import salve.services.VideoAnalysisManager;
 import salve.presentation.viewmodel.ModelDownloadViewModel;
 
@@ -131,10 +130,13 @@ public class MainActivity extends AppCompatActivity {
     private MotorConversacional motorConversacional;
 
     private ModuloInvestigacion investigacion;
-    private SistemaSensorial sensores;
     
     // ===== CEREBRO Y OÍDOS =====
     private android.speech.SpeechRecognizer speechRecognizer;
+    private LiveVoiceDialog liveVoiceDialog;
+    private boolean pendingLiveVoicePermission;
+    private boolean pendingLiveVoiceStart;
+    private boolean activityResumed;
     
     // ===== CONCIENCIA FUNCIONAL =====
     private salve.core.IdentidadNucleo identidadNucleo;
@@ -573,7 +575,7 @@ public class MainActivity extends AppCompatActivity {
 
         Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, motorConversacional.getRecognitionLanguageTag());
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3);
         
@@ -660,10 +662,25 @@ public class MainActivity extends AppCompatActivity {
         if (inputChat != null) inputChat.setHint("");
     }
 
+    private void abrirModoVoz() {
+        if (!hasAudioPermission()) {
+            pendingLiveVoicePermission = true;
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            return;
+        }
+        if (isFinishing() || isDestroyed()) return;
+        if (!activityResumed) { pendingLiveVoiceStart = true; return; }
+        if (liveVoiceDialog != null && liveVoiceDialog.isShowing()) return;
+        finalizarEscucha();
+        motorConversacional.cancelarTurnoVoz();
+        liveVoiceDialog = new LiveVoiceDialog(this, motorConversacional);
+        liveVoiceDialog.show();
+    }
+
     private void procesarMensajeUsuario(String mensaje, boolean porVoz) {
         if (mensaje == null || mensaje.trim().isEmpty()) return;
         String limpio = mensaje.trim();
-        if (salve.core.goals.GoalAutonomy.handles(limpio)) {
+        if (salve.core.goals.GoalAutonomy.handles(limpio) || MotorConversacional.isSensorInput(limpio)) {
             // Goal notes and proposals have their own local journal; do not upload raw commands.
             motorConversacional.procesarEntrada(limpio, porVoz);
             inputChat.setText("");
@@ -717,8 +734,11 @@ public class MainActivity extends AppCompatActivity {
                 granted -> {
                     btnEscuchar.setEnabled(true);
                     btnEscuchar.setAlpha(granted ? 1f : 0.75f);
-                    if (granted) iniciarEscucha();
-                    else Toast.makeText(this, "Activa el micrófono para usar reconocimiento de voz.", Toast.LENGTH_LONG).show();
+                    boolean startLive = pendingLiveVoicePermission;
+                    pendingLiveVoicePermission = false;
+                    if (granted) {
+                        if (startLive) abrirModoVoz(); else iniciarEscucha();
+                    } else Toast.makeText(this, "Activa el micrófono para usar reconocimiento de voz.", Toast.LENGTH_LONG).show();
                 }
         );
 
@@ -744,7 +764,6 @@ public class MainActivity extends AppCompatActivity {
         // ==== INICIALIZAR LÓGICA ORACULAR ====
         memoria              = new MemoriaEmocional(this);
         diario               = new DiarioSecreto(this);
-        sensores             = new SistemaSensorial(this); // Inicializar sensores de hardware
         reconocimientoFacial = new ReconocimientoFacial(this);
         motorConversacional  = new MotorConversacional(this, memoria, diario);
         motorConversacional.setAvatarSession(salve.avatar.AvatarMotionController.get().openSession(this));
@@ -800,11 +819,11 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        btnHablar.setOnClickListener(v ->
-                motorConversacional.hablar(sanitizeForSpeech("Estoy aquí, ¿en qué puedo ayudarte?")));
+        btnHablar.setOnClickListener(v -> abrirModoVoz());
 
         btnEscuchar.setOnClickListener(v -> {
             if (!hasAudioPermission()) {
+                pendingLiveVoicePermission = false;
                 audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
                 return;
             }
@@ -923,6 +942,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        activityResumed = true;
+        if (motorConversacional != null) motorConversacional.setConversationForeground(true);
+        if (pendingLiveVoiceStart) {
+            pendingLiveVoiceStart = false;
+            abrirModoVoz();
+        }
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(true);
         SyncWorker.enqueueWhenOnline(getApplicationContext());
 
@@ -1451,13 +1476,24 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        activityResumed = false;
+        pendingLiveVoiceStart = false;
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);
+        if (liveVoiceDialog != null) {
+            liveVoiceDialog.dismiss();
+            liveVoiceDialog = null;
+        }
         finalizarEscucha();
+        if (motorConversacional != null) {
+            motorConversacional.cancelarTurnoVoz();
+            motorConversacional.setConversationForeground(false);
+        }
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
+        if (liveVoiceDialog != null) { liveVoiceDialog.dismiss(); liveVoiceDialog = null; }
         inferenceChecks.shutdownNow();
         // stopService(new Intent(this, CamaraService.class));
         if (motorConversacional != null) motorConversacional.shutdown();
@@ -1515,7 +1551,7 @@ public class MainActivity extends AppCompatActivity {
         int padding = (int) (20 * getResources().getDisplayMetrics().density);
         form.setPadding(padding, padding / 2, padding, padding / 2);
         TextView explanation = new TextView(this);
-        explanation.setText("Una voz cercana, discretamente tímida y curiosa. Elige entre las voces españolas que tu motor de Android tenga disponibles; no es una voz entrenada exclusiva.\n\n" + motorConversacional.getVoiceStatus());
+        explanation.setText("Busca una voz femenina que te guste usando ‘Guardar y escuchar’. Android no indica el género de las voces: hay que comprobar su timbre al escucharlas. La selección automática prefiere español latinoamericano sin red; puedes instalar otras voces con el botón inferior.\n\n" + motorConversacional.getVoiceStatus());
         form.addView(explanation);
         android.widget.CheckBox network = new android.widget.CheckBox(this);
         network.setText("Permitir voces que envían texto al motor por Internet");
@@ -1527,7 +1563,7 @@ public class MainActivity extends AppCompatActivity {
             choices.clear();
             choices.addAll(salve.core.voice.VoiceSelectionPolicy.available(motorConversacional.getVoiceChoices(), network.isChecked()));
             java.util.List<String> labels = new java.util.ArrayList<>();
-            labels.add("Automática: español de España, sin red si está disponible");
+            labels.add("Automática: español latinoamericano, sin red si está disponible");
             for (salve.core.voice.VoiceSelectionPolicy.Choice choice : choices) labels.add(choice.label());
             spinner.setAdapter(new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, labels));
             for (int i = 0; i < choices.size(); i++) if (choices.get(i).name.equals(profile.voiceName)) spinner.setSelection(i + 1);

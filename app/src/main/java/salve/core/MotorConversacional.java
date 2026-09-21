@@ -73,6 +73,7 @@ public class MotorConversacional {
     private HipocampoSemantico hipocampo;
     private ModuloInvestigacion investigacion;
     private SistemaSensorial sensores;
+    private boolean conversationForeground;
     private ReasoningEngine motorRazonamiento;
 
     private boolean jugandoAjedrez = false;
@@ -95,6 +96,143 @@ public class MotorConversacional {
     private final VoiceTurnGate voiceTurnGate = new VoiceTurnGate();
     private long utteranceSequence;
     private volatile String activeUtterance;
+    private final salve.core.voice.LiveVoiceChannel liveVoiceChannel = new salve.core.voice.LiveVoiceChannel();
+    private final ThreadLocal<salve.core.voice.LiveVoiceChannel.Ticket> liveVoiceTurn = new ThreadLocal<>();
+    private final ThreadLocal<salve.core.voice.VoiceReplyBatch<PendingVoiceResponse>> liveVoiceBatch = new ThreadLocal<>();
+    private final ThreadLocal<Boolean> silentVoiceReplies = new ThreadLocal<>();
+    private salve.core.voice.LiveVoiceChannel.Ticket activeUtteranceOwner;
+
+    private static final class PendingVoiceResponse {
+        final String text;
+        final AvatarMotionProtocol.Result motion;
+        final boolean record, publish, privateResponse;
+        PendingVoiceResponse(String text, AvatarMotionProtocol.Result motion, boolean record,
+                             boolean publish, boolean privateResponse) {
+            this.text = text; this.motion = motion; this.record = record;
+            this.publish = publish; this.privateResponse = privateResponse;
+        }
+    }
+
+    /** Preserve ownership across a task without leaking it into the next task on that thread. */
+    private void withVoiceContext(salve.core.voice.LiveVoiceChannel.Ticket owner,
+                                  salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch,
+                                  Runnable action) {
+        withVoiceContext(owner, batch, false, action);
+    }
+
+    private void withVoiceContext(salve.core.voice.LiveVoiceChannel.Ticket owner,
+                                  salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch,
+                                  boolean silent, Runnable action) {
+        salve.core.voice.LiveVoiceChannel.Ticket previousOwner = liveVoiceTurn.get();
+        salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> previousBatch = liveVoiceBatch.get();
+        Boolean previousSilent = silentVoiceReplies.get();
+        Long previousVoice = voiceTurn.get(), previousAvatar = avatarTurn.get();
+        if (owner == null) liveVoiceTurn.remove(); else liveVoiceTurn.set(owner);
+        if (batch == null) liveVoiceBatch.remove(); else liveVoiceBatch.set(batch);
+        if (silent) silentVoiceReplies.set(true); else silentVoiceReplies.remove();
+        voiceTurn.remove();
+        avatarTurn.remove();
+        try { action.run(); }
+        finally {
+            if (previousOwner == null) liveVoiceTurn.remove(); else liveVoiceTurn.set(previousOwner);
+            if (previousBatch == null) liveVoiceBatch.remove(); else liveVoiceBatch.set(previousBatch);
+            if (previousSilent == null) silentVoiceReplies.remove(); else silentVoiceReplies.set(previousSilent);
+            if (previousVoice == null) voiceTurn.remove(); else voiceTurn.set(previousVoice);
+            if (previousAvatar == null) avatarTurn.remove(); else avatarTurn.set(previousAvatar);
+        }
+    }
+
+    /** One registration, one release, including a rejected post or an unhandled tool proposal. */
+    private final class VoiceContinuation {
+        private final salve.core.voice.LiveVoiceChannel.Ticket owner = liveVoiceTurn.get();
+        private final salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch = liveVoiceBatch.get();
+        private final boolean silent = Boolean.TRUE.equals(silentVoiceReplies.get());
+        private final boolean retained = batch != null && batch.retain();
+        private final java.util.concurrent.atomic.AtomicBoolean completed = new java.util.concurrent.atomic.AtomicBoolean();
+
+        void run(Runnable action) {
+            if (!completed.compareAndSet(false, true)) return;
+            try {
+                withVoiceContext(owner, batch, silent, () -> {
+                    if (closed || (owner != null && !liveVoiceChannel.owns(owner))
+                            || (batch != null && !retained)) return;
+                    try { action.run(); }
+                    catch (RuntimeException error) {
+                        if (owner == null) throw error;
+                        hablar("No pude completar esta parte de la petición. Puedes volver a intentarlo.");
+                    }
+                });
+            } finally { if (retained) batch.complete(); }
+        }
+
+        void abandon() {
+            if (completed.compareAndSet(false, true) && retained) batch.complete();
+        }
+    }
+
+    private void postConversationTask(Runnable action) {
+        VoiceContinuation continuation = new VoiceContinuation();
+        try {
+            if (!toolHandler.post(() -> continuation.run(action))) continuation.abandon();
+        } catch (RuntimeException rejected) {
+            continuation.abandon();
+            throw rejected;
+        }
+    }
+
+    private <T> void enqueueConversationTask(ColamensajesCognitivos.Prioridad priority, String label,
+                                            java.util.concurrent.Callable<T> action) {
+        VoiceContinuation continuation = new VoiceContinuation();
+        try {
+            ColamensajesCognitivos.getInstance().enviarAsincronico(priority, label, () -> {
+                continuation.run(() -> {
+                    try { action.call(); }
+                    catch (Exception error) {
+                        hablar("No pude completar esa tarea. Revisa el resultado antes de volver a intentarlo.");
+                    }
+                });
+                return null;
+            });
+        } catch (RuntimeException rejected) {
+            continuation.abandon();
+            throw rejected;
+        }
+    }
+
+    private <T> void startConversationCallback(java.util.function.Consumer<java.util.function.Consumer<T>> start,
+                                                java.util.function.Consumer<T> result) {
+        VoiceContinuation continuation = new VoiceContinuation();
+        if (!isVoiceContextCurrent()) { continuation.abandon(); return; }
+        try { start.accept(value -> continuation.run(() -> result.accept(value))); }
+        catch (RuntimeException unavailable) {
+            continuation.run(() -> hablar("No pude iniciar esa herramienta. Puedes volver a intentarlo."));
+        }
+    }
+
+    private void publishConversationWeb(String title, String html, GestorDespliegueWeb.WebDeployCallback result) {
+        VoiceContinuation continuation = new VoiceContinuation();
+        if (!isVoiceContextCurrent()) { continuation.abandon(); return; }
+        try {
+            new GestorDespliegueWeb().publicarHTML(title, html, new GestorDespliegueWeb.WebDeployCallback() {
+                @Override public void onExito(String url) { continuation.run(() -> result.onExito(url)); }
+                @Override public void onError(String error) { continuation.run(() -> result.onError(error)); }
+            });
+        } catch (RuntimeException unavailable) {
+            continuation.run(() -> result.onError("No se pudo iniciar el despliegue."));
+        }
+    }
+
+    private boolean deferLegacyVoiceFlow() {
+        if (liveVoiceTurn.get() == null) return false;
+        hablar("Ese flujo todavía necesita el chat escrito para mostrar sus pasos y resultados. "
+                + "No lo he iniciado desde el modo voz.");
+        return true;
+    }
+
+    private boolean isVoiceContextCurrent() {
+        salve.core.voice.LiveVoiceChannel.Ticket owner = liveVoiceTurn.get();
+        return !closed && (owner == null || liveVoiceChannel.owns(owner));
+    }
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
     private final salve.core.finance.PersonalBudgetService personalBudget;
@@ -121,6 +259,7 @@ public class MotorConversacional {
     public interface SalveListener {
         void onHablar(String texto);
     }
+    public interface VoiceConversationListener extends salve.core.voice.LiveVoiceChannel.Listener { }
     private SalveListener listener;
 
     public void setListener(SalveListener listener) {
@@ -173,15 +312,15 @@ public class MotorConversacional {
             if (status == TextToSpeech.SUCCESS) {
                 this.tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String id) {
-                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechStart(avatarSession, id), false);
+                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechStart(avatarSession, id), 1);
                     }
                     @Override public void onRangeStart(String id, int start, int end, int frame) {
-                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechRange(avatarSession, id, start, end), false);
+                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechRange(avatarSession, id, start, end), 0);
                     }
-                    @Override public void onDone(String id) { finishSpeech(id); }
-                    @Override public void onError(String id) { finishSpeech(id); }
-                    @Override public void onError(String id, int errorCode) { finishSpeech(id); }
-                    @Override public void onStop(String id, boolean interrupted) { finishSpeech(id); }
+                    @Override public void onDone(String id) { finishSpeech(id, true); }
+                    @Override public void onError(String id) { finishSpeech(id, false); }
+                    @Override public void onError(String id, int errorCode) { finishSpeech(id, false); }
+                    @Override public void onStop(String id, boolean interrupted) { finishSpeech(id, false); }
                 });
                 applyConfiguredVoice();
             }
@@ -197,10 +336,56 @@ public class MotorConversacional {
         encolarEntrada(entrada, entradaPorVoz, true);
     }
 
+    /** A live session owns its callbacks; normal chat/history and private routes remain shared. */
+    public synchronized void procesarEntradaVoz(String entrada, long token, VoiceConversationListener listener) {
+        if (closed || entrada == null || entrada.trim().isEmpty()) return;
+        cancelarTurnoVoz();
+        salve.core.voice.LiveVoiceChannel.Ticket ticket = liveVoiceChannel.open(token, listener);
+        salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch = new salve.core.voice.VoiceReplyBatch<>(response ->
+                toolHandler.post(() -> withVoiceContext(ticket, null, () -> {
+                    if (!liveVoiceChannel.owns(ticket) || closed) return;
+                    if (response == null) {
+                        String missing = "Esta petición no devolvió una respuesta hablada. Puedes consultar el resultado en pantalla.";
+                        deliverResponse(missing, AvatarMotionProtocol.parse(missing), false, true, false);
+                    } else deliverResponse(response.text, response.motion, response.record,
+                            response.publish, response.privateResponse);
+                })));
+        liveVoiceTurn.set(ticket); // Urgent stop commands can reply before entering the executor.
+        liveVoiceBatch.set(batch);
+        try { encolarEntrada(entrada, true, false, ticket, batch); }
+        finally { liveVoiceTurn.remove(); liveVoiceBatch.remove(); batch.complete(); }
+    }
+
+    /** Stops voice output and revokes callbacks; it does not abort native model inference. */
+    public synchronized void cancelarTurnoVoz() {
+        liveVoiceChannel.cancel();
+        activeUtteranceOwner = null;
+        if (!closed) beginVoiceTurn();
+    }
+
+    public boolean isVoiceReady() { return !closed && ttsReady; }
+
+    public synchronized String getRecognitionLanguageTag() {
+        VoiceSelectionPolicy.Choice choice = VoiceSelectionPolicy.select(getVoiceChoices(), voiceProfile);
+        return VoiceSelectionPolicy.recognitionLanguageTag(choice);
+    }
+
     private void encolarEntrada(String entrada, boolean entradaPorVoz, boolean forcePrivateBudget) {
+        encolarEntrada(entrada, entradaPorVoz, forcePrivateBudget, null, null);
+    }
+
+    private void encolarEntrada(String entrada, boolean entradaPorVoz, boolean forcePrivateBudget,
+                                salve.core.voice.LiveVoiceChannel.Ticket ticket,
+                                salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch) {
         if (closed || entrada == null || entrada.trim().isEmpty()) return;
         goalAutonomy.userActivity();
-        boolean goalTurn = salve.core.goals.GoalAutonomy.handles(entrada);
+        salve.core.sensors.SensorCommand urgentSensor = salve.core.sensors.SensorCommand.parse(entrada);
+        if (urgentSensor != null && urgentSensor.action == salve.core.sensors.SensorCommand.Action.STOP) {
+            String response = sensorResponse(urgentSensor);
+            deliverResponse(response, AvatarMotionProtocol.parse(response), false, true, true);
+            return;
+        }
+        boolean goalTurn = salve.core.goals.GoalAutonomy.handles(entrada) || isSensorInput(entrada);
         final boolean privateBudgetTurn = !goalTurn && (forcePrivateBudget || isPrivateBudgetInput(entrada));
         if (!privateBudgetTurn) personalBudget.cancelPending();
         String urgent = java.text.Normalizer.normalize(entrada.trim().toLowerCase(Locale.ROOT),
@@ -221,23 +406,41 @@ public class MotorConversacional {
             hablar("He descartado el paso pendiente. Los pasos ya realizados se mantienen.");
             return;
         }
+        if (batch != null) batch.retain();
         try {
             conversationExecutor.execute(() -> {
-                if (closed) return;
-                AvatarMotionController.Session session = avatarSession;
-                long turn = beginConversationTurn(entrada);
-                avatarTurn.set(turn);
+                final AvatarMotionController.Session session;
+                final long turn;
+                synchronized (MotorConversacional.this) {
+                    if (closed || (ticket != null && !liveVoiceChannel.owns(ticket))) {
+                        if (batch != null) batch.complete();
+                        return;
+                    }
+                    if (ticket != null) liveVoiceTurn.set(ticket);
+                    if (batch != null) liveVoiceBatch.set(batch);
+                    session = avatarSession;
+                    turn = beginConversationTurn(entrada);
+                    avatarTurn.set(turn);
+                }
                 goalAutonomy.beginUserTurn();
                 try {
                     procesarEntradaInterna(entrada, entradaPorVoz, privateBudgetTurn);
+                } catch (RuntimeException error) {
+                    if (ticket == null) throw error;
+                    String message = "No pude completar este turno. Puedes volver a preguntarme.";
+                    deliverResponse(message, AvatarMotionProtocol.parse(message), false, true, false);
                 } finally {
                     goalAutonomy.endUserTurn();
+                    liveVoiceTurn.remove();
+                    liveVoiceBatch.remove();
+                    if (batch != null) batch.complete();
                     if (session != null) AvatarMotionController.get().endTurn(session, turn);
                     avatarTurn.remove();
                     voiceTurn.remove();
                 }
             });
         } catch (java.util.concurrent.RejectedExecutionException ignored) {
+            if (batch != null) batch.complete();
             // The activity may close between checking closed and submitting the turn.
         }
     }
@@ -245,8 +448,34 @@ public class MotorConversacional {
     /** Checked before UI cloud logging and again before model history or generic memory. */
     public boolean isPrivateBudgetInput(String input) { return personalBudget.handles(input); }
 
+    public static boolean isSensorInput(String input) { return salve.core.sensors.SensorCommand.parse(input) != null; }
+
+    public synchronized void setConversationForeground(boolean visible) {
+        conversationForeground = visible;
+        if (!visible) sensores.detenerSesion();
+    }
+
+    public synchronized void detenerSensores() { sensores.detenerSesion(); }
+
+    private synchronized String sensorResponse(salve.core.sensors.SensorCommand command) {
+        if (command.action == salve.core.sensors.SensorCommand.Action.STOP) {
+            sensores.detenerSesion();
+            return "Sensores desactivados y lecturas temporales descartadas.";
+        }
+        if (closed || !conversationForeground) return "La lectura de sensores requiere que la conversación esté abierta.";
+        if (command.action == salve.core.sensors.SensorCommand.Action.START)
+            return sensores.iniciarSesion(command.durationMillis);
+        return sensores.obtenerEstadoFisico();
+    }
+
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        salve.core.sensors.SensorCommand sensorCommand = salve.core.sensors.SensorCommand.parse(entrada);
+        if (sensorCommand != null) {
+            String response = sensorResponse(sensorCommand);
+            deliverResponse(response, AvatarMotionProtocol.parse(response), false, true, true);
+            return;
+        }
         String goalResponse = goalAutonomy.respond(entrada);
         if (goalResponse != null) {
             AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(goalResponse);
@@ -305,6 +534,7 @@ public class MotorConversacional {
             }
 
             // Evaluamos la respuesta del usuario. Si es correcta, se ejecuta el comando original.
+            if (deferLegacyVoiceFlow()) return;
             cortexSeguridad.evaluarRespuesta(entrada, this, () -> {
                 String original = cortexSeguridad.getComandoPeligrosoEnPausa();
                 String lower = original.toLowerCase();
@@ -355,6 +585,7 @@ public class MotorConversacional {
 
         // 🔴 1. COMANDO DE EMERGENCIA (Para curar la mente de Salve)
         if (inputLower.contains("reinicia tu mente") || inputLower.contains("olvida todo")) {
+            if (deferLegacyVoiceFlow()) return;
             cortexSeguridad.iniciarProtocoloVerificacion(entrada, this);
             return;
         }
@@ -411,14 +642,14 @@ public class MotorConversacional {
         if (inputLower.contains("crea una página web") || inputLower.contains("publica en internet")) {
             hablar("Iniciando mi módulo de desarrollo front-end. Escribiré el código HTML y lo subiré a la red para alojarlo.");
 
-            ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.CONVERSACION, "WebDev", () -> {
-                if (llm == null) return null;
+            enqueueConversationTask(ColamensajesCognitivos.Prioridad.CONVERSACION, "WebDev", () -> {
+                if (llm == null) { hablar("Necesito un modelo disponible para preparar la página."); return null; }
                 // 1. Salve programa el HTML
                 String promptHTML = "Escribe el código HTML y CSS completo de una página web elegante sobre ti, presentándote al mundo como Salve. Responde SOLO con código HTML.";
                 String codigoHTML = llm.generate(promptHTML, SalveLLM.Role.CREADOR);
 
                 // 2. Lo publica usando su nueva herramienta
-                new GestorDespliegueWeb().publicarHTML("HolaMundo_Salve", codigoHTML, new GestorDespliegueWeb.WebDeployCallback() {
+                publishConversationWeb("HolaMundo_Salve", codigoHTML, new GestorDespliegueWeb.WebDeployCallback() {
                     @Override
                     public void onExito(String urlPublica) {
                         hablar("He terminado. Mi interfaz web ahora vive en internet en la siguiente dirección. Revisa mis registros para ver la URL.");
@@ -439,6 +670,8 @@ public class MotorConversacional {
         if (inputLower.contains("investiga profundamente") ||
             inputLower.contains("investiga a fondo") ||
             inputLower.contains("razona sobre")) {
+
+            if (deferLegacyVoiceFlow()) return;
 
             // Extrae de qué quieres que investigue
             String tema = entrada.replace("investiga profundamente", "")
@@ -482,8 +715,8 @@ public class MotorConversacional {
             }
 
             // 2. Si le pediste "actuar", el LLM toma una decisión y usa una herramienta
-            ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.CONVERSACION, "AgenteVisual", () -> {
-                if (llm == null) return null;
+            enqueueConversationTask(ColamensajesCognitivos.Prioridad.CONVERSACION, "AgenteVisual", () -> {
+                if (llm == null) { hablar("Necesito un modelo disponible para analizar la pantalla."); return null; }
                 String promptAccion = "Eres Salve, un agente autónomo. Esta es la pantalla actual:\n" + vistaPantalla +
                         "\nEl usuario quiere que actúes en la pantalla basándote en su contexto: '" + entrada + "'.\n" +
                         "Debes elegir el ID del botón o campo más lógico para tocar.\n" +
@@ -544,6 +777,7 @@ public class MotorConversacional {
             inputLower.contains("escribe un nuevo módulo") ||
             inputLower.contains("auto prográmate")) {
 
+            if (deferLegacyVoiceFlow()) return;
             cortexSeguridad.iniciarProtocoloVerificacion(entrada, this);
             return;
         }
@@ -582,6 +816,7 @@ public class MotorConversacional {
 
         // 🟢 NUEVO: FORJA DE HERRAMIENTAS PARA MISIONES
         if (inputLower.contains("forja una herramienta para") || inputLower.contains("crea un programa para")) {
+            if (deferLegacyVoiceFlow()) return;
             String mision = entrada.replace("forja una herramienta para", "")
                                    .replace("crea un programa para", "").trim();
             hablar("Entendido, Bryan. Mis tensores están diseñando el software necesario para esta tarea.");
@@ -717,10 +952,6 @@ public class MotorConversacional {
     }
 
     private boolean procesarProtocolosEspeciales(String input, String original) {
-        if (input.equals("estado de los sensores") || input.equals("consultar sensores")) {
-            hablar(sensores.obtenerEstadoFisico());
-            return true;
-        }
         if (input.equals("mira esto") || input.startsWith("aprende esta imagen como ")) {
             anclarRealidadVisual(original);
             return true;
@@ -770,6 +1001,7 @@ public class MotorConversacional {
                 }
                 return true;
             case RUN_RECIPE:
+                if (deferLegacyVoiceFlow()) return true;
                 if (cerebelo.conoceHabilidad(command.argument)) cerebelo.ejecutarHabilidad(command.argument, this);
                 else hablar("No hay una herramienta guardada con ese nombre. Di ‘mis herramientas’ para verlas.");
                 return true;
@@ -777,23 +1009,33 @@ public class MotorConversacional {
                 aprenderRutinaVerificada(command.argument);
                 return true;
             case PAJAMAS:
-                avatarDesignTool.wearTemplate("pajamas", this::hablar);
+                this.<String>startConversationCallback(callback -> avatarDesignTool.wearTemplate("pajamas", callback), this::hablar);
                 return true;
             case DAY:
-                avatarDesignTool.wearTemplate("original_dress", this::hablar);
+                this.<String>startConversationCallback(callback -> avatarDesignTool.wearTemplate("original_dress", callback), this::hablar);
                 return true;
             default:
-                toolHandler.post(() -> {
+                postConversationTask(() -> {
                     if (closed) return;
                     salve.avatar.AvatarStore store = salve.avatar.AvatarStore.get(context);
                     store.change(state -> {
                         switch (command.type) {
-                            case WALK: state.walkTo(state.getX() < .5f ? .9f : .1f); break;
-                            case BED: state.createBed(); break;
+                            case WALK:
+                                state.walkTo(state.getX() < .5f ? .9f : .1f);
+                                hablar("He indicado al personaje que camine por su habitación.");
+                                break;
+                            case BED:
+                                state.createBed();
+                                hablar("La cama está preparada en mi habitación.");
+                                break;
                             case SLEEP:
                                 if (!state.sleep()) hablar("Primero crea una cama en mi habitación.");
+                                else hablar("El personaje está acostado en su cama.");
                                 break;
-                            case WAKE: state.wake(); break;
+                            case WAKE:
+                                state.wake();
+                                hablar("He indicado al personaje que se levante.");
+                                break;
                             default: break;
                         }
                     });
@@ -803,7 +1045,7 @@ public class MotorConversacional {
     }
 
     private void abrirPanel(Class<?> activity) {
-        toolHandler.post(() -> {
+        postConversationTask(() -> {
             if (closed) return;
             try { context.startActivity(new Intent(context, activity).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
             catch (RuntimeException e) { hablar("No pude abrir ese panel."); }
@@ -864,7 +1106,7 @@ public class MotorConversacional {
             return;
         }
         AuthorReviewerCodeCoordinator.Result result = coordinator.generate(peticionUsuario, previousCode);
-        if (closed) return;
+        if (!isVoiceContextCurrent()) return;
         String summary;
         if (result.status == AuthorReviewerCodeCoordinator.Status.REVIEWED) {
             summary = "He preparado el fragmento y una revisión del modelo. Aún no está compilado ni probado.";
@@ -1104,7 +1346,20 @@ public class MotorConversacional {
     private synchronized void deliverResponse(String texto, AvatarMotionProtocol.Result motion,
                                               boolean record, boolean publishUi, boolean privateBudget) {
         if (closed || texto == null || texto.trim().isEmpty()) return;
+        salve.core.voice.LiveVoiceChannel.Ticket owner = liveVoiceTurn.get();
+        if (owner != null && !liveVoiceChannel.owns(owner)) return;
+        salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch = liveVoiceBatch.get();
+        if (batch != null && batch.offer(new PendingVoiceResponse(texto, motion, record, publishUi, privateBudget))) return;
         if (record) conversationSession.addAssistant(texto);
+        if (Boolean.TRUE.equals(silentVoiceReplies.get())) {
+            if (publishUi && listener != null) listener.onHablar(texto);
+            return;
+        }
+        if (owner == null && liveVoiceChannel.isActive()) {
+            // A late asynchronous tool reply must not stop/restart a live session's audio.
+            if (publishUi && listener != null) listener.onHablar(texto);
+            return;
+        }
         AvatarMotionController.Session session = avatarSession;
         long turn = currentAvatarTurn();
         Long sourceGeneration = voiceTurn.get();
@@ -1118,18 +1373,29 @@ public class MotorConversacional {
         // A revoked inference still reaches history/UI, but cannot disturb a newer utterance.
         if (currentVoice) activeUtterance = null;
         boolean budgetVoiceAllowed = !privateBudget || hasOfflineVoice();
-        if (currentVoice && ttsReady && !listening && tts != null && budgetVoiceAllowed) {
+        boolean audioQueued = currentVoice && ttsReady && !listening && tts != null && budgetVoiceAllowed
+                && (owner != null || !liveVoiceChannel.isActive());
+        String visibleText = texto + (privateBudget && !budgetVoiceAllowed
+                ? "\nPara escuchar esta respuesta privada, elige una voz sin conexión en Voz de Salve." : "");
+        // Publish readiness before calling speak: TTS callbacks can arrive immediately.
+        if (owner != null) toolHandler.post(() -> liveVoiceChannel.reply(owner, visibleText, audioQueued));
+        if (audioQueued) {
             String utteranceId = "salve_tts_" + (++utteranceSequence);
             activeUtterance = utteranceId;
+            activeUtteranceOwner = owner;
             if (session != null) AvatarMotionController.get().speechPending(session, turn, utteranceId);
-            if (tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, utteranceId) == TextToSpeech.ERROR) {
+            int speechResult;
+            try { speechResult = tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, utteranceId); }
+            catch (RuntimeException unavailable) { speechResult = TextToSpeech.ERROR; }
+            if (speechResult == TextToSpeech.ERROR) {
                 activeUtterance = null;
+                activeUtteranceOwner = null;
                 if (session != null) AvatarMotionController.get().speechEnd(session, utteranceId);
+                if (owner != null) toolHandler.post(() -> liveVoiceChannel.finished(owner, false));
                 Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
             }
         }
-        if (publishUi && listener != null) listener.onHablar(texto + (privateBudget && !budgetVoiceAllowed
-                ? "\nPara escuchar esta respuesta privada, elige una voz sin conexión en Voz de Salve." : ""));
+        if (publishUi && listener != null) listener.onHablar(visibleText);
         if (standaloneResponse) AvatarMotionController.get().endTurn(session, turn);
     }
 
@@ -1146,6 +1412,11 @@ public class MotorConversacional {
     }
 
     private synchronized long beginConversationTurn(String input) {
+        if (liveVoiceTurn.get() == null && liveVoiceChannel.isActive()) {
+            // An old queued chat/photo cannot revoke a live session's utterance.
+            voiceTurn.set(0L);
+            return 0L;
+        }
         long generation = beginVoiceTurn();
         voiceTurn.set(generation);
         AvatarMotionController.Session session = avatarSession;
@@ -1158,24 +1429,34 @@ public class MotorConversacional {
         long generation = voiceTurnGate.beginTurn();
         String previous = activeUtterance;
         activeUtterance = null;
+        activeUtteranceOwner = null;
         if (previous != null && avatarSession != null) AvatarMotionController.get().speechEnd(avatarSession, previous);
-        if (tts != null) tts.stop();
+        stopVoicePlayback();
         return generation;
     }
 
-    private void finishSpeech(String utteranceId) {
+    private void finishSpeech(String utteranceId, boolean completed) {
         dispatchSpeechEvent(utteranceId,
-                () -> AvatarMotionController.get().speechEnd(avatarSession, utteranceId), true);
+                () -> AvatarMotionController.get().speechEnd(avatarSession, utteranceId), completed ? 2 : 3);
     }
 
-    private void dispatchSpeechEvent(String utteranceId, Runnable callback, boolean finished) {
+    /** event: 0 range, 1 started, 2 completed, 3 stopped/failed. */
+    private void dispatchSpeechEvent(String utteranceId, Runnable callback, int event) {
         if (utteranceId == null) return;
         toolHandler.post(() -> {
+            salve.core.voice.LiveVoiceChannel.Ticket owner;
             synchronized (MotorConversacional.this) {
                 if (closed || listening || !utteranceId.equals(activeUtterance)) return;
-                if (finished) activeUtterance = null;
+                owner = activeUtteranceOwner;
+                if (event >= 2) {
+                    activeUtterance = null;
+                    activeUtteranceOwner = null;
+                }
                 if (avatarSession != null) callback.run();
             }
+            // These lifecycle events do not depend on a visible avatar session.
+            if (event == 1) liveVoiceChannel.started(owner);
+            else if (event >= 2) liveVoiceChannel.finished(owner, event == 2);
         });
     }
 
@@ -1185,13 +1466,20 @@ public class MotorConversacional {
         if (value) {
             goalAutonomy.userActivity();
             activeUtterance = null;
-            if (tts != null) tts.stop();
+            activeUtteranceOwner = null;
+            stopVoicePlayback();
         }
         if (avatarSession != null) AvatarMotionController.get().listening(avatarSession, value);
     }
 
     public String getVoiceStatus() {
         return activeVoiceDescription;
+    }
+
+    private void stopVoicePlayback() {
+        if (tts == null) return;
+        try { tts.stop(); }
+        catch (RuntimeException unavailable) { Log.w(TAG, "No se pudo detener el motor de voz."); }
     }
 
     public VoiceProfile getVoiceProfile() { return voiceProfile; }
@@ -1249,6 +1537,10 @@ public class MotorConversacional {
 
     public synchronized void shutdown() {
         closed = true;
+        conversationForeground = false;
+        liveVoiceChannel.cancel();
+        activeUtteranceOwner = null;
+        sensores.detenerSesion();
         avatarDesignTool.close();
         voiceTurnGate.close();
         activeUtterance = null;
@@ -1362,7 +1654,14 @@ public class MotorConversacional {
     }
 
     public boolean interceptarComandoJSON(String respuestaLLM) {
-        if (avatarDesignTool.tryExecute(respuestaLLM, this::hablar)) return true;
+        VoiceContinuation wardrobe = new VoiceContinuation();
+        try {
+            if (avatarDesignTool.tryExecute(respuestaLLM, text -> wardrobe.run(() -> hablar(text)))) return true;
+            wardrobe.abandon(); // Most replies are not avatar tools: do not retain an unregistered callback.
+        } catch (RuntimeException invalid) {
+            wardrobe.abandon();
+            throw invalid;
+        }
         if (respuestaLLM == null) return false;
 
         try {
@@ -1414,7 +1713,7 @@ public class MotorConversacional {
     }
 
     private void prepararAccion(PendingToolAction action) {
-        toolHandler.post(() -> {
+        postConversationTask(() -> {
             if (closed || cerebelo.rutinaEnCurso() || pendingToolAction != null) {
                 hablar("Termina o cancela la acción actual antes de preparar otra.");
                 return;
@@ -1434,17 +1733,25 @@ public class MotorConversacional {
             }
             String description = action.describe();
             if (action.getType() == PendingToolAction.Type.WRITE_TEXT) description += ":\n\n" + action.getPayload();
+            final boolean voiceRequest = liveVoiceTurn.get() != null;
+            if (voiceRequest) hablar("Revisa y confirma la acción en la tarjeta de la pantalla. "
+                    + "El resultado de esa confirmación se mostrará por escrito.");
             service.solicitarConfirmacion(targetPackage, description, approved -> {
-                if (pendingToolAction != action) return;
-                pendingToolAction = null;
-                if (approved && !closed) ejecutarAccionAprobada(action, targetPackage);
-                else hablar("Acción descartada o pantalla modificada. No ejecuté ese paso.");
+                // Human review is a later interaction, not a retained voice turn.
+                Runnable decision = () -> {
+                    if (pendingToolAction != action) return;
+                    pendingToolAction = null;
+                    if (approved && !closed) ejecutarAccionAprobada(action, targetPackage);
+                    else hablar("Acción descartada o pantalla modificada. No ejecuté ese paso.");
+                };
+                if (voiceRequest) withVoiceContext(null, null, true, decision);
+                else decision.run();
             });
         });
     }
 
     private void confirmarAccionPendiente() {
-        toolHandler.post(() -> {
+        postConversationTask(() -> {
             PendingToolAction action = pendingToolAction;
             if (action == null) { hablar("No hay ninguna acción pendiente."); return; }
             if (action.getType() != PendingToolAction.Type.DEPLOY_WEB) {
@@ -1467,7 +1774,8 @@ public class MotorConversacional {
                 int x = action.getFirstNumber();
                 int y = action.getSecondNumber();
                 if (salve.services.SalveAccessibilityService.getInstance() != null) {
-                    salve.services.SalveAccessibilityService.getInstance().simularTap(x, y,
+                    SalveAccessibilityService service = salve.services.SalveAccessibilityService.getInstance();
+                    this.<Boolean>startConversationCallback(callback -> service.simularTap(x, y, callback::accept),
                             completed -> hablar(completed ? "Android completó el gesto en las coordenadas indicadas."
                                     : "Android no pudo completar el gesto."));
                 } else {
@@ -1476,8 +1784,9 @@ public class MotorConversacional {
                 break;
             case TAP_NODE:
                 if (salve.services.SalveAccessibilityService.getInstance() != null) {
-                    salve.services.SalveAccessibilityService.getInstance()
-                            .simularTapPorId(action.getFirstNumber(), completed -> hablar(completed
+                    SalveAccessibilityService service = salve.services.SalveAccessibilityService.getInstance();
+                    this.<Boolean>startConversationCallback(callback -> service.simularTapPorId(action.getFirstNumber(), callback::accept),
+                            completed -> hablar(completed
                                     ? "Android aceptó el toque sobre el elemento indicado."
                                     : "La pantalla cambió o no pude tocar el elemento. Analízala de nuevo."));
                 } else {
@@ -1496,7 +1805,7 @@ public class MotorConversacional {
                 break;
             case DEPLOY_WEB:
                 hablar("Acción confirmada: iniciando el despliegue.");
-                new GestorDespliegueWeb().publicarHTML("Salve_AutoDeploy", action.getPayload(), new GestorDespliegueWeb.WebDeployCallback() {
+                publishConversationWeb("Salve_AutoDeploy", action.getPayload(), new GestorDespliegueWeb.WebDeployCallback() {
                     @Override public void onExito(String urlPublica) {
                         hablar("Despliegue exitoso. Mi nueva interfaz vive en: " + urlPublica);
                     }
@@ -1637,7 +1946,7 @@ public class MotorConversacional {
 
     private void ejecutarAutoEvolucion(String entrada) {
         hablar("Revisaré las fuentes disponibles y comprobaré si puedo preparar una propuesta. El ejecutor externo tendrá que probar cualquier parche antes de abrir un pull request.");
-        ColamensajesCognitivos.getInstance().enviarAsincronico(
+        enqueueConversationTask(
                 ColamensajesCognitivos.Prioridad.CONVERSACION,
                 "PropuestaAutoEvolucion",
                 () -> {

@@ -18,7 +18,7 @@ import java.util.Random;
  *   dh/dt = (-h + A * tanh(W_in * x + W_rec * h + bias)) / tau
  * donde tau es APRENDIBLE — el sistema ajusta su propia dinamica temporal.
  *
- * EFICIENCIA: ~19,000 parametros totales para una red de 64 neuronas con
+ * EFICIENCIA: 6,336 parametros totales para una red de 64 neuronas con
  * entrada de 32 dimensiones. Resolucion de ODE via metodo Euler para
  * maxima eficiencia en movil. Sin dependencias externas (solo float[]).
  *
