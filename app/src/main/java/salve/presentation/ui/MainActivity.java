@@ -95,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
     private final java.util.concurrent.ExecutorService inferenceChecks =
             java.util.concurrent.Executors.newSingleThreadExecutor();
     private String visualQuestion;
+    private boolean visualLocalOnly;
     private final ActivityResultLauncher<String[]> localModelPicker = registerForActivityResult(
             new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri != null) importarModeloLocal(uri);
@@ -104,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
                 String question = visualQuestion;
                 visualQuestion = null;
                 if (photo != null && this.motorConversacional != null) {
-                    this.motorConversacional.procesarImagen(question, photo);
+                    this.motorConversacional.procesarImagen(question, photo, visualLocalOnly);
                 } else {
                     if (photo != null) photo.recycle();
                     Toast.makeText(this, "No se capturó ninguna foto.", Toast.LENGTH_SHORT).show();
@@ -165,14 +166,13 @@ public class MainActivity extends AppCompatActivity {
 
     /** Directorio interno preferido (se crea si no existe). */
     private File getModelsRoot() {
-        File dir = new File(getFilesDir(), MODELS_DIR);
-        if (!dir.exists()) dir.mkdirs();
-        return dir;
+        return ModelStore.dir(this);
     }
 
     /** Posibles raíces donde puede haber modelos (interno, externo app, y descargas públicas). */
     private List<File> getModelRoots() {
         List<File> roots = new ArrayList<>();
+        roots.add(ModelStore.dir(this));
         // Interno de la app
         roots.add(new File(getFilesDir(), MODELS_DIR));
 
@@ -354,101 +354,12 @@ public class MainActivity extends AppCompatActivity {
         return (p == null) ? null : new File(p);
     }
 
-    /**
-     * Verifica modelos:
-     * ✅ lista todos los modelos locales detectados (carpetas -MLC o .gguf)
-     * ❌ si no hay, SOLO registra en log y un toast suave
-     * 💾 guarda el modelo preferido para su carga posterior por MotorConversacional
-     */
+    /** Returning from camera/settings must not select a different model or move downloaded files. */
     private boolean checkModelsAndNotify() {
-        List<File> modelos = findAllGgufAllRoots();
-
-        // Filtrar sólo aquellos que tienen mlc-chat-config.json o son archivos directos soportados
-        List<File> compatibles = new ArrayList<>();
-        for (File f : modelos) {
-            if (f.isFile()) {
-                String name = f.getName().toLowerCase(Locale.ROOT);
-                if (name.endsWith(".gguf") || name.endsWith(".litertlm") || name.endsWith(".task")) {
-                    compatibles.add(f);
-                }
-            } else if (f.isDirectory()) {
-                if (hasMlcConfig(f)) {
-                    compatibles.add(f);
-                }
-            }
-        }
-
-        if (compatibles.isEmpty()) {
-            StringBuilder msg = new StringBuilder("❌ No hay modelos locales detectados.\nRutas revisadas:\n");
-            for (File r : getModelRoots()) {
-                msg.append(" • ").append(r.getAbsolutePath()).append('\n');
-            }
-            String report = msg.toString();
-            Log.d("SalveDL/Status", report);
-
-            runOnUiThread(() -> Toast.makeText(
-                    this,
-                    "Aún no hay modelos listos. Busca en MEGA Downloads o espera la descarga.",
-                    Toast.LENGTH_SHORT
-            ).show());
-
-            return false;
-        }
-
-        // Orden sugerido: por tamaño (carpetas o archivos) descendente
-        compatibles.sort((a, b) -> Long.compare(modelSize(b), modelSize(a)));
-        File elegido = compatibles.get(0);
-
-        // 🟢 TRASLADO AUTOMÁTICO: Si el modelo está fuera de la app, intentamos traerlo dentro
-        File rootInterna = getModelsRoot();
-        if (!elegido.getAbsolutePath().startsWith(getFilesDir().getAbsolutePath())) {
-            Log.i("SalveLLM", "Detectado modelo externo: " + elegido.getAbsolutePath() + ". Iniciando traslado a carpeta segura...");
-            File destino = new File(rootInterna, elegido.getName());
-            
-            new Thread(() -> {
-                boolean exito = false;
-                if (elegido.isDirectory()) {
-                    exito = moveDirWithFallback(elegido, destino);
-                } else {
-                    exito = moveFileWithFallback(elegido, destino);
-                }
-                
-                if (exito) {
-                    Log.i("SalveLLM", "Traslado completado con éxito a: " + destino.getAbsolutePath());
-                    savePreferredModel(destino);
-                    try { SalveLLM.getInstance(getApplicationContext()).forceReloadModel(); } catch(Exception ignored){}
-                }
-            }).start();
-        }
-
-        // 💾 Persistir la elección para que el motor lo cargue
-        savePreferredModel(elegido);
-        // ⚠ Recargar el motor LLM para usar el nuevo modelo inmediatamente.
-        //   Si falla, seguimos con el fallback sin interrumpir la app.
-        try {
-            SalveLLM.getInstance(getApplicationContext()).forceReloadModel();
-        } catch (Exception e) {
-            Log.e("SalveDL/LLMReload", "Error al recargar el modelo local", e);
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("✅ Modelos detectados (").append(compatibles.size()).append(")\n");
-        for (int i = 0; i < Math.min(8, compatibles.size()); i++) {
-            File f = compatibles.get(i);
-            sb.append(" • ").append(f.getName())
-                    .append(" — ").append(humanGB(modelSize(f)))
-                    .append("\n    ").append(f.getAbsolutePath()).append("\n");
-        }
-        sb.append("Total local: ").append(humanGB(totalSize(compatibles))).append("\n")
-                .append("Modelo preferido ahora: ").append(elegido.getName());
-
-        String report = sb.toString();
-        Log.d("SalveDL/Status", "\n" + report);
-
-        runOnUiThread(() ->
-                Toast.makeText(this, "Modelos listos: " + modelos.size(), Toast.LENGTH_LONG).show()
-        );
-        return true;
+        String selected = getPreferredModelPath(this);
+        boolean exists = selected != null && new File(selected).exists();
+        Log.d("SalveDL/Status", exists ? "Modelo seleccionado conservado" : "Modelo local pendiente de instalar");
+        return exists;
     }
 
     /** Lista de modelos detectados agrupados por carpeta padre o nombre de archivo (para diagnóstico). */
@@ -791,7 +702,10 @@ public class MainActivity extends AppCompatActivity {
             startService(serviceIntent);
         }
 
-        if (savedInstanceState != null) visualQuestion = savedInstanceState.getString("visual_question");
+        if (savedInstanceState != null) {
+            visualQuestion = savedInstanceState.getString("visual_question");
+            visualLocalOnly = savedInstanceState.getBoolean("visual_local_only", false);
+        }
 
         // **Inicializar PDFBox para Android**
         PDFBoxResourceLoader.init(getApplicationContext());
@@ -1010,9 +924,10 @@ public class MainActivity extends AppCompatActivity {
         // ===== manejar Intents de compartir =====
         handleShareIntent(getIntent());
 
-        // ===== MIGRAR (si tenías modelos en carpetas viejas) y ARRANCAR DESCARGAS =====
-        migrateOldModelsIfAny();
-        iniciarDescargaModelos(); // idempotente (solo descarga los que falten/estén corruptos)
+        // Preserve existing model paths. New downloads/imports use app-private storage.
+        if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("gemma_download_requested", false)) {
+            iniciarDescargaModelos();
+        }
     }
 
     // Si la Activity ya estaba abierta y llega un nuevo share, lo recibimos aquí
@@ -1034,8 +949,8 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Activa las notificaciones para ver el progreso en segundo plano.", Toast.LENGTH_LONG).show();
         }
 
-        // Comprobación visible del estado de los modelos (en segundo plano)
-        new Thread(this::checkModelsAndNotify).start();
+        // Consulta de estado sin sustituir el modelo elegido.
+        checkModelsAndNotify();
 
         // Log extra para ver siempre qué modelo local quedó elegido
         String preferredModel = getPreferredModelPath(this);
@@ -1566,6 +1481,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         outState.putString("visual_question", visualQuestion);
+        outState.putBoolean("visual_local_only", visualLocalOnly);
         super.onSaveInstanceState(outState);
     }
 
@@ -1587,21 +1503,55 @@ public class MainActivity extends AppCompatActivity {
 
     private void mostrarAjustesIA() {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
-                .setItems(new String[]{"Configurar Gemini", "Probar Gemini", "Seleccionar modelo local", "Probar modelo local", "Tomar foto y preguntar"},
-                        (dialog, which) -> {
-                            if (which == 0) configurarGemini();
-                            else if (which == 1) probarModelo(false);
-                            else if (which == 2) localModelPicker.launch(new String[]{"*/*"});
-                            else if (which == 3) probarModelo(true);
-                            else solicitarFotoAnalisis();
-                        })
+                .setItems(new String[]{"Descargar o reanudar Gemma 4 (2,6 GB)", "Usar modelo local",
+                        "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini"}, (dialog, which) -> {
+                    switch (which) {
+                        case 0: mostrarDescargaGemma(); break;
+                        case 1:
+                            String selected = getPreferredModelPath(this);
+                            if (selected == null || !new File(selected).exists()) mostrarDescargaGemma();
+                            else {
+                                SalveLLM.getInstance(this).setLocalOnly(true);
+                                Toast.makeText(this, "Chat y fotos en modo local.", Toast.LENGTH_SHORT).show();
+                            }
+                            break;
+                        case 2: probarModelo(true); break;
+                        case 3: localModelPicker.launch(new String[]{"*/*"}); break;
+                        case 4: solicitarFotoAnalisis(); break;
+                        case 5: configurarGemini(); break;
+                        case 6:
+                            if (!GeminiService.getInstance(this).isAvailable()) configurarGemini();
+                            else {
+                                SalveLLM.getInstance(this).setLocalOnly(false);
+                                Toast.makeText(this, "Chat con Gemini activado.", Toast.LENGTH_SHORT).show();
+                            }
+                            break;
+                        case 7: probarModelo(false); break;
+                        default: break;
+                    }
+                })
                 .setNeutralButton("Estado", (dialog, which) -> new AlertDialog.Builder(this)
                         .setTitle("Estado de los motores")
-                        .setMessage(SalveLLM.getInstance(this).getStatusDescription() + "\n"
-                                + (GeminiService.getInstance(this).isAvailable()
-                                ? "Gemini: clave configurada; usa Probar Gemini para comprobarla"
-                                : "Gemini: sin clave API") + "\n" + motorConversacional.getVoiceStatus())
+                        .setMessage((SalveLLM.getInstance(this).isLocalOnly() ? "Chat y fotos: local\n" : "Chat y fotos: Gemini\n")
+                                + SalveLLM.getInstance(this).getStatusDescription() + "\n"
+                                + (GeminiService.getInstance(this).isAvailable() ? "Gemini: clave configurada" : "Gemini: sin clave API")
+                                + "\n" + motorConversacional.getVoiceStatus())
                         .setPositiveButton("Cerrar", null).show())
+                .setNegativeButton("Cerrar", null).show();
+    }
+
+    private void mostrarDescargaGemma() {
+        new AlertDialog.Builder(this).setTitle("Gemma 4 E2B para Salve")
+                .setMessage("Descarga de unos 2,6 GB desde Hugging Face. Reserva unos 3 GB libres. "
+                        + "El modelo se guarda aparte de la aplicación. Podrás pausarlo y reanudarlo; "
+                        + "se activará después de verificar el archivo y probar una respuesta. "
+                        + "Después, el chat y las fotos podrán procesarse en el móvil.")
+                .setPositiveButton("Descargar por Wi-Fi", (d, which) -> iniciarDescargaModelos())
+                .setNeutralButton("Usar datos móviles", (d, which) -> {
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("gemma_download_requested", true).apply();
+                    modelDownloadViewModel.startDownload(true);
+                })
                 .setNegativeButton("Cerrar", null).show();
     }
 
@@ -1653,7 +1603,7 @@ public class MainActivity extends AppCompatActivity {
                 String extension;
                 if (name.endsWith(".task")) extension = ".task";
                 else if (name.endsWith(".litertlm")) extension = ".litertlm";
-                else throw new IllegalArgumentException("Selecciona un modelo MediaPipe .task o .litertlm. GGUF no tiene ejecutor en esta app.");
+                else throw new IllegalArgumentException("Selecciona un modelo LiteRT-LM .litertlm o MediaPipe .task. GGUF no tiene ejecutor en esta app.");
                 imported = File.createTempFile("imported-", extension, getModelsRoot());
                 try (InputStream source = getContentResolver().openInputStream(uri);
                      FileOutputStream target = new FileOutputStream(imported)) {
@@ -1666,11 +1616,13 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 if (imported.length() == 0) throw new java.io.IOException("Archivo vacío");
-                savePreferredModel(imported);
-                stored = true;
                 SalveLLM engine = SalveLLM.getInstance(getApplicationContext());
-                engine.forceReloadModel();
-                report = engine.getStatusDescription() + ". Usa Probar modelo local para verificar una respuesta.";
+                ModelResult activation = engine.activateDownloadedModel(imported.getAbsolutePath(), false,
+                        () -> Thread.currentThread().isInterrupted());
+                stored = activation.isSuccess();
+                report = stored
+                        ? engine.getStatusDescription() + ". Respuesta comprobada en " + activation.getLatencyMillis() + " ms."
+                        : "No se activó el archivo importado: " + activation.getError();
             } catch (IllegalArgumentException e) { report = e.getMessage(); }
             catch (Exception e) { report = "No se pudo importar el modelo. Revisa el archivo y el espacio disponible."; }
             finally { if (!stored && imported != null) imported.delete(); }
@@ -1704,10 +1656,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void solicitarFotoAnalisis() {
-        if (!GeminiService.getInstance(this).isAvailable()) { configurarGemini(); return; }
+        SalveLLM local = SalveLLM.getInstance(this);
+        visualLocalOnly = local.isLocalOnly();
+        if (visualLocalOnly && !local.supportsVision()) {
+            Toast.makeText(this, "Descarga y activa Gemma 4 para analizar fotos en el móvil.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (!visualLocalOnly && !GeminiService.getInstance(this).isAvailable()) { configurarGemini(); return; }
         visualQuestion = inputChat.getText().toString().trim();
-        new AlertDialog.Builder(this).setTitle("Analizar foto con Gemini")
-                .setMessage("Se enviará la foto que tomes a Google para responder a tu pregunta. "
+        new AlertDialog.Builder(this).setTitle(visualLocalOnly ? "Analizar foto en el móvil" : "Analizar foto con Gemini")
+                .setMessage((visualLocalOnly ? "La foto se procesará con el modelo local. "
+                        : "Se enviará la foto que tomes a Google para responder a tu pregunta. ")
                         + "Escribe una pregunta en el chat antes de abrir la cámara, o recibirás una descripción.")
                 .setPositiveButton("Abrir cámara", (dialog, which) -> {
                     if (hasCameraPermission()) launchAnalysisCamera();
@@ -1853,21 +1812,8 @@ public class MainActivity extends AppCompatActivity {
 
     /** ▶️ Descarga automática de modelos usando precheck + descarga asíncrona + consola visual */
     private void iniciarDescargaModelos() {
-        String net = describirConexion();
-        if (net == null) {
-            Toast.makeText(this, "Sin conexión: no puedo descargar modelos", Toast.LENGTH_LONG).show();
-            Log.e("SalveDL", "Sin conexión de red");
-            ModelConsoleOverlay.log("Sin conexión, no puedo descargar modelos.");
-            ModelConsoleOverlay.hideDelayed(2000);
-            return;
-        }
-        Log.d("SalveDL", "Conexión: " + net);
-
-        ModelConsoleOverlay.clear();
-        ModelConsoleOverlay.show();
-        ModelConsoleOverlay.log("Conexión detectada: " + net);
-        ModelConsoleOverlay.log("Delegando descarga al WorkManager...");
-
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("gemma_download_requested", true).apply();
+        // WorkManager waits for an unmetered network and retains .part files if the network is lost.
         modelDownloadViewModel.startDownload();
     }
 

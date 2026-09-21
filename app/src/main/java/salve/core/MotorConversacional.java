@@ -608,7 +608,7 @@ public class MotorConversacional {
         boolean repetitionDetected = false;
 
         final String modelEmotion = emocionDetectada;
-        ModelResult inference = ConversationModelRouter.generate(false,
+        ModelResult inference = ConversationModelRouter.generate(false, llm != null && llm.isLocalOnly(), false,
                 gemini.isAvailable() ? () -> generarRespuestaGemini(entrada, modelEmotion, responseContext,
                         resumenAccion, reasoningPlan, entradaPorVoz) : null,
                 () -> generarRespuestaConversacionalLocal(entrada, modelEmotion, responseContext,
@@ -818,6 +818,10 @@ public class MotorConversacional {
 
     /** The caller transfers ownership of this photo; it is not retained in visual memory. */
     public void procesarImagen(String pregunta, Bitmap foto) {
+        procesarImagen(pregunta, foto, llm != null && llm.isLocalOnly());
+    }
+
+    public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly) {
         if (foto == null || foto.isRecycled()) { hablar("No recibí una foto válida."); return; }
         String entrada = pregunta == null || pregunta.trim().isEmpty() ? "Describe esta foto." : pregunta.trim();
         try {
@@ -827,8 +831,10 @@ public class MotorConversacional {
                     String prompt = buildSystemPrompt("no evaluada", "CONSULTA_VISUAL", false)
                             + "\nDescribe solo lo que puedas observar. Reconoce cualquier incertidumbre."
                             + "\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
-                    ModelResult result = ConversationModelRouter.generate(true,
-                            () -> gemini.generateResultSync(prompt, Collections.singletonList(foto)), null);
+                    ModelResult result = ConversationModelRouter.generate(true, localOnly,
+                            llm != null && llm.supportsVision(),
+                            () -> gemini.generateResultSync(prompt, Collections.singletonList(foto)),
+                            () -> llm.generateImageResult(prompt, foto));
                     String respuesta = result.isSuccess() ? result.getText() : modelFailureMessage(result);
                     hablar(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)));
                 } finally {
@@ -1006,14 +1012,30 @@ public class MotorConversacional {
     }
 
     private void reconocerEntornoVisual() {
+        // Ambient camera frames never become implicit cloud uploads.
+        if (llm == null || !llm.isLocalOnly()) {
+            hablar("Usa IA y cámara para tomar una foto y confirmar su análisis con Gemini.");
+            return;
+        }
         List<Bitmap> frames = VideoAnalysisManager.getInstance().getRecentFrames();
         if (frames == null || frames.isEmpty()) { hablar("Usa IA y cámara para tomar una foto y analizarla."); return; }
-        Bitmap foto = frames.get(frames.size() - 1);
-        if (gemini.isAvailable()) {
-            Executors.newSingleThreadExecutor().execute(() -> {
-                String idVisual = gemini.generateSync("Nombra el objeto principal de la imagen con una sola palabra.", Collections.singletonList(foto));
-                hablar("Detecto: " + idVisual);
-            });
+        Bitmap snapshot = null;
+        try {
+            // The camera recycles its buffer while native model initialization may still be running.
+            Bitmap frame = frames.get(frames.size() - 1);
+            if (frame == null || frame.isRecycled()) throw new IllegalStateException("Frame no disponible");
+            snapshot = frame.copy(Bitmap.Config.ARGB_8888, false);
+            if (snapshot == null) throw new IllegalStateException("No se pudo copiar el frame");
+            final Bitmap foto = snapshot;
+            ModelResult result = ConversationModelRouter.generate(true, true, llm.supportsVision(), null,
+                    () -> llm.generateImageResult("Nombra el objeto principal de la imagen con una sola palabra.", foto));
+            String respuesta = result.isSuccess() ? "Detecto: " + result.getText() : modelFailureMessage(result);
+            hablar(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)));
+        } catch (RuntimeException e) {
+            Log.w(TAG, "No se pudo analizar el frame local", e);
+            hablar("No pude analizar esa imagen. Usa IA y cámara para tomar una foto nueva.");
+        } finally {
+            if (snapshot != null) snapshot.recycle();
         }
     }
 

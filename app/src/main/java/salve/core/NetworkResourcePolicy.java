@@ -15,7 +15,7 @@ public final class NetworkResourcePolicy {
 
     private static final Set<String> MODEL_HOSTS = immutableSet(
             "huggingface.co", "cdn-lfs.huggingface.co", "cdn-lfs.hf.co",
-            "cas-bridge.xethub.hf.co", "arzenit.com");
+            "cas-bridge.xethub.hf.co", "us.aws.cdn.hf.co", "eu.aws.cdn.hf.co", "arzenit.com");
 
     private NetworkResourcePolicy() { }
 

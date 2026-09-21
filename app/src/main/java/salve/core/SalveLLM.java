@@ -2,6 +2,7 @@ package salve.core;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -49,6 +50,8 @@ public class SalveLLM {
     // Las mismas prefs que usa MainActivity
     private static final String PREFS_NAME = "salve_prefs";
     private static final String KEY_MODEL_PATH = "llm_model_path";
+    private static final String KEY_VISION_PATH = "llm_vision_model_path";
+    private static final String KEY_LOCAL_ONLY = "local_inference_only";
 
     // Nombre del config de MLC dentro de la carpeta del modelo
     private static final String MODEL_CONFIG_FILENAME = "mlc-chat-config.json";
@@ -56,9 +59,10 @@ public class SalveLLM {
     private static SalveLLM instance;
 
     private final Context appContext;
-    private String modelPath;   // ruta absoluta a la carpeta o archivo del modelo
+    private volatile String modelPath;   // ruta absoluta a la carpeta o archivo del modelo
     private String modelLib;    // nombre de la librería del modelo (solo MLC)
-    private boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
+    private volatile boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
+    private volatile boolean visionModel = false;
     private volatile boolean engineInitialized = false;
     private volatile boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
     private volatile String lastErrorMessage   = null;
@@ -99,7 +103,11 @@ public class SalveLLM {
      */
     private void reloadModelInfoFromPrefs() throws Exception {
         SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String path = prefs.getString(KEY_MODEL_PATH, null);
+        reloadModelInfo(prefs.getString(KEY_MODEL_PATH, null), prefs.getString(KEY_VISION_PATH, null));
+    }
+
+    private void reloadModelInfo(String path, String visionPath) throws Exception {
+        visionModel = path != null && path.equals(visionPath);
 
         if (path == null || path.trim().isEmpty()) {
             throw new IllegalStateException(
@@ -220,7 +228,11 @@ public class SalveLLM {
      * Solo se hace una vez por instancia.
      */
     private synchronized void initEngineIfNeeded() throws Exception {
-        if (engineInitialized) return;
+        initEngineIfNeeded(false);
+    }
+
+    private void initEngineIfNeeded(boolean withVision) throws Exception {
+        if (engineInitialized && !withVision && (!isLiteRT || LiteRTLlm.isInitialized())) return;
 
         if (modelPath == null) {
             throw new IllegalStateException("initEngineIfNeeded sin modelo válido.");
@@ -228,7 +240,7 @@ public class SalveLLM {
 
         if (isLiteRT) {
             Log.d(TAG, "Inicializando LiteRTLlm con modelPath=" + modelPath);
-            LiteRTLlm.init(appContext, modelPath);
+            LiteRTLlm.init(appContext, modelPath, withVision);
             engineInitialized = LiteRTLlm.isInitialized();
         } else {
             if (modelLib == null) {
@@ -276,7 +288,7 @@ public class SalveLLM {
             if (text == null || text.trim().isEmpty()) return ModelResult.failure(
                     ModelResult.Status.ERROR, "El modelo local no devolvió texto", latency);
             lastErrorMessage = null;
-            Log.i(TAG, "provider=local runtime=" + (isLiteRT ? "mediapipe" : "mlc") + " latency_ms=" + latency);
+            Log.i(TAG, "provider=local runtime=" + (isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
             return ModelResult.success(text, latency);
         } catch (Exception | LinkageError e) {
             lastErrorMessage = e.getMessage();
@@ -291,7 +303,100 @@ public class SalveLLM {
     public String getStatusDescription() {
         if (!modelAvailable) return "Local: sin modelo válido configurado";
         if (lastErrorMessage != null) return "Local: falló la última carga o inferencia";
-        return engineInitialized ? "Local: runtime cargado" : "Local: modelo seleccionado, pendiente de probar";
+        String path = modelPath;
+        String name = path == null ? "modelo local" : new File(path).getName();
+        return engineInitialized ? "Local: " + name + " · " + (isLiteRT ? LiteRTLlm.getBackendName() : "MLC")
+                : "Local: " + name + ", pendiente de probar";
+    }
+
+    public boolean isLocalOnly() {
+        return appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_LOCAL_ONLY, false);
+    }
+
+    public void setLocalOnly(boolean enabled) {
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_LOCAL_ONLY, enabled).apply();
+    }
+
+    public boolean supportsVision() { return modelAvailable && isLiteRT && visionModel; }
+
+    /** Activate a verified download or an explicitly imported file only after inference succeeds. */
+    public synchronized ModelResult activateDownloadedModel(String path, boolean supportsVision,
+                                                            java.util.function.BooleanSupplier cancelled) {
+        SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String previousPath = prefs.getString(KEY_MODEL_PATH, null);
+        String previousVisionPath = prefs.getString(KEY_VISION_PATH, null);
+        boolean hadLocalOnlyPreference = prefs.contains(KEY_LOCAL_ONLY);
+        boolean previousLocalOnly = prefs.getBoolean(KEY_LOCAL_ONLY, false);
+        boolean preferenceWriteAttempted = false;
+        ModelResult result;
+        try {
+            if (cancelled.getAsBoolean()) throw new java.io.InterruptedIOException("Instalación pausada");
+            BasicLocalLlm.reset();
+            LiteRTLlm.reset();
+            modelPath = path;
+            modelLib = null;
+            isLiteRT = true;
+            visionModel = supportsVision;
+            modelAvailable = true;
+            engineInitialized = false;
+            result = generateResult("Responde únicamente con un saludo breve en español.", Role.CONVERSACIONAL);
+            if (result.isSuccess() && !cancelled.getAsBoolean() && !Thread.currentThread().isInterrupted()) {
+                preferenceWriteAttempted = true;
+                boolean saved = prefs.edit()
+                        .putString(KEY_MODEL_PATH, path).putString(KEY_VISION_PATH, supportsVision ? path : null)
+                        .putBoolean(KEY_LOCAL_ONLY, true).commit();
+                if (saved) return result;
+                result = ModelResult.failure(ModelResult.Status.ERROR, "No se pudo guardar el modelo seleccionado", 0L);
+            } else if (result.isSuccess()) {
+                result = ModelResult.failure(ModelResult.Status.CANCELLED, "Instalación pausada", 0L);
+            }
+        } catch (Exception | LinkageError e) {
+            result = ModelResult.failure(ModelResult.Status.ERROR, "No se pudo activar el modelo descargado", 0L);
+            Log.e(TAG, "Fallo activando el modelo", e);
+        }
+        if (preferenceWriteAttempted) {
+            // commit() updates memory before writing disk, even when it returns false.
+            try {
+                SharedPreferences.Editor restore = prefs.edit()
+                        .putString(KEY_MODEL_PATH, previousPath)
+                        .putString(KEY_VISION_PATH, previousVisionPath);
+                if (hadLocalOnlyPreference) restore.putBoolean(KEY_LOCAL_ONLY, previousLocalOnly);
+                else restore.remove(KEY_LOCAL_ONLY);
+                if (!restore.commit()) Log.w(TAG, "Selección anterior restaurada en memoria; no se pudo persistir");
+            } catch (RuntimeException e) {
+                Log.e(TAG, "No se pudo restaurar la configuración guardada del modelo", e);
+            }
+        }
+        try { LiteRTLlm.reset(); } catch (Exception | LinkageError e) { Log.w(TAG, "Fallo liberando el candidato", e); }
+        engineInitialized = false;
+        modelAvailable = false;
+        // Restore from the captured selection even if storage failed again during rollback.
+        try { reloadModelInfo(previousPath, previousVisionPath); modelAvailable = true; }
+        catch (Exception e) { modelPath = null; visionModel = false; }
+        lastErrorMessage = result.getError();
+        return result;
+    }
+
+    public synchronized ModelResult generateImageResult(String prompt, Bitmap image) {
+        long start = System.nanoTime();
+        if (!supportsVision()) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
+                "El modelo seleccionado no tiene visión local configurada", 0L);
+        if (image == null || image.isRecycled()) return ModelResult.failure(ModelResult.Status.ERROR, "Foto no válida", 0L);
+        try {
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+            initEngineIfNeeded(true);
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            if (!image.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) throw new java.io.IOException("No se pudo leer la foto");
+            String text = LiteRTLlm.generateImage(prompt, bytes.toByteArray());
+            lastErrorMessage = null;
+            return ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L);
+        } catch (Exception | LinkageError e) {
+            engineInitialized = LiteRTLlm.isInitialized();
+            lastErrorMessage = e.getMessage();
+            Log.e(TAG, "Fallo de visión local", e);
+            return ModelResult.failure(Thread.currentThread().isInterrupted() ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR,
+                    "El modelo local no pudo analizar la foto", (System.nanoTime() - start) / 1_000_000L);
+        }
     }
 
     /**

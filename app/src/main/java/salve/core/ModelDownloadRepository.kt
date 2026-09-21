@@ -2,85 +2,45 @@ package salve.core
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.withContext
-class ModelDownloadRepository(
-    private val downloader: ModelDownloader = ModelDownloader()
-) {
-    fun downloadAndPrepareModels(context: Context, jsonBytes: ByteArray): Flow<ModelDownloadEvent> {
-        return channelFlow {
-            val needsDownload = withContext(Dispatchers.IO) {
-                downloader.precheckAll(context, jsonBytes.inputStream())
-            }
-            if (!needsDownload) {
-                trySend(ModelDownloadEvent.AllReady)
-                return@channelFlow
-            }
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.runInterruptible
+import java.io.File
+import java.io.IOException
 
-            downloader.downloadAll(context, jsonBytes.inputStream()).collect { event ->
-                when (event) {
-                    is ModelDownloader.DownloadEvent.Progress -> {
-                        trySend(
-                            ModelDownloadEvent.Progress(
-                                event.id,
-                                event.index,
-                                event.total,
-                                event.bytes,
-                                event.totalBytes,
-                                event.mbPerSec
-                            )
-                        )
+class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDownloader()) {
+    fun downloadAndPrepareModels(context: Context, jsonBytes: ByteArray): Flow<ModelDownloadEvent> = flow {
+        val jobContext = currentCoroutineContext()
+        downloader.downloadAll(context, jsonBytes.inputStream()).collect { event ->
+            when (event) {
+                is ModelDownloader.DownloadEvent.Started -> emit(ModelDownloadEvent.Status("Descargando ${event.id}", 0))
+                is ModelDownloader.DownloadEvent.Progress -> emit(ModelDownloadEvent.Status(
+                    "${event.id}: ${event.bytes / 1_000_000} / ${event.totalBytes / 1_000_000} MB",
+                    ((event.bytes * 100) / event.totalBytes).toInt().coerceIn(0, 99)))
+                is ModelDownloader.DownloadEvent.Verifying -> emit(ModelDownloadEvent.Status("Verificando la integridad del modelo…", 99))
+                is ModelDownloader.DownloadEvent.Completed -> {
+                    emit(ModelDownloadEvent.Status("Cargando ${event.id} y comprobando una respuesta real…", 99))
+                    val result = runInterruptible(Dispatchers.IO) {
+                        SalveLLM.getInstance(context).activateDownloadedModel(event.file.absolutePath,
+                            event.supportsVision, { !jobContext.isActive })
                     }
-                    is ModelDownloader.DownloadEvent.Completed -> {
-                        // ensureModelFolder throws Exception — catch it so a zip-extraction
-                        // failure doesn't propagate out of the flow and crash the Worker.
-                        val prepared = try {
-                            withContext(Dispatchers.IO) {
-                                ModelStore.ensureModelFolder(context, event.file, event.id)
-                            }
-                        } catch (e: Exception) {
-                            trySend(ModelDownloadEvent.Error(event.id, e))
-                            null
-                        }
-                        if (prepared != null) {
-                            context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE)
-                                .edit()
-                                .putString("llm_model_path", prepared.absolutePath)
-                                .apply()
-                            SalveLLM.getInstance(context).forceReloadModel()
-                            trySend(ModelDownloadEvent.Prepared(event.id, prepared))
-                        }
-                    }
-                    is ModelDownloader.DownloadEvent.Error -> {
-                        trySend(ModelDownloadEvent.Error(event.id, event.error))
-                    }
-                    is ModelDownloader.DownloadEvent.Started -> {
-                        trySend(ModelDownloadEvent.Started(event.id, event.index, event.total))
-                    }
-                    ModelDownloader.DownloadEvent.AllDone -> {
-                        trySend(ModelDownloadEvent.AllDone)
-                    }
+                    jobContext.ensureActive()
+                    if (result.isSuccess) emit(ModelDownloadEvent.Prepared(event.file, result.latencyMillis))
+                    else emit(ModelDownloadEvent.Error(IOException(result.error ?: "No se verificó la inferencia local")))
                 }
+                is ModelDownloader.DownloadEvent.Error -> emit(ModelDownloadEvent.Error(event.error))
+                ModelDownloader.DownloadEvent.AllDone -> Unit
             }
-        }.flowOn(Dispatchers.IO)
-    }
+        }
+    }.flowOn(Dispatchers.IO)
 }
 
 sealed class ModelDownloadEvent {
-    data class Started(val id: String, val index: Int, val total: Int) : ModelDownloadEvent()
-    data class Progress(
-        val id: String,
-        val index: Int,
-        val total: Int,
-        val bytes: Long,
-        val totalBytes: Long,
-        val mbPerSec: Double
-    ) : ModelDownloadEvent()
-    data class Prepared(val id: String, val directory: java.io.File) : ModelDownloadEvent()
-    data class Error(val id: String, val error: Exception) : ModelDownloadEvent()
-    data object AllReady : ModelDownloadEvent()
-    data object AllDone : ModelDownloadEvent()
+    data class Status(val message: String, val percent: Int) : ModelDownloadEvent()
+    data class Prepared(val file: File, val latencyMillis: Long) : ModelDownloadEvent()
+    data class Error(val error: Exception) : ModelDownloadEvent()
 }
