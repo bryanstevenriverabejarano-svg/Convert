@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -208,7 +209,7 @@ public class SalveLLM {
     /** The compiled library must be declared explicitly; never guess a binary. */
     private String detectModelLibFromConfig(File modelDir) throws Exception {
         File config = new File(modelDir, MODEL_CONFIG_FILENAME);
-        String json = new String(java.nio.file.Files.readAllBytes(config.toPath()), StandardCharsets.UTF_8);
+        String json = new String(Files.readAllBytes(config.toPath()), StandardCharsets.UTF_8);
         String lib = new JSONObject(json).optString("model_lib", "").trim();
         if (lib.isEmpty()) throw new IllegalStateException("El modelo MLC no declara model_lib; falta su biblioteca compilada");
         return lib;
@@ -390,6 +391,20 @@ public class SalveLLM {
         // Muchos paquetes de MLC colocan las .so en la raíz o en subcarpetas
         File found = findFirstSoRecursive(modelDir);
         return found != null && found.getName().equals(libName);
+    }
+
+    private File findFirstSoRecursive(File dir) {
+        File[] files = dir.listFiles();
+        if (files == null) return null;
+        for (File f : files) {
+            if (f.isDirectory()) {
+                File found = findFirstSoRecursive(f);
+                if (found != null) return found;
+            } else if (f.getName().endsWith(".so")) {
+                return f;
+            }
+        }
+        return null;
     }
 
     private void validateModelContents(File modelDir) throws Exception {
