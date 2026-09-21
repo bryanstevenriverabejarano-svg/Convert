@@ -97,6 +97,7 @@ public class MotorConversacional {
     private volatile String activeUtterance;
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
+    private final salve.core.finance.PersonalBudgetService personalBudget;
     private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
     private static final long MEMORY_DELETION_TTL_MS = 2 * 60 * 1000L;
     private volatile PendingToolAction pendingToolAction;
@@ -133,6 +134,7 @@ public class MotorConversacional {
 
     public MotorConversacional(Context context, MemoriaEmocional memoria, DiarioSecreto diario) {
         this.context  = context;
+        this.personalBudget = new salve.core.finance.PersonalBudgetService(new java.io.File(context.getNoBackupFilesDir(), "finance/personal-budget.json"));
         this.voiceProfiles = new VoiceProfileStore(context);
         this.voiceProfile = voiceProfiles.load();
         this.avatarDesignTool = new salve.avatar.AvatarDesignTool(context.getApplicationContext());
@@ -185,7 +187,18 @@ public class MotorConversacional {
     }
 
     public void procesarEntrada(String entrada, boolean entradaPorVoz) {
+        encolarEntrada(entrada, entradaPorVoz, false);
+    }
+
+    /** The UI has already classified this turn; keep it private even if pending state changes. */
+    public void procesarEntradaPresupuesto(String entrada, boolean entradaPorVoz) {
+        encolarEntrada(entrada, entradaPorVoz, true);
+    }
+
+    private void encolarEntrada(String entrada, boolean entradaPorVoz, boolean forcePrivateBudget) {
         if (closed || entrada == null || entrada.trim().isEmpty()) return;
+        final boolean privateBudgetTurn = forcePrivateBudget || isPrivateBudgetInput(entrada);
+        if (!privateBudgetTurn) personalBudget.cancelPending();
         String urgent = entrada.trim().toLowerCase(Locale.ROOT);
         if (urgent.equals("cancelar rutina") || urgent.equals("cancela la rutina")
                 || urgent.equals("cancelar acción") || urgent.equals("cancelar accion")) {
@@ -203,7 +216,7 @@ public class MotorConversacional {
                 long turn = beginConversationTurn(entrada);
                 avatarTurn.set(turn);
                 try {
-                    procesarEntradaInterna(entrada, entradaPorVoz);
+                    procesarEntradaInterna(entrada, entradaPorVoz, privateBudgetTurn);
                 } finally {
                     if (session != null) AvatarMotionController.get().endTurn(session, turn);
                     avatarTurn.remove();
@@ -215,8 +228,17 @@ public class MotorConversacional {
         }
     }
 
-    private void procesarEntradaInterna(String entrada, boolean entradaPorVoz) {
+    /** Checked before UI cloud logging and again before model history or generic memory. */
+    public boolean isPrivateBudgetInput(String input) { return personalBudget.handles(input); }
+
+    private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        if (privateBudgetTurn || isPrivateBudgetInput(entrada)) {
+            String response = personalBudget.respond(entrada);
+            AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(response);
+            deliverResponse(motion.text, motion, false, true, true);
+            return;
+        }
         long turnStartedAtNanos = System.nanoTime();
         boolean hasPriorContext = conversationSession.hasPriorContext();
         conversationSession.addUser(entrada);
@@ -890,7 +912,8 @@ public class MotorConversacional {
     private ModelResult generarRespuestaGemini(String entrada, String emocion, String contexto,
                                           String accion, ReasoningPlan reasoningPlan, boolean porVoz) {
         try {
-            String sistema = buildSystemPrompt(emocion, contexto, porVoz);
+            String sistema = buildSystemPrompt(emocion, contexto, porVoz)
+                    + salve.core.finance.FinanceConversationPolicy.contextFor(entrada);
             String recuerdos = reasoningPlan.shouldRetrieveLongTermMemory()
                     ? memoria.recuperarContextoRelevante(entrada, 3)
                     : "";
@@ -918,6 +941,7 @@ public class MotorConversacional {
                 ? memoria.recuperarContextoRelevante(entrada, 3)
                 : "";
         String prompt = buildSystemPrompt(emocion, contexto, porVoz)
+                + salve.core.finance.FinanceConversationPolicy.contextFor(entrada)
                 + (recuerdos.isEmpty() ? "" : "\n\nMEMORIA RELEVANTE:\n" + recuerdos)
                 + "\n\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
         if (accion != null) prompt += "\nCONTEXTO DE ACCIÓN: " + accion;
@@ -1046,6 +1070,11 @@ public class MotorConversacional {
     }
 
     private synchronized void deliverResponse(String texto, AvatarMotionProtocol.Result motion, boolean record) {
+        deliverResponse(texto, motion, record, record, false);
+    }
+
+    private synchronized void deliverResponse(String texto, AvatarMotionProtocol.Result motion,
+                                              boolean record, boolean publishUi, boolean privateBudget) {
         if (closed || texto == null || texto.trim().isEmpty()) return;
         if (record) conversationSession.addAssistant(texto);
         AvatarMotionController.Session session = avatarSession;
@@ -1060,7 +1089,8 @@ public class MotorConversacional {
         // Each utterance owns its callbacks. QUEUE_FLUSH and microphone interruption revoke old IDs.
         // A revoked inference still reaches history/UI, but cannot disturb a newer utterance.
         if (currentVoice) activeUtterance = null;
-        if (currentVoice && ttsReady && !listening && tts != null) {
+        boolean budgetVoiceAllowed = !privateBudget || hasOfflineVoice();
+        if (currentVoice && ttsReady && !listening && tts != null && budgetVoiceAllowed) {
             String utteranceId = "salve_tts_" + (++utteranceSequence);
             activeUtterance = utteranceId;
             if (session != null) AvatarMotionController.get().speechPending(session, turn, utteranceId);
@@ -1070,8 +1100,16 @@ public class MotorConversacional {
                 Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
             }
         }
-        if (record && listener != null) listener.onHablar(texto);
+        if (publishUi && listener != null) listener.onHablar(texto + (privateBudget && !budgetVoiceAllowed
+                ? "\nPara escuchar este presupuesto, elige una voz sin conexión en Voz de Salve." : ""));
         if (standaloneResponse) AvatarMotionController.get().endTurn(session, turn);
+    }
+
+    private boolean hasOfflineVoice() {
+        try {
+            android.speech.tts.Voice voice = tts == null ? null : tts.getVoice();
+            return voice != null && !voice.isNetworkConnectionRequired();
+        } catch (RuntimeException unavailable) { return false; }
     }
 
     private long currentAvatarTurn() {
