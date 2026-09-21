@@ -668,6 +668,11 @@ public class MainActivity extends AppCompatActivity {
     private void procesarMensajeUsuario(String mensaje, boolean porVoz) {
         if (mensaje == null || mensaje.trim().isEmpty()) return;
         String limpio = mensaje.trim();
+        if (motorConversacional.isPrivateBudgetInput(limpio)) {
+            motorConversacional.procesarEntradaPresupuesto(limpio, porVoz);
+            inputChat.setText("");
+            return;
+        }
         if (handleModuloTemporal(limpio)) {
             guardarEventoNube(porVoz ? "voice_message_modulo_temporal" : "user_message_modulo_temporal",
                     limpio, null);
