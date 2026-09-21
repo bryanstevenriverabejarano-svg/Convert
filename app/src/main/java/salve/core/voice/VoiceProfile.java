@@ -15,6 +15,7 @@ public final class VoiceProfile {
     public static VoiceProfile defaults() { return new VoiceProfile("", .95f, 1.04f, false); }
     public String styleInstruction() {
         return "ESTILO DE SALVE: cálida y discretamente tímida, curiosa y clara. "
+                + "Usa español claro y comprensible, sin regionalismos forzados. "
                 + "Muestra curiosidad con preguntas pertinentes, sin añadirlas a cada respuesta. "
                 + "Explica con precisión y cercanía, sin muletillas, tartamudeos fingidos ni infantilizarte. "
                 + "Este estilo no cambia los hechos, la incertidumbre ni las reglas de herramientas.\n";

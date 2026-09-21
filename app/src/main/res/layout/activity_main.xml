@@ -85,7 +85,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/btnEnviarMensaje"
-        android:text="Probar voz"
+        android:text="Modo voz: conversar con Salve"
         android:textColor="#E9DED2D2"
         android:background="@color/design_default_color_primary_dark"
         android:padding="12dp"
