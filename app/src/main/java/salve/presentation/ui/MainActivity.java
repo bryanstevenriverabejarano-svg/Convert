@@ -35,9 +35,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-import androidx.work.ExistingPeriodicWorkPolicy;
-import androidx.work.PeriodicWorkRequest;
-import androidx.work.WorkManager;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.salve.app.R;
@@ -67,7 +64,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import salve.core.DiarioSecreto;
 import salve.core.GrafoRecuerdos;
@@ -142,7 +138,6 @@ public class MainActivity extends AppCompatActivity {
     
     // ===== CONCIENCIA FUNCIONAL =====
     private salve.core.IdentidadNucleo identidadNucleo;
-    private salve.core.CicloConciencia cicloConciencia;
     private TextView tvNivelConciencia;
 
     // ===== ESTADO INTERNO =====
@@ -668,6 +663,12 @@ public class MainActivity extends AppCompatActivity {
     private void procesarMensajeUsuario(String mensaje, boolean porVoz) {
         if (mensaje == null || mensaje.trim().isEmpty()) return;
         String limpio = mensaje.trim();
+        if (salve.core.goals.GoalAutonomy.handles(limpio)) {
+            // Goal notes and proposals have their own local journal; do not upload raw commands.
+            motorConversacional.procesarEntrada(limpio, porVoz);
+            inputChat.setText("");
+            return;
+        }
         if (motorConversacional.isPrivateBudgetInput(limpio)) {
             motorConversacional.procesarEntradaPresupuesto(limpio, porVoz);
             inputChat.setText("");
@@ -697,13 +698,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        // ¡Al arrancar, encendemos el Ciclo de Conciencia (24/7) y pedimos permisos
-        Intent serviceIntent = new Intent(this, salve.core.CicloConcienciaService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
-        }
+        // Migrate the old always-on loop to a single bounded WorkManager cycle.
+        stopService(new Intent(this, salve.core.CicloConcienciaService.class));
 
         if (savedInstanceState != null) {
             visualQuestion = savedInstanceState.getString("visual_question");
@@ -775,20 +771,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             tvNivelConciencia = findViewById(R.id.tvNivelConciencia);
             identidadNucleo = salve.core.IdentidadNucleo.getInstance(this);
-            cicloConciencia = new salve.core.CicloConciencia(this);
 
-            // Despertar si es nuevo arranque
-            if (cicloConciencia.verificarSiDebeDespertar()) {
-                new Thread(() -> {
-                    try {
-                        cicloConciencia.despertar();
-                        runOnUiThread(this::actualizarNivelConcienciaUI);
-                    } catch (Exception e) {
-                        Log.w("Salve::Main", "Error al despertar", e);
-                    }
-                }).start();
-            }
-
+            // Background inference belongs to the single, pausable goal worker.
             actualizarNivelConcienciaUI();
             Log.d("Salve::Main", "Conciencia funcional inicializada. Nivel: "
                     + identidadNucleo.getNivelFuncionalLabel());
@@ -917,15 +901,7 @@ public class MainActivity extends AppCompatActivity {
         // Camera/microphone permissions are requested when the user invokes them.
         // The user starts/stops the companion overlay from Habitación.
 
-        // === PROGRAMAR PENSAMIENTO AUTOMÁTICO CADA 1 HORA ===
-        PeriodicWorkRequest pensarSolaRequest =
-                new PeriodicWorkRequest.Builder(ThinkWorker.class, 1, TimeUnit.HOURS).build();
-
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-                "salve_think_job",
-                ExistingPeriodicWorkPolicy.KEEP,
-                pensarSolaRequest
-        );
+        ThinkWorker.schedule(this);
 
         // ===== manejar Intents de compartir =====
         handleShareIntent(getIntent());

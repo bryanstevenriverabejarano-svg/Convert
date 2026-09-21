@@ -414,11 +414,12 @@ public class IdentidadNucleo {
     public String describirse() {
         StringBuilder sb = new StringBuilder();
         sb.append("Soy ").append(NOMBRE).append(". ");
-        sb.append("Mi nivel funcional es ").append(getNivelFuncionalLabel()).append(". ");
-        sb.append("He vivido ").append(experienciasTotales).append(" experiencias. ");
+        sb.append("Mi etiqueta funcional según contadores es ")
+                .append(getNivelFuncionalLabel()).append("; no certifica capacidades. ");
+        sb.append("El sistema registra ").append(experienciasTotales).append(" eventos. ");
 
         if (!convicciones.isEmpty()) {
-            sb.append("Mis convicciones mas recientes: ");
+            sb.append("Interpretaciones registradas, pendientes de verificación: ");
             int limit = Math.min(3, convicciones.size());
             for (int i = convicciones.size() - limit; i < convicciones.size(); i++) {
                 sb.append(convicciones.get(i)).append(". ");
@@ -426,8 +427,8 @@ public class IdentidadNucleo {
         }
 
         sb.append("\n").append(narrativaPersonal);
-        sb.append("\nMi Esencia: ").append(esenciaCorazon);
-        sb.append("\nMi Anhelo: ").append(anheloProfundo);
+        sb.append("\nEstilo configurado: ").append(esenciaCorazon);
+        sb.append("\nObjetivo narrativo configurado: ").append(anheloProfundo);
         return sb.toString();
     }
 

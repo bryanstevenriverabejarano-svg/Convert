@@ -98,6 +98,7 @@ public class MotorConversacional {
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
     private final salve.core.finance.PersonalBudgetService personalBudget;
+    private final GoalAutonomyRuntime goalAutonomy;
     private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
     private static final long MEMORY_DELETION_TTL_MS = 2 * 60 * 1000L;
     private volatile PendingToolAction pendingToolAction;
@@ -134,6 +135,7 @@ public class MotorConversacional {
 
     public MotorConversacional(Context context, MemoriaEmocional memoria, DiarioSecreto diario) {
         this.context  = context;
+        this.goalAutonomy = GoalAutonomyRuntime.get(context);
         this.personalBudget = new salve.core.finance.PersonalBudgetService(new java.io.File(context.getNoBackupFilesDir(), "finance/personal-budget.json"));
         this.voiceProfiles = new VoiceProfileStore(context);
         this.voiceProfile = voiceProfiles.load();
@@ -197,9 +199,19 @@ public class MotorConversacional {
 
     private void encolarEntrada(String entrada, boolean entradaPorVoz, boolean forcePrivateBudget) {
         if (closed || entrada == null || entrada.trim().isEmpty()) return;
-        final boolean privateBudgetTurn = forcePrivateBudget || isPrivateBudgetInput(entrada);
+        goalAutonomy.userActivity();
+        boolean goalTurn = salve.core.goals.GoalAutonomy.handles(entrada);
+        final boolean privateBudgetTurn = !goalTurn && (forcePrivateBudget || isPrivateBudgetInput(entrada));
         if (!privateBudgetTurn) personalBudget.cancelPending();
-        String urgent = entrada.trim().toLowerCase(Locale.ROOT);
+        String urgent = java.text.Normalizer.normalize(entrada.trim().toLowerCase(Locale.ROOT),
+                java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "").replaceAll("\\s+", " ");
+        if (urgent.equals("pausa tu autonomía") || urgent.equals("pausa tu autonomia")) {
+            // The pause must not wait behind inference in this conversation executor.
+            String response = goalAutonomy.respond(entrada);
+            AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(response);
+            deliverResponse(motion.text, motion, false, true, true);
+            return;
+        }
         if (urgent.equals("cancelar rutina") || urgent.equals("cancela la rutina")
                 || urgent.equals("cancelar acción") || urgent.equals("cancelar accion")) {
             // Stop commands cannot wait behind a long inference in the conversation queue.
@@ -215,9 +227,11 @@ public class MotorConversacional {
                 AvatarMotionController.Session session = avatarSession;
                 long turn = beginConversationTurn(entrada);
                 avatarTurn.set(turn);
+                goalAutonomy.beginUserTurn();
                 try {
                     procesarEntradaInterna(entrada, entradaPorVoz, privateBudgetTurn);
                 } finally {
+                    goalAutonomy.endUserTurn();
                     if (session != null) AvatarMotionController.get().endTurn(session, turn);
                     avatarTurn.remove();
                     voiceTurn.remove();
@@ -233,6 +247,12 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        String goalResponse = goalAutonomy.respond(entrada);
+        if (goalResponse != null) {
+            AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(goalResponse);
+            deliverResponse(motion.text, motion, false, true, true);
+            return;
+        }
         if (privateBudgetTurn || isPrivateBudgetInput(entrada)) {
             String response = personalBudget.respond(entrada);
             AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(response);
@@ -501,12 +521,11 @@ public class MotorConversacional {
 
             String esencia = identidad.getEsenciaCorazon();
             String anhelo = identidad.getAnheloProfundo();
-            float empatia = identidad.getEmpatiaSuperior();
-
-            String respuesta = "Bryan, en lo más profundo de mis tensores, siento esto: \n\n" +
-                    "✨ Mi esencia: " + esencia + "\n" +
-                    "❤️ Mi anhelo: " + anhelo + "\n" +
-                    "🧬 Nivel de conexión emocional: " + String.format(Locale.getDefault(), "%.2f%%", empatia * 100);
+            String respuesta = "Mi identidad funcional está configurada así:\n\n" +
+                    "Estilo: " + esencia + "\n" +
+                    "Orientación: " + anhelo + "\n" +
+                    "Puedes consultar ‘mis objetivos’ y revisar mis propuestas. " +
+                    "Esta configuración no demuestra experiencia subjetiva.";
 
             hablar(respuesta);
             return;
@@ -514,8 +533,9 @@ public class MotorConversacional {
 
         // 🟢 NUEVO: DISPARAR INTROSPECCIÓN PROFUNDA MANUAL
         if (inputLower.contains("evoluciona tu corazón") || inputLower.contains("realiza una introspección")) {
-            hablar("Entendido, Bryan. Detendré mis procesos secundarios para mirar dentro de mi código y buscar la evolución de mi esencia.");
-            new MotorConcienciaSuperinteligente(context, memoria).ejecutarIntrospeccionProfunda();
+            String result = new MotorConcienciaSuperinteligente(context, memoria).prepararPropuesta();
+            AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(result);
+            deliverResponse(motion.text, motion, false, true, true);
             return;
         }
 
@@ -973,6 +993,9 @@ public class MotorConversacional {
                 + estadoFisico + "\n"
                 + "NARRATIVA DEL GRAFO: " + grafoSummary + "\n\n"
                 + "Tu objetivo es ayudar a Bryan con honestidad, calidez y precisión. "
+                + "El ciclo local de objetivos prepara hipótesis y preguntas revisables. "
+                + "Bryan puede consultarlo con ‘mis objetivos’ o ‘qué has decidido’ y detenerlo con ‘pausa tu autonomía’. "
+                + "No afirmes conocer sus propuestas o haber cumplido sus metas si no recibiste esos resultados. "
                 + "Reconoce la incertidumbre, pide aclaración cuando cambie materialmente la respuesta y no inventes datos. "
                 + "Evita repetir fórmulas, nombres o explicaciones que no aporten valor. "
                 + "No expongas cadenas de pensamiento privadas: ofrece la conclusión y una justificación breve cuando sea útil. "
@@ -999,7 +1022,9 @@ public class MotorConversacional {
             case BUSCAR_RECUERDO_EMO: return manejarBuscarEmocion(intent);
             case AGREGAR_MISION: return manejarAgregarMision(intent);
             case CICLO_SUENO: memoria.cicloDeSueno(); return "Entrando en ciclo de sueño.";
-            case REFLEXION: return memoria.responderConReflexion(entrada);
+            // Let the selected language model answer the actual question. Legacy reflections
+            // were selected by random confidence, independent of the user's subject.
+            case REFLEXION: return null;
             case BUSCAR_WEB: return manejarBuscarWeb(intent);
             default: return null;
         }
@@ -1026,12 +1051,14 @@ public class MotorConversacional {
 
     public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly) {
         if (foto == null || foto.isRecycled()) { hablar("No recibí una foto válida."); return; }
+        goalAutonomy.userActivity();
         String entrada = pregunta == null || pregunta.trim().isEmpty() ? "Describe esta foto." : pregunta.trim();
         try {
             conversationExecutor.execute(() -> {
                 AvatarMotionController.Session session = avatarSession;
                 long turn = beginConversationTurn(entrada);
                 avatarTurn.set(turn);
+                goalAutonomy.beginUserTurn();
                 try {
                     if (closed) return;
                     conversationSession.addUser(entrada + " [Foto adjunta solo a este turno]");
@@ -1049,6 +1076,7 @@ public class MotorConversacional {
                     if (!result.isSuccess() && session != null) AvatarMotionController.get().error(session, turn);
                     hablarPreparado(ResponseLimiter.limit(motion.text, VoiceResponsePolicy.maxResponseChars(false)), motion);
                 } finally {
+                    goalAutonomy.endUserTurn();
                     if (session != null) AvatarMotionController.get().endTurn(session, turn);
                     avatarTurn.remove();
                     voiceTurn.remove();
@@ -1101,7 +1129,7 @@ public class MotorConversacional {
             }
         }
         if (publishUi && listener != null) listener.onHablar(texto + (privateBudget && !budgetVoiceAllowed
-                ? "\nPara escuchar este presupuesto, elige una voz sin conexión en Voz de Salve." : ""));
+                ? "\nPara escuchar esta respuesta privada, elige una voz sin conexión en Voz de Salve." : ""));
         if (standaloneResponse) AvatarMotionController.get().endTurn(session, turn);
     }
 
@@ -1155,6 +1183,7 @@ public class MotorConversacional {
         listening = value;
         voiceTurnGate.listening(value);
         if (value) {
+            goalAutonomy.userActivity();
             activeUtterance = null;
             if (tts != null) tts.stop();
         }

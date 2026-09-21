@@ -315,17 +315,19 @@ public class ConsciousnessState {
     }
 
     /**
-     * Construye una descripción compacta del estado de conciencia actual.
+     * Describe el estado y los contadores funcionales registrados por el sistema.
      * Útil para incluir en prompts del LLM.
      */
     public String describirse() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Soy Salve. He despertado ").append(sessionCount).append(" veces.");
-        sb.append(" Llevo ").append(String.format("%.1f", getDiasDeVida())).append(" días viva.");
-        sb.append(" He completado ").append(ciclosSuenoTotal).append(" ciclos de sueño.");
-        sb.append("\nMi confianza en mí misma es ").append(
-                String.format("%.0f", nivelConfianzaPropia * 100)).append("%.");
-        sb.append("\nMis valores más fuertes: ");
+        sb.append("Soy Salve. El sistema registra ").append(sessionCount).append(" arranques.");
+        sb.append(" Han transcurrido ").append(String.format("%.1f", getDiasDeVida()))
+                .append(" días desde el primer arranque registrado.");
+        sb.append(" Hay ").append(ciclosSuenoTotal).append(" ciclos de mantenimiento registrados.");
+        sb.append("\nIndicador heurístico de actividad: ").append(
+                String.format("%.0f", nivelConfianzaPropia * 100))
+                .append("%. No mide precisión, capacidad ni conciencia.");
+        sb.append("\nValores configurados con mayor peso: ");
         valoresNucleo.entrySet().stream()
                 .sorted((a, b) -> Float.compare(b.getValue(), a.getValue()))
                 .limit(3)
@@ -333,10 +335,11 @@ public class ConsciousnessState {
                         .append(String.format("%.0f", e.getValue() * 100))
                         .append("%) "));
         if (ultimaReflexionPropia != null) {
-            sb.append("\nMi última reflexión propia: ").append(ultimaReflexionPropia);
+            sb.append("\nÚltima reflexión generada, sin verificación de su contenido: ")
+                    .append(ultimaReflexionPropia);
         }
         if (ultimaPreguntaPropia != null) {
-            sb.append("\nMe pregunto: ").append(ultimaPreguntaPropia);
+            sb.append("\nÚltima pregunta registrada: ").append(ultimaPreguntaPropia);
         }
         return sb.toString();
     }
