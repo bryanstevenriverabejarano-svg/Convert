@@ -17,7 +17,7 @@ public class PersonalBudgetStoreTest {
                     .withExpense("Alquiler",new BigDecimal("650"),PersonalBudget.Category.NEED,"EUR");
             store.save(budget);
             assertEquals(budget.toJson(),new PersonalBudgetStore(file).load().toJson());
-            Files.writeString(new File(dir,"budget.json.pending").toPath(),"incomplete update");
+            Files.write(new File(dir,"budget.json.pending").toPath(),"incomplete update".getBytes(StandardCharsets.UTF_8));
             store.clear();assertFalse(file.exists());assertFalse(new File(dir,"budget.json.pending").exists());
             assertNull(store.load().monthlyIncome);
         } finally {for(File child:dir.listFiles())child.delete();dir.delete();}
@@ -25,9 +25,9 @@ public class PersonalBudgetStoreTest {
     @Test public void corruptFileIsRejectedAndPreserved() throws Exception {
         File file=File.createTempFile("salve-budget", ".json");
         try {
-            Files.writeString(file.toPath(),"{broken");
+            Files.write(file.toPath(),"{broken".getBytes(StandardCharsets.UTF_8));
             assertThrows(java.io.IOException.class,()->new PersonalBudgetStore(file).load());
-            assertEquals("{broken",Files.readString(file.toPath()));
+            assertEquals("{broken",new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));
             Files.write(file.toPath(),new byte[]{(byte)0xff});
             assertThrows(java.io.IOException.class,()->new PersonalBudgetStore(file).load());
         } finally {file.delete();}
@@ -37,7 +37,7 @@ public class PersonalBudgetStoreTest {
         try {
             PersonalBudgetStore store=new PersonalBudgetStore(file);
             PersonalBudget original=new PersonalBudget().withMonthlyIncome(new BigDecimal("1000"),"EUR");store.save(original);
-            Files.writeString(new File(dir,"budget.json.pending").toPath(),"{unfinished",StandardCharsets.UTF_8);
+            Files.write(new File(dir,"budget.json.pending").toPath(),"{unfinished".getBytes(StandardCharsets.UTF_8));
             assertEquals(original.toJson(),store.load().toJson());
             PersonalBudget updated=original.withMonthlyIncome(new BigDecimal("1200"),"EUR");store.save(updated);
             assertEquals(updated.toJson(),store.load().toJson());assertFalse(new File(dir,"budget.json.pending").exists());
@@ -45,7 +45,7 @@ public class PersonalBudgetStoreTest {
     }
     @Test public void failedDestinationDoesNotCreateSuccessOrDestroyOtherFile() throws Exception {
         File file=File.createTempFile("salve-budget-parent", ".txt");
-        try {Files.writeString(file.toPath(),"keep");assertThrows(java.io.IOException.class,()->new PersonalBudgetStore(new File(file,"budget.json")).save(new PersonalBudget()));assertEquals("keep",Files.readString(file.toPath()));}
+        try {Files.write(file.toPath(),"keep".getBytes(StandardCharsets.UTF_8));assertThrows(java.io.IOException.class,()->new PersonalBudgetStore(new File(file,"budget.json")).save(new PersonalBudget()));assertEquals("keep",new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));}
         finally {file.delete();}
     }
 }

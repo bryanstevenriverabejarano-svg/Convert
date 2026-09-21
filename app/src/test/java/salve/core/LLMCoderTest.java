@@ -89,14 +89,14 @@ public class LLMCoderTest {
             assertEquals(0, new ProcessBuilder("git", "init", "--quiet").directory(root.toFile()).start().waitFor());
             java.nio.file.Path file = root.resolve("app/src/main/java/salve/core/X.java");
             java.nio.file.Files.createDirectories(file.getParent());
-            java.nio.file.Files.writeString(file, snapshot().source("X").code);
+            java.nio.file.Files.write(file, snapshot().source("X").code.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             LLMCoder coder = new LLMCoder(() -> true, null, prompt -> ModelResult.success(diff("X").trim(), 1));
             java.nio.file.Path patch = root.resolve("change.patch");
-            java.nio.file.Files.writeString(patch, coder.generateFix("Haz la clase final", "X", snapshot()));
+            java.nio.file.Files.write(patch, coder.generateFix("Haz la clase final", "X", snapshot()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
             Process applied = new ProcessBuilder("git", "apply", patch.toString()).directory(root.toFile()).redirectErrorStream(true).start();
             String output = new String(applied.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertEquals(output, 0, applied.waitFor());
-            assertEquals("package salve.core;\nfinal class X {}\n", java.nio.file.Files.readString(file));
+            assertEquals("package salve.core;\nfinal class X {}\n", new String(java.nio.file.Files.readAllBytes(file), java.nio.charset.StandardCharsets.UTF_8));
         } finally {
             try (java.util.stream.Stream<java.nio.file.Path> paths = java.nio.file.Files.walk(root)) {
                 paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> path.toFile().delete());

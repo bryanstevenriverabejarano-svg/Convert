@@ -18,6 +18,7 @@ import android.os.SystemClock;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -30,12 +31,14 @@ import java.util.ArrayList;
 
 import salve.core.MotorConversacional;
 import salve.core.voice.VoiceConversationLoop;
+import salve.core.voice.VoiceTurnMetrics;
 
 /** Foreground, automatic voice turns. The microphone stays closed during synthesis. */
 public final class LiveVoiceDialog extends Dialog implements MotorConversacional.VoiceConversationListener {
     private final Activity activity;
     private final MotorConversacional motor;
     private final VoiceConversationLoop loop = new VoiceConversationLoop();
+    private final VoiceTurnMetrics metrics = new VoiceTurnMetrics();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable watchdog = () -> apply(loop.tick(now()));
     private final AudioManager audioManager;
@@ -58,6 +61,8 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
     private TextView transcript;
     private TextView reply;
     private Button interrupt;
+    private String recognitionErrorText;
+    private long displayedReplyToken = -1L;
 
     public LiveVoiceDialog(Activity activity, MotorConversacional motor) {
         super(activity);
@@ -90,8 +95,15 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
         interrupt = new Button(activity);
         interrupt.setText("Interrumpir y hablar");
         interrupt.setOnClickListener(view -> {
-            VoiceConversationLoop.Step step = loop.interrupt(now());
-            if (step.action != VoiceConversationLoop.Action.NONE) motor.cancelarTurnoVoz();
+            long timestamp = now();
+            VoiceConversationLoop.Step step = loop.interrupt(timestamp);
+            if (step.action != VoiceConversationLoop.Action.NONE) {
+                if (step.action != VoiceConversationLoop.Action.STOP) {
+                    metrics.interrupt(metrics.token(), timestamp);
+                    reportMetrics();
+                }
+                motor.cancelarTurnoVoz();
+            }
             apply(step);
         });
         content.addView(interrupt);
@@ -152,6 +164,7 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
                 break;
             case SUBMIT:
                 destroyRecognizer();
+                metrics.submitted(step.token, now());
                 transcript.setText("Tú: " + step.text);
                 reply.setText("Salve: preparando respuesta…");
                 try {
@@ -162,8 +175,16 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
                 break;
             case WAIT:
                 destroyRecognizer();
+                if (loop.state() == VoiceConversationLoop.State.COOLDOWN && metrics.isActive()
+                        && !metrics.hasSubmitted()) {
+                    // The application watchdog or an empty final transcript ended this capture.
+                    metrics.stop(metrics.token(), now(), VoiceConversationLoop.StopReason.NO_SPEECH);
+                    reportMetrics();
+                }
                 break;
             case STOP:
+                metrics.stop(metrics.token(), now(), loop.stopReason());
+                reportMetrics();
                 releaseResources();
                 break;
             default: break;
@@ -175,6 +196,8 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
     private void beginRecognition(long token) {
         destroyRecognizer();
         if (!loop.owns(token)) return;
+        if (!metrics.begin(token, now())) return;
+        recognitionErrorText = null;
         if (activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             apply(loop.stop(VoiceConversationLoop.StopReason.MICROPHONE_PERMISSION));
             return;
@@ -183,6 +206,7 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
             boolean onDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                     && SpeechRecognizer.isOnDeviceRecognitionAvailable(activity);
             if (!onDevice && !SpeechRecognizer.isRecognitionAvailable(activity)) {
+                recognitionErrorText = "No hay un servicio de reconocimiento disponible en Android.";
                 apply(loop.stop(VoiceConversationLoop.StopReason.RECOGNIZER_UNAVAILABLE));
                 return;
             }
@@ -201,28 +225,34 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
                 }
 
                 @Override public void onReadyForSpeech(Bundle params) {
-                    if (current()) status.setText("Te escucho…");
+                    if (current() && metrics.ready(token, now())) renderState();
                 }
                 @Override public void onBeginningOfSpeech() {
-                    if (current()) status.setText("Te escucho…");
+                    if (current() && metrics.speechBegan(token, now())) renderState();
                 }
                 @Override public void onRmsChanged(float rmsdB) { }
                 @Override public void onBufferReceived(byte[] buffer) { }
                 @Override public void onEndOfSpeech() {
-                    if (current()) status.setText("Terminando la transcripción…");
+                    if (current() && metrics.speechEnded(token, now())) renderState();
                 }
                 @Override public void onError(int error) {
                     if (!current()) return;
+                    long timestamp = now();
+                    if (!metrics.recognitionFailed(token, timestamp, error)) return;
+                    recognitionErrorText = recognitionErrorMessage(error);
+                    reportMetrics();
                     destroyRecognizer();
-                    apply(loop.recognitionFailed(token, recognitionFailure(error), now()));
+                    apply(loop.recognitionFailed(token, recognitionFailure(error), timestamp));
                 }
                 @Override public void onResults(Bundle results) {
                     if (!current()) return;
+                    long timestamp = now();
+                    if (!metrics.recognized(token, timestamp)) return;
                     ArrayList<String> matches = results == null ? null
                             : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     String text = matches == null || matches.isEmpty() ? "" : matches.get(0);
                     destroyRecognizer();
-                    apply(loop.recognized(token, text, now()));
+                    apply(loop.recognized(token, text, timestamp));
                 }
                 @Override public void onPartialResults(Bundle partialResults) {
                     if (!current() || partialResults == null) return;
@@ -242,6 +272,7 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
             apply(loop.stop(VoiceConversationLoop.StopReason.MICROPHONE_PERMISSION));
         } catch (RuntimeException unavailable) {
             // Do not silently switch a failed local recognizer to a remote provider.
+            recognitionErrorText = "No se pudo iniciar el servicio de reconocimiento de Android.";
             apply(loop.stop(VoiceConversationLoop.StopReason.RECOGNIZER_UNAVAILABLE));
         }
     }
@@ -254,12 +285,43 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
             case SpeechRecognizer.ERROR_NETWORK:
             case SpeechRecognizer.ERROR_SERVER:
+            case SpeechRecognizer.ERROR_SERVER_DISCONNECTED:
             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
                 return VoiceConversationLoop.RecognitionFailure.TRANSIENT;
             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
                 return VoiceConversationLoop.RecognitionFailure.PERMISSION;
             default:
                 return VoiceConversationLoop.RecognitionFailure.UNAVAILABLE;
+        }
+    }
+
+    private static String recognitionErrorMessage(int error) {
+        switch (error) {
+            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
+            case SpeechRecognizer.ERROR_NETWORK:
+                return "Falló la conexión con el servicio de reconocimiento.";
+            case SpeechRecognizer.ERROR_SERVER:
+            case SpeechRecognizer.ERROR_SERVER_DISCONNECTED:
+                return "El servicio de reconocimiento dejó de responder.";
+            case SpeechRecognizer.ERROR_AUDIO:
+                return "Android no pudo capturar audio del micrófono.";
+            case SpeechRecognizer.ERROR_CLIENT:
+                return "El servicio rechazó la solicitud de reconocimiento.";
+            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+                return "El servicio de reconocimiento está ocupado.";
+            case SpeechRecognizer.ERROR_TOO_MANY_REQUESTS:
+                return "El servicio ha limitado las solicitudes de reconocimiento. Espera antes de volver a abrir el modo voz.";
+            case SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED:
+                return "El servicio no admite el idioma de la voz elegida. Revisa los idiomas de reconocimiento de Android.";
+            case SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE:
+                return "Faltan datos de reconocimiento para el idioma elegido. Revisa su instalación en Android.";
+            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
+                return "El servicio no tiene permiso para usar el micrófono.";
+            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+            case SpeechRecognizer.ERROR_NO_MATCH:
+                return "No reconocí una frase.";
+            default:
+                return "El reconocimiento falló (código " + error + ").";
         }
     }
 
@@ -314,11 +376,26 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
         if (status == null) return;
         interrupt.setEnabled(loop.isActive() && loop.state() != VoiceConversationLoop.State.LISTENING);
         switch (loop.state()) {
-            case LISTENING: status.setText("Te escucho…"); break;
+            case LISTENING:
+                switch (metrics.captureStage()) {
+                    case STARTING: status.setText("Preparando el micrófono…"); break;
+                    case FINALIZING:
+                    case FINISHED: status.setText("Terminando la transcripción…"); break;
+                    default: status.setText("Te escucho…"); break;
+                }
+                break;
             case THINKING: status.setText("Preparando respuesta…"); break;
             case SPEAKING: status.setText("Salve está hablando…"); break;
-            case COOLDOWN: status.setText("Enseguida te escucho…"); break;
-            case STOPPED: status.setText(stopMessage(loop.stopReason())); break;
+            case COOLDOWN:
+                status.setText(recognitionErrorText == null ? "Enseguida te escucho…"
+                        : recognitionErrorText + " Volveré a intentarlo…");
+                break;
+            case STOPPED:
+                boolean recognitionFailure = loop.stopReason() == VoiceConversationLoop.StopReason.RECOGNIZER_ERROR
+                        || loop.stopReason() == VoiceConversationLoop.StopReason.RECOGNIZER_UNAVAILABLE;
+                status.setText(recognitionFailure && recognitionErrorText != null
+                        ? recognitionErrorText + " He cerrado el micrófono." : stopMessage(loop.stopReason()));
+                break;
             default: break;
         }
     }
@@ -328,7 +405,7 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
             case SESSION_LIMIT: return "Sesión terminada: han pasado 10 minutos. Puedes abrir otra cuando quieras.";
             case NO_SPEECH: return "No detecté una frase. He cerrado el micrófono; puedes volver a abrir el modo voz.";
             case MICROPHONE_PERMISSION: return "Hace falta permitir el micrófono para conversar por voz.";
-            case RECOGNIZER_UNAVAILABLE: return "El reconocimiento no está disponible para este idioma. Revisa las voces de Android.";
+            case RECOGNIZER_UNAVAILABLE: return "El reconocimiento no está disponible. Revisa el servicio de voz de Android.";
             case RECOGNIZER_ERROR: return "No pude recuperar el reconocimiento. He cerrado el micrófono.";
             case RESPONSE_TIMEOUT: return "La respuesta está tardando demasiado. He detenido esta sesión de voz.";
             case RESPONSE_ERROR: return "No pude preparar la respuesta. He detenido esta sesión de voz.";
@@ -341,17 +418,36 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
     }
 
     @Override public void onReply(long token, String text, boolean audioQueued) {
-        if (dismissed || !loop.owns(token)) return;
+        if (dismissed || !loop.owns(token) || displayedReplyToken == token) return;
+        displayedReplyToken = token;
+        long timestamp = now();
+        // A very short utterance can finish before its reply callback; still show its text once.
+        metrics.replied(token, timestamp);
         reply.setText("Salve: " + (text == null ? "" : text));
-        apply(loop.replied(token, audioQueued, now()));
+        apply(loop.replied(token, audioQueued, timestamp));
     }
 
     @Override public void onSpeechStarted(long token) {
-        if (!dismissed) apply(loop.speechStarted(token, now()));
+        long timestamp = now();
+        if (!dismissed && loop.owns(token) && metrics.speechStarted(token, timestamp))
+            apply(loop.speechStarted(token, timestamp));
     }
 
     @Override public void onSpeechFinished(long token, boolean completed) {
-        if (!dismissed) apply(loop.speechFinished(token, completed, now()));
+        if (dismissed || !loop.owns(token)) return;
+        long timestamp = now();
+        if (!metrics.speechFinished(token, timestamp)) return;
+        VoiceConversationLoop.Step step = loop.speechFinished(token, completed, timestamp);
+        if (step.action == VoiceConversationLoop.Action.WAIT && completed) {
+            metrics.complete(token, timestamp);
+            reportMetrics();
+        }
+        apply(step);
+    }
+
+    private void reportMetrics() {
+        String line = metrics.takeLogLine();
+        if (line != null) Log.i("Salve/Voice", line);
     }
 
     private TextView label(String text, int size) {

@@ -2,6 +2,7 @@ package salve.core.finance;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -26,18 +27,18 @@ public class PersonalBudgetServiceTest {
         File dir=Files.createTempDirectory("salve-budget-service").toFile();File file=new File(dir,"budget.json");
         try {
             PersonalBudgetService service=new PersonalBudgetService(file);service.respond("mi sueldo es 1800 EUR netos al mes");
-            String original=Files.readString(file.toPath());
+            String original=new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8);
             for(String input:new String[]{"si mi sueldo es 9000 EUR netos al mes", "mi sueldo es 1.800 EUR netos al mes", "mi sueldo es -200 EUR netos al mes"}) {
-                assertTrue(service.handles(input));service.respond(input);assertEquals(original,Files.readString(file.toPath()));
+                assertTrue(service.handles(input));service.respond(input);assertEquals(original,new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));
             }
         } finally {for(File child:dir.listFiles())child.delete();dir.delete();}
     }
     @Test public void corruptBudgetDoesNotBecomeEmptyAndCanBeExplicitlyDeleted() throws Exception {
         File file=File.createTempFile("salve-budget-service", ".json");
         try {
-            Files.writeString(file.toPath(),"{broken");PersonalBudgetService service=new PersonalBudgetService(file);
+            Files.write(file.toPath(),"{broken".getBytes(StandardCharsets.UTF_8));PersonalBudgetService service=new PersonalBudgetService(file);
             assertTrue(service.respond("mi sueldo es 1800 EUR netos al mes").contains("conservado"));
-            assertEquals("{broken",Files.readString(file.toPath()));service.respond("borra mi presupuesto");assertFalse(file.exists());
+            assertEquals("{broken",new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));service.respond("borra mi presupuesto");assertFalse(file.exists());
         } finally {file.delete();}
     }
     @Test public void failedWriteNeverReportsSaved() throws Exception {
