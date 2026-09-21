@@ -1,0 +1,114 @@
+{
+  "runtime": "litert-lm-api 0.16.1",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "backend": "CPU (4 threads)",
+  "model_file": "gemma-4-E2B-it.litertlm",
+  "model_bytes": 2588147712,
+  "context_limit": 1024,
+  "max_output_tokens": 128,
+  "sampler": {
+    "top_k": 40,
+    "top_p": 0.9,
+    "temperature": 0.6,
+    "seed": 42
+  },
+  "thinking_enabled": false,
+  "checks": [
+    {
+      "prompt": "Hola, Salve. Respóndeme en una frase breve.",
+      "raw_response": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Hola. [[salve_motion:WAVE:WARM]]"
+          }
+        ]
+      },
+      "parsed_production_java": {
+        "text": "Hola.",
+        "gesture": "WAVE",
+        "expression": "WARM",
+        "hasDirective": true
+      },
+      "end_to_end_seconds": 1.389,
+      "benchmark": {
+        "init_time_in_second": 0.535947818,
+        "time_to_first_token_in_second": 0.8283645515,
+        "last_prefill_token_count": 280,
+        "last_prefill_tokens_per_second": 355.1340734179451,
+        "last_decode_token_count": 15,
+        "last_decode_tokens_per_second": 25.043872649162772
+      },
+      "decoded_public_text_tokens": 14,
+      "protocol_visible_after_parser": false
+    },
+    {
+      "prompt": "Explícame en una frase breve para qué sirve la memoria de una conversación.",
+      "raw_response": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "La memoria de una conversación sirve para recordar información intercambiada previamente con el interlocutor. [[salve_motion:EXPLAIN:NEUTRAL]]"
+          }
+        ]
+      },
+      "parsed_production_java": {
+        "text": "La memoria de una conversación sirve para recordar información intercambiada previamente con el interlocutor.",
+        "gesture": "EXPLAIN",
+        "expression": "NEUTRAL",
+        "hasDirective": true
+      },
+      "end_to_end_seconds": 1.826,
+      "benchmark": {
+        "init_time_in_second": 0.5359587650000001,
+        "time_to_first_token_in_second": 0.72942238925,
+        "last_prefill_token_count": 282,
+        "last_prefill_tokens_per_second": 407.7007129440681,
+        "last_decode_token_count": 30,
+        "last_decode_tokens_per_second": 26.49811301770069
+      },
+      "decoded_public_text_tokens": 29,
+      "protocol_visible_after_parser": false
+    },
+    {
+      "prompt": "Salve, salúdame con la mano y contéstame en una frase breve.",
+      "raw_response": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Hola. [[salve_motion:WAVE:WARM]]"
+          }
+        ]
+      },
+      "parsed_production_java": {
+        "text": "Hola.",
+        "gesture": "WAVE",
+        "expression": "WARM",
+        "hasDirective": true
+      },
+      "end_to_end_seconds": 1.16,
+      "benchmark": {
+        "init_time_in_second": 0.535943713,
+        "time_to_first_token_in_second": 0.67566274,
+        "last_prefill_token_count": 284,
+        "last_prefill_tokens_per_second": 442.9629330785623,
+        "last_decode_token_count": 15,
+        "last_decode_tokens_per_second": 28.964037702402916
+      },
+      "decoded_public_text_tokens": 14,
+      "protocol_visible_after_parser": false
+    }
+  ],
+  "limitations": [
+    "Linux x86_64 native CPU text test only; not Android/S24, TTS/audio, visual rendering or a latency benchmark.",
+    "Small prompt harness with the exact production visual instruction, not full application identity/history/tools prompt.",
+    "Three independent conversations in one engine, deterministic seed; does not establish general gesture quality."
+  ],
+  "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+  "load_seconds": 0.266,
+  "total_seconds": 6.974,
+  "max_rss_kib": 1651328
+}

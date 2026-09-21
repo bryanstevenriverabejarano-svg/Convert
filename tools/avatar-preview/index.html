@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salve — revisión del avatar ilustrado</title>
+<style>
+body{margin:0;padding:28px;background:#0e1725;color:#edf7fb;font:16px system-ui,sans-serif}h1{font-size:24px;margin:0 0 8px}p{max-width:980px;line-height:1.5;color:#b8d1df}#grid{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:16px}article{border:1px solid #29445b;border-radius:16px;overflow:hidden;background:#152337}h2{font-size:15px;font-weight:500;margin:0;padding:13px 16px;border-bottom:1px solid #29445b}canvas{display:block;width:100%;height:auto}#status{color:#68dad4}button{background:#18394b;color:white;border:1px solid #3e7684;border-radius:9px;padding:10px 16px;margin:5px;cursor:pointer}@media(max-width:1000px){#grid{grid-template-columns:repeat(2,minmax(200px,1fr))}}
+</style>
+<h1>Salve · Ilustración original y gestos</h1>
+<p>Vista de desarrollo: utiliza el mismo PNG, polígonos, pivotes y malla de <code>app/src/main/assets/avatar/rig.json</code>. Las poses son muestras fijas del renderer; aquí no se reproduce audio ni se ejecuta el modelo conversacional. En Android la boca sigue los eventos reales de síntesis.</p>
+<p id="status">Cargando arte y rig…</p>
+<div id="grid"></div>
+<script type="module">
+// Serve the repository root, then open /tools/avatar-preview/. No build or external dependency.
+const root = '../../app/src/main/';
+const rig = await fetch(root + 'assets/avatar/rig.json').then(r => { if (!r.ok) throw Error('Rig missing'); return r.json(); });
+const load = path => new Promise((resolve,reject) => { const image = new Image(); image.onload=()=>resolve(image); image.onerror=reject; image.src=path; });
+const [art,hair] = await Promise.all([load(root+'res/drawable/salve_imagen.png'),load(root+'res/drawable-nodpi/salve_hair_fill.png')]);
+const limit = (v,a,b) => Number.isFinite(v)?Math.min(b,Math.max(a,v)):Math.min(b,Math.max(a,0));
+const smooth = (a,b,v) => { const t=limit((v-a)/(b-a),0,1); return t*t*(3-2*t); };
+const neutral = {blink:0,gazeX:0,gazeY:0,headTilt:0,headYaw:0,headPitch:0,bodyTilt:0,leftArm:0,rightArm:0,mouthOpen:0,breath:.5,speaking:false,expression:'NEUTRAL',stride:0};
+function adjusted(input) {
+ const p={...neutral,...input};
+ if(p.expression==='CURIOUS'){p.headTilt+=1.5;p.gazeX+=.1;}
+ if(p.expression==='CONCERNED'){p.headTilt-=1.2;p.gazeY+=.2;p.blink=Math.max(p.blink,.1);}
+ return p;
+}
+function deform(x,y,p) {
+ let px=x,py=y; const closed=limit(p.blink,0,1);
+ for(const center of [rig.leftEye,rig.rightEye]){
+  const dx=x-center[0],dy=y-center[1];if(Math.abs(dx)>60||Math.abs(dy)>75)continue;const edge=smooth(52,32,Math.abs(dx));
+  py-=dy*closed*.96*edge*Math.exp(-Math.pow(dy/43,4));
+  const iris=Math.exp(-Math.pow(dx/22,4)-Math.pow(dy/29,4));
+  px+=limit(p.gazeX,-1,1)*3*iris*(1-closed);py+=limit(p.gazeY,-1,1)*2.2*iris*(1-closed);
+ }
+ const head=smooth(490,325,y),angle=limit(p.headTilt,-7,7)*head*Math.PI/180,dx=px-rig.headPivot[0],dy=py-rig.headPivot[1];
+ px=rig.headPivot[0]+dx*Math.cos(angle)-dy*Math.sin(angle);py=rig.headPivot[1]+dx*Math.sin(angle)+dy*Math.cos(angle);
+ px+=limit(p.headYaw,-14,14)*.55*head;py+=limit(p.headPitch,-10,10)*.7*head;
+ const breath=(limit(p.breath,0,1)-.5)*2,chest=smooth(920,420,y)*smooth(220,440,y);
+ py-=breath*2*chest;px+=breath*1.6*smooth(350,510,y)*smooth(870,710,y)*limit(Math.abs(x-480)/350,0,1);
+ return [px,py];
+}
+function shape(points){const path=new Path2D();path.moveTo(points[0],points[1]);for(let i=2;i<points.length;i+=2)path.lineTo(points[i],points[i+1]);path.closePath();return path;}
+function cut(ctx,points){const path=new Path2D();path.rect(-4096,-4096,8192,8192);path.addPath(shape(points));ctx.clip(path,'evenodd');}
+function rotate(ctx,degrees,pivot){ctx.translate(...pivot);ctx.rotate(degrees*Math.PI/180);ctx.translate(-pivot[0],-pivot[1]);}
+function piece(ctx,part,angle){ctx.save();rotate(ctx,angle,part.pivot);ctx.clip(shape(part.polygon));ctx.drawImage(art,0,0,rig.width,rig.height);ctx.restore();}
+function fill(ctx,part){ctx.save();ctx.clip(shape(part.fill));ctx.drawImage(hair,0,0,rig.width,rig.height);ctx.restore();}
+
+// The same grid as Canvas.drawBitmapMesh. WebGL interpolates texture coordinates without 12,288
+// separately anti-aliased Canvas clips, whose seams would misrepresent Android's mesh renderer.
+const warp=document.createElement('canvas');warp.width=rig.width;warp.height=rig.height;
+const gl=warp.getContext('webgl',{alpha:true,premultipliedAlpha:true,preserveDrawingBuffer:true});
+if(!gl)throw Error('This visual check requires WebGL; no fake rendering fallback is used.');
+function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
+const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,'attribute vec2 position;attribute vec2 uv;varying vec2 texcoord;void main(){texcoord=uv;gl_Position=vec4(position.x/512.0-1.0,1.0-position.y/768.0,0.0,1.0);}'));
+gl.attachShader(program,shader(gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D portrait;varying vec2 texcoord;void main(){gl_FragColor=texture2D(portrait,texcoord);}'));gl.linkProgram(program);gl.useProgram(program);
+const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,art);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+const count=(rig.meshColumns+1)*(rig.meshRows+1),coords=new Float32Array(count*2),positions=new Float32Array(count*2),indices=[];
+for(let row=0,i=0;row<=rig.meshRows;row++)for(let col=0;col<=rig.meshColumns;col++){coords[i++]=col/rig.meshColumns;coords[i++]=row/rig.meshRows;}
+for(let y=0;y<rig.meshRows;y++)for(let x=0;x<rig.meshColumns;x++){const a=y*(rig.meshColumns+1)+x,b=a+1,c=a+rig.meshColumns+1,d=c+1;indices.push(a,b,c,b,d,c);}
+function bind(name,array,usage){const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,array,usage);const attribute=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(attribute);gl.vertexAttribPointer(attribute,2,gl.FLOAT,false,0,0);return buffer;}
+bind('uv',coords,gl.STATIC_DRAW);const vertexBuffer=bind('position',positions,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW);gl.viewport(0,0,warp.width,warp.height);
+function mesh(p){for(let row=0,i=0;row<=rig.meshRows;row++)for(let col=0;col<=rig.meshColumns;col++){const point=deform(col*rig.width/rig.meshColumns,row*rig.height/rig.meshRows,p);positions[i++]=point[0];positions[i++]=point[1];}gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);gl.bufferSubData(gl.ARRAY_BUFFER,0,positions);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);return warp;}
+function faceTransform(ctx,p){const a=deform(450,310,p),b=deform(510,310,p),c=deform(450,350,p);const aa=(b[0]-a[0])/60,bb=(b[1]-a[1])/60,cc=(c[0]-a[0])/40,dd=(c[1]-a[1])/40;ctx.transform(aa,bb,cc,dd,a[0]-aa*450-cc*310,a[1]-bb*450-dd*310);}
+function mouth(ctx,p){ctx.save();faceTransform(ctx,p);ctx.drawImage(art,465,315,25,8,459,322,37,18);const [x,y]=rig.mouth;ctx.beginPath();if(p.speaking&&p.mouthOpen>.04){const half=7+p.mouthOpen*7,height=2+p.mouthOpen*13;ctx.moveTo(x-half,y-1);ctx.quadraticCurveTo(x,y-2.5,x+half,y-1);ctx.quadraticCurveTo(x+half*.7,y+height,x,y+height);ctx.quadraticCurveTo(x-half*.7,y+height,x-half,y-1);ctx.closePath();ctx.fillStyle='#754945';ctx.fill();}else{ctx.moveTo(x-13,y-1);ctx.quadraticCurveTo(x,y+6,x+13,y-1);ctx.lineWidth=1.7;ctx.lineCap='round';ctx.strokeStyle='#ba8a7e';ctx.stroke();}ctx.restore();}
+function render(ctx,input){const p=adjusted(input),left=limit(p.leftArm,-20,20),right=limit(p.rightArm,-20,20),leg=limit(p.stride,-1,1)*3.4,moveL=Math.abs(left)>.05,moveR=Math.abs(right)>.05,walking=Math.abs(leg)>.01;ctx.save();rotate(ctx,limit(p.bodyTilt,-3,3),rig.bodyPivot);if(moveL)fill(ctx,rig.leftArm);if(moveR)fill(ctx,rig.rightArm);if(walking){piece(ctx,rig.leftLeg,leg);piece(ctx,rig.rightLeg,-leg);}ctx.save();if(moveL)cut(ctx,rig.leftArm.polygon);if(moveR)cut(ctx,rig.rightArm.polygon);if(walking){cut(ctx,rig.leftLeg.polygon);cut(ctx,rig.rightLeg.polygon);}const isNeutral=p.headTilt===0&&p.headYaw===0&&p.headPitch===0&&p.blink===0&&p.gazeX===0&&p.gazeY===0&&p.breath===.5;ctx.drawImage(isNeutral?art:mesh(p),0,0,rig.width,rig.height);ctx.restore();if(moveL)piece(ctx,rig.leftArm,left);if(moveR)piece(ctx,rig.rightArm,right);if((p.speaking&&p.mouthOpen>.04)||p.expression==='WARM')mouth(ctx,p);ctx.restore();}
+const poses=[['Original · referencia',null],['Reposo · pose neutra',{}],['Saludo · manga derecha',{rightArm:-20,headTilt:-4,expression:'WARM'}],['Explicación',{leftArm:9,rightArm:-13,headTilt:3,expression:'WARM'}],['Parpadeo',{blink:1}],['Habla · apertura aproximada',{speaking:true,mouthOpen:.8,headTilt:2}],['Curiosidad',{expression:'CURIOUS'}],['Atención seria',{expression:'CONCERNED'}],['Caminar · paso A',{stride:1}],['Caminar · paso B',{stride:-1}],['Celebración · límites',{leftArm:20,rightArm:-20,bodyTilt:3,expression:'WARM'}],['Asentir · inclinación leve',{headPitch:8}]];
+for(const [title,pose]of poses){const article=document.createElement('article'),label=document.createElement('h2'),canvas=document.createElement('canvas');label.textContent=title;canvas.width=512;canvas.height=768;article.append(label,canvas);document.querySelector('#grid').append(article);const ctx=canvas.getContext('2d');ctx.scale(.5,.5);if(pose===null)ctx.drawImage(art,0,0);else render(ctx,pose);}
+document.querySelector('#status').textContent='12 muestras renderizadas · textura original intacta · esquema '+rig.version;
+window.avatarPreview={rig,render,poses,ready:true};document.documentElement.dataset.ready='true';
+</script>
+</html>

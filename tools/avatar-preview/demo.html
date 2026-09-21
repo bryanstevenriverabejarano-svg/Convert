@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Salve · gestos de la ilustración original</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101a29;color:#f3f8fa;font:16px system-ui,sans-serif;text-align:center}main{max-width:540px;margin:auto;padding:24px}h1{font-size:23px;margin:0 0 6px}p{color:#aec9d5;margin:5px 0 16px;font-size:14px}#stage{width:100%;height:auto;display:block}#scene{height:28px;color:#74ded9}button{font:inherit;color:#efffff;background:#194355;border:1px solid #347587;border-radius:10px;padding:10px 22px;min-height:44px}button:disabled{opacity:.6}
+</style>
+<main><h1>Salve</h1><p>Su ilustración original en movimiento</p><canvas id="stage" width="540" height="736" aria-label="Demostración de gestos de Salve"></canvas><div id="scene" aria-live="polite">Cargando…</div><button id="play" disabled>Reproducir</button><p>Demostración visual sin audio.</p></main>
+<iframe id="renderer" src="index.html" hidden title="Motor de vista previa"></iframe>
+<script type="module">
+const frames=await fetch('motion-frames.json').then(r=>{if(!r.ok)throw Error('Generate motion-frames.json with ExportMotionFrames first');return r.json()});
+const iframe=document.getElementById('renderer'),canvas=document.getElementById('stage'),ctx=canvas.getContext('2d'),button=document.getElementById('play'),label=document.getElementById('scene');
+let renderer,playing=false,start=0,lastFrame=-1,animation;
+await new Promise(resolve=>{const timer=setInterval(()=>{if(iframe.contentWindow?.avatarPreview?.ready){clearInterval(timer);renderer=iframe.contentWindow.avatarPreview;resolve()}},30)});
+function show(i){const p=frames[i];ctx.fillStyle='#101a29';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.save();ctx.translate(47,4);ctx.scale(.435,.435);renderer.render(ctx,p);ctx.restore();ctx.fillStyle='#74ded9';ctx.font='18px system-ui,sans-serif';ctx.textAlign='center';ctx.fillText(p.scene,270,713);if(label.textContent!==p.scene)label.textContent=p.scene;lastFrame=i}
+function tick(time){if(!playing)return;const index=Math.min(frames.length-1,Math.floor((time-start)*.03));show(index);if(index===frames.length-1){playing=false;button.textContent='Repetir';return}animation=requestAnimationFrame(tick)}
+function play(){cancelAnimationFrame(animation);playing=true;lastFrame=-1;start=performance.now();button.textContent='Reproduciendo…';animation=requestAnimationFrame(tick)}
+button.addEventListener('click',play);button.disabled=false;show(0);
+window.salveDemo={ready:true,play,show,frames};document.documentElement.dataset.ready='true';
+</script>
+</html>

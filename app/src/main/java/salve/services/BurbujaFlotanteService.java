@@ -94,10 +94,9 @@ public final class BurbujaFlotanteService extends Service {
                 "II", "Detenerse o despertar", () -> store.change(AvatarState::wake),
                 "×", "Cerrar personaje", this::stopSelf);
         controls("Cama", "Crear cama y acostarse", () -> store.change(s -> { s.createBed(); s.sleep(); }),
-                "Ropa", "Cambiar vestido o pijama", () -> store.change(s -> s.wear(
-                        s.getOutfit() == AvatarState.Outfit.DAY ? AvatarState.Outfit.PAJAMAS : AvatarState.Outfit.DAY,
-                        s.getAccent(), s.getPattern())),
-                "…", "Abrir habitación y vestuario", this::openRoom);
+                "Saludo", "Mostrar gesto de saludo", () -> salve.avatar.AvatarMotionController.get().previewGesture(
+                        salve.avatar.AvatarMotion.Gesture.WAVE, salve.avatar.AvatarMotion.Expression.WARM),
+                "…", "Abrir habitación y gestos", this::openRoom);
         params = new WindowManager.LayoutParams(dp(190), dp(274), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);

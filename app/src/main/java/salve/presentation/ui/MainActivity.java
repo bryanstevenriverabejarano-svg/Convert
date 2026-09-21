@@ -746,6 +746,7 @@ public class MainActivity extends AppCompatActivity {
         sensores             = new SistemaSensorial(this); // Inicializar sensores de hardware
         reconocimientoFacial = new ReconocimientoFacial(this);
         motorConversacional  = new MotorConversacional(this, memoria, diario);
+        motorConversacional.setAvatarSession(salve.avatar.AvatarMotionController.get().openSession(this));
 
         // Conectar la voz de Salve a la pantalla para que puedas leerla siempre
         motorConversacional.setListener(texto -> {
