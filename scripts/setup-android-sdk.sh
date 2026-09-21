@@ -19,13 +19,13 @@ require_command() {
 require_command curl
 require_command unzip
 
-if [[ ! -w "$(dirname "$ANDROID_SDK_ROOT")" ]]; then
-    printf 'No se puede escribir en %s. Usa ANDROID_SDK_ROOT con una ruta accesible.\n' \
-        "$(dirname "$ANDROID_SDK_ROOT")" >&2
+# An existing SDK may be writable even when its parent is owned by root
+# (as on GitHub-hosted runners). Check the operation we actually need.
+if ! mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"; then
+    printf 'No se puede preparar %s. Usa ANDROID_SDK_ROOT con una ruta accesible.\n' \
+        "$ANDROID_SDK_ROOT" >&2
     exit 1
 fi
-
-mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
 
 if [[ ! -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]]; then
     archive="$(mktemp --suffix=.zip)"
