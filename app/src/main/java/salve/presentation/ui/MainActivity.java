@@ -18,7 +18,6 @@ import android.provider.Settings;
 import android.speech.RecognizerIntent;
 import android.util.Log;
 import android.view.View;
-import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -85,7 +84,6 @@ import salve.core.ReconocimientoFacial;
 import salve.core.ThinkWorker;
 import salve.data.sync.CloudSyncManager;
 import salve.data.sync.SyncWorker;
-import salve.services.BurbujaFlotanteService;
 import salve.services.SistemaSensorial;
 import salve.services.VideoAnalysisManager;
 import salve.presentation.viewmodel.ModelDownloadViewModel;
@@ -124,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
     // ===== VISTAS UI =====
     private EditText inputChat;
     private Button btnEnviarMensaje, btnHablar, btnEscuchar, btnAdjuntar, btnReflexiones;
-    private ImageView imagenSalve;
+    private salve.avatar.AvatarView imagenSalve;
     private LinearLayout panelReflexion;
     private TextView tituloReflexion, textoReflexion;
     private Button btnCerrarReflexion, btnSiguienteReflexion, btnResponderReflexion;
@@ -737,8 +735,8 @@ public class MainActivity extends AppCompatActivity {
         btnResponderReflexion = findViewById(R.id.btnResponderReflexion);
         btnMostrarReflexion   = findViewById(R.id.btnMostrarReflexion);
 
-        // Animación flotante de Salve
-        imagenSalve.setAnimation(AnimationUtils.loadAnimation(this, R.anim.float_animation));
+        // The native avatar animates its articulated pose and shares persistent room state.
+        imagenSalve.setOnClickListener(v -> startActivity(new Intent(this, AvatarRoomActivity.class)));
 
         updateAudioPermissionState();
 
@@ -799,6 +797,8 @@ public class MainActivity extends AppCompatActivity {
 
         // ==== LISTENERS ====
         findViewById(R.id.btnConfigurarIA).setOnClickListener(v -> mostrarAjustesIA());
+        findViewById(R.id.btnAvatar).setOnClickListener(v -> startActivity(new Intent(this, AvatarRoomActivity.class)));
+        findViewById(R.id.btnDispositivos).setOnClickListener(v -> startActivity(new Intent(this, DeviceControlActivity.class)));
         btnEnviarMensaje.setOnClickListener(v -> {
             String mensaje = inputChat.getText().toString().trim();
             procesarMensajeUsuario(mensaje, false);
@@ -909,7 +909,7 @@ public class MainActivity extends AppCompatActivity {
 
         // ==== PERMISOS Y SERVICIOS ====
         // Camera/microphone permissions are requested when the user invokes them.
-        verificarPermisoOverlay(); // ahora solo informa; no abre Ajustes sola
+        // The user starts/stops the companion overlay from Habitación.
 
         // === PROGRAMAR PENSAMIENTO AUTOMÁTICO CADA 1 HORA ===
         PeriodicWorkRequest pensarSolaRequest =
@@ -941,6 +941,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (imagenSalve != null) imagenSalve.setAnimationEnabled(true);
         SyncWorker.enqueueWhenOnline(getApplicationContext());
 
         updateAudioPermissionState();
@@ -1346,14 +1347,6 @@ public class MainActivity extends AppCompatActivity {
     // ============================================================
     //                  OTROS MÉTODOS AUXILIARES
     // ============================================================
-    private void verificarPermisoOverlay() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, "Para la burbuja, activa 'Mostrar sobre otras apps' en Ajustes.", Toast.LENGTH_LONG).show();
-        } else {
-            iniciarBurbujaFlotante();
-        }
-    }
-
     private boolean hasAudioPermission() {
         return ContextCompat.checkSelfPermission(
                 this, Manifest.permission.RECORD_AUDIO
@@ -1381,17 +1374,6 @@ public class MainActivity extends AppCompatActivity {
         boolean granted = hasAudioPermission();
         btnEscuchar.setEnabled(true);
         btnEscuchar.setAlpha(granted ? 1f : 0.75f);
-    }
-
-    private void openOverlaySettings() {
-        Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:" + getPackageName()));
-        startActivity(intent);
-    }
-
-    private void iniciarBurbujaFlotante() {
-        try { startService(new Intent(this, BurbujaFlotanteService.class)); }
-        catch (Throwable t) { Log.e("Salve", "Burbuja no pudo iniciar", t); }
     }
 
     // ==== CONCIENCIA FUNCIONAL: UI ====
@@ -1487,6 +1469,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);
         finalizarEscucha();
         super.onPause();
     }
@@ -1495,7 +1478,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         inferenceChecks.shutdownNow();
         // stopService(new Intent(this, CamaraService.class));
-        stopService(new Intent(this, BurbujaFlotanteService.class));
         if (motorConversacional != null) motorConversacional.shutdown();
         finalizarEscucha();
         super.onDestroy();

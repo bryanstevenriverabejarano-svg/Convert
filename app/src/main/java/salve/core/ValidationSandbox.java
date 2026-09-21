@@ -1,7 +1,6 @@
 package salve.core;
 
 import android.content.Context;
-import android.text.TextUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,14 +8,13 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Ejecuta validaciones ligeras sobre las suites de pruebas generadas
- * automáticamente. En esta fase inicial se realiza una simulación semántica
- * para garantizar que las pruebas contengan aserciones y referencien la clase
- * objetivo antes de solicitar una verificación humana.
+ * Precomprueba la estructura de una suite y registra por separado su ejecución.
+ * El prechequeo solo inspecciona texto: no demuestra que las pruebas pasen.
+ * Esta API no recibe ni aplica el parche candidato; su validación completa
+ * corresponde al ejecutor externo sobre una revisión concreta.
  */
 public class ValidationSandbox {
 
-    private final Context context;
     private final TestExecutor executor;
 
     public ValidationSandbox(Context context) {
@@ -24,7 +22,6 @@ public class ValidationSandbox {
     }
 
     public ValidationSandbox(Context context, TestExecutor executor) {
-        this.context = context.getApplicationContext();
         this.executor = executor == null ? new NoOpTestExecutor() : executor;
     }
 
@@ -40,7 +37,7 @@ public class ValidationSandbox {
                     "La suite de pruebas creativas necesita intervención manual antes de ejecutarse.");
         }
         String code = suite.getCode();
-        boolean referencesTarget = !TextUtils.isEmpty(className) && code.contains(className);
+        boolean referencesTarget = className != null && !className.isEmpty() && code.contains(className);
         boolean hasAssertions = code.contains("assert") || code.contains("Assertions.");
         boolean hasMultipleTests = countOccurrences(code, "@Test") >= 2;
         boolean success = referencesTarget && hasAssertions && hasMultipleTests;
@@ -61,7 +58,7 @@ public class ValidationSandbox {
     }
 
     private int countOccurrences(String source, String needle) {
-        if (TextUtils.isEmpty(source) || TextUtils.isEmpty(needle)) {
+        if (source == null || source.isEmpty() || needle == null || needle.isEmpty()) {
             return 0;
         }
         int count = 0;
@@ -86,6 +83,7 @@ public class ValidationSandbox {
 
     public static class ValidationReport {
         public final boolean executed;
+        /** Compatibilidad: éxito del prechequeo sintáctico, no del parche ni de sus tests. */
         public final boolean success;
         public final String message;
         public final String primaryTestName;
@@ -115,12 +113,13 @@ public class ValidationSandbox {
 
         public String toNarrative() {
             return String.format(Locale.getDefault(),
-                    "Validación %s. %s %s",
-                    success ? "superada" : "pendiente",
+                    "Prechequeo sintáctico %s. %s %s\n%s\nEl parche candidato no fue aplicado por esta validación.",
+                    success ? "superado" : "pendiente",
                     message,
-                    TextUtils.isEmpty(primaryTestName)
+                    primaryTestName.isEmpty()
                             ? ""
-                            : "Test destacado: " + primaryTestName);
+                            : "Test destacado: " + primaryTestName,
+                    executionResult.toNarrative());
         }
 
         public boolean hasRuntimeExecution() {
@@ -156,7 +155,7 @@ public class ValidationSandbox {
 
         public static TestExecutionResult skipped(String reason) {
             List<String> lines = new ArrayList<>();
-            lines.add(TextUtils.isEmpty(reason)
+            lines.add((reason == null || reason.isEmpty())
                     ? "Ejecución omitida por configuración."
                     : reason);
             return new TestExecutionResult(false, false, reason, lines, "", 0L);
@@ -206,7 +205,7 @@ public class ValidationSandbox {
                     builder.append('\n').append(index++).append(") ").append(step);
                 }
             }
-            if (!TextUtils.isEmpty(rawLog)) {
+            if (!rawLog.isEmpty()) {
                 builder.append("\nLog condensado: ");
                 builder.append(rawLog.length() > 400 ? rawLog.substring(0, 397) + "..." : rawLog);
             }

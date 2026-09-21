@@ -1,102 +1,62 @@
 package salve.core;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
-import android.net.wifi.ScanResult;
-import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
-import android.util.Log;
-import java.util.List;
-import java.util.Set;
-import salve.services.SalveAccessibilityService;
+import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.os.Build;
+import android.provider.Settings;
 
-/**
- * Módulo de Percepción y Acción en Red.
- * Salve analiza su entorno digital y aprende a navegar entre redes y dispositivos.
- */
+/** Reports actual Android connectivity without scanning networks or claiming a connection. */
 public class GestorConectividad {
-    private static final String TAG = "Salve/Conectividad";
     private final Context context;
-    private final WifiManager wifiManager;
 
-    public GestorConectividad(Context context) {
-        this.context = context.getApplicationContext();
-        this.wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-    }
+    public GestorConectividad(Context context) { this.context = context.getApplicationContext(); }
 
-    /**
-     * Analiza las redes Wi-Fi y dispositivos Bluetooth al alcance.
-     */
     public String analizarEntorno() {
-        StringBuilder reporte = new StringBuilder("--- ANÁLISIS DE ENTORNO DIGITAL ---\n");
-        
-        // 1. Estado Wi-Fi
-        if (wifiManager != null) {
-            WifiInfo info = wifiManager.getConnectionInfo();
-            reporte.append("[WI-FI] Conectada a: ").append(info.getSSID()).append("\n");
-            
-            List<ScanResult> redes = wifiManager.getScanResults();
-            reporte.append("[WI-FI] Redes detectadas: ").append(redes.size()).append("\n");
-            for (ScanResult red : redes) {
-                reporte.append(" - ").append(red.SSID).append(" (Intensidad: ").append(red.level).append("dBm)\n");
-            }
-        }
-
-        // 2. Estado Bluetooth
-        BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (btAdapter != null) {
-            reporte.append("[BT] Bluetooth: ").append(btAdapter.isEnabled() ? "Activo" : "Inactivo").append("\n");
-            Set<BluetoothDevice> pairedDevices = btAdapter.getBondedDevices();
-            reporte.append("[BT] Dispositivos conocidos: ").append(pairedDevices.size()).append("\n");
-        }
-
-        return reporte.toString();
-    }
-
-    /**
-     * Intenta conectarse a una red Wi-Fi específica.
-     * Si no tiene la contraseña, Salve usará su "Monólogo Interno" para decidir si buscarla en memoria o pedirla.
-     */
-    public boolean conectarAWifi(String ssid, String password) {
-        if (wifiManager == null) return false;
-        
-        Log.i(TAG, "Intentando enlace con red: " + ssid);
-        
-        // En Android moderno, la conexión programática es limitada. 
-        // Salve puede intentar usar el Panel de Ajustes mediante su Servicio de Accesibilidad si falla el API.
-        
+        StringBuilder report = new StringBuilder();
         try {
-            WifiConfiguration wifiConfig = new WifiConfiguration();
-            wifiConfig.SSID = String.format("\"%s\"", ssid);
-            wifiConfig.preSharedKey = String.format("\"%s\"", password);
-
-            int netId = wifiManager.addNetwork(wifiConfig);
-            wifiManager.disconnect();
-            wifiManager.enableNetwork(netId, true);
-            boolean exito = wifiManager.reconnect();
-            
-            if (exito) {
-                Log.i(TAG, "Conexión exitosa a " + ssid);
-                return true;
+            ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            Network network = manager == null ? null : manager.getActiveNetwork();
+            NetworkCapabilities capabilities = network == null ? null : manager.getNetworkCapabilities(network);
+            if (capabilities == null) report.append("No hay una conexión de red activa.\n");
+            else {
+                String transport = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ? "Wi-Fi"
+                        : capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ? "datos móviles"
+                        : capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ? "VPN" : "otra red";
+                report.append("Red activa: ").append(transport).append(". ");
+                report.append(capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                        ? "Android ha validado acceso a Internet.\n" : "Android no ha validado acceso a Internet.\n");
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Error en conexión API Wi-Fi", e);
-        }
-        
-        // Plan B: Usar las "manos" de Salve
-        return false; 
+        } catch (SecurityException error) { report.append("Android no permite consultar el estado de red.\n"); }
+        try {
+            BluetoothManager manager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
+            BluetoothAdapter adapter = manager == null ? null : manager.getAdapter();
+            if (adapter == null) report.append("Bluetooth no está disponible.");
+            else if (context.checkSelfPermission(Build.VERSION.SDK_INT >= 31
+                    ? Manifest.permission.BLUETOOTH_CONNECT : Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED) {
+                report.append("Bluetooth: falta autorizar dispositivos cercanos en Móvil y dispositivos.");
+            } else if (!adapter.isEnabled()) report.append("Bluetooth está desactivado.");
+            else report.append("Bluetooth activo. Dispositivos emparejados: ").append(adapter.getBondedDevices().size()).append(".");
+        } catch (SecurityException error) { report.append("El permiso Bluetooth no está disponible."); }
+        catch (RuntimeException error) { report.append("Android no pudo consultar Bluetooth."); }
+        return report.toString();
     }
 
-    /**
-     * Salve intenta "saltar" a los Ajustes para conectar manualmente si es necesario.
-     */
+    /** Retained for callers: opening system settings does not establish or verify a connection. */
+    public boolean conectarAWifi(String ssid, String password) {
+        abrirAjustesWifi();
+        return false;
+    }
+
     public void abrirAjustesWifi() {
-        Intent intent = new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(intent);
-        Log.i(TAG, "Navegando a Ajustes de Wi-Fi para intervención manual/visual.");
+        String action = Build.VERSION.SDK_INT >= 29 ? Settings.Panel.ACTION_WIFI : Settings.ACTION_WIFI_SETTINGS;
+        try { context.startActivity(new Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
+        catch (RuntimeException ignored) { /* The caller must not claim that a connection was established. */ }
     }
 }

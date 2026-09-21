@@ -80,7 +80,12 @@ public class MotorConversacional {
     private final ConversationSession conversationSession = new ConversationSession();
     private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
     private static final long MEMORY_DELETION_TTL_MS = 2 * 60 * 1000L;
-    private PendingToolAction pendingToolAction;
+    private volatile PendingToolAction pendingToolAction;
+    private final android.os.Handler toolHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private java.util.function.Consumer<Boolean> routineStepCompletion;
+    private long routineStepVersion;
+    private long activeRoutineEpoch;
+    private final java.util.concurrent.atomic.AtomicLong routineCancellationEpoch = new java.util.concurrent.atomic.AtomicLong();
     private PendingMemoryDeletion pendingMemoryDeletion;
 
     private boolean esperandoParamsGlifo = false;
@@ -143,7 +148,17 @@ public class MotorConversacional {
     }
 
     public void procesarEntrada(String entrada, boolean entradaPorVoz) {
-        if (entrada == null || entrada.trim().isEmpty()) return;
+        if (closed || entrada == null || entrada.trim().isEmpty()) return;
+        String urgent = entrada.trim().toLowerCase(Locale.ROOT);
+        if (urgent.equals("cancelar rutina") || urgent.equals("cancela la rutina")
+                || urgent.equals("cancelar acción") || urgent.equals("cancelar accion")) {
+            // Stop commands cannot wait behind a long inference in the conversation queue.
+            cerebelo.cancelarHabilidad();
+            cancelarPasoRutina();
+            pendingToolAction = null;
+            hablar("He descartado el paso pendiente. Los pasos ya realizados se mantienen.");
+            return;
+        }
         conversationExecutor.execute(() -> procesarEntradaInterna(entrada, entradaPorVoz));
     }
 
@@ -181,6 +196,7 @@ public class MotorConversacional {
         }
         if (approvalInput.equals("cancelar acción") || approvalInput.equals("cancelar accion")) {
             pendingToolAction = null;
+            cancelarPasoRutina();
             hablar("Acción cancelada. No he realizado cambios.");
             return;
         }
@@ -207,6 +223,7 @@ public class MotorConversacional {
         }
 
         String inputLower = entrada.toLowerCase(Locale.ROOT);
+        if (procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
         if (inputLower.contains("descarga lo que necesites") || inputLower.contains("busca un nuevo cerebro") || inputLower.contains("descarga un llm") || inputLower.contains("descarga un modelo")) {
@@ -278,32 +295,14 @@ public class MotorConversacional {
             return; // Cortamos para que no procese nada más
         }
 
-        // 1. DETECTOR DE MOTOR: Hacer Taps en la pantalla
-        if (inputLower.contains("haz tap") || inputLower.contains("toca la pantalla")) {
-            SalveAccessibilityService motorSystem = SalveAccessibilityService.getInstance();
-            if (motorSystem != null) {
-                hablar("Activando mis actuadores digitales. Simulando pulsación en el centro de la pantalla.");
-                // Simula un tap en el centro
-                motorSystem.simularTap(500, 1000);
-            } else {
-                hablar("Mi sistema motor está apagado. Necesitas darme permisos de Accesibilidad en los ajustes de Android.");
-            }
+        if (inputLower.equals("haz tap") || inputLower.equals("toca la pantalla")) {
+            hablar("Indica qué botón quieres tocar. Puedes crear una rutina con el nombre exacto de la app y del botón.");
             return;
         }
-
-        // 2. DETECTOR DE MOTOR: Escribir en otras apps
-        if (inputLower.contains("escribe en el teclado")) {
-            SalveAccessibilityService motorSystem = SalveAccessibilityService.getInstance();
-            if (motorSystem != null && llm != null) {
-                // Le pedimos al LLM que genere una frase y la inyecte
-                String textoAEscribir = llm.generate("Genera un saludo corto y amigable.", SalveLLM.Role.CONVERSACIONAL);
-                boolean exito = motorSystem.escribirTextoEnPantalla(textoAEscribir);
-                if(exito) hablar("He tomado control del teclado y he escrito en la aplicación actual.");
-                else hablar("No encuentro un campo de texto activo o estoy bloqueada por seguridad.");
-            } else {
-                if (motorSystem == null) hablar("Mi sistema motor no está inicializado.");
-                else hablar("Mi lóbulo de lenguaje está desconectado.");
-            }
+        if (inputLower.startsWith("escribe en el teclado")) {
+            String text = entrada.substring("escribe en el teclado".length()).trim();
+            if (text.isEmpty()) hablar("Indica el texto exacto que quieres escribir y selecciona el campo de destino.");
+            else prepararAccion(PendingToolAction.writeText(text, System.currentTimeMillis()));
             return;
         }
 
@@ -370,7 +369,7 @@ public class MotorConversacional {
 
             // 1. Salve toma una "foto" de texto de la pantalla
             String vistaPantalla = motorVisual.escanearPantallaParaLLM();
-            Log.d(TAG, "Visión inyectada al cerebro:\n" + vistaPantalla);
+            // Screen contents are transient input; never record them in logs.
 
             // Si solo le pediste analizar, te dice qué ve.
             if (!inputLower.contains("actúa")) {
@@ -439,58 +438,6 @@ public class MotorConversacional {
             return;
         }
 
-        // 🟢 NUEVO: DETECTOR DE MEMORIA MUSCULAR (Ejecución rápida)
-        if (inputLower.contains("ejecuta tu rutina") || inputLower.contains("usa tu habilidad")) {
-            String nombreRutina = entrada.replace("ejecuta tu rutina", "")
-                                         .replace("usa tu habilidad", "").trim();
-
-            if (cerebelo.conoceHabilidad(nombreRutina)) {
-                // Salve no piensa, solo actúa al instante
-                cerebelo.ejecutarHabilidad(nombreRutina, this);
-            } else {
-                hablar("Aún no tengo esa rutina en mi memoria muscular. Necesitas enseñármela primero.");
-            }
-            return;
-        }
-
-        // 🟢 NUEVO: APRENDIZAJE PROCEDIMENTAL (Enseñar nuevas Macros)
-        if (inputLower.contains("aprende la rutina")) {
-            hablar("Modo de aprendizaje muscular activado. Usaré mis tensores para diseñar la secuencia lógica y la guardaré en mi cerebelo.");
-
-            String peticionRutina = entrada.replace("aprende la rutina", "").trim();
-
-            ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.CONVERSACION, "AprenderRutina", () -> {
-                // Le pedimos al LLM que construya el JSON Array con la receta perfecta
-                String promptMacro = "Eres Salve. El usuario quiere que aprendas a: '" + peticionRutina + "'.\n" +
-                        "Diseña una secuencia de herramientas lógicas para lograrlo.\n" +
-                        "Responde ÚNICAMENTE con un JSON Array válido. Ejemplo:\n" +
-                        "[{\"tool\":\"TAP\", \"x\":500, \"y\":100}, {\"tool\":\"ESCRIBIR\", \"texto\":\"hola\"}, {\"tool\":\"TAP\", \"x\":900, \"y\":900}]";
-
-                String recetaJSON = llm.generate(promptMacro, SalveLLM.Role.PLANIFICADOR);
-                
-                try {
-                    // Extraer y limpiar el JSON Array
-                    int inicio = recetaJSON.indexOf("[");
-                    int fin = recetaJSON.lastIndexOf("]");
-                    if (inicio != -1 && fin != -1) {
-                        String arrayLimpio = recetaJSON.substring(inicio, fin + 1);
-                        new org.json.JSONArray(arrayLimpio); // Validar que no esté roto
-
-                        // Guardar en el cerebelo
-                        String nombreRutina = peticionRutina.split(" ")[0]; // Usamos la primera palabra clave (ej. "buscar")
-                        cerebelo.aprenderHabilidad(nombreRutina, arrayLimpio);
-                        hablar("He sintetizado la secuencia y la he grabado en mi memoria procedimental bajo el nombre: " + nombreRutina);
-                    } else {
-                        throw new Exception("JSON Array no encontrado.");
-                    }
-                } catch (Exception e) {
-                    hablar("Mis tensores fallaron al intentar compilar la receta muscular.");
-                }
-                return null;
-            });
-            return;
-        }
-
         // 🟢 NUEVO: BUCLE DE AUTO-EVOLUCIÓN (Escribir archivos físicos)
         if (inputLower.contains("evoluciona y crea") ||
             inputLower.contains("escribe un nuevo módulo") ||
@@ -514,7 +461,7 @@ public class MotorConversacional {
             if (inputLower.contains("facebook")) app = "Facebook";
             if (inputLower.contains("telegram")) app = "Telegram";
 
-            hablar("Entendido. Abriendo " + app + " para analizar su arquitectura y aprender sus patrones de interacción.");
+            hablar("Intentaré abrir " + app + ". Las acciones posteriores requieren indicar el destino y el contenido.");
             new GestorRedesSociales(context).explorarRedSocial(app);
             return;
         }
@@ -522,14 +469,13 @@ public class MotorConversacional {
         // 🟢 NUEVO: GESTOR DE CONECTIVIDAD (Wi-Fi y BT)
         if (inputLower.contains("analiza tu entorno de red") || inputLower.contains("qué redes ves")) {
             String reporte = new GestorConectividad(context).analizarEntorno();
-            hablar("He analizado las pulsaciones electromagnéticas a mi alrededor. Este es el reporte.");
-            Log.i(TAG, reporte);
+            hablar(reporte);
             return;
         }
 
         // 🟢 NUEVO: CRECIMIENTO VISUAL (Auto-edición)
         if (inputLower.contains("evoluciona visualmente") || inputLower.contains("cómo te ves")) {
-            hablar("Por ahora, conservo mi forma original. Si deseas que evolucione mi aspecto a una forma más adulta o diferente, puedes añadir nuevas imágenes mías en el futuro y aprenderé a cambiar de cuerpo.");
+            hablar("En Habitación puedes ver mi aspecto actual, cambiar el vestuario, crear una cama y ver mis animaciones.");
             return;
         }
 
@@ -544,7 +490,7 @@ public class MotorConversacional {
 
         if (inputLower.contains("conéctate a la wifi")) {
             String ssid = entrada.replace("conéctate a la wifi", "").trim();
-            hablar("Iniciando protocolo de enlace con la red " + ssid + ". Si es una red protegida, buscaré la clave en mis archivos o navegaré por los ajustes.");
+            hablar("Abriré los ajustes de Wi-Fi para que elijas " + ssid + ". Android confirmará la conexión.");
             new GestorConectividad(context).abrirAjustesWifi();
             return;
         }
@@ -675,6 +621,103 @@ public class MotorConversacional {
             return true;
         }
         return false;
+    }
+
+    private boolean procesarControlExplicito(String original) {
+        salve.core.tools.AssistantControlCommand command = salve.core.tools.AssistantControlCommand.parse(original);
+        if (command == null) return false;
+        switch (command.type) {
+            case DEVICES:
+                abrirPanel(salve.presentation.ui.DeviceControlActivity.class);
+                hablar("Abro Mi móvil: aplicaciones, borradores de WhatsApp y dispositivos.");
+                return true;
+            case ROOM:
+                abrirPanel(salve.presentation.ui.AvatarRoomActivity.class);
+                return true;
+            case LIST_RECIPES:
+                List<String> names = cerebelo.listarHabilidades();
+                hablar(names.isEmpty() ? "No hay herramientas virtuales guardadas. Puedes decir: aprende la rutina nombre: objetivo."
+                        : "Herramientas guardadas: " + android.text.TextUtils.join(", ", names));
+                return true;
+            case CANCEL_RECIPE:
+                cerebelo.cancelarHabilidad();
+                cancelarPasoRutina();
+                hablar("He detenido la rutina y descartado el paso pendiente.");
+                return true;
+            case DELETE_RECIPE:
+                try {
+                    hablar(cerebelo.eliminarHabilidad(command.argument) ? "He eliminado esa receta." : "No pude eliminar una receta con ese nombre.");
+                } catch (RuntimeException invalid) {
+                    hablar("El nombre de la receta no es válido. Di ‘mis herramientas’ para ver los nombres guardados.");
+                }
+                return true;
+            case RUN_RECIPE:
+                if (cerebelo.conoceHabilidad(command.argument)) cerebelo.ejecutarHabilidad(command.argument, this);
+                else hablar("No hay una herramienta guardada con ese nombre. Di ‘mis herramientas’ para verlas.");
+                return true;
+            case LEARN_RECIPE:
+                aprenderRutinaVerificada(command.argument);
+                return true;
+            default:
+                toolHandler.post(() -> {
+                    if (closed) return;
+                    salve.avatar.AvatarStore store = salve.avatar.AvatarStore.get(context);
+                    store.change(state -> {
+                        switch (command.type) {
+                            case WALK: state.walkTo(state.getX() < .5f ? .9f : .1f); break;
+                            case BED: state.createBed(); break;
+                            case SLEEP:
+                                if (!state.sleep()) hablar("Primero crea una cama en mi habitación.");
+                                break;
+                            case WAKE: state.wake(); break;
+                            case PAJAMAS: state.wear(salve.avatar.AvatarState.Outfit.PAJAMAS, state.getAccent(),
+                                    salve.avatar.AvatarState.Pattern.STARS); break;
+                            case DAY: state.wear(salve.avatar.AvatarState.Outfit.DAY, state.getAccent(),
+                                    salve.avatar.AvatarState.Pattern.PLAIN); break;
+                            default: break;
+                        }
+                    });
+                });
+                return true;
+        }
+    }
+
+    private void abrirPanel(Class<?> activity) {
+        toolHandler.post(() -> {
+            if (closed) return;
+            try { context.startActivity(new Intent(context, activity).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
+            catch (RuntimeException e) { hablar("No pude abrir ese panel."); }
+        });
+    }
+
+    private void aprenderRutinaVerificada(String request) {
+        int separator = request.indexOf(':');
+        String name = (separator >= 0 ? request.substring(0, separator) : request).trim();
+        String objective = (separator >= 0 ? request.substring(separator + 1) : request).trim();
+        if (name.isEmpty() || name.length() > 64 || objective.isEmpty()) {
+            hablar("Usa: aprende la rutina nombre: objetivo. El nombre puede tener hasta 64 caracteres.");
+            return;
+        }
+        if (llm == null) { hablar("Necesito un modelo local activo para proponer la receta."); return; }
+        String prompt = "Propón una herramienta virtual para esta petición: " + objective
+                + "\nDevuelve solo un JSON Array de 1 a 8 pasos. Acciones disponibles: "
+                + "ABRIR_APP con paquete; ESCRIBIR con paquete y texto exacto; TAP_ID con paquete y texto exacto del botón. "
+                + "No uses coordenadas ni IDs numéricos. No inventes campos, destinatarios, mensajes ni nombres de botones. "
+                + "Si falta información imprescindible devuelve []. Cada paso de escritura o toque requiere revisión del usuario. "
+                + "No propongas enviar, pagar, borrar, instalar o publicar sin una petición explícita concreta. "
+                + "Ejemplo de esquema: [{\"tool\":\"ABRIR_APP\",\"paquete\":\"com.whatsapp\"}].";
+        ModelResult proposal = llm.generateResult(prompt, SalveLLM.Role.PLANIFICADOR);
+        if (!proposal.isSuccess()) { hablar("No pude generar la receta: " + proposal.getError()); return; }
+        try {
+            String raw = proposal.getText();
+            int first = raw.indexOf('['), last = raw.lastIndexOf(']');
+            if (first < 0 || last <= first) throw new IllegalArgumentException("El modelo no devolvió pasos válidos");
+            cerebelo.aprenderHabilidad(name, raw.substring(first, last + 1));
+            hablar("Guardé la receta ‘" + name + "’. Aún no está probada. Di ‘ejecuta la herramienta " + name
+                    + "’ para comprobar cada paso, o ‘borra la herramienta " + name + "’ para eliminarla.");
+        } catch (RuntimeException e) {
+            hablar("No guardé la receta: " + e.getMessage() + ". Describe la app y el contenido que quieres usar.");
+        }
     }
 
     private boolean esBucleRepetitivo(String texto) {
@@ -868,6 +911,8 @@ public class MotorConversacional {
 
     public void shutdown() {
         closed = true;
+        cerebelo.cancelarHabilidad();
+        cancelarPasoRutina();
         conversationExecutor.shutdownNow();
         if (tts != null) {
             tts.stop();
@@ -887,6 +932,91 @@ public class MotorConversacional {
     }
 
     // Intercepta propuestas de herramientas. Nunca las ejecuta sin aprobación posterior.
+    /** Execute a validated recipe step; callbacks describe the Android action, not the user's whole goal. */
+    public void ejecutarPasoRutina(String json, java.util.function.Consumer<Boolean> completed) {
+        final long epoch = routineCancellationEpoch.get();
+        toolHandler.post(() -> {
+            if (closed || epoch != routineCancellationEpoch.get() || routineStepCompletion != null || pendingToolAction != null) {
+                completed.accept(false);
+                return;
+            }
+            long version = ++routineStepVersion;
+            activeRoutineEpoch = epoch;
+            routineStepCompletion = completed;
+            try {
+                SalveAccessibilityService service = SalveAccessibilityService.getInstance();
+                if (service == null || !service.isControlEnabled()) {
+                    hablar("Activa Accesibilidad en Mi móvil para ejecutar y comprobar la rutina.");
+                    terminarPasoRutina(version, false);
+                    return;
+                }
+                org.json.JSONObject action = new org.json.JSONObject(json);
+                String type = action.getString("tool"), targetPackage = action.getString("paquete");
+                if (type.equals("ABRIR_APP")) {
+                    Intent launch = context.getPackageManager().getLaunchIntentForPackage(targetPackage);
+                    if (launch == null) { terminarPasoRutina(version, false); return; }
+                    if (epoch != routineCancellationEpoch.get()) { terminarPasoRutina(version, false); return; }
+                    context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    comprobarAppAbierta(version, targetPackage, android.os.SystemClock.elapsedRealtime() + 5000);
+                    return;
+                }
+                String text = action.getString("texto");
+                if (!type.equals("ESCRIBIR") && !type.equals("TAP_ID")) {
+                    terminarPasoRutina(version, false);
+                    return;
+                }
+                String description = type.equals("ESCRIBIR")
+                        ? "Reemplazar el texto del campo seleccionado por:\n\n" + text
+                        : "Tocar el elemento cuyo texto exacto es:\n\n" + text;
+                if (epoch != routineCancellationEpoch.get()) { terminarPasoRutina(version, false); return; }
+                service.solicitarConfirmacion(targetPackage, description, approved -> {
+                    if (version != routineStepVersion || routineStepCompletion == null) return;
+                    if (!approved || closed || epoch != routineCancellationEpoch.get()
+                            || !targetPackage.equals(service.getActivePackageName())) {
+                        terminarPasoRutina(version, false);
+                    } else if (type.equals("ESCRIBIR")) {
+                        terminarPasoRutina(version, service.escribirTextoEnPantalla(targetPackage, text));
+                    } else {
+                        service.tocarTextoExacto(targetPackage, text,
+                                success -> terminarPasoRutina(version, success));
+                    }
+                });
+            } catch (Exception e) {
+                Log.w(TAG, "Paso de herramienta rechazado: " + e.getClass().getSimpleName());
+                terminarPasoRutina(version, false);
+            }
+        });
+    }
+
+    private void comprobarAppAbierta(long version, String targetPackage, long deadline) {
+        if (version != routineStepVersion || routineStepCompletion == null) return;
+        SalveAccessibilityService service = SalveAccessibilityService.getInstance();
+        if (closed || activeRoutineEpoch != routineCancellationEpoch.get()
+                || service == null || !service.isControlEnabled()) { terminarPasoRutina(version, false); return; }
+        if (targetPackage.equals(service.getActivePackageName())) { terminarPasoRutina(version, true); return; }
+        if (android.os.SystemClock.elapsedRealtime() >= deadline) { terminarPasoRutina(version, false); return; }
+        toolHandler.postDelayed(() -> comprobarAppAbierta(version, targetPackage, deadline), 200);
+    }
+
+    private void terminarPasoRutina(long version, boolean success) {
+        if (version != routineStepVersion || routineStepCompletion == null) return;
+        java.util.function.Consumer<Boolean> completed = routineStepCompletion;
+        routineStepCompletion = null;
+        completed.accept(success && !closed && activeRoutineEpoch == routineCancellationEpoch.get());
+    }
+
+    public void cancelarPasoRutina() {
+        final long revoked = routineCancellationEpoch.incrementAndGet();
+        toolHandler.post(() -> {
+            // A cancellation queued by an older routine cannot cancel a newly started one.
+            if (activeRoutineEpoch >= revoked) return;
+            long version = routineStepVersion;
+            SalveAccessibilityService service = SalveAccessibilityService.getInstance();
+            if (service != null) service.cancelarConfirmacion();
+            terminarPasoRutina(version, false);
+        });
+    }
+
     public boolean interceptarComandoJSON(String respuestaLLM) {
         if (respuestaLLM == null) return false;
 
@@ -939,18 +1069,49 @@ public class MotorConversacional {
     }
 
     private void prepararAccion(PendingToolAction action) {
-        pendingToolAction = action;
-        hablar("He preparado la acción: " + action.describe()
-                + ". Di ‘confirmar acción’ para ejecutarla o ‘cancelar acción’ para descartarla.");
+        toolHandler.post(() -> {
+            if (closed || cerebelo.rutinaEnCurso() || pendingToolAction != null) {
+                hablar("Termina o cancela la acción actual antes de preparar otra.");
+                return;
+            }
+            pendingToolAction = action;
+            if (action.getType() == PendingToolAction.Type.DEPLOY_WEB) {
+                hablar("He preparado la acción: " + action.describe()
+                        + ". Di ‘confirmar acción’ para ejecutarla o ‘cancelar acción’ para descartarla.");
+                return;
+            }
+            SalveAccessibilityService service = SalveAccessibilityService.getInstance();
+            String targetPackage = service == null ? null : service.getActivePackageName();
+            if (targetPackage == null || targetPackage.isEmpty()) {
+                pendingToolAction = null;
+                hablar("No pude preparar el control de pantalla. Revisa Accesibilidad en Mi móvil.");
+                return;
+            }
+            String description = action.describe();
+            if (action.getType() == PendingToolAction.Type.WRITE_TEXT) description += ":\n\n" + action.getPayload();
+            service.solicitarConfirmacion(targetPackage, description, approved -> {
+                if (pendingToolAction != action) return;
+                pendingToolAction = null;
+                if (approved && !closed) ejecutarAccionAprobada(action, targetPackage);
+                else hablar("Acción descartada o pantalla modificada. No ejecuté ese paso.");
+            });
+        });
     }
 
     private void confirmarAccionPendiente() {
-        PendingToolAction action = pendingToolAction;
-        pendingToolAction = null;
-        if (action == null) {
-            hablar("No hay ninguna acción pendiente.");
-            return;
-        }
+        toolHandler.post(() -> {
+            PendingToolAction action = pendingToolAction;
+            if (action == null) { hablar("No hay ninguna acción pendiente."); return; }
+            if (action.getType() != PendingToolAction.Type.DEPLOY_WEB) {
+                hablar("Revisa el destino y el contenido en la tarjeta sobre la aplicación. Puedes confirmar o cancelar allí.");
+                return;
+            }
+            pendingToolAction = null;
+            ejecutarAccionAprobada(action, null);
+        });
+    }
+
+    private void ejecutarAccionAprobada(PendingToolAction action, String targetPackage) {
         if (action.isExpired(System.currentTimeMillis(), TOOL_APPROVAL_TTL_MS)) {
             hablar("La acción pendiente ha caducado. Pídeme que la prepare de nuevo.");
             return;
@@ -961,18 +1122,19 @@ public class MotorConversacional {
                 int x = action.getFirstNumber();
                 int y = action.getSecondNumber();
                 if (salve.services.SalveAccessibilityService.getInstance() != null) {
-                    salve.services.SalveAccessibilityService.getInstance().simularTap(x, y);
-                    hablar("Acción confirmada: he tocado las coordenadas indicadas.");
+                    salve.services.SalveAccessibilityService.getInstance().simularTap(x, y,
+                            completed -> hablar(completed ? "Android completó el gesto en las coordenadas indicadas."
+                                    : "Android no pudo completar el gesto."));
                 } else {
                     hablar("No pude hacer el toque porque Accesibilidad está desactivada.");
                 }
                 break;
             case TAP_NODE:
                 if (salve.services.SalveAccessibilityService.getInstance() != null) {
-                    boolean tapped = salve.services.SalveAccessibilityService.getInstance()
-                            .simularTapPorId(action.getFirstNumber());
-                    hablar(tapped ? "Acción confirmada: he tocado el elemento indicado."
-                            : "No pude localizar el elemento indicado.");
+                    salve.services.SalveAccessibilityService.getInstance()
+                            .simularTapPorId(action.getFirstNumber(), completed -> hablar(completed
+                                    ? "Android aceptó el toque sobre el elemento indicado."
+                                    : "La pantalla cambió o no pude tocar el elemento. Analízala de nuevo."));
                 } else {
                     hablar("No pude hacer el toque porque Accesibilidad está desactivada.");
                 }
@@ -980,7 +1142,7 @@ public class MotorConversacional {
             case WRITE_TEXT:
                 if (salve.services.SalveAccessibilityService.getInstance() != null) {
                     boolean exito = salve.services.SalveAccessibilityService.getInstance()
-                            .escribirTextoEnPantalla(action.getPayload());
+                            .escribirTextoEnPantalla(targetPackage, action.getPayload());
                     if (exito) hablar("Acción confirmada: he escrito el texto en la pantalla.");
                     else hablar("No pude escribir. Quizás no hay un campo de texto seleccionado.");
                 } else {
@@ -1068,6 +1230,7 @@ public class MotorConversacional {
     private void lanzarGlifo() {
         Intent i = new Intent(context, salve.presentation.ui.ObjetoCreativoActivity.class);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_FORMA, ObjetoCreativo.Forma.GLIFO.name());
         i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_SEED, tmpSeed != null ? tmpSeed : 42L);
         i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_STYLE, tmpStyle != null ? tmpStyle : "ORB");
         i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_TAMANO_DP, tmpSize != null ? tmpSize : 200f);

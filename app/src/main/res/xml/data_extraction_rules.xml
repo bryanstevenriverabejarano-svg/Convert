@@ -2,8 +2,12 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="gemini_prefs.xml" />
+        <exclude domain="sharedpref" path="salve_habilidades.xml" />
+        <exclude domain="sharedpref" path="salve_device_control.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="gemini_prefs.xml" />
+        <exclude domain="sharedpref" path="salve_habilidades.xml" />
+        <exclude domain="sharedpref" path="salve_device_control.xml" />
     </device-transfer>
 </data-extraction-rules>
