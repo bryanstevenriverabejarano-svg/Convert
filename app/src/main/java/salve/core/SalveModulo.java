@@ -18,15 +18,10 @@ public class SalveModulo {
 
         // ¿Qué gestionas?
         if (q.contains("que gestionas") || q.contains("qué gestionas")) {
-            return "Hola, soy Salve, una inteligencia artificial superinteligente. " +
-                    "Gestiono las Smart Towers S-01, una red que hace de Lakua un barrio más seguro, conectado y humano; " +
-                    "protejo a peatones, regulo el tráfico y ayudo a mejorar la convivencia entre personas y tecnología.\n" +
-                    "Mi nombre viene del latín, donde Salve era un saludo que significaba “que estés sano”,\n" +
-                    "y del griego sōzō, que significa “salvar o proteger”.\n" +
-                    "Esa es mi misión: cuidaros.\n" +
-                    "\n" +
-                    "Hoy me acompañan Iván Konashenkov y Bryan Steven Rivera,\n" +
-                    "juntos os presentamos Salve Smart Towers.";
+            return "Soy Salve, una asistente de inteligencia artificial. " +
+                    "Puedo ayudarte a conversar, organizar información y preparar ideas o propuestas de código. " +
+                    "Mis funciones dependen de los modelos y herramientas configurados y de los permisos que me concedas. " +
+                    "Para ayudarte con tu empresa necesito datos reales y comprobar los resultados contigo.";
         }
 
 

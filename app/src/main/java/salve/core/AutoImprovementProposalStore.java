@@ -70,6 +70,8 @@ public final class AutoImprovementProposalStore {
         public final boolean sandboxAttempted;
         public final boolean sandboxPassed;
         public final boolean ethicalReviewPassed;
+        public final String sourceRevision;
+        public final String sourceSha256;
 
         public Proposal(long createdAtEpochMillis,
                         String targetClass,
@@ -81,6 +83,26 @@ public final class AutoImprovementProposalStore {
                         boolean sandboxAttempted,
                         boolean sandboxPassed,
                         boolean ethicalReviewPassed) {
+            this(createdAtEpochMillis, targetClass, targetPath, issueSummary, patch, generatedTests,
+                    syntheticValidationPassed, sandboxAttempted, sandboxPassed, ethicalReviewPassed, null, null);
+        }
+
+        public Proposal(long createdAtEpochMillis,
+                        String targetClass,
+                        String targetPath,
+                        String issueSummary,
+                        String patch,
+                        String generatedTests,
+                        boolean syntheticValidationPassed,
+                        boolean sandboxAttempted,
+                        boolean sandboxPassed,
+                        boolean ethicalReviewPassed,
+                        String sourceRevision,
+                        String sourceSha256) {
+            if ((sourceRevision == null) != (sourceSha256 == null)
+                    || (sourceRevision != null && (!sourceRevision.matches("[a-f0-9]{40}") || !sourceSha256.matches("[a-f0-9]{64}")))) {
+                throw new IllegalArgumentException("Identidad de fuente inválida");
+            }
             this.createdAtEpochMillis = createdAtEpochMillis;
             this.proposalId = UUID.randomUUID().toString();
             this.targetClass = safe(targetClass);
@@ -92,6 +114,8 @@ public final class AutoImprovementProposalStore {
             this.sandboxAttempted = sandboxAttempted;
             this.sandboxPassed = sandboxPassed;
             this.ethicalReviewPassed = ethicalReviewPassed;
+            this.sourceRevision = sourceRevision;
+            this.sourceSha256 = sourceSha256;
         }
 
         public boolean hasActionablePatch() {

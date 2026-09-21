@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import tempfile
 import unittest
@@ -61,6 +62,21 @@ class ProposalValidationTest(unittest.TestCase):
         proposal["proposalId"] = proposal["proposalId"].replace("-", "")
         with self.assertRaises(runner.ProposalError):
             runner.validate_proposal(proposal)
+
+    def test_source_identity_is_optional_but_must_be_complete_and_strict(self):
+        proposal = self.proposal()
+        proposal.update(sourceRevision="a" * 40, sourceSha256="b" * 64)
+        runner.validate_proposal(proposal)
+        for field in ("sourceRevision", "sourceSha256"):
+            for value in (None, 42, "", "A" * 64):
+                invalid = dict(proposal)
+                invalid[field] = value
+                with self.subTest(field=field, value=value), self.assertRaises(runner.ProposalError):
+                    runner.validate_proposal(invalid)
+            invalid = dict(proposal)
+            del invalid[field]
+            with self.assertRaises(runner.ProposalError):
+                runner.validate_proposal(invalid)
 
     def test_rejects_float_schema_version(self):
         proposal = self.proposal()
@@ -204,6 +220,32 @@ class RunnerIntegrationTest(unittest.TestCase):
                 mock.patch.object(runner.sandbox, "run_sandbox") as sandbox_run:
             runner.execute(self.proposal_path, self.repo, "main", True)
             sandbox_run.assert_called_once()
+        self.assertEqual("", self.git("ls-remote", "--heads", "origin", self.branch))
+        self.assertEqual([], self.pr_bodies)
+        self.assert_cleaned()
+
+    def test_bound_source_is_verified_and_recorded_in_pr(self):
+        source = (self.repo / self.target).read_bytes()
+        self.proposal.update(sourceRevision=self.git("rev-parse", "HEAD").strip(),
+                             sourceSha256=hashlib.sha256(source).hexdigest())
+        self.proposal_path.write_text(json.dumps(self.proposal))
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox") as sandbox_run:
+            runner.execute(self.proposal_path, self.repo, "main", False)
+            sandbox_run.assert_called_once()
+        self.assertIn(self.proposal["sourceSha256"], self.pr_bodies[0])
+        self.assertIn(self.proposal["sourceRevision"], self.pr_bodies[0])
+        self.assert_cleaned()
+
+    def test_stale_source_rejected_before_patch_application_or_sandbox(self):
+        self.proposal.update(sourceRevision="a" * 40, sourceSha256=hashlib.sha256(b"older source").hexdigest())
+        self.proposal_path.write_text(json.dumps(self.proposal))
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run) as run, \
+                mock.patch.object(runner.sandbox, "run_sandbox") as sandbox_run:
+            with self.assertRaisesRegex(runner.ProposalError, "fuente cambió"):
+                runner.execute(self.proposal_path, self.repo, "main", False)
+            sandbox_run.assert_not_called()
+            self.assertFalse(any(call.args[0][:2] == ["git", "apply"] for call in run.call_args_list))
         self.assertEqual("", self.git("ls-remote", "--heads", "origin", self.branch))
         self.assertEqual([], self.pr_bodies)
         self.assert_cleaned()

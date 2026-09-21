@@ -699,6 +699,10 @@ public class MotorConversacional {
         salve.core.tools.AssistantControlCommand command = salve.core.tools.AssistantControlCommand.parse(original);
         if (command == null) return false;
         switch (command.type) {
+            case FINANCES:
+                abrirPanel(salve.presentation.ui.BusinessFinanceActivity.class);
+                hablar("Abro el análisis local de costes, margen y punto de equilibrio. Introduce las cifras de tu negocio.");
+                return true;
             case DEVICES:
                 abrirPanel(salve.presentation.ui.DeviceControlActivity.class);
                 hablar("Abro Mi móvil: aplicaciones, borradores de WhatsApp y dispositivos.");
@@ -1565,12 +1569,13 @@ public class MotorConversacional {
     }
 
     private void ejecutarAutoEvolucion(String entrada) {
-        hablar("Prepararé una propuesta autónoma para una rama aislada. El ejecutor externo deberá volver a probarla antes de abrir el pull request; mi APK de producción no se modificará directamente.");
+        hablar("Revisaré las fuentes disponibles y comprobaré si puedo preparar una propuesta. El ejecutor externo tendrá que probar cualquier parche antes de abrir un pull request.");
         ColamensajesCognitivos.getInstance().enviarAsincronico(
                 ColamensajesCognitivos.Prioridad.CONVERSACION,
                 "PropuestaAutoEvolucion",
                 () -> {
-                    new AutoImprovementManager(context).autoImprove();
+                    String result = new AutoImprovementManager(context).autoImprove();
+                    if (!closed) hablar(result);
                     return null;
                 });
     }

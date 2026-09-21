@@ -3,9 +3,10 @@ package salve.core;
 import android.content.Context;
 import android.util.Log;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * AutoImprovementManager coordina la generación de mejoras de código
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class AutoImprovementManager {
 
     private static final String TAG = "AutoImproveMgr";
+    private static final int MAX_ISSUES_PER_RUN = 3;
     private final Context context;
     private final CodeAnalyzerEnhanced analyzer;
     private final LLMCoder coder;
@@ -52,17 +54,33 @@ public class AutoImprovementManager {
     /**
      * Ejecuta el flujo de auto mejora: analiza el código de Salve, genera
      * parches sugeridos para cada issue de nivel WARNING y guarda estas
-     * sugerencias como recuerdos en la memoria emocional. Se utiliza un
-     * timeout de 5 segundos para el análisis.
+     * sugerencias como recuerdos en la memoria emocional. Se utiliza la
+     * fuente exacta de una revisión y una lista acotada de clases instaladas.
      */
-    public void autoImprove() {
+    public String autoImprove() {
+        int detectedIssues = 0;
+        int queuedProposals = 0;
         try {
-            List<AnalysisReport> reports = analyzer.analyzeWithTimeout(5, TimeUnit.SECONDS);
+            final AutoImprovementSourceSnapshot snapshot;
+            try {
+                snapshot = AutoImprovementSourceSnapshot.read(new File(context.getFilesDir(), AutoImprovementSourceSnapshot.RELATIVE_PATH));
+            } catch (IOException missingSource) {
+                Log.w(TAG, "Auto-mejora no iniciada: falta una instantánea válida del código fuente.");
+                return "No pude iniciar la auto-mejora: necesito una instantánea válida del código fuente exportada desde Git. Aún no he generado un parche.";
+            }
+            List<AnalysisReport> reports = analyzer.analyzeSourceTargets(snapshot.classNames());
+            if (reports.isEmpty()) {
+                Log.w(TAG, "Auto-mejora sin objetivos: ninguna fuente corresponde a una clase analizable del APK.");
+                return "No encontré clases instaladas que pueda analizar entre las fuentes suministradas. Aún no he generado un parche.";
+            }
+            analysisLoop:
             for (AnalysisReport report : reports) {
                 for (MethodIssue issue : report.getIssues()) {
                     if (issue.getLevel() != IssueLevel.WARNING) {
                         continue;
                     }
+                    if (detectedIssues == MAX_ISSUES_PER_RUN || Thread.currentThread().isInterrupted()) break analysisLoop;
+                    detectedIssues++;
                     AutoImprovementSession session = new AutoImprovementSession(
                             issue.getSuggestion() + " en " + report.getClassName());
                     session.addArtifact(
@@ -80,7 +98,10 @@ public class AutoImprovementManager {
                             true
                     );
 
-                    String fix = coder.generateFix(issue.getSuggestion(), report.getClassName());
+                    String diagnosis = describeIssue(issue, report) + "\nFuente: revisión " + snapshot.revision
+                            + "; SHA-256 " + snapshot.source(report.getClassName()).sha256
+                            + ". La inspección de firmas procede del APK y puede diferir de esta revisión.";
+                    String fix = coder.generateFix(describeIssue(issue, report), report.getClassName(), snapshot);
                     boolean hasFix = isActionableFix(fix);
                     session.addArtifact(
                             AutoImprovementSession.Stage.GENERATION,
@@ -170,15 +191,18 @@ public class AutoImprovementManager {
                                             System.currentTimeMillis(),
                                             report.getClassName(),
                                             "app/src/main/java/salve/core/" + report.getClassName() + ".java",
-                                            describeIssue(issue, report),
+                                            diagnosis,
                                             fix,
                                             suite == null ? "" : suite.getCode(),
                                             validation.success,
                                             validation.getExecutionResult().wasAttempted(),
                                             validation.getExecutionResult().wasSuccessful(),
-                                            deliberacion.aprobada
+                                            deliberacion.aprobada,
+                                            snapshot.revision,
+                                            snapshot.source(report.getClassName()).sha256
                                     );
                             proposalStore.enqueue(proposal);
+                            queuedProposals++;
                             session.addArtifact(
                                     AutoImprovementSession.Stage.REVIEW,
                                     "Bandeja para PR automático",
@@ -219,7 +243,13 @@ public class AutoImprovementManager {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error en autoImprove", e);
+            return "La auto-mejora se interrumpió por un error. Propuestas guardadas: " + queuedProposals + ". No se ha modificado el APK.";
         }
+        if (Thread.currentThread().isInterrupted()) return "La auto-mejora fue cancelada. Propuestas guardadas: " + queuedProposals + ". No se ha modificado el APK.";
+        if (queuedProposals > 0) return "He guardado " + queuedProposals + " propuesta(s) con fuente identificada. El ejecutor externo aún debe aplicar y probar los parches; no se ha modificado el APK.";
+        return detectedIssues == 0
+                ? "La inspección de firmas no detectó métodos con más de cuatro parámetros en las clases suministradas. Esto no demuestra que el código esté libre de otros problemas."
+                : "Detecté " + detectedIssues + " posible(s) problema(s), pero no obtuve un parche utilizable. No se ha modificado el APK.";
     }
 
     private String describeIssue(MethodIssue issue, AnalysisReport report) {

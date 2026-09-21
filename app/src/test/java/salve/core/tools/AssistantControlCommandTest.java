@@ -4,6 +4,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AssistantControlCommandTest {
+    @Test public void financeOnlyOpensForAnExplicitCommand() {
+        assertEquals(AssistantControlCommand.Type.FINANCES, AssistantControlCommand.parse("Salve, abre finanzas").type);
+        assertNull(AssistantControlCommand.parse("Quiero aprender de finanzas"));
+        assertNull(AssistantControlCommand.parse("No abras finanzas"));
+    }
     @Test public void exactAvatarCommandHandlesSpanishAccents() {
         assertEquals(AssistantControlCommand.Type.SLEEP, AssistantControlCommand.parse("Salve, ACUÉSTATE!").type);
     }
