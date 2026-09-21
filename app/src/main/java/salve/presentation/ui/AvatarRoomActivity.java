@@ -78,6 +78,7 @@ public final class AvatarRoomActivity extends Activity {
             else store.change(AvatarState::sleep);
         });
         row(root, "Despertar", () -> store.change(AvatarState::wake), "Guardar cama", () -> store.change(AvatarState::removeBed));
+        button(root, "Taller de posturas", () -> startActivity(new Intent(this, AvatarPoseActivity.class)));
         root.addView(label("Cómo me muevo", 19, Color.WHITE));
         motionStatus = label("", 14, 0xFFB3C5D1); root.addView(motionStatus);
         row(root, "Más despacio", () -> movementFeedback(MotionPreferenceProfile.Feedback.TOO_FAST),
