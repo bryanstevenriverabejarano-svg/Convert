@@ -1,5 +1,65 @@
 # Auditoría funcional de Salve — 2026-09-21
 
+## Integración de Gemma 4 E2B para Galaxy S24 Ultra — 2026-09-21
+
+Base de este grupo: `96b4881422832d3191d1ca1b1ac4281e3abcb6da` (incluye la PR 71 y cambios posteriores del propietario).
+
+Se elige **Gemma 4 E2B** por su combinación de tamaño y entrada visual para el S24 Ultra. El paquete general CPU/GPU publicado ocupa **2.588.147.712 bytes (~2,6 GB)**; no se descarga el repositorio completo ni los paquetes NPU de otros chips. Es una base preentrenada de Google, no un modelo entrenado por Salve ni una demostración de superinteligencia.
+
+### Qué cambia
+
+- `config/models.json` contiene un único archivo `.litertlm`, con URL de revisión inmutable, longitud y SHA-256 publicados. Los pesos se descargan al almacenamiento privado `noBackupFilesDir/models`, fuera del APK y de las copias de seguridad. Un gate de `preBuild` impide incorporar pesos `.litertlm`, `.task` o `.gguf` a assets. Los recursos visuales y de voz existentes conservan su empaquetado.
+- El primer arranque solicita la descarga mediante un trabajo único de WorkManager, esperando una red no medida (normalmente Wi-Fi). **IA y cámara → Descargar o reanudar Gemma 4 (2,6 GB)** permite reanudarla o autorizar datos móviles. Se puede pausar desde la notificación o el panel y ocultar el panel mientras continúa. La elección de datos móviles actualiza las restricciones del trabajo existente.
+- `VerifiedModelFile` descarga a `.part`, valida cada redirección HTTPS antes de conectarse, limita bytes y comprueba longitud/SHA-256 del archivo entero, incluido el prefijo reanudado. Si el servidor ignora Range y devuelve 200, reinicia; valida el Content-Range de 206. Renombra atómicamente solo tras la verificación. Pausar cancela la llamada HTTP activa. Un bloqueo de archivo evita escritores concurrentes, con una espera cancelable breve al reanudar mientras termina el trabajo anterior.
+- Se reutiliza el recorrido `ModelDownloader → ModelDownloadRepository → ModelDownloadWorker`. Se retira la descarga automática de repositorios MLC y el catálogo simulado de `BuscadorDescargadorModelos`; sus entradas públicas delegan al mismo catálogo fijado. La importación manual y los motores MLC existentes permanecen. WorkManager usa ahora el constructor estándar de dos argumentos y devuelve fallo cuando falla la preparación; los mensajes finales se leen de `outputData`.
+- `.litertlm` usa **LiteRT-LM 0.16.1**, con biblioteca ARM64 publicada incluida en la dependencia; las importaciones `.task` conservan MediaPipe. Se fija 0.16.1 por compatibilidad con Kotlin 2.2; la versión 0.17.1 inspeccionada depende de Kotlin 2.4. GPU es la primera opción y CPU se intenta ante errores de inicialización GPU. Visión se inicializa al solicitar una foto. Contexto máximo inicial: 4096 tokens; salida: 512; espera de generación: 90 segundos. Los canales internos no pasan al chat/TTS.
+- La activación ejecuta una respuesta real de texto antes de guardar la selección. La importación manual comparte esa operación serializada; no publica preferencias antes de probar el archivo. Si falla, se restauran las preferencias y metadatos anteriores, también si falla `commit()`. El archivo descargado y verificado puede volver a probarse sin descargarlo. **Una respuesta no vacía verifica ejecución, no corrección ni calidad general.**
+- Tras activarse, chat y fotos usan el modo local. Un error local se informa; no sube silenciosamente la consulta a Gemini. Se conserva la elección local/remota al lanzar la cámara. **Usar Gemini** vuelve a habilitar explícitamente el recorrido remoto. El reconocimiento de voz y TTS siguen siendo los servicios Android existentes; este cambio no promete voz íntegramente offline.
+- Se retiran el traslado indiscriminado de modelos al arrancar y la selección del archivo más grande al volver a la pantalla. En la base actual esa selección sí tenía una llamada en `onResume` y podía deshacer la selección validada. Las rutas anteriores se conservan y la importación sigue disponible.
+
+```mermaid
+flowchart TD
+    D["Catálogo fijado · descarga reanudable"] --> V["Tamaño y SHA-256"]
+    V --> A["Activación · respuesta real"]
+    A -->|Fallo| P["Selección anterior"]
+    A -->|Éxito| L["LiteRT-LM local"]
+    T["Turno · historial · memoria"] --> R["Modo elegido"]
+    R -->|Local| L
+    R -->|Remoto explícito| G["Gemini"]
+    L --> S["Texto público · pantalla y TTS"]
+    G --> S
+```
+
+### Comprobaciones y límites
+
+- El enlace publicado respondió **HTTP 206**, con `Content-Range: bytes 0-31/2588147712` y cabecera de archivo `LITERTLM`. La redirección observada fue `us.aws.cdn.hf.co`; no hizo falta token para esa lectura. El SHA esperado se obtuvo del puntero publicado de la misma revisión.
+- **76 pruebas JUnit JVM** aprobaron: regresiones de conversación, memoria, herramientas, identidad, políticas de voz y protocolo Gemini; transferencia/reanudación/cancelación, enrutamiento local/remoto, catálogo fijado sin pesos en assets y separación de canales privados usando las clases reales de LiteRT-LM. Los transportes controlados de las pruebas de descarga no sustituyen una descarga o inferencia de dispositivo.
+- **Inferencia nativa real de texto realizada en Linux x86_64**, con el archivo completo descargado y SHA verificado, `litert-lm-api==0.16.1`, CPU de 4 hilos y contexto de 1024. Devolvió «Hola, Bryan.» en 4,326 s y `391` para 17 × 23 en 0,425 s. Carga: 11,714 s; RSS máximo del proceso: ~3,51 GiB. Son dos observaciones con conversación compartida, no un benchmark ni cifras del S24 Ultra. Se conservaron las limitaciones y advertencias nativas en `docs/validation/gemma4-e2b-linux-2026-09-21.json`.
+- Compilación aislada de los Kotlin/Java del núcleo de descarga, wrappers, repositorio, Worker y ViewModel contra AAR/JAR reales de LiteRT-LM 0.16.1, MediaPipe, Android, WorkManager, Lifecycle y OkHttp. Se incluyeron el puente MLC y sus fuentes, sin sustituirlos por inferencia simulada. Sintaxis de Java y XML modificados revisada. Esto no ensambla ni ejecuta el APK.
+- La compilación Android completa sigue bloqueada en este entorno: el wrapper de esta base no pudo descargar Gradle **9.7.1** (`Network is unreachable`). No hay APK ensamblado ni prueba en un S24 Ultra. No se ha medido RAM, temperatura, batería ni latencia de voz del teléfono.
+- Se amplía `RealInferenceTest` con una foto roja generada cuyos píxeles se envían realmente al motor local. Las pruebas instrumentadas requieren teléfono/emulador y descarga/activación previa; son optativas, no se consideran ejecutadas por existir.
+- Para repetir la comprobación Linux: instalar `litert-lm-api==0.16.1` y ejecutar `python scripts/verify_local_model.py --model /ruta/al/archivo.litertlm --output /ruta/al/informe.json`. Comprueba bytes/SHA del catálogo, nombre en saludo y aritmética con el motor real. El CLI se preparó a partir del chequeo ejecutado; se verificaron su sintaxis y ayuda, sin una segunda ejecución nativa.
+
+### Comprobación en el teléfono
+
+1. Compilar con el SDK/Java 21 configurados: `./gradlew :app:testDebugUnitTest :app:assembleDebug`. Instalar el APK resultante en el S24 Ultra.
+2. Abrir Salve con unos 3 GB libres y Wi-Fi no medido. Confirmar progreso, pausar, cerrar/reabrir y reanudar. Interrumpir la red: no debe anunciar éxito ni seleccionar `.part`.
+3. Esperar la verificación y prueba de respuesta. En **IA y cámara → Estado**, comprobar Gemma y LiteRT-LM GPU/CPU. Probar una pregunta nueva en modo avión. El resto de funciones de red de Salve no forman parte de esta garantía de inferencia local.
+4. Probar **Tomar foto y preguntar**, cancelación de cámara y retorno a la pantalla. El modelo elegido debe conservarse. Probar micrófono/TTS y confirmar qué servicios del dispositivo requieren red.
+5. Prueba de inferencia instrumentada: `./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.runRealLocal=true -Pandroid.testInstrumentationRunnerArguments.runRealLocalVision=true`.
+6. Registrar exactitud, latencia y uso de memoria con conversaciones largas. El historial todavía se limita por mensajes, no por tokens; puede superar la ventana de 4096 y necesita presupuestado antes de afirmar robustez en sesiones largas.
+
+### Próxima evolución medible
+
+Crear un conjunto reservado de tareas de español, transcripciones imperfectas, contexto, código ejecutable y visión. Comparar la versión base con cada cambio de herramientas/configuración o ajuste del modelo, registrando fallos verificables y regresiones. Entrenar/ajustar fuera del móvil y distribuir versiones compactas solo tras esa comparación. La mejora indefinida y la superioridad general siguen siendo objetivos de investigación; no son propiedades demostradas de esta integración.
+
+Fuentes: [paquete y licencia](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm), [archivo fijado y SHA](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/blob/6e5c4f1e395deb959c494953478fa5cec4b8008f/gemma-4-E2B-it.litertlm), [API Kotlin de la versión utilizada](https://github.com/google-ai-edge/LiteRT-LM/tree/v0.16.1/kotlin/java/com/google/ai/edge/litertlm).
+
+---
+
+## Auditoría anterior y cambios de la PR 71
+
+
 Base inspeccionada: `87a9e5204a7d51725c6516438dd5d22bec40f1a7` de `main`.
 Este documento sustituye el diagnóstico anterior: tener una clase o una dependencia no demuestra que la función esté operativa. Se distingue entre código conectado, prototipos y pruebas realizadas. No se ha ejecutado el APK en un teléfono durante esta revisión.
 

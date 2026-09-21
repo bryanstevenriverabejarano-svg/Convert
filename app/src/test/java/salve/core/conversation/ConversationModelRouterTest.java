@@ -6,6 +6,24 @@ import salve.core.ModelResult;
 import static org.junit.Assert.*;
 
 public class ConversationModelRouterTest {
+    @Test public void localModeNeverCallsCloudEvenWhenLocalFails() {
+        ModelResult result = ConversationModelRouter.generate(false, true, false,
+                () -> { throw new AssertionError("Local mode must not upload the turn"); },
+                () -> ModelResult.failure(ModelResult.Status.ERROR, "local failed", 2L));
+        assertEquals(ModelResult.Status.ERROR, result.getStatus());
+    }
+
+    @Test public void localVisionReceivesImageWithoutCallingCloud() {
+        assertEquals("foto local", ConversationModelRouter.generate(true, true, true,
+                () -> { throw new AssertionError("Do not upload a local photo"); },
+                () -> ModelResult.success("foto local", 10L)).getText());
+    }
+
+    @Test public void localTextModelCannotPretendToSeePhotos() {
+        assertFalse(ConversationModelRouter.generate(true, true, false,
+                () -> { throw new AssertionError("No cloud fallback"); },
+                () -> { throw new AssertionError("No text fallback"); }).isSuccess());
+    }
     private ModelResult unavailable() {
         return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "no runtime", 0L);
     }

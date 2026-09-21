@@ -10,6 +10,17 @@ public final class ConversationModelRouter {
     public static ModelResult generate(boolean requiresVision,
                                        Supplier<ModelResult> cloud,
                                        Supplier<ModelResult> local) {
+        return generate(requiresVision, false, false, cloud, local);
+    }
+
+    /** Local mode never silently sends a turn/photo to a remote provider. */
+    public static ModelResult generate(boolean requiresVision, boolean localOnly, boolean localSupportsVision,
+                                       Supplier<ModelResult> cloud, Supplier<ModelResult> local) {
+        if (localOnly) {
+            if (requiresVision && !localSupportsVision) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
+                    "El modelo local seleccionado no admite fotos", 0L);
+            return invoke(local);
+        }
         ModelResult remote = invoke(cloud);
         if (remote.isSuccess() || remote.getStatus() == ModelResult.Status.CANCELLED) return remote;
         // The current local adapter accepts text only. Never describe an unseen image.

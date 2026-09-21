@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * Gestión de modelos locales:
- *  - Carpeta /Android/data/<pkg>/files/models
+ *  - Nuevas descargas en noBackupFilesDir/models; las rutas anteriores se conservan en preferencias.
  *  - Catálogo de modelos (pensamiento, coder, pequeño)
  *  - Búsqueda por prefijo
  *  - Soporte para:
@@ -24,10 +24,9 @@ public final class ModelStore {
 
     private static final String TAG = "ModelStore";
 
-    // Carpeta única de modelos (dentro del sandbox de la app)
+    // Nuevos modelos en almacenamiento privado, excluido de copias de seguridad.
     public static File dir(Context ctx) {
-        // /Android/data/com.salve.salve/files/models   (en tu app real es com.salve.app)
-        File d = new File(ctx.getExternalFilesDir(null), "models");
+        File d = new File(ctx.getNoBackupFilesDir(), "models");
         if (!d.exists()) d.mkdirs();
         return d;
     }

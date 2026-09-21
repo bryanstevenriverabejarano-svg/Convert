@@ -12,6 +12,19 @@ import static org.junit.Assume.assumeTrue;
 
 /** Opt-in tests call actual runtimes. No credentials, canned outputs or network mocks. */
 public class RealInferenceTest {
+    @Test public void downloadedLocalModelReceivesActualImagePixels() {
+        optedIn("runRealLocalVision");
+        SalveLLM engine = SalveLLM.getInstance(context());
+        assertTrue("Download and activate Gemma 4 in the app first", engine.supportsVision());
+        Bitmap image = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888);
+        image.eraseColor(Color.RED);
+        try {
+            ModelResult result = engine.generateImageResult(
+                    "¿Cuál es el color principal de esta imagen? Responde con una palabra en español.", image);
+            assertTrue(result.getError(), result.isSuccess());
+            assertTrue(result.getText().toLowerCase(Locale.ROOT).contains("rojo"));
+        } finally { image.recycle(); }
+    }
     private Context context() { return InstrumentationRegistry.getInstrumentation().getTargetContext(); }
     private void optedIn(String flag) {
         assumeTrue("Real inference not requested", "true".equals(

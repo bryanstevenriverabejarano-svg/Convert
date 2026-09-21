@@ -1,0 +1,56 @@
+{
+  "runtime": "litert-lm-api 0.16.1",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "backend": "CPU (4 threads)",
+  "model_file": "gemma-4-E2B-it.litertlm",
+  "context_limit": 1024,
+  "thinking_enabled": false,
+  "checks": [
+    {
+      "prompt": "Hola, me llamo Bryan. Salúdame por mi nombre en una sola frase.",
+      "seconds": 4.326,
+      "name": "greeting",
+      "public_response": "Hola, Bryan.",
+      "passed": true
+    },
+    {
+      "prompt": "¿Cuánto es 17 por 23? Responde solo con el número.",
+      "seconds": 0.425,
+      "name": "arithmetic",
+      "public_response": "391",
+      "passed": true
+    }
+  ],
+  "load_seconds": 11.714,
+  "total_seconds": 16.571,
+  "max_rss_kib": 3679664,
+  "download": {
+    "bytes": 2588147712,
+    "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+    "seconds": 212.315,
+    "verified": true
+  },
+  "source_url": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/6e5c4f1e395deb959c494953478fa5cec4b8008f/gemma-4-E2B-it.litertlm?download=true",
+  "limitations": [
+    "Two short text prompts on Linux x86_64 CPU only; no Android/S24, GPU/NPU, voice, camera, sustained thermal, battery, tool execution or long-context validation.",
+    "Measured end-to-end turn times are single observations with a shared conversation; they are not p50/p95 latency or a comparison benchmark.",
+    "max_rss_kib includes the complete process/runtime/memory mappings and any multimodal package initialization; it is not a guaranteed Android RAM budget.",
+    "Native engine emitted an XNNPACK disk-cache warning because runtime-cache did not exist during initialization. Generation still succeeded with exit code 0. Directory was subsequently created; no repeated inference was needed.",
+    "Native log contained optional NPU registration and audio/vision initialization warnings. Only text input and text output were tested."
+  ],
+  "passed": true,
+  "date": "2026-09-21",
+  "process_exit_code": 0,
+  "execution_method": "Direct Python API smoke check performed before scripts/verify_local_model.py was added; this report preserves that real run.",
+  "reproduction_script_validation": "The generalized CLI was checked with py_compile and --help; inference was not repeated through that CLI.",
+  "generation_config": {
+    "system_message": "Responde en español de forma breve y directa.",
+    "max_output_tokens": 80,
+    "automatic_tool_calling": false,
+    "thinking_token_budget": 0,
+    "top_k": 1,
+    "temperature": 0.0,
+    "seed": 42,
+    "shared_conversation": true
+  }
+}

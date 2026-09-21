@@ -3,6 +3,19 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Keep multi-GB language model weights out of APKs, including future accidental additions.
+def verifyExternalLlmWeights = tasks.register('verifyExternalLlmWeights') {
+    doLast {
+        def bundled = fileTree('src/main/assets') {
+            include '**/*.litertlm', '**/*.task', '**/*.gguf'
+        }
+        if (!bundled.isEmpty()) {
+            throw new GradleException('Los pesos LLM deben descargarse desde config/models.json, no incluirse en assets.')
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn(verifyExternalLlmWeights) }
+
 android {
 
     namespace 'com.salve.app'
@@ -94,7 +107,9 @@ dependencies {
     // ONNX Runtime para ai.onnxruntime.*
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.24.2'
 
-    // MediaPipe LLM Inference (para .litertlm y .task)
+    // Real .litertlm runtime; 0.16.1 keeps compatibility with Kotlin 2.2 in this project.
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.16.1'
+    // Legacy .task imports keep their original engine.
     implementation 'com.google.mediapipe:tasks-genai:0.10.33'
 
     testImplementation 'junit:junit:4.13.2'

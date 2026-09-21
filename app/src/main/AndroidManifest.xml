@@ -47,6 +47,9 @@
         android:theme="@style/Theme.Salve.Splash"
         tools:targetApi="31">
 
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+
         <activity
             android:name="salve.presentation.ui.MainActivity"
             android:exported="true">

@@ -13,68 +13,64 @@ import com.salve.app.databinding.FragmentDownloadOverlayBinding
 class DownloadOverlayFragment : Fragment() {
     private var _binding: FragmentDownloadOverlayBinding? = null
     private val binding get() = _binding!!
-
     private val viewModel: ModelDownloadViewModel by activityViewModels()
+    private var hiddenState: Class<*>? = null
+    private val hideBanner = Runnable { _binding?.overlayRoot?.visibility = View.GONE }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentDownloadOverlayBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         binding.overlayCloseButton.setOnClickListener {
+            hiddenState = viewModel.uiState.value?.javaClass
             binding.overlayRoot.visibility = View.GONE
         }
-
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
-            // Remove any pending auto-hide callbacks when state changes
-            binding.overlayRoot.removeCallbacks(null)
-
+            binding.overlayRoot.removeCallbacks(hideBanner)
+            if (state is DownloadUiState.Idle || state.javaClass == hiddenState) {
+                binding.overlayRoot.visibility = View.GONE
+                return@observe
+            }
+            binding.overlayRoot.visibility = View.VISIBLE
+            binding.overlayCloseButton.visibility = View.VISIBLE
+            binding.overlayActionButton.visibility = View.GONE
+            binding.overlayStatus.text = "Gemma 4 E2B · descarga externa"
             when (state) {
-                is DownloadUiState.Idle -> {
-                    binding.overlayRoot.visibility = View.GONE
-                    binding.overlayCloseButton.visibility = View.GONE
-                }
+                is DownloadUiState.Idle -> Unit
                 is DownloadUiState.Running -> {
-                    binding.overlayRoot.visibility = View.VISIBLE
-                    binding.overlayTitle.text = "Descargando modelos…"
+                    binding.overlayTitle.text = "Preparando el modelo local"
                     binding.overlayProgress.progress = state.percent
+                    binding.overlayProgress.isIndeterminate = state.percent == 0 || state.percent == 99
                     binding.overlayMessage.text = state.message ?: ""
-                    binding.overlayStatus.text = state.modelId ?: ""
-                    binding.overlayCloseButton.visibility = View.GONE
+                    binding.overlayActionButton.visibility = View.VISIBLE
+                    binding.overlayActionButton.text = "Pausar"
+                    binding.overlayActionButton.setOnClickListener { viewModel.pauseDownload() }
                 }
                 is DownloadUiState.Success -> {
-                    binding.overlayRoot.visibility = View.VISIBLE
-                    binding.overlayTitle.text = "Modelos listos"
+                    binding.overlayTitle.text = "Modelo local activo"
+                    binding.overlayProgress.isIndeterminate = false
                     binding.overlayProgress.progress = 100
-                    binding.overlayMessage.text = state.message ?: "Descarga completada"
-                    binding.overlayStatus.text = ""
-                    binding.overlayCloseButton.visibility = View.GONE
-                    // Auto-hide after 3 s so the success banner doesn't linger
-                    binding.overlayRoot.postDelayed({
-                        if (_binding != null) binding.overlayRoot.visibility = View.GONE
-                    }, 3_000L)
+                    binding.overlayMessage.text = state.message ?: "Inferencia comprobada"
+                    binding.overlayRoot.postDelayed(hideBanner, 5000L)
                 }
                 is DownloadUiState.Error -> {
-                    binding.overlayRoot.visibility = View.VISIBLE
-                    binding.overlayTitle.text = "Error descargando modelos"
+                    binding.overlayTitle.text = "Modelo pendiente de preparar"
+                    binding.overlayProgress.isIndeterminate = false
                     binding.overlayProgress.progress = 0
                     binding.overlayMessage.text = state.message
-                    binding.overlayStatus.text = ""
-                    // Show the dismiss button so the user can keep using the app
-                    binding.overlayCloseButton.visibility = View.VISIBLE
+                    binding.overlayActionButton.visibility = View.VISIBLE
+                    binding.overlayActionButton.text = "Reanudar por Wi-Fi"
+                    binding.overlayActionButton.setOnClickListener { hiddenState = null; viewModel.startDownload() }
                 }
             }
         }
     }
 
     override fun onDestroyView() {
+        binding.overlayRoot.removeCallbacks(hideBanner)
         super.onDestroyView()
         _binding = null
     }

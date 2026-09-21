@@ -42,14 +42,20 @@
         android:textColor="#8BC34A"
         android:textSize="14sp" />
 
-    <!-- Visible only in error state so the user can dismiss and keep using the app -->
+    <Button
+        android:id="@+id/overlayActionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Pausar"
+        android:visibility="gone" />
+
     <Button
         android:id="@+id/overlayCloseButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:layout_gravity="end"
-        android:text="Continuar sin modelos"
+        android:text="Ocultar"
         android:textColor="#FFFFFF"
         android:backgroundTint="#555555"
         android:visibility="gone" />
