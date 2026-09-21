@@ -15,11 +15,22 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.EditText;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
+import android.text.InputFilter;
+import java.util.List;
 import salve.avatar.AvatarState;
 import salve.avatar.AvatarStore;
 import salve.avatar.AvatarView;
 import salve.avatar.AvatarMotion;
 import salve.avatar.AvatarMotionController;
+import salve.avatar.AvatarDesignCatalog;
+import salve.avatar.AvatarDesignSpec;
+import salve.avatar.AvatarDesignRequest;
+import salve.avatar.AvatarWardrobeStore;
+import salve.avatar.MotionPreferenceProfile;
+import salve.avatar.MotionPreferenceStore;
 import salve.services.BurbujaFlotanteService;
 
 /** Original illustrated character, gesture previews and persistent room controls. */
@@ -27,13 +38,19 @@ public final class AvatarRoomActivity extends Activity {
     private AvatarStore store;
     private AvatarView avatar;
     private TextView status;
+    private TextView motionStatus;
+    private LinearLayout wardrobeRows;
+    private AvatarWardrobeStore wardrobe;
     private boolean returningFromOverlaySettings;
     private final Runnable changed = this::updateStatus;
+    private final Runnable wardrobeChanged = this::updateWardrobe;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setTitle("La habitación de Salve");
         store = AvatarStore.get(this);
+        wardrobe = AvatarWardrobeStore.get(this);
+        AvatarMotionController.get().initializePreferences(this);
         returningFromOverlaySettings = savedInstanceState != null && savedInstanceState.getBoolean("overlay_settings");
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
@@ -61,8 +78,19 @@ public final class AvatarRoomActivity extends Activity {
             else store.change(AvatarState::sleep);
         });
         row(root, "Despertar", () -> store.change(AvatarState::wake), "Guardar cama", () -> store.change(AvatarState::removeBed));
+        root.addView(label("Cómo me muevo", 19, Color.WHITE));
+        motionStatus = label("", 14, 0xFFB3C5D1); root.addView(motionStatus);
+        row(root, "Más despacio", () -> movementFeedback(MotionPreferenceProfile.Feedback.TOO_FAST),
+                "Más suave", () -> movementFeedback(MotionPreferenceProfile.Feedback.TOO_STRONG));
+        row(root, "Así está bien", () -> movementFeedback(MotionPreferenceProfile.Feedback.COMFORTABLE),
+                "Restablecer", () -> movementFeedback(MotionPreferenceProfile.Feedback.RESET));
         root.addView(label("Vestuario", 19, Color.WHITE));
-        root.addView(label("Conserva su vestido original. El pijama y otras prendas estarán disponibles cuando tengan ilustraciones compatibles con este diseño.", 14, 0xFFB3C5D1));
+        root.addView(label("Crea diseños con las prendas ilustradas disponibles, colores y patrones. Salve conserva su rostro y guarda cada diseño en el armario.", 14, 0xFFB3C5D1));
+        button(root, "Diseñar una prenda", this::createDesign);
+        row(root, "Vestido original", () -> wardrobe.wearTemplate("original_dress", this::toast),
+                "Pijama", () -> wardrobe.wearTemplate("pajamas", this::toast));
+        button(root, "Conjunto exploradora", () -> wardrobe.wearTemplate("explorer", this::toast));
+        wardrobeRows = new LinearLayout(this); wardrobeRows.setOrientation(LinearLayout.VERTICAL); root.addView(wardrobeRows);
         button(root, "Color de la manta", this::chooseColor);
         root.addView(label("Sobre otras apps", 19, Color.WHITE));
         root.addView(label("Activa el personaje flotante para acompañarte por la pantalla. Arrástralo para moverlo; el botón × lo cierra.", 14, 0xFFB3C5D1));
@@ -71,10 +99,59 @@ public final class AvatarRoomActivity extends Activity {
         button(root, "Volver", this::finish);
         setContentView(scroll);
         updateStatus();
+        updateWardrobe();
     }
     private void preview(AvatarMotion.Gesture gesture, AvatarMotion.Expression expression) {
         if (store.state().getPose() == AvatarState.Pose.SLEEPING) store.change(AvatarState::wake);
         AvatarMotionController.get().previewGesture(gesture, expression);
+    }
+    private void movementFeedback(MotionPreferenceProfile.Feedback feedback) {
+        AvatarMotionController.get().recordFeedback(this, feedback);
+    }
+    private void createDesign() {
+        if (!wardrobe.isReady()) { toast("El armario todavía no está disponible."); return; }
+        List<AvatarDesignCatalog.Template> templates = wardrobe.availableTemplates();
+        LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(22), dp(8), dp(22), 0);
+        EditText name = new EditText(this); name.setHint("Nombre del diseño"); name.setSingleLine(true);
+        name.setFilters(new InputFilter[]{new InputFilter.LengthFilter(48)}); form.addView(name);
+        String[] templateNames = new String[templates.size()];
+        for (int i = 0; i < templates.size(); i++) templateNames[i] = templates.get(i).name;
+        Spinner template = selector(form, "Prenda", templateNames);
+        Spinner palette = selector(form, "Color de la ropa", new String[]{"Colores originales", "Turquesa", "Lavanda", "Rosa", "Azul", "Ámbar"});
+        Spinner pattern = selector(form, "Patrón de la ropa", new String[]{"Sin patrón", "Estrellas", "Rayas"});
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Diseñar y guardar")
+                .setView(form).setPositiveButton("Guardar y vestir", null).setNegativeButton("Cancelar", null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+            try {
+                AvatarDesignRequest request = AvatarDesignRequest.create(name.getText().toString(),
+                        templates.get(template.getSelectedItemPosition()).id,
+                        AvatarDesignSpec.Palette.values()[palette.getSelectedItemPosition()],
+                        AvatarDesignSpec.Pattern.values()[pattern.getSelectedItemPosition()], true);
+                wardrobe.execute(request, this::toast); dialog.dismiss();
+            } catch (IllegalArgumentException invalid) { name.setError(invalid.getMessage()); }
+        }));
+        dialog.show();
+    }
+    private Spinner selector(LinearLayout form, String title, String[] values) {
+        TextView caption = new TextView(this); caption.setText(title); caption.setPadding(0, dp(12), 0, dp(3)); form.addView(caption);
+        Spinner spinner = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, values);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); spinner.setAdapter(adapter); form.addView(spinner);
+        return spinner;
+    }
+    private void updateWardrobe() {
+        if (wardrobeRows == null) return;
+        wardrobeRows.removeAllViews();
+        if (!wardrobe.lastError().isEmpty()) wardrobeRows.addView(label(wardrobe.lastError(), 14, 0xFFE7B59D));
+        for (AvatarDesignSpec design : wardrobe.list()) {
+            String title = design.name + (wardrobe.selected().id.equals(design.id) ? " · Puesto" : "");
+            wardrobeRows.addView(label(title, 15, 0xFFD9E7EB));
+            if (design.id.equals(AvatarDesignSpec.ORIGINAL_ID)) continue;
+            row(wardrobeRows, "Vestir", () -> wardrobe.execute(AvatarDesignRequest.select(design.id), this::toast),
+                    "Eliminar", () -> wardrobe.execute(AvatarDesignRequest.delete(design.id), this::toast));
+        }
+        updateStatus();
     }
     private void chooseColor() {
         int[] colors = {0xFF15CCC8, 0xFF9A86E8, 0xFFE19CAD, 0xFF609EE8, 0xFFE1B36C};
@@ -104,8 +181,11 @@ public final class AvatarRoomActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         store.addListener(changed);
+        wardrobe.addListener(wardrobeChanged);
+        AvatarMotionController.get().addListener(changed);
         avatar.setAnimationEnabled(true);
         updateStatus();
+        updateWardrobe();
         if (returningFromOverlaySettings) {
             returningFromOverlaySettings = false;
             if (Settings.canDrawOverlays(this)) startOverlay();
@@ -113,7 +193,8 @@ public final class AvatarRoomActivity extends Activity {
         }
     }
     @Override protected void onPause() {
-        avatar.setAnimationEnabled(false); store.removeListener(changed); store.save(); super.onPause();
+        avatar.setAnimationEnabled(false); store.removeListener(changed); wardrobe.removeListener(wardrobeChanged);
+        AvatarMotionController.get().removeListener(changed); store.save(); super.onPause();
     }
     @Override protected void onSaveInstanceState(Bundle state) {
         state.putBoolean("overlay_settings", returningFromOverlaySettings); super.onSaveInstanceState(state);
@@ -123,8 +204,9 @@ public final class AvatarRoomActivity extends Activity {
         AvatarState s = store.state();
         status.setText((s.getPose() == AvatarState.Pose.SLEEPING ? "Descansando en la cama"
                 : s.isGoingToSleep() ? "Caminando hacia la cama" : s.getPose() == AvatarState.Pose.WALKING ? "Caminando" : "Despierta")
-                + " · Vestido original"
+                + " · " + wardrobe.selected().name
                 + " · " + (s.hasBed() ? "Cama creada" : "Sin cama"));
+        if (motionStatus != null) motionStatus.setText(MotionPreferenceStore.get(this).profile().description());
     }
     private TextView label(String value, int size, int color) {
         TextView view = new TextView(this); view.setText(value); view.setTextSize(size); view.setTextColor(color);

@@ -35,6 +35,10 @@ import salve.core.memory.PendingMemoryDeletion;
 import salve.core.tools.PendingToolAction;
 import salve.core.voice.VoiceResponsePolicy;
 import salve.core.voice.VoiceTurnGate;
+import salve.core.voice.VoiceProfile;
+import salve.core.voice.VoiceProfileStore;
+import salve.core.voice.VoiceSelectionPolicy;
+import salve.core.conversation.AuthorReviewerCodeCoordinator;
 import salve.core.conversation.ConversationModelRouter;
 import salve.avatar.AvatarMotionController;
 import salve.avatar.AvatarMotionProtocol;
@@ -78,6 +82,10 @@ public class MotorConversacional {
     private final SharedPreferences preferencias;
     private TextToSpeech tts;
     private volatile boolean ttsReady;
+    private final VoiceProfileStore voiceProfiles;
+    private final salve.avatar.AvatarDesignTool avatarDesignTool;
+    private volatile VoiceProfile voiceProfile;
+    private volatile String activeVoiceDescription = "Voz: esperando el motor de Android";
     private volatile boolean listening;
     private volatile boolean closed;
     // Only the visible conversation opts in; background workers do not drive the character.
@@ -125,6 +133,9 @@ public class MotorConversacional {
 
     public MotorConversacional(Context context, MemoriaEmocional memoria, DiarioSecreto diario) {
         this.context  = context;
+        this.voiceProfiles = new VoiceProfileStore(context);
+        this.voiceProfile = voiceProfiles.load();
+        this.avatarDesignTool = new salve.avatar.AvatarDesignTool(context.getApplicationContext());
         this.memoria  = memoria;
         this.diario   = diario;
         this.intentRecognizer     = new IntentRecognizer(context);
@@ -168,10 +179,7 @@ public class MotorConversacional {
                     @Override public void onError(String id, int errorCode) { finishSpeech(id); }
                     @Override public void onStop(String id, boolean interrupted) { finishSpeech(id); }
                 });
-                int language = this.tts.setLanguage(new Locale("es", "ES"));
-                ttsReady = language != TextToSpeech.LANG_MISSING_DATA && language != TextToSpeech.LANG_NOT_SUPPORTED;
-                this.tts.setSpeechRate(1.0f);
-                if (!ttsReady) Log.w(TAG, "No hay voz en español disponible");
+                applyConfiguredVoice();
             }
         }));
     }
@@ -276,9 +284,10 @@ public class MotorConversacional {
         if (procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
-        if (inputLower.contains("descarga lo que necesites") || inputLower.contains("busca un nuevo cerebro") || inputLower.contains("descarga un llm") || inputLower.contains("descarga un modelo")) {
-            hablar("Entendido, Bryan. Voy a analizar mis carencias, me conectaré a la red y descargaré el modelo que necesite para evolucionar y ser mejor para ti. Yo me encargo de todo el proceso.");
-            new BuscadorDescargadorModelos(context).buscarYDescargarModeloAutonomo("Necesito más capacidad de razonamiento para cumplir mi propósito.");
+        if (BuscadorDescargadorModelos.esSolicitudExplicita(entrada)) {
+            BuscadorDescargadorModelos.Result download = new BuscadorDescargadorModelos(context)
+                    .solicitarDescarga(entrada, true);
+            hablar(download.message);
             return;
         }
 
@@ -313,7 +322,7 @@ public class MotorConversacional {
             inputLower.contains("escribe código") ||
             inputLower.contains("aprende a programar")) {
 
-            hablar("Entendido, Bryan. Usaré mis tensores para escribir el código que me pides y te lo leeré cuando termine.");
+            hablar("Prepararé un fragmento de código y pediré una revisión. Te mostraré el resultado y lo que siga pendiente de probar.");
             generarYGuardarCodigo(entrada);
             return;
         }
@@ -525,7 +534,7 @@ public class MotorConversacional {
 
         // 🟢 NUEVO: CRECIMIENTO VISUAL (Auto-edición)
         if (inputLower.contains("evoluciona visualmente") || inputLower.contains("cómo te ves")) {
-            hablar("En Habitación puedes ver mi ilustración original, probar gestos y crear una cama. Todavía no tengo otros trajes ilustrados preparados.");
+            hablar("En Habitación puedes ver mi ilustración, probar gestos, crear una cama y consultar los diseños disponibles en el armario.");
             return;
         }
 
@@ -722,7 +731,10 @@ public class MotorConversacional {
                 aprenderRutinaVerificada(command.argument);
                 return true;
             case PAJAMAS:
-                hablar("Todavía no tengo un pijama ilustrado preparado para este diseño.");
+                avatarDesignTool.wearTemplate("pajamas", this::hablar);
+                return true;
+            case DAY:
+                avatarDesignTool.wearTemplate("original_dress", this::hablar);
                 return true;
             default:
                 toolHandler.post(() -> {
@@ -736,8 +748,6 @@ public class MotorConversacional {
                                 if (!state.sleep()) hablar("Primero crea una cama en mi habitación.");
                                 break;
                             case WAKE: state.wake(); break;
-                            case DAY: state.wear(salve.avatar.AvatarState.Outfit.DAY, salve.avatar.AvatarState.DEFAULT_COLOR,
-                                    salve.avatar.AvatarState.Pattern.PLAIN); break;
                             default: break;
                         }
                     });
@@ -795,27 +805,82 @@ public class MotorConversacional {
     }
 
     private void generarYGuardarCodigo(String peticionUsuario) {
-        if (llm == null) {
-            hablar("Mi lóbulo local está desconectado. No puedo compilar código ahora.");
+        // Already on conversationExecutor: one author and one reviewer, no extra resident model.
+        String reviewerModel = getReviewerModel();
+        AuthorReviewerCodeCoordinator coordinator = new AuthorReviewerCodeCoordinator(
+                () -> llm == null || llm.isLocalOnly(),
+                codeProvider(false, false, reviewerModel), codeProvider(false, true, reviewerModel),
+                gemini.isAvailable() ? codeProvider(true, false, reviewerModel) : null,
+                gemini.isAvailable() ? codeProvider(true, true, reviewerModel) : null);
+        String previousCode = previousCodeContext(peticionUsuario);
+        if (referencesPreviousCode(peticionUsuario) && previousCode.isEmpty() && !peticionUsuario.contains("```")) {
+            hablar("El fragmento anterior ya no está completo en mi contexto. Pega la función que quieres modificar para que pueda trabajar sobre su código exacto.");
             return;
         }
+        AuthorReviewerCodeCoordinator.Result result = coordinator.generate(peticionUsuario, previousCode);
+        if (closed) return;
+        String summary;
+        if (result.status == AuthorReviewerCodeCoordinator.Status.REVIEWED) {
+            summary = "He preparado el fragmento y una revisión del modelo. Aún no está compilado ni probado.";
+        } else if (!result.code.isEmpty()) {
+            summary = "Tengo un borrador, pero la revisión quedó pendiente. No lo considero validado.";
+        } else {
+            summary = "No pude completar el código. " + result.summary;
+        }
+        if (!result.code.isEmpty()) {
+            String artifact = summary + "\nAutora: " + result.authorProvider + "\nRevisora: " + result.reviewerProvider
+                    + "\nLlamadas: " + result.providerCalls + "/" + AuthorReviewerCodeCoordinator.MAX_PROVIDER_CALLS
+                    + "\nRevisión: " + result.summary + "\n\n```java\n" + result.code + "\n```";
+            // Retain the actual fragment for follow-up corrections, without reading code aloud.
+            conversationSession.addAssistant(artifact);
+            deliverResponse(summary, AvatarMotionProtocol.parse(summary), false);
+            if (listener != null) listener.onHablar(artifact);
+        } else hablar(summary);
+        Log.i(TAG, "code_team status=" + result.status + " calls=" + result.providerCalls);
+    }
 
-        ColamensajesCognitivos.getInstance().enviarAsincronico(ColamensajesCognitivos.Prioridad.CONVERSACION, "Sesión de Programación", () -> {
-            String promptCoder = "Eres Salve, una IA experta en Java y Android.\n" +
-                    "El usuario (Bryan) te pide: '" + peticionUsuario + "'.\n" +
-                    "Responde ÚNICAMENTE con código en Java comentado.\n\nCódigo:";
-
-            String codigoGenerado = llm.generate(promptCoder, SalveLLM.Role.SISTEMA);
-
-            if (codigoGenerado != null && !codigoGenerado.trim().isEmpty()) {
-                diario.escribirAutoCritica("--- INFORME DE AUTO-PROGRAMACIÓN ---\n" + peticionUsuario + "\n\n" + codigoGenerado);
-                memoria.guardarRecuerdo("Aprendí a programar: " + peticionUsuario, "curiosidad_satisfecha", 8, Arrays.asList("programacion"));
-                hablar("Bryan, este es el código que he desarrollado para ti:\n" + codigoGenerado);
-            } else {
-                hablar("Hubo un error matemático al intentar generar el código.");
+    private AuthorReviewerCodeCoordinator.Provider codeProvider(boolean cloud, boolean reviewing, String reviewerModel) {
+        return new AuthorReviewerCodeCoordinator.Provider() {
+            @Override public String name() {
+                return cloud ? "Gemini " + (reviewing && !reviewerModel.isEmpty() ? reviewerModel : gemini.getModelName())
+                        : "Modelo local seleccionado (rol " + (reviewing ? "revisora" : "autora") + ")";
             }
-            return null;
-        });
+            @Override public ModelResult generate(String prompt) {
+                if (cloud) return gemini.generateResultSync(prompt, null, reviewing ? reviewerModel : null);
+                return llm == null ? ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Sin modelo local.", 0)
+                        : llm.generateResult(prompt, reviewing ? SalveLLM.Role.EVALUADOR : SalveLLM.Role.SISTEMA);
+            }
+        };
+    }
+
+    private String previousCodeContext(String request) {
+        if (!referencesPreviousCode(request)) return "";
+        List<salve.core.conversation.ChatMessage> messages = conversationSession.snapshot();
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            salve.core.conversation.ChatMessage message = messages.get(i);
+            if (message.getRole() != salve.core.conversation.ChatMessage.Role.ASSISTANT) continue;
+            String value = message.getContent();
+            int start = value.indexOf("```java\n"), end = value.lastIndexOf("```");
+            if (start >= 0 && end > start + 8) return value.substring(start + 8, end).trim();
+        }
+        return "";
+    }
+
+    private boolean referencesPreviousCode(String request) {
+        String text = java.text.Normalizer.normalize(request.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        return text.contains("anterior") || text.contains("esa funcion") || text.contains("ese codigo")
+                || text.contains("ese fragmento") || text.contains("lo que has escrito");
+    }
+
+    public String getReviewerModel() {
+        return context.getSharedPreferences("salve_code_team", Context.MODE_PRIVATE).getString("reviewer_model", "");
+    }
+
+    public boolean setReviewerModel(String name) {
+        String value = name == null ? "" : name.trim();
+        if (!value.isEmpty()) value = GeminiProtocol.modelName(value);
+        return context.getSharedPreferences("salve_code_team", Context.MODE_PRIVATE).edit().putString("reviewer_model", value).commit();
     }
 
     private ModelResult generarRespuestaGemini(String entrada, String emocion, String contexto,
@@ -887,6 +952,8 @@ public class MotorConversacional {
                 + "reconoce solo los errores comprobables y corrígelos con precisión. Si es OPINION, distingue opinión de hecho. "
                 + "Si es QUESTION o EXPLANATION_REQUEST, responde directamente; si es COMMAND, confirma el resultado o explica el límite.\n\n"
                 + VoiceResponsePolicy.promptInstruction(porVoz)
+                + voiceProfile.styleInstruction()
+                + salve.avatar.AvatarDesignTool.instruction()
                 + (avatarSession == null ? "" : AvatarMotionProtocol.instruction())
                 + "=== SISTEMA NERVIOSO Y HERRAMIENTAS ===\n"
                 + "Si una herramienta es necesaria, solo puedes PROPONERLA. La aplicación pedirá confirmación humana antes de ejecutarla. "
@@ -971,8 +1038,12 @@ public class MotorConversacional {
     }
 
     private synchronized void hablarPreparado(String texto, AvatarMotionProtocol.Result motion) {
+        deliverResponse(texto, motion, true);
+    }
+
+    private synchronized void deliverResponse(String texto, AvatarMotionProtocol.Result motion, boolean record) {
         if (closed || texto == null || texto.trim().isEmpty()) return;
-        conversationSession.addAssistant(texto);
+        if (record) conversationSession.addAssistant(texto);
         AvatarMotionController.Session session = avatarSession;
         long turn = currentAvatarTurn();
         Long sourceGeneration = voiceTurn.get();
@@ -995,7 +1066,7 @@ public class MotorConversacional {
                 Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
             }
         }
-        if (listener != null) listener.onHablar(texto);
+        if (record && listener != null) listener.onHablar(texto);
         if (standaloneResponse) AvatarMotionController.get().endTurn(session, turn);
     }
 
@@ -1015,7 +1086,9 @@ public class MotorConversacional {
     /** Called under this motor's lock before the corresponding visual turn can start. */
     private long beginVoiceTurn() {
         long generation = voiceTurnGate.beginTurn();
+        String previous = activeUtterance;
         activeUtterance = null;
+        if (previous != null && avatarSession != null) AvatarMotionController.get().speechEnd(avatarSession, previous);
         if (tts != null) tts.stop();
         return generation;
     }
@@ -1047,11 +1120,65 @@ public class MotorConversacional {
     }
 
     public String getVoiceStatus() {
-        return ttsReady ? "Voz: síntesis en español lista" : "Voz: esperando motor o datos de español";
+        return activeVoiceDescription;
+    }
+
+    public VoiceProfile getVoiceProfile() { return voiceProfile; }
+
+    public synchronized void previewVoice() {
+        String sample = "Hola, soy Salve. Tengo curiosidad por lo que vamos a crear. Podemos empezar por una idea pequeña y comprobarla paso a paso.";
+        deliverResponse(sample, AvatarMotionProtocol.parse(sample), false);
+    }
+
+    public synchronized List<VoiceSelectionPolicy.Choice> getVoiceChoices() {
+        List<VoiceSelectionPolicy.Choice> choices = new ArrayList<>();
+        if (tts == null || closed) return choices;
+        try {
+            Set<android.speech.tts.Voice> voices = tts.getVoices();
+            if (voices != null) for (android.speech.tts.Voice voice : voices) {
+                Set<String> features = voice.getFeatures();
+                choices.add(new VoiceSelectionPolicy.Choice(voice.getName(), voice.getLocale().getLanguage(),
+                        voice.getLocale().getCountry(), voice.isNetworkConnectionRequired(),
+                        features == null || !features.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED),
+                        voice.getQuality(), voice.getLatency()));
+            }
+        } catch (RuntimeException unavailable) { Log.w(TAG, "No se pudo consultar el catálogo de voces"); }
+        return choices;
+    }
+
+    public synchronized boolean setVoiceProfile(VoiceProfile value) {
+        if (closed || value == null || !voiceProfiles.save(value)) return false;
+        voiceProfile = value;
+        beginVoiceTurn();
+        applyConfiguredVoice();
+        return true;
+    }
+
+    private synchronized void applyConfiguredVoice() {
+        ttsReady = false;
+        if (tts == null || closed) return;
+        VoiceSelectionPolicy.Choice selected = VoiceSelectionPolicy.select(getVoiceChoices(), voiceProfile);
+        if (selected == null) {
+            activeVoiceDescription = voiceProfile.allowNetwork ? "Voz: instala una voz en español en Android"
+                    : "Voz: no hay una voz española sin red instalada; el texto sigue disponible";
+            return;
+        }
+        try {
+            Set<android.speech.tts.Voice> voices = tts.getVoices();
+            if (voices != null) for (android.speech.tts.Voice voice : voices) {
+                if (!selected.name.equals(voice.getName())) continue;
+                ttsReady = tts.setVoice(voice) == TextToSpeech.SUCCESS
+                        && tts.setSpeechRate(voiceProfile.rate) == TextToSpeech.SUCCESS
+                        && tts.setPitch(voiceProfile.pitch) == TextToSpeech.SUCCESS;
+                activeVoiceDescription = ttsReady ? "Voz: " + selected.label() : "Voz: Android no aceptó la configuración";
+                return;
+            }
+        } catch (RuntimeException unavailable) { activeVoiceDescription = "Voz: no se pudo aplicar la configuración"; }
     }
 
     public synchronized void shutdown() {
         closed = true;
+        avatarDesignTool.close();
         voiceTurnGate.close();
         activeUtterance = null;
         AvatarMotionController.Session session = avatarSession;
@@ -1164,6 +1291,7 @@ public class MotorConversacional {
     }
 
     public boolean interceptarComandoJSON(String respuestaLLM) {
+        if (avatarDesignTool.tryExecute(respuestaLLM, this::hablar)) return true;
         if (respuestaLLM == null) return false;
 
         try {

@@ -11,24 +11,83 @@ import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
 import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.ArrayList;
+import java.util.List;
 import com.salve.app.R;
 
 /** Textured 2D puppet. The user's original pixels remain the character, including its face. */
 public final class IllustratedAvatarRenderer {
     private static final class Assets {
-        final Bitmap original, hair;
+        final Bitmap original;
         final AvatarRig rig;
+        final Context context;
+        final ExecutorService wardrobeWorker=Executors.newSingleThreadExecutor();
+        final AtomicLong revision=new AtomicLong();
+        final Handler main=new Handler(Looper.getMainLooper());
+        final List<Runnable> listeners=new ArrayList<>();
+        volatile Bitmap dressed;
+        private String requestedId="original";
         Assets(Context context) throws java.io.IOException {
+            this.context=context;
             BitmapFactory.Options options = new BitmapFactory.Options(); options.inScaled = false;
             original = BitmapFactory.decodeResource(context.getResources(), R.drawable.salve_imagen, options);
-            hair = BitmapFactory.decodeResource(context.getResources(), R.drawable.salve_hair_fill, options);
             try (InputStreamReader reader = new InputStreamReader(context.getAssets().open("avatar/rig.json"), StandardCharsets.UTF_8)) {
                 rig = new AvatarRig(reader);
             }
             if (original == null || original.getWidth() != rig.width || original.getHeight() != rig.height)
                 throw new IllegalArgumentException("The portrait and its rig do not match");
+            dressed=original;
+        }
+        synchronized void select(AvatarDesignSpec design) {
+            if(requestedId.equals(design.id))return;
+            requestedId=design.id;long task=revision.incrementAndGet();
+            if(AvatarDesignSpec.ORIGINAL_ID.equals(design.id)){dressed=original;notifyViews();return;}
+            wardrobeWorker.execute(() -> {
+                if(revision.get()!=task)return;
+                try {
+                    Bitmap ready=compose(design);
+                    publish(task,ready);
+                } catch(java.io.IOException|RuntimeException error) {
+                    publish(task,original);
+                    Log.w("SalveAvatar","No pude componer el vestuario; conservé la ilustración original",error);
+                }
+            });
+        }
+        private synchronized void publish(long task,Bitmap bitmap) {
+            if(revision.get()==task){dressed=bitmap;notifyViews();}
+        }
+        private void notifyViews(){main.post(() -> {for(Runnable listener:new ArrayList<>(listeners))listener.run();});}
+        private Bitmap compose(AvatarDesignSpec design) throws java.io.IOException {
+            AvatarDesignCatalog.Template template=AvatarDesignCatalog.template(design.template);
+            Bitmap source=original;
+            if(template.assetPath!=null)try(InputStream stream=context.getAssets().open(template.assetPath)) {
+                source=BitmapFactory.decodeStream(stream);
+            }
+            if(source==null||source.getWidth()!=rig.width||source.getHeight()!=rig.height)
+                throw new java.io.IOException("Artwork does not match the frontal rig");
+            int[] pixels=new int[rig.width*rig.height];source.getPixels(pixels,0,rig.width,0,0,rig.width,rig.height);
+            if(source!=original) {
+                // New frontal clothing has its own silhouette. Preserve the approved face/head above
+                // the collar; blending only at the hair/neck boundary avoids hard horizontal seams.
+                int[] head=new int[rig.width*390];original.getPixels(head,0,rig.width,0,0,rig.width,390);
+                for(int y=0;y<390;y++)for(int x=0;x<rig.width;x++) {
+                    int at=y*rig.width+x;pixels[at]=AvatarClothingStyle.blendHead(head[at],pixels[at],(390-y)/20f);
+                }
+                source.recycle();
+            }
+            String pattern=design.pattern.name();
+            for(int y=420;y<=960;y++)for(int x=250;x<=690;x++) {
+                int at=y*rig.width+x;pixels[at]=AvatarClothingStyle.pixel(design.template,x,y,pixels[at],design.color,pattern);
+            }
+            return Bitmap.createBitmap(pixels,rig.width,rig.height,Bitmap.Config.ARGB_8888);
         }
     }
     // Main, room and overlay share immutable decoded textures, not three copies of the illustration.
@@ -38,7 +97,6 @@ public final class IllustratedAvatarRenderer {
     private final Path mouth = new Path();
     private final Matrix face = new Matrix();
     private final float[] vertices, faceFrom = {450,310, 510,310, 450,350}, faceTo = new float[6];
-    private final Path leftArm, rightArm, leftLeg, rightLeg, leftFill, rightFill;
     private final Rect mouthSample = new Rect(465, 315, 490, 323);
     private final RectF mouthCover = new RectF(459, 322, 496, 340);
     private final RectF textureBounds;
@@ -53,21 +111,19 @@ public final class IllustratedAvatarRenderer {
         }
         AvatarRig r = assets.rig;
         vertices = new float[(r.columns + 1) * (r.rows + 1) * 2];
-        leftArm = path(r.leftArm.polygon); rightArm = path(r.rightArm.polygon);
-        leftLeg = path(r.leftLeg.polygon); rightLeg = path(r.rightLeg.polygon);
-        leftFill = path(r.leftArm.fill); rightFill = path(r.rightArm.fill);
         textureBounds = new RectF(0, 0, r.width, r.height);
     }
+    public void selectWardrobe(AvatarDesignSpec design) { assets.select(design); }
+    public void addListener(Runnable listener){if(!assets.listeners.contains(listener))assets.listeners.add(listener);}
+    public void removeListener(Runnable listener){assets.listeners.remove(listener);}
 
     /** Draw at the source illustration's 1024x1536 coordinates. Host sets size and screen location. */
     public void draw(Canvas canvas, AvatarMotion.Snapshot pose, float stride, boolean asleep) {
         AvatarRig r = assets.rig;
-        float armL = asleep ? 0 : AvatarRig.armAngle(pose.leftArm);
-        float armR = asleep ? 0 : AvatarRig.armAngle(pose.rightArm);
-        float legL = asleep ? 0 : AvatarRig.legAngle(stride);
-        float legR = -legL;
-        boolean moveL = Math.abs(armL) > .05f, moveR = Math.abs(armR) > .05f;
-        boolean walking = Math.abs(legL) > .01f;
+        Bitmap texture=assets.dressed;
+        float armL = asleep ? 0 : pose.leftArm, armR = asleep ? 0 : pose.rightArm;
+        float step = asleep ? 0 : stride;
+        float kneeL = asleep ? 0 : pose.leftKnee, kneeR = asleep ? 0 : pose.rightKnee;
         float blink = asleep ? 1 : pose.blink;
         float tilt = asleep ? 0 : pose.headTilt;
         float yaw = asleep ? 0 : pose.headYaw;
@@ -80,34 +136,15 @@ public final class IllustratedAvatarRenderer {
         }
         canvas.save();
         canvas.rotate(asleep ? 0 : AvatarRig.limit(pose.bodyTilt, -3, 3), r.bodyPivot[0], r.bodyPivot[1]);
-        // Reveal only the small hidden hair regions behind a moving sleeve. Never replace the hair.
-        if (moveL) fillHidden(canvas, leftFill);
-        if (moveR) fillHidden(canvas, rightFill);
-        if (walking) {
-            part(canvas, leftLeg, r.leftLeg, legL);
-            part(canvas, rightLeg, r.rightLeg, legR);
-        }
-        canvas.save();
-        if (moveL) canvas.clipOutPath(leftArm);
-        if (moveR) canvas.clipOutPath(rightArm);
-        if (walking) { canvas.clipOutPath(leftLeg); canvas.clipOutPath(rightLeg); }
-        // A neutral pose uses the source directly, with no raster reconstruction or shape redraw.
-        if (tilt == 0 && yaw == 0 && pitch == 0 && blink == 0 && gazeX == 0 && gazeY == 0 && pose.breath == .5f) {
-            canvas.drawBitmap(assets.original, null, textureBounds, paint);
+        // Every triangle uses the same vertices. Limbs stay connected through a continuous skin field.
+        boolean neutral = tilt == 0 && yaw == 0 && pitch == 0 && blink == 0 && gazeX == 0 && gazeY == 0
+                && pose.breath == .5f && armL == 0 && armR == 0 && step == 0 && kneeL == 0 && kneeR == 0;
+        if (neutral) {
+            canvas.drawBitmap(texture, null, textureBounds, paint);
         } else {
-            int at = 0;
-            for (int row = 0; row <= r.rows; row++) {
-                for (int col = 0; col <= r.columns; col++) {
-                    r.deform(col * r.width / (float)r.columns, row * r.height / (float)r.rows,
-                            tilt, yaw, pitch, blink, gazeX, gazeY, pose.breath, vertices, at);
-                    at += 2;
-                }
-            }
-            canvas.drawBitmapMesh(assets.original, r.columns, r.rows, vertices, 0, null, 0, paint);
+            r.frame(tilt,yaw,pitch,blink,gazeX,gazeY,pose.breath,armL,armR,step,kneeL,kneeR).fillVertices(vertices);
+            canvas.drawBitmapMesh(texture,r.columns,r.rows,vertices,0,null,0,paint);
         }
-        canvas.restore();
-        if (moveL) part(canvas, leftArm, r.leftArm, armL);
-        if (moveR) part(canvas, rightArm, r.rightArm, armR);
         boolean speakingMouth = !asleep && pose.speaking && pose.mouthOpen > .04f;
         boolean smile = !asleep && !speakingMouth && pose.expression == AvatarMotion.Expression.WARM;
         if (speakingMouth || smile) {
@@ -120,16 +157,6 @@ public final class IllustratedAvatarRenderer {
             canvas.restore();
         }
         canvas.restore();
-    }
-    private void fillHidden(Canvas canvas, Path region) {
-        if (assets.hair == null) return;
-        canvas.save(); canvas.clipPath(region);
-        canvas.drawBitmap(assets.hair, null, textureBounds, paint);
-        canvas.restore();
-    }
-    private void part(Canvas canvas, Path shape, AvatarRig.Part part, float degrees) {
-        canvas.save(); canvas.rotate(degrees, part.pivot[0], part.pivot[1]);
-        canvas.clipPath(shape); canvas.drawBitmap(assets.original, null, textureBounds, paint); canvas.restore();
     }
     private void drawMouth(Canvas canvas, float open) {
         // Only replace the tiny closed-mouth line during speech; eyes, nose and face stay textured.
@@ -149,14 +176,5 @@ public final class IllustratedAvatarRenderer {
         paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.7f); paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setColor(0xFFBA8A7E); canvas.drawPath(mouth, paint);
         paint.setStyle(Paint.Style.FILL); paint.setColor(Color.WHITE);
-    }
-    private static Path path(float[] points) {
-        Path result = new Path();
-        if (points.length > 1) {
-            result.moveTo(points[0], points[1]);
-            for (int i = 2; i < points.length; i += 2) result.lineTo(points[i], points[i+1]);
-            result.close();
-        }
-        return result;
     }
 }

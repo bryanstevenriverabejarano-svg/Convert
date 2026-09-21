@@ -1,0 +1,100 @@
+{
+  "generator": "built-in image_gen",
+  "reference": "app/src/main/res/drawable/salve_imagen.png",
+  "prompts": [
+    {
+      "key": "torso_dress_front",
+      "text": "Use case: identity-preserve. Asset type: isolated production animation layer for Salve, extracted/reconstructed from the supplied original illustration. Input 1 is the exact identity, style, clothing and pixel-position reference. Output one PNG with real transparent alpha, portrait 1024x1536. Keep the requested part in EXACTLY its original position and scale on that full canvas; all other regions fully transparent. Do not center or enlarge the isolated part. Preserve original fine anime linework, soft shading, proportions, white hair, black fabric and turquoise trim. Complete surfaces formerly occluded by other layers so joints can overlap when bending; no severed-body horror, no gore, this is a clean game asset. No labels, outlines, skeletons, diagrams, shadow background or extra views.\nPrimary request: isolate the complete clothed torso and original black/turquoise skirt ONLY, from the white collar at y390 to the original skirt hem at y1035. Preserve belt, turquoise ring, bow, dress trim. Reconstruct the black shoulders and bodice under her white hair and sleeves. Exclude head, hair, both arms, hands, legs and boots. Include opaque black fabric shoulder overlap tabs ending around x350/610 y470 so sleeves can overlap them. The dress remains one complete garment, original shape and position. Transparent everywhere else."
+    },
+    {
+      "key": "arm_screen_left",
+      "text": "Use case: identity-preserve. Asset type: isolated production animation layer for Salve, extracted/reconstructed from the supplied original illustration. Input 1 is the exact identity, style, clothing and pixel-position reference. Output one PNG with real transparent alpha, portrait 1024x1536. Keep the requested part in EXACTLY its original position and scale on that full canvas; all other regions fully transparent. Do not center or enlarge the isolated part. Preserve original fine anime linework, soft shading, proportions, white hair, black fabric and turquoise trim. Complete surfaces formerly occluded by other layers so joints can overlap when bending; no severed-body horror, no gore, this is a clean game asset. No labels, outlines, skeletons, diagrams, shadow background or extra views.\nPrimary request: isolate ONLY the arm on the LEFT SIDE OF THE PICTURE: its original white puff sleeve from shoulder around (365,440) through elbow around (310,630), wrist around (255,810), and relaxed hand/fingers ending around (180,920). Preserve the exact original pose, five fingers, shading and cuff. Complete the hidden sleeve cap behind the black dress with a rounded cloth overlap at shoulder. Remove all hair, torso, head, other arm and legs. The isolated full arm stays in its original left-side place on the full canvas."
+    },
+    {
+      "key": "arm_screen_right",
+      "text": "Use case: identity-preserve. Asset type: isolated production animation layer for Salve, extracted/reconstructed from the supplied original illustration. Input 1 is the exact identity, style, clothing and pixel-position reference. Output one PNG with real transparent alpha, portrait 1024x1536. Keep the requested part in EXACTLY its original position and scale on that full canvas; all other regions fully transparent. Do not center or enlarge the isolated part. Preserve original fine anime linework, soft shading, proportions, white hair, black fabric and turquoise trim. Complete surfaces formerly occluded by other layers so joints can overlap when bending; no severed-body horror, no gore, this is a clean game asset. No labels, outlines, skeletons, diagrams, shadow background or extra views.\nPrimary request: isolate ONLY the arm on the RIGHT SIDE OF THE PICTURE: its original white puff sleeve from shoulder around (595,440) through elbow around (645,630), wrist around (695,815), and relaxed hand/fingers ending around (790,930). Preserve the exact original pose, five fingers, shading and cuff. Complete the hidden sleeve cap behind the black dress with a rounded cloth overlap at shoulder. Remove all hair, torso, head, other arm and legs. The isolated full arm stays in its original right-side place on the full canvas."
+    },
+    {
+      "key": "turnaround_eight_views",
+      "text": "Use case: identity-preserve. Input image is Salve's exact original character, style and clothing reference. Preserve white hair, bright cyan eyes, original proportions, black dress with turquoise piping, white puff sleeves and boots. Soft detailed anime linework. Production animation artwork with genuine transparent alpha background, no white rectangle, no labels, no skeleton or diagram.\nAsset type: eight-view orthographic character turnaround reference sheet for building a poseable 3D rig. Landscape 2048x1536 image. EXACTLY eight evenly spaced full-body standing figures in a clean 4-column by 2-row grid, each same height and scale, feet on aligned baselines with ample transparent margins. Top row, left to right: exact FRONT, FRONT THREE-QUARTER facing image-right, exact RIGHT-FACING PROFILE, BACK THREE-QUARTER facing image-right. Bottom row: exact BACK, BACK THREE-QUARTER facing image-left, exact LEFT-FACING PROFILE, FRONT THREE-QUARTER facing image-left. Keep the SAME character, dress construction, hair length and proportions in every view. Show the back of the black dress, same belt, sleeves and long hair; no invented tail or accessories. Resting arms slightly separated from body. Full head and feet visible in every cell. This is a model sheet, not sequential walking poses; no perspective camera foreshortening. Only eight characters, no text."
+    },
+    {
+      "key": "head_front",
+      "text": "Use case: identity-preserve. Input image is Salve's exact original character, style and clothing reference. Preserve white hair, bright cyan eyes, original proportions, black dress with turquoise piping, white puff sleeves and boots. Soft detailed anime linework. Production animation artwork with genuine transparent alpha background, no white rectangle, no labels, no skeleton or diagram.\nAsset type: isolated animation head layer. Portrait1024x1536 canvas. ONLY the exact original face, complete head, bangs, hair around crown and short front side-locks, with a little neck below chin; no torso/clothes or arms. Remove the long rear hair curtain BELOW the collar so it can be a separate layer. Keep head at original position, top around y35, cyan eyes aroundy255, chin aroundy370, neck endingy425. Complete the back curve of head behind long hair and collar; clean natural anime head cutout, no gore. Keep the original facial expression and original head proportions, not a different face. Transparent elsewhere; do not center/enlarge the head on the canvas."
+    },
+    {
+      "key": "hair_back",
+      "text": "Use case: identity-preserve. Input image is Salve's exact original character, style and clothing reference. Preserve white hair, bright cyan eyes, original proportions, black dress with turquoise piping, white puff sleeves and boots. Soft detailed anime linework. Production animation artwork with genuine transparent alpha background, no white rectangle, no labels, no skeleton or diagram.\nAsset type: isolated rear hair layer for skeletal animation. Portrait1024x1536 canvas. ONLY her long white rear hair, from crown aroundy35 down to the long curling ends aroundy820, original full widthx130..870. Reconstruct a complete continuous rear curtain of hair which was hidden behind her head, neck, torso and sleeves. No face, no eyes, no skin, no body, no clothes. Keep length/curls and subtle original grey-white shading. The rear curtain can be filled with white hair at the center; face and body will be separate layers placed in front. Do not draw bangs that cover the front face. Transparent outside silhouette, no text."
+    },
+    {
+      "key": "torso_dress_front_v2",
+      "text": "Use case: precise-object-edit. The supplied image is the edit target: isolated original black/turquoise dress for Salve. Remove BOTH white sleeves completely, from shoulders to cuffs, leaving only the black sleeveless dress, white collar, black bow, belt and skirt. Keep the entire remaining dress exactly unchanged in shape, scale, location, colors, texture, trim and outline. Replace removed sleeves with genuine transparent alpha, extend black fabric by a tiny rounded seam allowance at both armholes for animation overlap. No arms, sleeves, skin, head, hair, legs, other pieces or background. Real transparent alpha background. Do not center or enlarge dress. Output a portrait1024x1536 garment-only layer. This is a clean isolated piece of clothing for a virtual wardrobe."
+    },
+    {
+      "key": "pajama_lower_body",
+      "text": "Use case: precise-object-edit. Extract ONLY the fully clothed lower half from this pajama character image as an isolated animation clothing layer: the complete lavender long pajama trousers and white/turquoise slippers, including an opaque high pajama waistband at top. No exposed skin anywhere. No head, torso, arms, hands, hair or shirt. Keep the trousers and slippers exactly the same design, pose, shading, positions and scale as the source. Reconstruct the part of the trousers waistband that was hidden under the pajama shirt. Full trousers and slippers only on genuine transparent alpha background, 1024x1536 portrait canvas. Do not center or enlarge the clothing; keep original lower-canvas placement."
+    },
+    {
+      "key": "hair_back",
+      "text": "Use case: precise-object-edit. Create an isolated long white hair back layer matching this character's original hair length, curls and soft anime linework. Only a complete curtain of long white hair, no face, eyes, body, skin, hands, clothing or other objects. The hair runs from rounded crown into long gently curling strands with a continuous white-hair center surface, so an animated head and dressed torso can be layered in front. Genuine transparent alpha outside the hair silhouette. Portrait1024x1536 canvas. Original hair color and shading; no blue lights, accessories or labels."
+    },
+    {
+      "key": "parts_three_quarter",
+      "view": "FRONT THREE-QUARTER toward image-right",
+      "text": "Use case: identity-preserve. Asset type: separated animation parts texture atlas for Salve in FRONT THREE-QUARTER toward image-right. Reference1 is the exact original character identity and costume. Reference2 is her eight-view turnaround; choose ONLY the requested FRONT THREE-QUARTER toward image-right orientation consistently for EVERY piece. Soft original anime style, white hair, turquoise accents, black dress and white puff sleeves. Transparent alpha background.\nCreate one clean landscape 4-column by 2-row atlas, exactly8isolated pieces, each inside its own equalcell with transparentmargin. No grid lines, captions, numbers or text. Pieces in row-major order:\n1 complete head with face only if visible from requested view, bangs and short framing hair (no body);\n2 complete rear curtain of long white hair, reconstructing hidden hair surfaces (no face);\n3 original black sleeveless bodice, white collar, bow and waist belt, continuing a small overlap into skirt (no sleeves);\n4 complete original black/turquoise skirt as separate garment, including hidden waistband;\n5 complete white sleeve and relaxed hand on character's left side, with rounded shoulder overlap; show its projection in requestedview even if it normally hides behindbody;\n6 matching right sleeve and hand, consistentrequestedview;\n7 left original black/turquoise boot, wholeboot only;\n8 right original black/turquoise boot, wholeboot only.\nKeep identifiable construction consistent with the original costume. No bare torso, no extra bodies or limbs, no alternate costumes or accessories. Natural anatomy of hands, fine clean edges and softshading. This is a parts atlas, not a finished combinedcharacter. Fully fill hidden garmentseams under layers so pieces canoverlap whenrigged. Keep two boots distinct and in same orientation. Parts may be scaled individually tofit cells; exactassemblyplacement will be calibrated separately. Output realRGBA transparency, not checkerboardpattern or backgroundglow."
+    },
+    {
+      "key": "parts_profile",
+      "view": "exact RIGHT-FACING PROFILE",
+      "text": "Use case: identity-preserve. Asset type: separated animation parts texture atlas for Salve in exact RIGHT-FACING PROFILE. Reference1 is the exact original character identity and costume. Reference2 is her eight-view turnaround; choose ONLY the requested exact RIGHT-FACING PROFILE orientation consistently for EVERY piece. Soft original anime style, white hair, turquoise accents, black dress and white puff sleeves. Transparent alpha background.\nCreate one clean landscape 4-column by 2-row atlas, exactly8isolated pieces, each inside its own equalcell with transparentmargin. No grid lines, captions, numbers or text. Pieces in row-major order:\n1 complete head with face only if visible from requested view, bangs and short framing hair (no body);\n2 complete rear curtain of long white hair, reconstructing hidden hair surfaces (no face);\n3 original black sleeveless bodice, white collar, bow and waist belt, continuing a small overlap into skirt (no sleeves);\n4 complete original black/turquoise skirt as separate garment, including hidden waistband;\n5 complete white sleeve and relaxed hand on character's left side, with rounded shoulder overlap; show its projection in requestedview even if it normally hides behindbody;\n6 matching right sleeve and hand, consistentrequestedview;\n7 left original black/turquoise boot, wholeboot only;\n8 right original black/turquoise boot, wholeboot only.\nKeep identifiable construction consistent with the original costume. No bare torso, no extra bodies or limbs, no alternate costumes or accessories. Natural anatomy of hands, fine clean edges and softshading. This is a parts atlas, not a finished combinedcharacter. Fully fill hidden garmentseams under layers so pieces canoverlap whenrigged. Keep two boots distinct and in same orientation. Parts may be scaled individually tofit cells; exactassemblyplacement will be calibrated separately. Output realRGBA transparency, not checkerboardpattern or backgroundglow."
+    },
+    {
+      "key": "parts_back",
+      "view": "exact BACK VIEW",
+      "text": "Use case: identity-preserve. Asset type: separated animation parts texture atlas for Salve in exact BACK VIEW. Reference1 is the exact original character identity and costume. Reference2 is her eight-view turnaround; choose ONLY the requested exact BACK VIEW orientation consistently for EVERY piece. Soft original anime style, white hair, turquoise accents, black dress and white puff sleeves. Transparent alpha background.\nCreate one clean landscape 4-column by 2-row atlas, exactly8isolated pieces, each inside its own equalcell with transparentmargin. No grid lines, captions, numbers or text. Pieces in row-major order:\n1 complete head with face only if visible from requested view, bangs and short framing hair (no body);\n2 complete rear curtain of long white hair, reconstructing hidden hair surfaces (no face);\n3 original black sleeveless bodice, white collar, bow and waist belt, continuing a small overlap into skirt (no sleeves);\n4 complete original black/turquoise skirt as separate garment, including hidden waistband;\n5 complete white sleeve and relaxed hand on character's left side, with rounded shoulder overlap; show its projection in requestedview even if it normally hides behindbody;\n6 matching right sleeve and hand, consistentrequestedview;\n7 left original black/turquoise boot, wholeboot only;\n8 right original black/turquoise boot, wholeboot only.\nKeep identifiable construction consistent with the original costume. No bare torso, no extra bodies or limbs, no alternate costumes or accessories. Natural anatomy of hands, fine clean edges and softshading. This is a parts atlas, not a finished combinedcharacter. Fully fill hidden garmentseams under layers so pieces canoverlap whenrigged. Keep two boots distinct and in same orientation. Parts may be scaled individually tofit cells; exactassemblyplacement will be calibrated separately. Output realRGBA transparency, not checkerboardpattern or backgroundglow."
+    }
+  ],
+  "selected": [
+    {
+      "name": "turnaround-eight-views.png",
+      "key": "turnaround_eight_views"
+    },
+    {
+      "name": "head-front.png",
+      "key": "head_front"
+    },
+    {
+      "name": "torso-dress-front.png",
+      "key": "torso_dress_front_v2"
+    },
+    {
+      "name": "arm-screen-left.png",
+      "key": "arm_screen_left"
+    },
+    {
+      "name": "arm-screen-right.png",
+      "key": "arm_screen_right"
+    },
+    {
+      "name": "pajama-lower-body.png",
+      "key": "pajama_lower_body"
+    },
+    {
+      "name": "hair-back.png",
+      "key": "hair_back"
+    },
+    {
+      "name": "parts-three-quarter.png",
+      "key": "parts_three_quarter"
+    },
+    {
+      "name": "parts-profile.png",
+      "key": "parts_profile"
+    },
+    {
+      "name": "parts-back.png",
+      "key": "parts_back"
+    }
+  ],
+  "note": "The first torso included sleeves and was replaced; generated layers require calibration and rigging, not automatic production assembly."
+}

@@ -15,6 +15,8 @@ public final class AvatarView extends View {
     private final IllustratedAvatarRenderer portrait;
     private final AvatarMotionController motion = AvatarMotionController.get();
     private final AvatarStore store;
+    private final AvatarWardrobeStore wardrobe;
+    private static final AvatarLocomotion locomotion = new AvatarLocomotion();
     private boolean overlay, animationEnabled = true, attached;
     private Runnable frameListener;
     private float phase;
@@ -24,6 +26,7 @@ public final class AvatarView extends View {
             if (!attached || !animationEnabled || !isShown() || getWindowVisibility() != VISIBLE) return;
             long now = SystemClock.uptimeMillis();
             store.advance(now);
+            locomotion.advance(now,store.state().getX(),store.state().getPose()==AvatarState.Pose.WALKING);
             motion.advance(now);
             phase = (now % 60000L) / 1000f;
             if (frameListener != null) frameListener.run();
@@ -36,6 +39,7 @@ public final class AvatarView extends View {
     public AvatarView(Context context, AttributeSet attrs) {
         super(context, attrs);
         store = AvatarStore.get(context);
+        wardrobe = AvatarWardrobeStore.get(context);
         portrait = new IllustratedAvatarRenderer(context);
         setFocusable(true);
         setClickable(true);
@@ -50,10 +54,12 @@ public final class AvatarView extends View {
         if (attached && animationEnabled && isShown() && getWindowVisibility() == VISIBLE) post(frame);
     }
     @Override protected void onAttachedToWindow() {
-        super.onAttachedToWindow(); attached = true; store.addListener(changed); motion.addListener(changed); restartFrames();
+        super.onAttachedToWindow(); attached = true; store.addListener(changed); motion.addListener(changed);
+        wardrobe.addListener(changed);portrait.addListener(changed);restartFrames();
     }
     @Override protected void onDetachedFromWindow() {
-        attached = false; removeCallbacks(frame); store.removeListener(changed); motion.removeListener(changed); store.save();
+        attached = false; removeCallbacks(frame); store.removeListener(changed); motion.removeListener(changed);
+        wardrobe.removeListener(changed);portrait.removeListener(changed);store.save();
         super.onDetachedFromWindow();
     }
     @Override protected void onVisibilityChanged(View changedView, int visibility) {
@@ -66,7 +72,7 @@ public final class AvatarView extends View {
         AvatarState s = store.state();
         setContentDescription("Salve, " + (s.getPose() == AvatarState.Pose.SLEEPING ? "dormida en su cama"
                 : s.getPose() == AvatarState.Pose.WALKING ? "caminando" : "despierta")
-                + ", con su ilustración original. "
+                + ", avatar ilustrado. "
                 + (motion.snapshot().speaking ? "Hablando." : motion.snapshot().listening ? "Escuchando." : ""));
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
@@ -87,6 +93,7 @@ public final class AvatarView extends View {
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         AvatarState s = store.state();
+        portrait.selectWardrobe(wardrobe.selected());
         AvatarMotion.Snapshot expression = motion.snapshot();
         float worldWidth = overlay ? 220f : 320f;
         float scale = Math.min(getWidth() / worldWidth, getHeight() / 280f);
@@ -108,10 +115,10 @@ public final class AvatarView extends View {
             text(canvas, "z", bedX + 61, floor - 90, 11, 0xFFA8DADD);
         } else {
             float x = overlay ? 110f : 78f + s.getX() * 164f;
-            float stride = s.getPose() == AvatarState.Pose.WALKING ? (float) Math.sin(phase * 10f) : 0f;
+            float stride = locomotion.stride();
             canvas.save();
-            canvas.translate(x, floor - Math.abs(stride) * 1.1f);
-            if (s.getPose() == AvatarState.Pose.WALKING && !s.isFacingRight()) canvas.scale(-1, 1);
+            canvas.translate(x, floor - locomotion.lift() * .7f);
+            // A frontal drawing keeps its actual handedness; direction is scene movement, not a flip.
             drawPortrait(canvas, expression, overlay ? 244f : 226f, stride, false);
             canvas.restore();
         }

@@ -29,7 +29,8 @@ public final class AvatarMotion {
     private boolean ownerOpen;
     private boolean acceptsTurn, enabled = true, listening, thinking, speaking, responseCue;
     private String utterance;
-    private float age, gestureAge, expressionAge, audioAge, rangePulse;
+    private float age, gestureAge, gesturePhase, expressionAge, audioAge, rangePulse;
+    private MotionPreferenceProfile preferences = MotionPreferenceProfile.defaults();
     private Gesture gesture = Gesture.NONE;
     private Expression expression = Expression.NEUTRAL;
     private AvatarMotionProtocol.Result fallback;
@@ -79,6 +80,11 @@ public final class AvatarMotion {
         if (value == null || face == null) return;
         enabled = true; setGesture(value, face);
     }
+    /** Changes gesture comfort only; the audio clock, turn ownership and expiry remain untouched. */
+    public void setPreferences(MotionPreferenceProfile profile) {
+        if (profile == null) throw new IllegalArgumentException("Missing movement preferences");
+        preferences = profile;
+    }
     public void speechPending(long session, long id, String audioId) {
         if (!validTurn(session, id) || audioId == null || audioId.isEmpty() || audioId.length() > 160) return;
         stopAudio(); utterance = audioId; audioAge = 0;
@@ -101,6 +107,7 @@ public final class AvatarMotion {
         float elapsed = Math.min(seconds, 1000f);
         age = (age + dt) % 420f;
         gestureAge = Math.min(1000f, gestureAge + elapsed);
+        gesturePhase = Math.min(1000f, gesturePhase + elapsed * preferences.tempo());
         expressionAge = Math.min(1000f, expressionAge + elapsed);
         if (utterance != null && (audioAge += elapsed) > (speaking ? 90f : 10f)) stopAudio();
         if (gesture != Gesture.NONE && gestureAge > duration(gesture)) gesture = Gesture.NONE;
@@ -110,22 +117,24 @@ public final class AvatarMotion {
         float targetTilt = (float)Math.sin(age * .9f) * .6f, targetYaw = 0, targetPitch = 0;
         float targetLeft = 0, targetRight = 0, targetBody = 0, targetKnee = 0;
         switch (gesture) {
-            case WAVE: targetRight = -19 + (float)Math.sin(gestureAge * 12f) * 5; targetTilt = -4; break;
-            case NOD: targetPitch = (float)Math.sin(gestureAge * 10f) * 8; break;
-            case SHAKE: targetYaw = (float)Math.sin(gestureAge * 10f) * 12; break;
-            case EXPLAIN: targetLeft = 9; targetRight = -13 + (float)Math.sin(gestureAge * 4f) * 3; targetTilt = 3; break;
+            case WAVE: targetRight = -19 + (float)Math.sin(gesturePhase * 12f) * 5; targetTilt = -4; break;
+            case NOD: targetPitch = (float)Math.sin(gesturePhase * 10f) * 8; break;
+            case SHAKE: targetYaw = (float)Math.sin(gesturePhase * 10f) * 12; break;
+            case EXPLAIN: targetLeft = 9; targetRight = -13 + (float)Math.sin(gesturePhase * 4f) * 3; targetTilt = 3; break;
             case THINK: targetRight = -11; targetTilt = 6; break;
-            case CELEBRATE: targetLeft = 21; targetRight = -21; targetBody = (float)Math.sin(gestureAge * 6f) * 3;
-                targetKnee = (1 + (float)Math.sin(gestureAge * 8f)) * .12f; break;
+            case CELEBRATE: targetLeft = 21; targetRight = -21; targetBody = (float)Math.sin(gesturePhase * 6f) * 3;
+                targetKnee = (1 + (float)Math.sin(gesturePhase * 8f)) * .12f; break;
             default: break;
         }
         float blend = 1f - (float)Math.exp(-dt * 13f);
-        headTilt = approach(headTilt, targetTilt * strength, blend);
-        headYaw = approach(headYaw, targetYaw * strength, blend);
-        headPitch = approach(headPitch, targetPitch * strength, blend);
-        bodyTilt = approach(bodyTilt, targetBody * strength, blend);
-        leftArm = approach(leftArm, targetLeft * strength, blend); rightArm = approach(rightArm, targetRight * strength, blend);
-        leftKnee = approach(leftKnee, targetKnee * strength, blend); rightKnee = approach(rightKnee, targetKnee * strength, blend);
+        float gestureBlend = 1f - (float)Math.exp(-dt * 13f * preferences.tempo());
+        float gestureStrength = strength * (gesture == Gesture.NONE ? 1f : preferences.amplitude());
+        headTilt = approach(headTilt, targetTilt * gestureStrength, gestureBlend);
+        headYaw = approach(headYaw, targetYaw * gestureStrength, gestureBlend);
+        headPitch = approach(headPitch, targetPitch * gestureStrength, gestureBlend);
+        bodyTilt = approach(bodyTilt, targetBody * gestureStrength, gestureBlend);
+        leftArm = approach(leftArm, targetLeft * gestureStrength, gestureBlend); rightArm = approach(rightArm, targetRight * gestureStrength, gestureBlend);
+        leftKnee = approach(leftKnee, targetKnee * gestureStrength, gestureBlend); rightKnee = approach(rightKnee, targetKnee * gestureStrength, gestureBlend);
         gazeX = approach(gazeX, thinking ? .24f : listening ? 0f : (float)Math.sin(age * .4f) * .09f, blend);
         gazeY = approach(gazeY, thinking ? -.25f : 0f, blend);
         float blinkPhase = age % 4.2f;
@@ -143,7 +152,7 @@ public final class AvatarMotion {
         return validTurn(session, turn) && utterance != null && utterance.equals(id);
     }
     private void setGesture(Gesture value, Expression face) {
-        gesture = value; expression = face; gestureAge = 0; expressionAge = 0;
+        gesture = value; expression = face; gestureAge = 0; gesturePhase = 0; expressionAge = 0;
     }
     private void stopAudio() { speaking = false; utterance = null; mouthOpen = 0; audioAge = 0; rangePulse = 0; }
     private void reset() {

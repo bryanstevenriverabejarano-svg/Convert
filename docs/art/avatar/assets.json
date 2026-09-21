@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "purpose": "Rigging source artwork, not a production skeletal or 3D model",
+  "assets": [
+    {
+      "file": "turnaround-eight-views.png",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "visible_bounds_alpha_gt_127": [
+        65,
+        9,
+        1405,
+        1073
+      ],
+      "sha256": "5ccc08109ebed2f7006bdb501e87078847e1f2df3ec6e229df872922e6e8ace9"
+    },
+    {
+      "file": "head-front.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        58,
+        84,
+        1016,
+        1163
+      ],
+      "sha256": "991493ef1115ea84e271af26c9de8acfbf1074baa4f8074e068b2d896d9de0cd"
+    },
+    {
+      "file": "torso-dress-front.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        28,
+        164,
+        997,
+        1342
+      ],
+      "sha256": "9375dce45bda19b00787c6fc722daaf7b3001872700afd40a0bcbb002cf0a3d9"
+    },
+    {
+      "file": "arm-screen-left.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        110,
+        452,
+        421,
+        1153
+      ],
+      "sha256": "d65647770c4269da0f986cf9c741cd435394d6d5e8b56bd75808063656fd7d41"
+    },
+    {
+      "file": "arm-screen-right.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        586,
+        402,
+        896,
+        1118
+      ],
+      "sha256": "08c6a6e43353e1e076f416160ed81f41450a440d36ec3d683c2c725b841f3c0c"
+    },
+    {
+      "file": "pajama-lower-body.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        282,
+        157,
+        782,
+        1420
+      ],
+      "sha256": "488cd1f07601eea01d850af612df0229ff8216cbf9ff84d616812c099c37991c"
+    },
+    {
+      "file": "hair-back.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        7,
+        43,
+        1023,
+        1486
+      ],
+      "sha256": "e50e277bdedca1827990462b8314549e1c8c28737b891b47844a6893edba7635"
+    },
+    {
+      "file": "parts-three-quarter.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        8,
+        13,
+        1530,
+        1005
+      ],
+      "sha256": "ce60cbbed6f594f336387ab76c4e2360662bc02093ca0339c9c0474fb50a8261"
+    },
+    {
+      "file": "parts-profile.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        18,
+        22,
+        1518,
+        1004
+      ],
+      "sha256": "c73ebb62b0e308e5b1af47bcf73d3d114e73971442bb269f47f87b83cd4b886b"
+    },
+    {
+      "file": "parts-back.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "visible_bounds_alpha_gt_127": [
+        47,
+        19,
+        1510,
+        998
+      ],
+      "sha256": "831479b354b6f50721ced237dba14cb940358dbc867d16829072dd44d887add7"
+    }
+  ]
+}
