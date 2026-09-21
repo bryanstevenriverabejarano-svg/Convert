@@ -61,9 +61,9 @@ object BasicLocalLlm {
                 engineInstance = try {
                     MLCEngine()
                 } catch (e: Throwable) {
-                    Log.e(TAG, "No se pudo crear MLCEngine. Se usará modo sin TVM.", e)
+                    Log.e(TAG, "No se pudo crear MLCEngine. Runtime no disponible.", e)
                     initialized = false
-                    return@runBlocking
+                    throw IllegalStateException("No se pudo cargar el runtime MLC", e)
                 }
                 engine = engineInstance
             }
@@ -81,9 +81,9 @@ object BasicLocalLlm {
                 Log.i(TAG, "MLC runtime cargado con modelPath=$modelPath modelLib=$modelLib")
                 initialized = true
             } catch (e: Throwable) {
-                Log.e(TAG, "No se pudo recargar el modelo MLC. Se mantiene modo sin TVM.", e)
+                Log.e(TAG, "No se pudo recargar el modelo MLC. Modelo no disponible.", e)
                 initialized = false
-                return@runBlocking
+                throw IllegalStateException("No se pudo cargar el modelo MLC", e)
             }
         }
     }
@@ -95,13 +95,14 @@ object BasicLocalLlm {
      * @param messages Historial de mensajes en formato OpenAI (role/user/assistant).
      */
     @JvmStatic
+    @Synchronized
     fun simpleChat(messages: List<ChatCompletionMessage>): String {
         if (!initialized) {
-            return "El modelo local aún no está inicializado en BasicLocalLlm."
+            throw IllegalStateException("El modelo MLC no está inicializado")
         }
 
         val currentEngine = engine
-            ?: return "El motor MLC no está creado. Llama a init() primero."
+            ?: throw IllegalStateException("El motor MLC no está creado")
 
         return runBlocking {
             val responses = try {
@@ -110,7 +111,7 @@ object BasicLocalLlm {
                     stream_options = OpenAIProtocol.StreamOptions(include_usage = true)
                 )
             } catch (e: Exception) {
-                return@runBlocking "No se pudo generar respuesta con el motor MLC: ${e.message}"
+                throw IllegalStateException("Falló la inferencia MLC", e)
             }
 
             val sb = StringBuilder()
