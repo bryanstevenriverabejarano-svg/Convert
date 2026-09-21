@@ -1,5 +1,6 @@
 .idea/
 .gradle/
+.kotlin/
 local.properties
 !local.properties.example
 /build/

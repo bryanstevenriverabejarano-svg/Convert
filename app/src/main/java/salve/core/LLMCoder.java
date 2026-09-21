@@ -1,67 +1,50 @@
 package salve.core;
 
 import android.content.Context;
-import android.util.Log;
 
-/**
- * LLMCoder — Componente encargado de generar código y proponer mejoras.
- * Ahora integrado con GeminiService para una capacidad de programación real.
- */
+import java.util.function.BooleanSupplier;
+import java.util.function.Function;
+
+import salve.core.conversation.ConversationModelRouter;
+
+/** Genera propuestas con el proveedor elegido por el usuario; nunca ejecuta código. */
 public class LLMCoder {
-    private static final String TAG = "Salve/LLMCoder";
     private static LLMCoder instance;
-    private final Context context;
+    private final BooleanSupplier localOnly;
+    private final Function<String, ModelResult> cloud;
+    private final Function<String, ModelResult> local;
 
     private LLMCoder(Context ctx) {
-        this.context = ctx.getApplicationContext();
+        Context context = ctx.getApplicationContext();
+        this.localOnly = () -> SalveLLM.getInstance(context).isLocalOnly();
+        this.cloud = prompt -> GeminiService.getInstance(context).generateResultSync(prompt, null);
+        this.local = prompt -> SalveLLM.getInstance(context)
+                .generateResult(prompt, SalveLLM.Role.PLANIFICADOR);
+    }
+
+    /** Inyección de proveedores para comprobar rutas y fallos sin una red ni un modelo. */
+    LLMCoder(BooleanSupplier localOnly, Function<String, ModelResult> cloud,
+             Function<String, ModelResult> local) {
+        this.localOnly = localOnly;
+        this.cloud = cloud;
+        this.local = local;
     }
 
     public static synchronized LLMCoder getInstance(Context ctx) {
-        if (instance == null) {
-            instance = new LLMCoder(ctx);
-        }
+        if (instance == null) instance = new LLMCoder(ctx);
         return instance;
     }
 
-    /**
-     * Genera código fuente a partir de una descripción.
-     * Intenta usar Gemini primero por su superioridad en programación.
-     */
     public String generateCode(String description, String language) {
         String prompt = "Eres un experto programador. Genera un fragmento de código en "
-                + language + " para la siguiente tarea:\n"
-                + description + "\n"
+                + language + " para la siguiente tarea:\n" + description + "\n"
                 + "Responde ÚNICAMENTE con el código, sin explicaciones.";
-
-        // 1. Intentar con Gemini (Cerebro Superior)
-        GeminiService gemini = GeminiService.getInstance(context);
-        if (gemini.isAvailable()) {
-            String code = gemini.generateSync(prompt);
-            if (code != null && !code.trim().isEmpty()) {
-                Log.d(TAG, "Código generado exitosamente con Gemini");
-                return cleanCode(code);
-            }
-        }
-
-        // 2. Fallback al LLM Local
-        try {
-            SalveLLM llm = SalveLLM.getInstance(context);
-            if (llm != null) {
-                String result = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
-                if (isValidResponse(result)) {
-                    return cleanCode(result);
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error en fallback local de generateCode", e);
-        }
-
-        return "// No se pudo generar el código. Verifica la conexión o el modelo local.\n"
-                + "// Tarea: " + description;
+        return generate(prompt, "// No se pudo generar el código. Verifica el proveedor seleccionado.");
     }
 
     /**
-     * Genera una propuesta de corrección (parche).
+     * Propone un diff. Sin el código fuente exacto, no se considera aplicable ni
+     * validado hasta que el ejecutor externo lo compruebe contra una revisión.
      */
     public String generateFix(String issueDescription, String className) {
         String sourcePath = "app/src/main/java/salve/core/" + className + ".java";
@@ -70,39 +53,30 @@ public class LLMCoder {
                 + "La ruta exacta del archivo es " + sourcePath + ".\n"
                 + "Devuelve exclusivamente un unified diff aplicable con git apply. "
                 + "El diff solo puede modificar esa ruta, debe incluir contexto suficiente y "
-                + "no debe contener bloques Markdown ni explicaciones.";
+                + "no debe contener bloques Markdown ni explicaciones. "
+                + "Si no dispones del código necesario para un diff fiel, responde "
+                + "// No se pudo generar la corrección: falta el código fuente exacto.";
+        return generate(prompt, "// No se pudo generar la corrección.");
+    }
 
-        GeminiService gemini = GeminiService.getInstance(context);
-        if (gemini.isAvailable()) {
-            String fix = gemini.generateSync(prompt);
-            if (fix != null && !fix.trim().isEmpty()) {
-                return cleanCode(fix);
-            }
-        }
-
-        // Fallback local
+    private String generate(String prompt, String failure) {
+        final boolean useLocalOnly;
         try {
-            SalveLLM llm = SalveLLM.getInstance(context);
-            if (llm != null) {
-                String result = llm.generate(prompt, SalveLLM.Role.PLANIFICADOR);
-                if (isValidResponse(result)) {
-                    return cleanCode(result);
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error en fallback local de generateFix", e);
+            useLocalOnly = localOnly.getAsBoolean();
+        } catch (RuntimeException unavailablePolicy) {
+            // No enviar datos si no se ha podido determinar el modo elegido.
+            return failure;
         }
-
-        return "// No se pudo generar la corrección.";
+        ModelResult result = ConversationModelRouter.generate(false, useLocalOnly, false,
+                cloud == null ? null : () -> cloud.apply(prompt),
+                local == null ? null : () -> local.apply(prompt));
+        if (!result.isSuccess()) return failure;
+        String code = cleanCode(result.getText());
+        return code.isEmpty() ? failure : code;
     }
 
     private String cleanCode(String raw) {
         if (raw == null) return "";
-        // Quitar bloques de código markdown si existen (```java ... ```)
         return raw.replaceAll("(?s)```[a-zA-Z]*\\n?(.*?)\\n?```", "$1").trim();
-    }
-
-    private boolean isValidResponse(String res) {
-        return res != null && !res.trim().isEmpty() && !res.contains("[SalveLLM]");
     }
 }

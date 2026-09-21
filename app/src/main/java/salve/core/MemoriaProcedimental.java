@@ -3,71 +3,141 @@ package salve.core;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
-import org.json.JSONArray;
-import org.json.JSONObject;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-/**
- * El Cerebelo de Salve (Memoria Muscular).
- * Almacena y ejecuta secuencias de acciones (Macros) de forma instantánea 
- * sin necesidad de despertar al modelo LLM pesado.
- */
+import salve.core.tools.VirtualToolRecipe;
+
+/** Persisted declarative tools; each step awaits explicit approval and its actual result. */
 public class MemoriaProcedimental {
-    private static final String TAG = "Salve/Cerebelo";
+    private static final String TAG = "Salve/Rutinas";
     private static final String PREFS_NAME = "salve_habilidades";
     private final SharedPreferences prefs;
+    private final Object executionLock = new Object();
+    private VirtualToolRecipe.Execution activeExecution;
+    private String activeName;
 
     public MemoriaProcedimental(Context context) {
         this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
-    /**
-     * Guarda una nueva "Habilidad" en el cerebro de Salve.
-     * Ejemplo de scriptJson: [{"tool":"TAP", "x":100, "y":200}, {"tool":"ESCRIBIR", "texto":"hola"}]
-     */
-    public void aprenderHabilidad(String nombreHabilidad, String scriptJson) {
-        prefs.edit().putString(nombreHabilidad.toLowerCase().trim(), scriptJson).apply();
-        Log.i(TAG, "Nueva habilidad muscular adquirida: " + nombreHabilidad);
+    /** Stores the full name and canonical, verified JSON; invalid legacy scripts are never executed. */
+    public synchronized void aprenderHabilidad(String nombreHabilidad, String scriptJson) {
+        String name = VirtualToolRecipe.normalizeName(nombreHabilidad);
+        VirtualToolRecipe recipe = VirtualToolRecipe.parse(scriptJson);
+        String previous = prefs.getString(name, null);
+        if (!prefs.edit().putString(name, recipe.toJson()).commit()) {
+            restorePreference(name, previous);
+            throw new IllegalStateException("No pude guardar la rutina en el dispositivo.");
+        }
+        // Recipe names and writing payloads can contain user information: do not log them.
+        Log.i(TAG, "Rutina validada y guardada; pasos=" + recipe.getSteps().size());
     }
 
-    /**
-     * Comprueba si Salve ya sabe hacer esto sin pensar.
-     */
     public boolean conoceHabilidad(String nombreHabilidad) {
-        return prefs.contains(nombreHabilidad.toLowerCase().trim());
+        try {
+            return prefs.contains(VirtualToolRecipe.normalizeName(nombreHabilidad));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     public List<String> listarHabilidades() {
-        return new ArrayList<>(prefs.getAll().keySet());
+        List<String> names = new ArrayList<>();
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            if (entry.getValue() instanceof String) names.add(entry.getKey());
+        }
+        Collections.sort(names);
+        return names;
     }
 
-    /**
-     * Ejecuta la rutina a la velocidad de la luz.
-     */
-    public void ejecutarHabilidad(String nombreHabilidad, MotorConversacional motor) {
-        String script = prefs.getString(nombreHabilidad.toLowerCase().trim(), null);
-        if (script == null) return;
+    public synchronized boolean eliminarHabilidad(String nombreHabilidad) {
+        String name = VirtualToolRecipe.normalizeName(nombreHabilidad);
+        VirtualToolRecipe.Execution execution;
+        synchronized (executionLock) {
+            execution = name.equals(activeName) ? activeExecution : null;
+        }
+        if (execution != null) execution.cancel();
+        String previous = prefs.getString(name, null);
+        if (previous == null) return false;
+        if (prefs.edit().remove(name).commit()) return true;
+        restorePreference(name, previous);
+        return false;
+    }
 
-        motor.hablar("Ejecutando rutina aprendida: " + nombreHabilidad);
-        
-        new Thread(() -> {
-            try {
-                JSONArray acciones = new JSONArray(script);
-                for (int i = 0; i < acciones.length(); i++) {
-                    JSONObject accion = acciones.getJSONObject(i);
-                    // Pasamos la acción simulando que el LLM la generó
-                    motor.interceptarComandoJSON(accion.toString());
-                    
-                    // Pausa biológica entre taps para que Android reaccione a la UI
-                    Thread.sleep(1500); 
-                }
-                motor.hablar("Rutina " + nombreHabilidad + " completada con éxito.");
-            } catch (Exception e) {
-                Log.e(TAG, "Fallo en la memoria muscular", e);
-                motor.hablar("Mi memoria muscular falló al ejecutar esta rutina. Necesito re-aprenderla.");
+    private void restorePreference(String name, String previous) {
+        // commit() updates the in-memory map even when the disk write fails.
+        SharedPreferences.Editor rollback = prefs.edit();
+        if (previous == null) rollback.remove(name);
+        else rollback.putString(name, previous);
+        if (!rollback.commit()) Log.w(TAG, "No se pudo persistir la restauración de una rutina.");
+    }
+
+    public boolean rutinaEnCurso() {
+        synchronized (executionLock) {
+            return activeExecution != null;
+        }
+    }
+
+    public boolean cancelarHabilidad() {
+        VirtualToolRecipe.Execution execution;
+        synchronized (executionLock) {
+            execution = activeExecution;
+        }
+        if (execution == null) return false;
+        execution.cancel();
+        return true;
+    }
+
+    public void ejecutarHabilidad(String nombreHabilidad, MotorConversacional motor) {
+        final String name;
+        final VirtualToolRecipe recipe;
+        try {
+            name = VirtualToolRecipe.normalizeName(nombreHabilidad);
+            String script = prefs.getString(name, null);
+            if (script == null) {
+                motor.hablar("No tengo guardada esa rutina.");
+                return;
             }
-        }).start();
+            recipe = VirtualToolRecipe.parse(script);
+        } catch (RuntimeException e) {
+            motor.hablar("Esa rutina no es válida: " + e.getMessage()
+                    + " Enséñamela de nuevo usando aplicaciones y elementos visibles, sin coordenadas inventadas.");
+            return;
+        }
+
+        VirtualToolRecipe.Execution execution = new VirtualToolRecipe.Execution(recipe,
+                new VirtualToolRecipe.StepExecutor() {
+                    @Override public void execute(String stepJson, java.util.function.Consumer<Boolean> completed) {
+                        motor.ejecutarPasoRutina(stepJson, completed);
+                    }
+
+                    @Override public void cancel() { motor.cancelarPasoRutina(); }
+                }, outcome -> {
+                    synchronized (executionLock) {
+                        activeExecution = null;
+                        activeName = null;
+                    }
+                    if (outcome == VirtualToolRecipe.Outcome.SUCCESS) {
+                        motor.hablar("Rutina " + name + " completada: todos los pasos devolvieron un resultado correcto.");
+                    } else if (outcome == VirtualToolRecipe.Outcome.CANCELLED) {
+                        motor.hablar("He detenido la rutina. Los pasos ya realizados se mantienen.");
+                    } else {
+                        motor.hablar("He detenido la rutina porque un paso no pudo completarse. No ejecuté los pasos restantes.");
+                    }
+                });
+        synchronized (executionLock) {
+            if (activeExecution != null) {
+                motor.hablar("Ya hay una rutina en curso. Complétala o di cancelar rutina antes de iniciar otra.");
+                return;
+            }
+            activeExecution = execution;
+            activeName = name;
+        }
+        motor.hablar("Preparando rutina " + name + ". Confirma cada paso en pantalla; puedes cancelar la rutina.");
+        execution.start();
     }
 }

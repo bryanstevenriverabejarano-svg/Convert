@@ -1,5 +1,7 @@
 # Auditoría funcional de Salve — 2026-09-21
 
+La revisión posterior a la integración de Gemma —control del móvil, Bluetooth/NSD, herramientas virtuales, avatar y evolución— está en [CONTROL_DISPOSITIVOS_AVATAR.md](docs/CONTROL_DISPOSITIVOS_AVATAR.md). Incluye diagnóstico, decisiones, código conectado, límites y tareas de validación.
+
 ## Integración de Gemma 4 E2B para Galaxy S24 Ultra — 2026-09-21
 
 Base de este grupo: `96b4881422832d3191d1ca1b1ac4281e3abcb6da` (incluye la PR 71 y cambios posteriores del propietario).

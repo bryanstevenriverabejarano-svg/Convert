@@ -11,6 +11,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" android:maxSdkVersion="33" />
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -30,6 +34,12 @@
         android:required="false" />
 
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
         <intent><action android:name="android.speech.RecognitionService" /></intent>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
         <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
@@ -80,6 +90,9 @@
             android:name="salve.presentation.ui.ObjetoCreativoActivity"
             android:exported="false" />
 
+        <activity android:name="salve.presentation.ui.AvatarRoomActivity" android:exported="false" android:theme="@style/Theme.Salve" />
+        <activity android:name="salve.presentation.ui.DeviceControlActivity" android:exported="false" android:theme="@style/Theme.Salve" />
+
         <activity
             android:name="salve.presentation.ui.GaleriaVisualActivity"
             android:exported="false"
@@ -100,7 +113,11 @@
         <service
             android:name="salve.services.BurbujaFlotanteService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-started interactive companion overlay with walking and wardrobe controls; visible notification and stop action" />
+        </service>
 
         <service
             android:name="salve.services.SalveAccessibilityService"

@@ -21,18 +21,12 @@ import java.util.Locale
  * wrapper de Gradle disponible en el proyecto. Opera en modo offline y borra los
  * archivos temporales al finalizar para evitar contaminar el árbol de código.
  */
-class GradleSandboxTestExecutor private constructor(
-    context: Context,
+class GradleSandboxTestExecutor internal constructor(
     private val workspaceRoot: File?,
     private val timeoutMillis: Long,
-    private val enabled: Boolean
+    private val enabled: Boolean,
+    private val panelMetricas: PanelMetricasCreatividad?
 ) : ValidationSandbox.TestExecutor {
-
-    private val panelMetricas: PanelMetricasCreatividad? = if (enabled) {
-        PanelMetricasCreatividad(context)
-    } else {
-        null
-    }
 
     override fun run(
         suite: AutoTestGenerator.GeneratedTestSuite?,
@@ -54,6 +48,7 @@ class GradleSandboxTestExecutor private constructor(
         var testFile: File? = null
         var gradleOutput = ""
         var success = false
+        var processStarted = false
         var lastGuardrail: PanelMetricasCreatividad.GuardrailDecision? = null
         var coverageSnapshot: CoverageSnapshot? = null
 
@@ -80,11 +75,13 @@ class GradleSandboxTestExecutor private constructor(
                 )
             }
 
+            steps.add("Comprobación de suite local: no aplica ni certifica el parche candidato.")
             val result = runBlocking {
                 executeGradleCommand(
                     buildCommand(gradleWrapper, suiteClassName),
                     steps,
-                    "Ejecución principal"
+                    "Ejecución principal",
+                    onStarted = { processStarted = true }
                 )
             }
             gradleOutput = result.output
@@ -146,6 +143,11 @@ class GradleSandboxTestExecutor private constructor(
             }
         }
 
+        if (!processStarted) {
+            return ValidationSandbox.TestExecutionResult.skipped(
+                "El ejecutor local no llegó a iniciar un proceso. $gradleOutput"
+            )
+        }
         val duration = System.currentTimeMillis() - start
         val summaryBuilder = StringBuilder(
             if (success) "Suite ejecutada con éxito en sandbox offline." else "La ejecución del sandbox reportó fallas."
@@ -158,8 +160,8 @@ class GradleSandboxTestExecutor private constructor(
         }
 
         return ValidationSandbox.TestExecutionResult.create(
-            true,
-            summaryBuilder.toString(),
+            success,
+            summaryBuilder.append(" Se invocó el ejecutor local sobre el checkout; el parche candidato no se aplica aquí.").toString(),
             steps,
             gradleOutput,
             duration
@@ -191,12 +193,14 @@ class GradleSandboxTestExecutor private constructor(
     private suspend fun executeGradleCommand(
         command: List<String>,
         steps: MutableList<String>,
-        label: String
+        label: String,
+        onStarted: () -> Unit = {}
     ): CommandResult {
         val process = ProcessBuilder(command)
             .directory(workspaceRoot)
             .redirectErrorStream(true)
             .start()
+        onStarted()
 
         val output = StringBuilder()
         val reader = BufferedReader(InputStreamReader(process.inputStream))
@@ -285,9 +289,11 @@ class GradleSandboxTestExecutor private constructor(
     }
 
     private fun deriveSuiteClassName(suite: AutoTestGenerator.GeneratedTestSuite): String {
-        val raw = suite.primaryTestName ?: "SalveSandbox"
-        return raw.replace("[^A-Za-z0-9_]".toRegex(), "")
-            .ifBlank { "SalveSandbox" }
+        // primaryTestName is a method name, not the Java class/file name.
+        val classMatch = Regex("\\bpublic\\s+(?:final\\s+)?class\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\b")
+            .find(suite.code)
+            ?: throw IOException("La suite no declara una clase Java pública.")
+        return classMatch.groupValues[1]
     }
 
     data class CoverageSnapshot(
@@ -326,7 +332,8 @@ class GradleSandboxTestExecutor private constructor(
             val root = discoverWorkspaceRoot(context)
             val available = root != null && locateGradleWrapper(root) != null
             val timeout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 90_000L else 120_000L
-            return GradleSandboxTestExecutor(context, root, timeout, available)
+            return GradleSandboxTestExecutor(root, timeout, available,
+                if (available) PanelMetricasCreatividad(context) else null)
         }
 
         private fun discoverWorkspaceRoot(context: Context): File? {

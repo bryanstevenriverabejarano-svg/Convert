@@ -7,23 +7,31 @@
     android:background="@drawable/fondo_salv"
     android:padding="16dp">
 
-    <!-- Imagen de Salve centrada verticalmente -->
-    <ImageView
+    <LinearLayout
+        android:id="@+id/quickActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button android:id="@+id/btnAvatar" android:layout_width="0dp"
+            android:layout_weight="1" android:layout_height="48dp" android:text="Habitación"
+            android:textSize="12sp" />
+        <Button android:id="@+id/btnDispositivos" android:layout_width="0dp"
+            android:layout_weight="1" android:layout_height="48dp" android:text="Mi móvil"
+            android:textSize="12sp" />
+        <Button android:id="@+id/btnConfigurarIA" android:layout_width="0dp"
+            android:layout_weight="1" android:layout_height="48dp" android:text="IA y cámara"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Personaje articulado: mismo estado que habitación y ventana flotante. -->
+    <salve.avatar.AvatarView
         android:id="@+id/imagenSalve"
-        android:layout_width="350dp"
-        android:layout_height="400dp"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_below="@id/quickActions"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="10dp"
-        android:src="@drawable/salve_imagen"
-        android:scaleType="fitCenter"
         android:contentDescription="@string/salve" />
-
-    <Button
-        android:id="@+id/btnConfigurarIA"
-        android:layout_width="wrap_content"
-        android:layout_height="48dp"
-        android:layout_alignParentEnd="true"
-        android:text="IA y cámara" />
 
     <!-- Nivel de conciencia de Salve -->
     <TextView
