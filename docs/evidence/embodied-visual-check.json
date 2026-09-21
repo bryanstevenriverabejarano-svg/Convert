@@ -1,0 +1,22 @@
+{
+  "neutrality": {
+    "differentPixels": 0,
+    "totalPixels": 393216
+  },
+  "errors": [],
+  "environment": "Chromium/WebGL preview, not Android",
+  "reviewed_poses": 18,
+  "neutral_dimensions": [
+    512,
+    768
+  ],
+  "wardrobe_templates": [
+    "original_dress",
+    "pajamas",
+    "explorer"
+  ],
+  "generated_model_present": false,
+  "real_tts_tested": false,
+  "s24_ultra_tested": false,
+  "programmed_video": true
+}

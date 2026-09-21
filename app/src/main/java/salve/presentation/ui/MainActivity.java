@@ -1488,7 +1488,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{"Descargar o reanudar Gemma 4 (2,6 GB)", "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaGemma(); break;
                         case 1:
@@ -1511,6 +1511,8 @@ public class MainActivity extends AppCompatActivity {
                             }
                             break;
                         case 7: probarModelo(false); break;
+                        case 8: mostrarVozSalve(); break;
+                        case 9: mostrarEquipoProgramacion(); break;
                         default: break;
                     }
                 })
@@ -1522,6 +1524,92 @@ public class MainActivity extends AppCompatActivity {
                                 + "\n" + motorConversacional.getVoiceStatus())
                         .setPositiveButton("Cerrar", null).show())
                 .setNegativeButton("Cerrar", null).show();
+    }
+
+    private void mostrarVozSalve() {
+        salve.core.voice.VoiceProfile profile = motorConversacional.getVoiceProfile();
+        android.widget.LinearLayout form = new android.widget.LinearLayout(this);
+        form.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        form.setPadding(padding, padding / 2, padding, padding / 2);
+        TextView explanation = new TextView(this);
+        explanation.setText("Una voz cercana, discretamente tímida y curiosa. Elige entre las voces españolas que tu motor de Android tenga disponibles; no es una voz entrenada exclusiva.\n\n" + motorConversacional.getVoiceStatus());
+        form.addView(explanation);
+        android.widget.CheckBox network = new android.widget.CheckBox(this);
+        network.setText("Permitir voces que envían texto al motor por Internet");
+        network.setChecked(profile.allowNetwork);
+        form.addView(network);
+        android.widget.Spinner spinner = new android.widget.Spinner(this);
+        final java.util.List<salve.core.voice.VoiceSelectionPolicy.Choice> choices = new java.util.ArrayList<>();
+        Runnable updateChoices = () -> {
+            choices.clear();
+            choices.addAll(salve.core.voice.VoiceSelectionPolicy.available(motorConversacional.getVoiceChoices(), network.isChecked()));
+            java.util.List<String> labels = new java.util.ArrayList<>();
+            labels.add("Automática: español de España, sin red si está disponible");
+            for (salve.core.voice.VoiceSelectionPolicy.Choice choice : choices) labels.add(choice.label());
+            spinner.setAdapter(new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, labels));
+            for (int i = 0; i < choices.size(); i++) if (choices.get(i).name.equals(profile.voiceName)) spinner.setSelection(i + 1);
+        };
+        network.setOnCheckedChangeListener((button, checked) -> updateChoices.run());
+        form.addView(spinner);
+        updateChoices.run();
+        TextView rateLabel = new TextView(this);
+        android.widget.SeekBar rate = new android.widget.SeekBar(this);
+        rate.setMax(50); rate.setProgress(Math.round((profile.rate - .75f) * 100));
+        TextView pitchLabel = new TextView(this);
+        android.widget.SeekBar pitch = new android.widget.SeekBar(this);
+        pitch.setMax(45); pitch.setProgress(Math.round((profile.pitch - .80f) * 100));
+        Runnable showValues = () -> {
+            rateLabel.setText("Ritmo: " + (75 + rate.getProgress()) + "%");
+            pitchLabel.setText("Tono: " + (80 + pitch.getProgress()) + "%");
+        };
+        android.widget.SeekBar.OnSeekBarChangeListener changed = new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(android.widget.SeekBar bar, int progress, boolean fromUser) { showValues.run(); }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar bar) { }
+            @Override public void onStopTrackingTouch(android.widget.SeekBar bar) { }
+        };
+        rate.setOnSeekBarChangeListener(changed); pitch.setOnSeekBarChangeListener(changed); showValues.run();
+        form.addView(rateLabel); form.addView(rate); form.addView(pitchLabel); form.addView(pitch);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this); scroll.addView(form);
+        new AlertDialog.Builder(this).setTitle("Voz de Salve").setView(scroll)
+                .setPositiveButton("Guardar y escuchar", (dialog, which) -> {
+                    int index = spinner.getSelectedItemPosition() - 1;
+                    String name = index >= 0 && index < choices.size() ? choices.get(index).name : "";
+                    salve.core.voice.VoiceProfile value = new salve.core.voice.VoiceProfile(name,
+                            .75f + rate.getProgress() / 100f, .80f + pitch.getProgress() / 100f, network.isChecked());
+                    if (motorConversacional.setVoiceProfile(value)) {
+                        motorConversacional.previewVoice();
+                        Toast.makeText(this, motorConversacional.getVoiceStatus(), Toast.LENGTH_LONG).show();
+                    } else Toast.makeText(this, "No se pudo guardar la voz.", Toast.LENGTH_LONG).show();
+                }).setNeutralButton("Instalar voces", (dialog, which) -> {
+                    try { startActivity(new Intent(android.speech.tts.TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)); }
+                    catch (RuntimeException unavailable) { Toast.makeText(this, "Configura las voces en los ajustes de texto a voz de Android.", Toast.LENGTH_LONG).show(); }
+                }).setNegativeButton("Cerrar", null).show();
+    }
+
+    private void mostrarEquipoProgramacion() {
+        android.widget.LinearLayout form = new android.widget.LinearLayout(this);
+        form.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        form.setPadding(padding, padding, padding, padding);
+        TextView info = new TextView(this);
+        info.setText("Una autora prepara Java y una revisora propone correcciones. Máximo 3 llamadas, incluyendo fallos y alternativas. "
+                + "En modo local son dos roles del mismo modelo, cargado una sola vez. Si eliges Gemini puedes configurar otro modelo revisor. "
+                + "Una revisión no demuestra que el código compile.\n\nModo actual: "
+                + (SalveLLM.getInstance(this).isLocalOnly() ? "local, sin consultas de este equipo a Gemini." : "Gemini configurado, con alternativa local."));
+        form.addView(info);
+        EditText reviewer = new EditText(this);
+        reviewer.setSingleLine(true); reviewer.setHint("Modelo Gemini revisor (vacío: el modelo actual)");
+        reviewer.setText(motorConversacional.getReviewerModel()); form.addView(reviewer);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Equipo de programación").setView(form)
+                .setPositiveButton("Guardar", null).setNegativeButton("Cerrar", null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
+            try {
+                if (motorConversacional.setReviewerModel(reviewer.getText().toString())) dialog.dismiss();
+                else reviewer.setError("No se pudo guardar la configuración.");
+            } catch (IllegalArgumentException invalid) { reviewer.setError(invalid.getMessage()); }
+        }));
+        dialog.show();
     }
 
     private void mostrarDescargaGemma() {

@@ -14,8 +14,11 @@ import java.util.List;
  */
 public final class ConversationSession {
     private static final int DEFAULT_MAX_MESSAGES = 16;
+    private static final int DEFAULT_MAX_CHARS = 8000;
 
     private final int maxMessages;
+    private final int maxChars;
+    private int contentChars;
     private final Deque<ChatMessage> messages = new ArrayDeque<>();
 
     public ConversationSession() {
@@ -23,10 +26,16 @@ public final class ConversationSession {
     }
 
     public ConversationSession(int maxMessages) {
+        this(maxMessages, DEFAULT_MAX_CHARS);
+    }
+
+    public ConversationSession(int maxMessages, int maxChars) {
         if (maxMessages < 2) {
             throw new IllegalArgumentException("maxMessages debe ser al menos 2");
         }
+        if (maxChars < 256) throw new IllegalArgumentException("maxChars debe ser al menos 256");
         this.maxMessages = maxMessages;
+        this.maxChars = maxChars;
     }
 
     public synchronized void addUser(String content) {
@@ -39,8 +48,15 @@ public final class ConversationSession {
 
     private void add(ChatMessage.Role role, String content) {
         if (content == null || content.trim().isEmpty()) return;
+        if (content.length() > maxChars) {
+            String marker = "\n[Contenido truncado por el límite de contexto]";
+            content = content.substring(0, maxChars - marker.length()) + marker;
+        }
         messages.addLast(new ChatMessage(role, content, System.currentTimeMillis()));
-        while (messages.size() > maxMessages) messages.removeFirst();
+        contentChars += content.length();
+        while (messages.size() > maxMessages || contentChars > maxChars) {
+            contentChars -= messages.removeFirst().getContent().length();
+        }
     }
 
     public synchronized List<ChatMessage> snapshot() {
@@ -63,5 +79,6 @@ public final class ConversationSession {
 
     public synchronized void clear() {
         messages.clear();
+        contentChars = 0;
     }
 }

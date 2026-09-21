@@ -1,0 +1,52 @@
+{
+  "build_success": true,
+  "gradle_exit": 0,
+  "toolchain": {
+    "android_sdk": 36,
+    "java": "JetBrains Runtime 21",
+    "gradle": "9.7.1"
+  },
+  "tasks": [
+    ":app:testDebugUnitTest",
+    ":app:assembleDebug"
+  ],
+  "init_script": "scripts/android-arm64.init.gradle",
+  "duration_seconds": 23,
+  "tests": {
+    "tests": 301,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "test_suites": 46,
+  "apk_name": "salve-s24-creative-avatar-debug.apk",
+  "apk_path": "/workspace/scratch/7305811ca654/android-build-check/salve-s24-creative-avatar-debug.apk",
+  "apk_bytes": 152967696,
+  "apk_mib": 145.881,
+  "apk_sha256": "11f688efc7af77f42725745d577d8c5368adc93bf37dfc057398d2d73eefb532",
+  "signature_verified": true,
+  "signature": {
+    "scheme": "v2",
+    "certificate": "C=US, O=Android, CN=Android Debug",
+    "certificate_sha256": "868702e4df05d9320703fc834967b2a5544e1282ef794433764a819fdeafd423"
+  },
+  "abis": [
+    "arm64-v8a"
+  ],
+  "llm_weight_files": [],
+  "llm_weight_check": {
+    "suffixes": [
+      ".gguf",
+      ".litertlm",
+      ".safetensors",
+      ".params"
+    ],
+    "matches": [],
+    "note": "Existing gte-small-int8.onnx embedding weights remain packaged; generative LLM weights are external."
+  },
+  "source_artwork_sha256": "32346faf7219f417eb0983262ae7ac20a2e80063781a0ea32b843d3eb03fb0ec",
+  "embedded_artwork_sha256": {
+    "res/drawable/salve_imagen.png": "32346faf7219f417eb0983262ae7ac20a2e80063781a0ea32b843d3eb03fb0ec"
+  },
+  "device_tested": false
+}

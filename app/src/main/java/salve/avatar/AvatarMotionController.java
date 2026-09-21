@@ -1,5 +1,6 @@
 package salve.avatar;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -29,6 +30,7 @@ public final class AvatarMotionController {
     /** The owner is required but not retained, so this singleton never holds an Activity. */
     public synchronized Session openSession(Object owner) {
         if (owner == null) throw new IllegalArgumentException("A visual owner is required");
+        if (owner instanceof Context) initializePreferences((Context) owner);
         if (current != null) current.open = false;
         Session session = new Session(ids.incrementAndGet());
         current = session;
@@ -51,6 +53,21 @@ public final class AvatarMotionController {
     public void pause(Session s) { dispatch(s, m -> m.pause(s.id)); }
     public void previewGesture(AvatarMotion.Gesture gesture, AvatarMotion.Expression expression) {
         onMain(() -> { advanceClock(SystemClock.uptimeMillis()); motion.previewGesture(gesture, expression); publish(); });
+    }
+    /** Uses the application context only; room and conversation share the same persisted preference. */
+    public void initializePreferences(Context context) {
+        MotionPreferenceStore store = MotionPreferenceStore.get(context);
+        onMain(() -> { advanceClock(SystemClock.uptimeMillis()); motion.setPreferences(store.profile()); publish(); });
+    }
+    /** Feedback is an explicit UI action, not something inferred from a model's conversation. */
+    public void recordFeedback(Context context, MotionPreferenceProfile.Feedback feedback) {
+        if (feedback == null) throw new IllegalArgumentException("Missing movement feedback");
+        MotionPreferenceStore store = MotionPreferenceStore.get(context);
+        onMain(() -> {
+            advanceClock(SystemClock.uptimeMillis());
+            motion.setPreferences(store.record(feedback));
+            publish();
+        });
     }
     public synchronized void closeSession(Session s) {
         if (s == null || current != s) return;

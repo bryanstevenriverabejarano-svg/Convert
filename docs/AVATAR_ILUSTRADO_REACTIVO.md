@@ -2,6 +2,8 @@
 
 Corrección solicitada tras la PR 73, sobre `40ad6f2c54e54c4dd98c39a7d80f738768bc8fd1`.
 
+Evolución posterior: [malla continua, nuevas prendas, adaptación de movimiento, equipo de código y voz](SALVE_CUERPO_VOZ_Y_CREACION.md). Ese cambio reemplaza los recortes de miembros descritos aquí y añade las plantillas ilustradas que antes faltaban.
+
 ## Qué se había entendido mal
 
 El personaje geométrico anterior permitía caminar y cambiar de estado, pero reemplazaba la apariencia que el usuario quería conservar. `AvatarView.drawCharacter()` no utilizaba la ilustración existente. Además, los movimientos dependían de botones y órdenes específicas; no había un director de gestos conectado a la conversación ni eventos de voz que animaran la boca.

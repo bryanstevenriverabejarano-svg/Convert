@@ -7,7 +7,7 @@
 body{margin:0;padding:28px;background:#0e1725;color:#edf7fb;font:16px system-ui,sans-serif}h1{font-size:24px;margin:0 0 8px}p{max-width:980px;line-height:1.5;color:#b8d1df}#grid{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:16px}article{border:1px solid #29445b;border-radius:16px;overflow:hidden;background:#152337}h2{font-size:15px;font-weight:500;margin:0;padding:13px 16px;border-bottom:1px solid #29445b}canvas{display:block;width:100%;height:auto}#status{color:#68dad4}button{background:#18394b;color:white;border:1px solid #3e7684;border-radius:9px;padding:10px 16px;margin:5px;cursor:pointer}@media(max-width:1000px){#grid{grid-template-columns:repeat(2,minmax(200px,1fr))}}
 </style>
 <h1>Salve · Ilustración original y gestos</h1>
-<p>Vista de desarrollo: utiliza el mismo PNG, polígonos, pivotes y malla de <code>app/src/main/assets/avatar/rig.json</code>. Las poses son muestras fijas del renderer; aquí no se reproduce audio ni se ejecuta el modelo conversacional. En Android la boca sigue los eventos reales de síntesis.</p>
+<p>Vista de desarrollo: utiliza el mismo PNG, articulaciones, pesos y malla de <code>app/src/main/assets/avatar/rig.json</code>. Las poses son muestras fijas del renderer; aquí no se reproduce audio ni se ejecuta el modelo conversacional. En Android la boca sigue los eventos reales de síntesis.</p>
 <p id="status">Cargando arte y rig…</p>
 <div id="grid"></div>
 <script type="module">
@@ -15,17 +15,18 @@ body{margin:0;padding:28px;background:#0e1725;color:#edf7fb;font:16px system-ui,
 const root = '../../app/src/main/';
 const rig = await fetch(root + 'assets/avatar/rig.json').then(r => { if (!r.ok) throw Error('Rig missing'); return r.json(); });
 const load = path => new Promise((resolve,reject) => { const image = new Image(); image.onload=()=>resolve(image); image.onerror=reject; image.src=path; });
-const [art,hair] = await Promise.all([load(root+'res/drawable/salve_imagen.png'),load(root+'res/drawable-nodpi/salve_hair_fill.png')]);
+const art = await load(root+'res/drawable/salve_imagen.png');
+const [pajamas,explorer] = await Promise.all([load(root+'assets/avatar/wardrobe/pajamas.png'),load(root+'assets/avatar/wardrobe/explorer.png')]);
 const limit = (v,a,b) => Number.isFinite(v)?Math.min(b,Math.max(a,v)):Math.min(b,Math.max(a,0));
 const smooth = (a,b,v) => { const t=limit((v-a)/(b-a),0,1); return t*t*(3-2*t); };
-const neutral = {blink:0,gazeX:0,gazeY:0,headTilt:0,headYaw:0,headPitch:0,bodyTilt:0,leftArm:0,rightArm:0,mouthOpen:0,breath:.5,speaking:false,expression:'NEUTRAL',stride:0};
+const neutral = {blink:0,gazeX:0,gazeY:0,headTilt:0,headYaw:0,headPitch:0,bodyTilt:0,leftArm:0,rightArm:0,mouthOpen:0,breath:.5,speaking:false,expression:'NEUTRAL',stride:0,leftKnee:0,rightKnee:0};
 function adjusted(input) {
  const p={...neutral,...input};
  if(p.expression==='CURIOUS'){p.headTilt+=1.5;p.gazeX+=.1;}
  if(p.expression==='CONCERNED'){p.headTilt-=1.2;p.gazeY+=.2;p.blink=Math.max(p.blink,.1);}
  return p;
 }
-function deform(x,y,p) {
+function deformFace(x,y,p) {
  let px=x,py=y; const closed=limit(p.blink,0,1);
  for(const center of [rig.leftEye,rig.rightEye]){
   const dx=x-center[0],dy=y-center[1];if(Math.abs(dx)>60||Math.abs(dy)>75)continue;const edge=smooth(52,32,Math.abs(dx));
@@ -41,11 +42,37 @@ function deform(x,y,p) {
  return [px,py];
 }
 function shape(points){const path=new Path2D();path.moveTo(points[0],points[1]);for(let i=2;i<points.length;i+=2)path.lineTo(points[i],points[i+1]);path.closePath();return path;}
-function cut(ctx,points){const path=new Path2D();path.rect(-4096,-4096,8192,8192);path.addPath(shape(points));ctx.clip(path,'evenodd');}
 function rotate(ctx,degrees,pivot){ctx.translate(...pivot);ctx.rotate(degrees*Math.PI/180);ctx.translate(-pivot[0],-pivot[1]);}
-function piece(ctx,part,angle){ctx.save();rotate(ctx,angle,part.pivot);ctx.clip(shape(part.polygon));ctx.drawImage(art,0,0,rig.width,rig.height);ctx.restore();}
-function fill(ctx,part){ctx.save();ctx.clip(shape(part.fill));ctx.drawImage(hair,0,0,rig.width,rig.height);ctx.restore();}
-
+function rotation(degrees,p){const rad=degrees*Math.PI/180,c=Math.cos(rad),s=Math.sin(rad);return[c,s,-s,c,p[0]-c*p[0]+s*p[1],p[1]-s*p[0]-c*p[1]];}
+function child(m,t){return[m[0]*t[0]+m[2]*t[1],m[1]*t[0]+m[3]*t[1],m[0]*t[2]+m[2]*t[3],m[1]*t[2]+m[3]*t[3],m[0]*t[4]+m[2]*t[5]+m[4],m[1]*t[4]+m[3]*t[5]+m[5]];}
+function distance(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],t=limit(((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy),0,1);return Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t);}
+function weightsAt(x,y){const j=rig.joints;function arm(left){const shoulder=left?j.leftShoulder:j.rightShoulder,elbow=left?j.leftElbow:j.rightElbow,palm=left?j.leftPalm:j.rightPalm,d=Math.min(distance(x,y,shoulder,elbow),distance(x,y,elbow,palm));return smooth(245,75,d)*(left?smooth(375,295,x):smooth(555,635,x))*smooth(400,535,y)*smooth(1080,930,y);}const legs=smooth(995,1125,y),side=smooth(570,400,x);return[arm(true),arm(false),legs*side,legs*(1-side),smooth(590,750,y),smooth(1145,1290,y)];}
+function matrices(p){const j=rig.joints;let l=limit(p.leftArm,-25,25)*.36,r=limit(p.rightArm,-25,25)*.36;const step=limit(p.stride,-1,1);if(l<0)l*=.4;if(r>0)r*=.4;const lu=rotation(l,j.leftShoulder),ru=rotation(r,j.rightShoulder),lt=rotation(step*2.8,j.leftHip),rt=rotation(-step*2.8,j.rightHip);return[lu,child(lu,rotation(l*.22,j.leftElbow)),ru,child(ru,rotation(r*.22,j.rightElbow)),lt,child(lt,rotation(-Math.max(0,step)*2.2-limit(p.leftKnee,0,1)*2,j.leftKnee)),rt,child(rt,rotation(Math.max(0,-step)*2.2+limit(p.rightKnee,0,1)*2,j.rightKnee))];}
+function deform(x,y,p,m,w){const out=deformFace(x,y,p);for(let n=0;n<4;n++){const parent=m[n*2],c=m[n*2+1],weight=w[n],blend=w[n<2?4:5];out[0]+=weight*((parent[0]*x+parent[2]*y+parent[4]-x)*(1-blend)+(c[0]*x+c[2]*y+c[4]-x)*blend);out[1]+=weight*((parent[1]*x+parent[3]*y+parent[5]-y)*(1-blend)+(c[1]*x+c[3]*y+c[5]-y)*blend);}return out;}
+// Static garment composition happens before deformation, just as in the Android worker.
+const wardrobeCache=new Map(),templates={original_dress:art,pajamas,explorer};
+const headerCanvas=document.createElement('canvas');headerCanvas.width=1024;headerCanvas.height=390;const headerCtx=headerCanvas.getContext('2d',{willReadFrequently:true});headerCtx.drawImage(art,0,0);const header=headerCtx.getImageData(0,0,1024,390).data;
+function wardrobe(spec={}){
+ const template=spec.template||'original_dress',palette=spec.color||0,pattern=spec.pattern||'NONE';
+ if(template==='original_dress'&&palette===0&&pattern==='NONE')return art;
+ const key=template+'/'+palette+'/'+pattern;if(wardrobeCache.has(key))return wardrobeCache.get(key);
+ if(!templates[template])throw Error('Unsupported garment');
+ const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=1536;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(templates[template],0,0);const image=ctx.getImageData(0,0,1024,1536),data=image.data;
+ if(template!=='original_dress')for(let y=0;y<390;y++)for(let x=0;x<1024;x++){
+  const at=(y*1024+x)*4,w=limit((390-y)/20,0,1),a=header[at+3]*w,b=data[at+3]*(1-w),sum=a+b;
+  if(w===1){for(let c=0;c<4;c++)data[at+c]=header[at+c];}
+  else if(sum<.5){for(let c=0;c<4;c++)data[at+c]=0;}
+  else{for(let c=0;c<3;c++)data[at+c]=Math.round((header[at+c]*a+data[at+c]*b)/sum);data[at+3]=Math.round(sum);}
+ }
+ if(palette!==0||pattern!=='NONE')for(let y=420;y<=960;y++)for(let x=250;x<=690;x++){
+  const at=(y*1024+x)*4;let r=data[at],g=data[at+1],b=data[at+2];const pajamas=template==='pajamas',bottom=pajamas?860:960,t=(y-420)/(bottom-420),left=355-(pajamas?55:100)*t,right=600+(pajamas?35:90)*t;let weight=smooth(0,36,x-left)*smooth(0,36,right-x)*smooth(420,450,y)*smooth(0,pajamas?90:65,bottom-y);weight*=1-(1-smooth(555,595,y))*(1-smooth(390,425,x));weight*=1-(1-smooth(570,610,y))*smooth(525,548,x);
+  if(data[at+3]<128||weight<=0||Math.min(r,g,b)>230||(r>g+12&&r>b+18))continue;
+  if(palette!==0){const brightness=Math.max(.24,Math.min(1.15,(.2126*r+.7152*g+.0722*b)/150));r=Math.round(r*(1-.55*weight)+Math.min(255,((palette>>>16)&255)*brightness)*.55*weight);g=Math.round(g*(1-.55*weight)+Math.min(255,((palette>>>8)&255)*brightness)*.55*weight);b=Math.round(b*(1-.55*weight)+Math.min(255,(palette&255)*brightness)*.55*weight);}
+  let mark=false;if(pattern==='STRIPES')mark=y%32<3;else if(pattern==='STARS'){const dx=Math.abs((x+40)%80-40),dy=Math.abs((y+40)%80-40);mark=(dx<2&&dy<11)||(dy<2&&dx<9)||(dx+dy<7);}
+  if(mark){r=Math.round(r*(1-.5*weight)+127.5*weight);g=Math.round(g*(1-.5*weight)+127.5*weight);b=Math.round(b*(1-.5*weight)+127.5*weight);}data[at]=r;data[at+1]=g;data[at+2]=b;
+ }
+ ctx.putImageData(image,0,0);wardrobeCache.set(key,canvas);return canvas;
+}
 // The same grid as Canvas.drawBitmapMesh. WebGL interpolates texture coordinates without 12,288
 // separately anti-aliased Canvas clips, whose seams would misrepresent Android's mesh renderer.
 const warp=document.createElement('canvas');warp.width=rig.width;warp.height=rig.height;
@@ -60,13 +87,15 @@ for(let row=0,i=0;row<=rig.meshRows;row++)for(let col=0;col<=rig.meshColumns;col
 for(let y=0;y<rig.meshRows;y++)for(let x=0;x<rig.meshColumns;x++){const a=y*(rig.meshColumns+1)+x,b=a+1,c=a+rig.meshColumns+1,d=c+1;indices.push(a,b,c,b,d,c);}
 function bind(name,array,usage){const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,array,usage);const attribute=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(attribute);gl.vertexAttribPointer(attribute,2,gl.FLOAT,false,0,0);return buffer;}
 bind('uv',coords,gl.STATIC_DRAW);const vertexBuffer=bind('position',positions,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW);gl.viewport(0,0,warp.width,warp.height);
-function mesh(p){for(let row=0,i=0;row<=rig.meshRows;row++)for(let col=0;col<=rig.meshColumns;col++){const point=deform(col*rig.width/rig.meshColumns,row*rig.height/rig.meshRows,p);positions[i++]=point[0];positions[i++]=point[1];}gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);gl.bufferSubData(gl.ARRAY_BUFFER,0,positions);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);return warp;}
-function faceTransform(ctx,p){const a=deform(450,310,p),b=deform(510,310,p),c=deform(450,350,p);const aa=(b[0]-a[0])/60,bb=(b[1]-a[1])/60,cc=(c[0]-a[0])/40,dd=(c[1]-a[1])/40;ctx.transform(aa,bb,cc,dd,a[0]-aa*450-cc*310,a[1]-bb*450-dd*310);}
+const meshWeights=[];for(let row=0;row<=rig.meshRows;row++)for(let col=0;col<=rig.meshColumns;col++)meshWeights.push(weightsAt(col*rig.width/rig.meshColumns,row*rig.height/rig.meshRows));
+let boundTexture=art;
+function mesh(p,bitmap=art){if(boundTexture!==bitmap){gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bitmap);boundTexture=bitmap;}const bones=matrices(p);for(let row=0,i=0,n=0;row<=rig.meshRows;row++)for(let col=0;col<=rig.meshColumns;col++,n++){const point=deform(col*rig.width/rig.meshColumns,row*rig.height/rig.meshRows,p,bones,meshWeights[n]);positions[i++]=point[0];positions[i++]=point[1];}gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);gl.bufferSubData(gl.ARRAY_BUFFER,0,positions);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);return warp;}
+function faceTransform(ctx,p){const a=deformFace(450,310,p),b=deformFace(510,310,p),c=deformFace(450,350,p);const aa=(b[0]-a[0])/60,bb=(b[1]-a[1])/60,cc=(c[0]-a[0])/40,dd=(c[1]-a[1])/40;ctx.transform(aa,bb,cc,dd,a[0]-aa*450-cc*310,a[1]-bb*450-dd*310);}
 function mouth(ctx,p){ctx.save();faceTransform(ctx,p);ctx.drawImage(art,465,315,25,8,459,322,37,18);const [x,y]=rig.mouth;ctx.beginPath();if(p.speaking&&p.mouthOpen>.04){const half=7+p.mouthOpen*7,height=2+p.mouthOpen*13;ctx.moveTo(x-half,y-1);ctx.quadraticCurveTo(x,y-2.5,x+half,y-1);ctx.quadraticCurveTo(x+half*.7,y+height,x,y+height);ctx.quadraticCurveTo(x-half*.7,y+height,x-half,y-1);ctx.closePath();ctx.fillStyle='#754945';ctx.fill();}else{ctx.moveTo(x-13,y-1);ctx.quadraticCurveTo(x,y+6,x+13,y-1);ctx.lineWidth=1.7;ctx.lineCap='round';ctx.strokeStyle='#ba8a7e';ctx.stroke();}ctx.restore();}
-function render(ctx,input){const p=adjusted(input),left=limit(p.leftArm,-20,20),right=limit(p.rightArm,-20,20),leg=limit(p.stride,-1,1)*3.4,moveL=Math.abs(left)>.05,moveR=Math.abs(right)>.05,walking=Math.abs(leg)>.01;ctx.save();rotate(ctx,limit(p.bodyTilt,-3,3),rig.bodyPivot);if(moveL)fill(ctx,rig.leftArm);if(moveR)fill(ctx,rig.rightArm);if(walking){piece(ctx,rig.leftLeg,leg);piece(ctx,rig.rightLeg,-leg);}ctx.save();if(moveL)cut(ctx,rig.leftArm.polygon);if(moveR)cut(ctx,rig.rightArm.polygon);if(walking){cut(ctx,rig.leftLeg.polygon);cut(ctx,rig.rightLeg.polygon);}const isNeutral=p.headTilt===0&&p.headYaw===0&&p.headPitch===0&&p.blink===0&&p.gazeX===0&&p.gazeY===0&&p.breath===.5;ctx.drawImage(isNeutral?art:mesh(p),0,0,rig.width,rig.height);ctx.restore();if(moveL)piece(ctx,rig.leftArm,left);if(moveR)piece(ctx,rig.rightArm,right);if((p.speaking&&p.mouthOpen>.04)||p.expression==='WARM')mouth(ctx,p);ctx.restore();}
-const poses=[['Original · referencia',null],['Reposo · pose neutra',{}],['Saludo · manga derecha',{rightArm:-20,headTilt:-4,expression:'WARM'}],['Explicación',{leftArm:9,rightArm:-13,headTilt:3,expression:'WARM'}],['Parpadeo',{blink:1}],['Habla · apertura aproximada',{speaking:true,mouthOpen:.8,headTilt:2}],['Curiosidad',{expression:'CURIOUS'}],['Atención seria',{expression:'CONCERNED'}],['Caminar · paso A',{stride:1}],['Caminar · paso B',{stride:-1}],['Celebración · límites',{leftArm:20,rightArm:-20,bodyTilt:3,expression:'WARM'}],['Asentir · inclinación leve',{headPitch:8}]];
+function render(ctx,input){const p=adjusted(input),bitmap=wardrobe(p);ctx.save();rotate(ctx,limit(p.bodyTilt,-3,3),rig.bodyPivot);const isNeutral=p.headTilt===0&&p.headYaw===0&&p.headPitch===0&&p.blink===0&&p.gazeX===0&&p.gazeY===0&&p.breath===.5&&p.leftArm===0&&p.rightArm===0&&p.stride===0&&p.leftKnee===0&&p.rightKnee===0;ctx.drawImage(isNeutral?bitmap:mesh(p,bitmap),0,0,rig.width,rig.height);if((p.speaking&&p.mouthOpen>.04)||p.expression==='WARM')mouth(ctx,p);ctx.restore();}
+const poses=[['Original · referencia',null],['Reposo · pose neutra',{}],['Saludo · manga derecha',{rightArm:-20,headTilt:-4,expression:'WARM'}],['Explicación',{leftArm:9,rightArm:-13,headTilt:3,expression:'WARM'}],['Parpadeo',{blink:1}],['Habla · apertura aproximada',{speaking:true,mouthOpen:.8,headTilt:2}],['Curiosidad',{expression:'CURIOUS'}],['Atención seria',{expression:'CONCERNED'}],['Caminar · paso A',{stride:1}],['Caminar · paso B',{stride:-1}],['Celebración · límites',{leftArm:20,rightArm:-20,bodyTilt:3,expression:'WARM'}],['Asentir · inclinación leve',{headPitch:8}],['Pijama · frente conservado',{template:'pajamas'}],['Pijama · saludo conectado',{template:'pajamas',rightArm:-25,headTilt:-4,expression:'WARM'}],['Exploradora · frente conservado',{template:'explorer'}],['Exploradora · explicar',{template:'explorer',leftArm:12,rightArm:-20,headTilt:3}],['Pijama · acento rosa',{template:'pajamas',color:0xffe19cad,pattern:'STARS'}],['Exploradora · acento lavanda',{template:'explorer',color:0xff9a86e8,pattern:'STRIPES'}]];
 for(const [title,pose]of poses){const article=document.createElement('article'),label=document.createElement('h2'),canvas=document.createElement('canvas');label.textContent=title;canvas.width=512;canvas.height=768;article.append(label,canvas);document.querySelector('#grid').append(article);const ctx=canvas.getContext('2d');ctx.scale(.5,.5);if(pose===null)ctx.drawImage(art,0,0);else render(ctx,pose);}
-document.querySelector('#status').textContent='12 muestras renderizadas · textura original intacta · esquema '+rig.version;
-window.avatarPreview={rig,render,poses,ready:true};document.documentElement.dataset.ready='true';
+document.querySelector('#status').textContent=poses.length+' muestras renderizadas · malla conectada · esquema '+rig.version;
+window.avatarPreview={rig,render,poses,wardrobe,ready:true};document.documentElement.dataset.ready='true';
 </script>
 </html>

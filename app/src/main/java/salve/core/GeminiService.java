@@ -65,12 +65,18 @@ public class GeminiService {
     }
 
     public ModelResult generateResultSync(String prompt, List<Bitmap> frames) {
+        return generateResultSync(prompt, frames, null);
+    }
+
+    /** Per-request specialist; does not change the conversational model or its saved configuration. */
+    public ModelResult generateResultSync(String prompt, List<Bitmap> frames, String modelOverride) {
         long startedAt = System.nanoTime();
         String key;
         String model;
         synchronized (this) {
             key = getApiKey();
-            model = getModelName();
+            model = modelOverride == null || modelOverride.trim().isEmpty()
+                    ? getModelName() : GeminiProtocol.modelName(modelOverride);
         }
         if (key.trim().isEmpty()) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
                 "Configura una clave API en IA y cámara", 0L);

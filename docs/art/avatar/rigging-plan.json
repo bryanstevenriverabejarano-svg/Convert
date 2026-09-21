@@ -1,0 +1,332 @@
+{
+  "version": 1,
+  "status": "artwork_prepared_rig_not_built",
+  "referenceCanvas": {
+    "width": 1024,
+    "height": 1536
+  },
+  "reference": "../../../app/src/main/res/drawable/salve_imagen.png",
+  "coordinateConvention": "screen left/right, origin top-left, pixels; measured/estimated landmarks require fitting before use",
+  "hierarchy": [
+    {
+      "id": "root",
+      "parent": null,
+      "anchor": [
+        480,
+        1020
+      ]
+    },
+    {
+      "id": "pelvis",
+      "parent": "root",
+      "anchor": [
+        480,
+        1000
+      ]
+    },
+    {
+      "id": "torso",
+      "parent": "pelvis",
+      "anchor": [
+        480,
+        650
+      ]
+    },
+    {
+      "id": "neck",
+      "parent": "torso",
+      "anchor": [
+        479,
+        393
+      ]
+    },
+    {
+      "id": "head",
+      "parent": "neck",
+      "anchor": [
+        479,
+        393
+      ]
+    },
+    {
+      "id": "hair_back",
+      "parent": "head",
+      "anchor": [
+        480,
+        200
+      ]
+    },
+    {
+      "id": "shoulder_left",
+      "parent": "torso",
+      "anchor": [
+        363,
+        444
+      ]
+    },
+    {
+      "id": "elbow_left",
+      "parent": "shoulder_left",
+      "anchor": [
+        310,
+        630
+      ]
+    },
+    {
+      "id": "wrist_left",
+      "parent": "elbow_left",
+      "anchor": [
+        255,
+        810
+      ]
+    },
+    {
+      "id": "shoulder_right",
+      "parent": "torso",
+      "anchor": [
+        591,
+        443
+      ]
+    },
+    {
+      "id": "elbow_right",
+      "parent": "shoulder_right",
+      "anchor": [
+        645,
+        630
+      ]
+    },
+    {
+      "id": "wrist_right",
+      "parent": "elbow_right",
+      "anchor": [
+        695,
+        815
+      ]
+    },
+    {
+      "id": "hip_left",
+      "parent": "pelvis",
+      "anchor": [
+        399,
+        1028
+      ]
+    },
+    {
+      "id": "knee_left",
+      "parent": "hip_left",
+      "anchor": [
+        410,
+        1160
+      ]
+    },
+    {
+      "id": "ankle_left",
+      "parent": "knee_left",
+      "anchor": [
+        416,
+        1330
+      ]
+    },
+    {
+      "id": "hip_right",
+      "parent": "pelvis",
+      "anchor": [
+        535,
+        1025
+      ]
+    },
+    {
+      "id": "knee_right",
+      "parent": "hip_right",
+      "anchor": [
+        567,
+        1160
+      ]
+    },
+    {
+      "id": "ankle_right",
+      "parent": "knee_right",
+      "anchor": [
+        601,
+        1335
+      ]
+    }
+  ],
+  "layers": [
+    {
+      "id": "hair_back",
+      "file": "hair-back.png",
+      "parent": "head",
+      "z": 0,
+      "fit": "manual",
+      "sourceBounds": [
+        7,
+        43,
+        1023,
+        1486
+      ],
+      "targetApproximateBounds": [
+        130,
+        35,
+        870,
+        820
+      ]
+    },
+    {
+      "id": "head_front",
+      "file": "head-front.png",
+      "parent": "head",
+      "z": 5,
+      "fit": "manual",
+      "sourceBounds": [
+        58,
+        84,
+        1016,
+        1163
+      ],
+      "targetApproximateBounds": [
+        300,
+        35,
+        660,
+        470
+      ]
+    },
+    {
+      "id": "torso_dress",
+      "file": "torso-dress-front.png",
+      "parent": "torso",
+      "z": 3,
+      "fit": "manual",
+      "sourceBounds": [
+        28,
+        164,
+        997,
+        1342
+      ],
+      "targetApproximateBounds": [
+        232,
+        390,
+        708,
+        1035
+      ]
+    },
+    {
+      "id": "arm_left",
+      "file": "arm-screen-left.png",
+      "parent": "shoulder_left",
+      "z": 2,
+      "fit": "manual",
+      "sourceJointChain": [
+        [
+          372,
+          461
+        ],
+        [
+          300,
+          715
+        ],
+        [
+          238,
+          988
+        ]
+      ],
+      "targetJointChain": [
+        [
+          363,
+          444
+        ],
+        [
+          310,
+          630
+        ],
+        [
+          255,
+          810
+        ]
+      ]
+    },
+    {
+      "id": "arm_right",
+      "file": "arm-screen-right.png",
+      "parent": "shoulder_right",
+      "z": 2,
+      "fit": "manual",
+      "sourceJointChain": [
+        [
+          626,
+          412
+        ],
+        [
+          685,
+          705
+        ],
+        [
+          767,
+          972
+        ]
+      ],
+      "targetJointChain": [
+        [
+          591,
+          443
+        ],
+        [
+          645,
+          630
+        ],
+        [
+          695,
+          815
+        ]
+      ]
+    },
+    {
+      "id": "pajama_lower_body",
+      "file": "pajama-lower-body.png",
+      "parent": "pelvis",
+      "z": 1,
+      "fit": "manual",
+      "sourceBounds": [
+        282,
+        157,
+        782,
+        1420
+      ],
+      "targetApproximateBounds": [
+        305,
+        790,
+        680,
+        1536
+      ],
+      "costume": "pajamas",
+      "note": "Pair must be separated into left/right clothing meshes; not a skin replacement for the original dress."
+    }
+  ],
+  "turnaround": {
+    "file": "turnaround-eight-views.png",
+    "columns": 4,
+    "rows": 2,
+    "usage": "approximate multi-view artwork for modeling, not calibrated orthographic views or animation frames",
+    "views": [
+      "front",
+      "front_three_quarter_right",
+      "profile_right",
+      "back_three_quarter_right",
+      "back",
+      "back_three_quarter_left",
+      "profile_left",
+      "front_three_quarter_left"
+    ]
+  },
+  "missingForArbitrary3DPoses": [
+    "watertight or intentionally layered 3D mesh",
+    "UV texture layout and original-style shading",
+    "skin weights binding mesh to skeleton",
+    "elbow/knee/wrist/finger and spine articulation",
+    "facial blend shapes and visemes",
+    "garment/hair secondary motion and collision",
+    "foot contact/IK and joint limits",
+    "validated GLB export and actual Android 3D renderer"
+  ]
+}
