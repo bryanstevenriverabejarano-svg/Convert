@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -33,7 +34,10 @@ import salve.core.memory.MemoryForgetRequest;
 import salve.core.memory.PendingMemoryDeletion;
 import salve.core.tools.PendingToolAction;
 import salve.core.voice.VoiceResponsePolicy;
+import salve.core.voice.VoiceTurnGate;
 import salve.core.conversation.ConversationModelRouter;
+import salve.avatar.AvatarMotionController;
+import salve.avatar.AvatarMotionProtocol;
 import salve.presentation.ui.GaleriaVisualActivity;
 import salve.presentation.ui.ObjetoCreativoActivity;
 import salve.services.SalveAccessibilityService;
@@ -76,6 +80,13 @@ public class MotorConversacional {
     private volatile boolean ttsReady;
     private volatile boolean listening;
     private volatile boolean closed;
+    // Only the visible conversation opts in; background workers do not drive the character.
+    private volatile AvatarMotionController.Session avatarSession;
+    private final ThreadLocal<Long> avatarTurn = new ThreadLocal<>();
+    private final ThreadLocal<Long> voiceTurn = new ThreadLocal<>();
+    private final VoiceTurnGate voiceTurnGate = new VoiceTurnGate();
+    private long utteranceSequence;
+    private volatile String activeUtterance;
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
     private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
@@ -104,6 +115,12 @@ public class MotorConversacional {
 
     public void setListener(SalveListener listener) {
         this.listener = listener;
+    }
+
+    public synchronized void setAvatarSession(AvatarMotionController.Session session) {
+        activeUtterance = null;
+        if (avatarSession != null) AvatarMotionController.get().closeSession(avatarSession);
+        avatarSession = session;
     }
 
     public MotorConversacional(Context context, MemoriaEmocional memoria, DiarioSecreto diario) {
@@ -139,6 +156,18 @@ public class MotorConversacional {
         this.tts = new TextToSpeech(context, status -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             if (closed || this.tts == null) return;
             if (status == TextToSpeech.SUCCESS) {
+                this.tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override public void onStart(String id) {
+                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechStart(avatarSession, id), false);
+                    }
+                    @Override public void onRangeStart(String id, int start, int end, int frame) {
+                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechRange(avatarSession, id, start, end), false);
+                    }
+                    @Override public void onDone(String id) { finishSpeech(id); }
+                    @Override public void onError(String id) { finishSpeech(id); }
+                    @Override public void onError(String id, int errorCode) { finishSpeech(id); }
+                    @Override public void onStop(String id, boolean interrupted) { finishSpeech(id); }
+                });
                 int language = this.tts.setLanguage(new Locale("es", "ES"));
                 ttsReady = language != TextToSpeech.LANG_MISSING_DATA && language != TextToSpeech.LANG_NOT_SUPPORTED;
                 this.tts.setSpeechRate(1.0f);
@@ -159,7 +188,23 @@ public class MotorConversacional {
             hablar("He descartado el paso pendiente. Los pasos ya realizados se mantienen.");
             return;
         }
-        conversationExecutor.execute(() -> procesarEntradaInterna(entrada, entradaPorVoz));
+        try {
+            conversationExecutor.execute(() -> {
+                if (closed) return;
+                AvatarMotionController.Session session = avatarSession;
+                long turn = beginConversationTurn(entrada);
+                avatarTurn.set(turn);
+                try {
+                    procesarEntradaInterna(entrada, entradaPorVoz);
+                } finally {
+                    if (session != null) AvatarMotionController.get().endTurn(session, turn);
+                    avatarTurn.remove();
+                    voiceTurn.remove();
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {
+            // The activity may close between checking closed and submitting the turn.
+        }
     }
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz) {
@@ -223,6 +268,11 @@ public class MotorConversacional {
         }
 
         String inputLower = entrada.toLowerCase(Locale.ROOT);
+        AvatarMotionProtocol.Result gestureCommand = avatarSession == null ? null : AvatarMotionProtocol.parseCommand(entrada);
+        if (gestureCommand != null) {
+            hablarPreparado(gestureCommand.text, gestureCommand);
+            return;
+        }
         if (procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
@@ -475,7 +525,7 @@ public class MotorConversacional {
 
         // 🟢 NUEVO: CRECIMIENTO VISUAL (Auto-edición)
         if (inputLower.contains("evoluciona visualmente") || inputLower.contains("cómo te ves")) {
-            hablar("En Habitación puedes ver mi aspecto actual, cambiar el vestuario, crear una cama y ver mis animaciones.");
+            hablar("En Habitación puedes ver mi ilustración original, probar gestos y crear una cama. Todavía no tengo otros trajes ilustrados preparados.");
             return;
         }
 
@@ -516,6 +566,7 @@ public class MotorConversacional {
 
         ConversationAnalysis conversationAnalysis = ConversationRequestAnalyzer.analyze(entrada, hasPriorContext);
         if (conversationAnalysis.needsClarification()) {
+            if (avatarSession != null) AvatarMotionController.get().clarification(avatarSession, currentAvatarTurn());
             hablar("¿Puedes concretar a qué te refieres? No tengo un turno anterior que me permita interpretarlo con seguridad.");
             return;
         }
@@ -562,6 +613,16 @@ public class MotorConversacional {
         fallbackUsed = !inference.isSuccess();
         respuesta = inference.isSuccess() ? inference.getText()
                 : (resumenAccion == null ? "" : resumenAccion + "\n") + modelFailureMessage(inference);
+        AvatarMotionProtocol.Result visualResponse = AvatarMotionProtocol.parse(respuesta);
+        respuesta = visualResponse.text;
+        if (respuesta.isEmpty()) {
+            fallbackUsed = true;
+            respuesta = "El modelo no devolvió una respuesta utilizable. Puedes reformular la pregunta.";
+            visualResponse = AvatarMotionProtocol.parse(respuesta);
+        }
+        if (!inference.isSuccess() && avatarSession != null) {
+            AvatarMotionController.get().error(avatarSession, currentAvatarTurn());
+        }
 
         // Las propuestas JSON se convierten en acciones pendientes de aprobación humana.
         if (interceptarComandoJSON(respuesta)) {
@@ -578,6 +639,7 @@ public class MotorConversacional {
             if (indiceCorte == -1) indiceCorte = respuesta.indexOf("Bryan:");
             respuesta = respuesta.substring(0, indiceCorte).trim();
             if (respuesta.isEmpty()) respuesta = "Tuve una pequeña disonancia. Me he detenido.";
+            visualResponse = AvatarMotionProtocol.parse(respuesta);
         }
 
         // 🟡 4. GOBERNADOR DE LONGITUD
@@ -594,12 +656,13 @@ public class MotorConversacional {
             Log.e(TAG, "¡BUCLE DETECTADO! Cortocircuitando...");
             limpiarContextoConversacional();
             respuesta = "Detecté una repetición anómala y reinicié el contexto de corto plazo para recuperarme.";
+            visualResponse = AvatarMotionProtocol.parse(respuesta);
         }
 
         long latencyMillis = (System.nanoTime() - turnStartedAtNanos) / 1_000_000L;
         TurnQualityAssessment assessment = ConversationQualityEvaluator.evaluate(
                 respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
-        responderYRegistrarCalidad(entrada, respuesta, assessment);
+        responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse);
     }
 
     private boolean procesarProtocolosEspeciales(String input, String original) {
@@ -658,6 +721,9 @@ public class MotorConversacional {
             case LEARN_RECIPE:
                 aprenderRutinaVerificada(command.argument);
                 return true;
+            case PAJAMAS:
+                hablar("Todavía no tengo un pijama ilustrado preparado para este diseño.");
+                return true;
             default:
                 toolHandler.post(() -> {
                     if (closed) return;
@@ -670,9 +736,7 @@ public class MotorConversacional {
                                 if (!state.sleep()) hablar("Primero crea una cama en mi habitación.");
                                 break;
                             case WAKE: state.wake(); break;
-                            case PAJAMAS: state.wear(salve.avatar.AvatarState.Outfit.PAJAMAS, state.getAccent(),
-                                    salve.avatar.AvatarState.Pattern.STARS); break;
-                            case DAY: state.wear(salve.avatar.AvatarState.Outfit.DAY, state.getAccent(),
+                            case DAY: state.wear(salve.avatar.AvatarState.Outfit.DAY, salve.avatar.AvatarState.DEFAULT_COLOR,
                                     salve.avatar.AvatarState.Pattern.PLAIN); break;
                             default: break;
                         }
@@ -823,6 +887,7 @@ public class MotorConversacional {
                 + "reconoce solo los errores comprobables y corrígelos con precisión. Si es OPINION, distingue opinión de hecho. "
                 + "Si es QUESTION o EXPLANATION_REQUEST, responde directamente; si es COMMAND, confirma el resultado o explica el límite.\n\n"
                 + VoiceResponsePolicy.promptInstruction(porVoz)
+                + (avatarSession == null ? "" : AvatarMotionProtocol.instruction())
                 + "=== SISTEMA NERVIOSO Y HERRAMIENTAS ===\n"
                 + "Si una herramienta es necesaria, solo puedes PROPONERLA. La aplicación pedirá confirmación humana antes de ejecutarla. "
                 + "Responde únicamente con un bloque JSON válido con el siguiente formato:\n"
@@ -869,7 +934,11 @@ public class MotorConversacional {
         String entrada = pregunta == null || pregunta.trim().isEmpty() ? "Describe esta foto." : pregunta.trim();
         try {
             conversationExecutor.execute(() -> {
+                AvatarMotionController.Session session = avatarSession;
+                long turn = beginConversationTurn(entrada);
+                avatarTurn.set(turn);
                 try {
+                    if (closed) return;
                     conversationSession.addUser(entrada + " [Foto adjunta solo a este turno]");
                     String prompt = buildSystemPrompt("no evaluada", "CONSULTA_VISUAL", false)
                             + "\nDescribe solo lo que puedas observar. Reconoce cualquier incertidumbre."
@@ -879,8 +948,15 @@ public class MotorConversacional {
                             () -> gemini.generateResultSync(prompt, Collections.singletonList(foto)),
                             () -> llm.generateImageResult(prompt, foto));
                     String respuesta = result.isSuccess() ? result.getText() : modelFailureMessage(result);
-                    hablar(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)));
+                    AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(respuesta);
+                    if (motion.text.isEmpty()) motion = AvatarMotionProtocol.parse(
+                            "El modelo no devolvió una descripción utilizable. Prueba con otra pregunta sobre la imagen.");
+                    if (!result.isSuccess() && session != null) AvatarMotionController.get().error(session, turn);
+                    hablarPreparado(ResponseLimiter.limit(motion.text, VoiceResponsePolicy.maxResponseChars(false)), motion);
                 } finally {
+                    if (session != null) AvatarMotionController.get().endTurn(session, turn);
+                    avatarTurn.remove();
+                    voiceTurn.remove();
                     foto.recycle();
                 }
             });
@@ -890,27 +966,97 @@ public class MotorConversacional {
     }
 
     public synchronized void hablar(String texto) {
+        AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(texto);
+        hablarPreparado(motion.text, motion);
+    }
+
+    private synchronized void hablarPreparado(String texto, AvatarMotionProtocol.Result motion) {
         if (closed || texto == null || texto.trim().isEmpty()) return;
         conversationSession.addAssistant(texto);
-        if (ttsReady && !listening && tts != null) {
-            if (tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, "salve_tts") == TextToSpeech.ERROR) {
+        AvatarMotionController.Session session = avatarSession;
+        long turn = currentAvatarTurn();
+        Long sourceGeneration = voiceTurn.get();
+        long generation = sourceGeneration == null ? beginVoiceTurn() : sourceGeneration;
+        boolean currentVoice = voiceTurnGate.maySpeak(generation);
+        boolean standaloneResponse = session != null && sourceGeneration == null && currentVoice;
+        if (standaloneResponse) turn = AvatarMotionController.get().beginTurn(session, "");
+        if (session != null && currentVoice) AvatarMotionController.get().response(session, turn, motion);
+
+        // Each utterance owns its callbacks. QUEUE_FLUSH and microphone interruption revoke old IDs.
+        // A revoked inference still reaches history/UI, but cannot disturb a newer utterance.
+        if (currentVoice) activeUtterance = null;
+        if (currentVoice && ttsReady && !listening && tts != null) {
+            String utteranceId = "salve_tts_" + (++utteranceSequence);
+            activeUtterance = utteranceId;
+            if (session != null) AvatarMotionController.get().speechPending(session, turn, utteranceId);
+            if (tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, utteranceId) == TextToSpeech.ERROR) {
+                activeUtterance = null;
+                if (session != null) AvatarMotionController.get().speechEnd(session, utteranceId);
                 Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
             }
         }
         if (listener != null) listener.onHablar(texto);
+        if (standaloneResponse) AvatarMotionController.get().endTurn(session, turn);
+    }
+
+    private long currentAvatarTurn() {
+        Long turn = avatarTurn.get();
+        return turn == null ? 0L : turn;
+    }
+
+    private synchronized long beginConversationTurn(String input) {
+        long generation = beginVoiceTurn();
+        voiceTurn.set(generation);
+        AvatarMotionController.Session session = avatarSession;
+        return session != null && voiceTurnGate.maySpeak(generation)
+                ? AvatarMotionController.get().beginTurn(session, input) : 0L;
+    }
+
+    /** Called under this motor's lock before the corresponding visual turn can start. */
+    private long beginVoiceTurn() {
+        long generation = voiceTurnGate.beginTurn();
+        activeUtterance = null;
+        if (tts != null) tts.stop();
+        return generation;
+    }
+
+    private void finishSpeech(String utteranceId) {
+        dispatchSpeechEvent(utteranceId,
+                () -> AvatarMotionController.get().speechEnd(avatarSession, utteranceId), true);
+    }
+
+    private void dispatchSpeechEvent(String utteranceId, Runnable callback, boolean finished) {
+        if (utteranceId == null) return;
+        toolHandler.post(() -> {
+            synchronized (MotorConversacional.this) {
+                if (closed || listening || !utteranceId.equals(activeUtterance)) return;
+                if (finished) activeUtterance = null;
+                if (avatarSession != null) callback.run();
+            }
+        });
     }
 
     public synchronized void setListening(boolean value) {
         listening = value;
-        if (value && tts != null) tts.stop();
+        voiceTurnGate.listening(value);
+        if (value) {
+            activeUtterance = null;
+            if (tts != null) tts.stop();
+        }
+        if (avatarSession != null) AvatarMotionController.get().listening(avatarSession, value);
     }
 
     public String getVoiceStatus() {
         return ttsReady ? "Voz: síntesis en español lista" : "Voz: esperando motor o datos de español";
     }
 
-    public void shutdown() {
+    public synchronized void shutdown() {
         closed = true;
+        voiceTurnGate.close();
+        activeUtterance = null;
+        AvatarMotionController.Session session = avatarSession;
+        avatarSession = null;
+        if (session != null) AvatarMotionController.get().closeSession(session);
         cerebelo.cancelarHabilidad();
         cancelarPasoRutina();
         conversationExecutor.shutdownNow();
@@ -921,8 +1067,8 @@ public class MotorConversacional {
     }
 
     private void responderYRegistrarCalidad(String entrada, String respuesta,
-                                            TurnQualityAssessment assessment) {
-        hablar(respuesta);
+                                            TurnQualityAssessment assessment, AvatarMotionProtocol.Result motion) {
+        hablarPreparado(respuesta, motion);
         mensajesEnSesion++;
         identidad.integrarExperiencia("conversacion", entrada, 0.7f, Arrays.asList("empatia"));
         Log.i(TAG, assessment.toMetricsLog());

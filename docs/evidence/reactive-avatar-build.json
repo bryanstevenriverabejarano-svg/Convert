@@ -1,0 +1,51 @@
+{
+  "build_success": true,
+  "gradle_exit": 0,
+  "tasks": [
+    ":app:testDebugUnitTest",
+    ":app:assembleDebug"
+  ],
+  "init_script": "scripts/android-arm64.init.gradle",
+  "duration_seconds": 26,
+  "tests": {
+    "tests": 225,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "apk_bytes": 149751883,
+  "apk_mib": 142.815,
+  "apk_sha256": "7fcc09b7c96b42b6824b710d6b598b8587bb5b70db830822b8223fb061b1b6e1",
+  "signature_verified": true,
+  "abis": [
+    "arm64-v8a"
+  ],
+  "llm_weight_files": [],
+  "source_artwork_sha256": "32346faf7219f417eb0983262ae7ac20a2e80063781a0ea32b843d3eb03fb0ec",
+  "embedded_artwork_sha256": {
+    "res/drawable/salve_imagen.png": "32346faf7219f417eb0983262ae7ac20a2e80063781a0ea32b843d3eb03fb0ec"
+  },
+  "device_tested": false,
+  "test_suites": 37,
+  "apk_name": "salve-s24-reactive-avatar-debug.apk",
+  "toolchain": {
+    "android_sdk": 36,
+    "java": "JetBrains Runtime 21",
+    "gradle": "9.7.1"
+  },
+  "signature": {
+    "scheme": "v2",
+    "certificate": "C=US, O=Android, CN=Android Debug",
+    "certificate_sha256": "868702e4df05d9320703fc834967b2a5544e1282ef794433764a819fdeafd423"
+  },
+  "llm_weight_check": {
+    "suffixes": [
+      ".gguf",
+      ".litertlm",
+      ".safetensors",
+      ".params"
+    ],
+    "matches": [],
+    "note": "The pre-existing gte-small-int8.onnx embedding model remains packaged; this check concerns generative LLM weights."
+  }
+}

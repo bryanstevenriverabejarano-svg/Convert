@@ -1,5 +1,7 @@
 # Salve: control del móvil, dispositivos, herramientas y avatar
 
+**Actualización visual posterior:** [avatar ilustrado y reactivo](AVATAR_ILUSTRADO_REACTIVO.md). El vestuario geométrico y el dibujo simplificado descritos en este informe corresponden a la PR 73; la corrección conserva la ilustración original y conecta los gestos al diálogo.
+
 Auditoría e implementación sobre `7f692e203491396205ae698dd8a62d2a260a2869`, que ya incorpora Gemma 4 y LiteRT-LM. Fecha: 2026-09-21.
 
 ## Diagnóstico del sistema recibido

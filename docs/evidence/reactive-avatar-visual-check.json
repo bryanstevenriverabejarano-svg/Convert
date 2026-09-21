@@ -1,0 +1,18 @@
+{
+  "neutrality": {
+    "differentPixels": 0,
+    "totalPixels": 393216
+  },
+  "errors": [],
+  "environment": "Browser preview, not Android",
+  "preview": "tools/avatar-preview/README.md",
+  "reviewed_poses": 12,
+  "comparison_dimensions": {
+    "width": 512,
+    "height": 768
+  },
+  "includes_alpha": true,
+  "programmed_sequence": true,
+  "real_tts_tested": false,
+  "s24_ultra_tested": false
+}

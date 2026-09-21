@@ -18,9 +18,11 @@ import android.widget.Toast;
 import salve.avatar.AvatarState;
 import salve.avatar.AvatarStore;
 import salve.avatar.AvatarView;
+import salve.avatar.AvatarMotion;
+import salve.avatar.AvatarMotionController;
 import salve.services.BurbujaFlotanteService;
 
-/** Local, interactive wardrobe and room. No image generator, network or model required. */
+/** Original illustrated character, gesture previews and persistent room controls. */
 public final class AvatarRoomActivity extends Activity {
     private AvatarStore store;
     private AvatarView avatar;
@@ -43,11 +45,15 @@ public final class AvatarRoomActivity extends Activity {
         TextView title = label("Salve · Mi espacio", 25, Color.WHITE);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         root.addView(title);
-        root.addView(label("Camina, cambia de ropa y descansa. Tu habitación se conserva al cerrar la app.", 15, 0xFFB3C5D1));
+        root.addView(label("Salve reacciona mientras conversáis. Aquí puedes ver sus gestos, caminar y descansar.", 15, 0xFFB3C5D1));
         avatar = new AvatarView(this);
         root.addView(avatar, new LinearLayout.LayoutParams(-1, dp(310)));
         status = label("", 14, 0xFF80E1DA);
         root.addView(status);
+        row(root, "Saludar", () -> preview(AvatarMotion.Gesture.WAVE, AvatarMotion.Expression.WARM),
+                "Asentir", () -> preview(AvatarMotion.Gesture.NOD, AvatarMotion.Expression.WARM));
+        row(root, "Explicar", () -> preview(AvatarMotion.Gesture.EXPLAIN, AvatarMotion.Expression.NEUTRAL),
+                "Negar", () -> preview(AvatarMotion.Gesture.SHAKE, AvatarMotion.Expression.NEUTRAL));
         row(root, "Caminar", () -> store.change(s -> s.walkTo(s.getX() > .5f ? .08f : .92f)),
                 "Detenerse", () -> store.change(AvatarState::wake));
         row(root, "Crear cama", () -> store.change(AvatarState::createBed), "Acostarse", () -> {
@@ -55,8 +61,9 @@ public final class AvatarRoomActivity extends Activity {
             else store.change(AvatarState::sleep);
         });
         row(root, "Despertar", () -> store.change(AvatarState::wake), "Guardar cama", () -> store.change(AvatarState::removeBed));
-        row(root, "Vestido", () -> wear(AvatarState.Outfit.DAY), "Pijama", () -> wear(AvatarState.Outfit.PAJAMAS));
-        row(root, "Color de ropa", this::chooseColor, "Diseño", this::choosePattern);
+        root.addView(label("Vestuario", 19, Color.WHITE));
+        root.addView(label("Conserva su vestido original. El pijama y otras prendas estarán disponibles cuando tengan ilustraciones compatibles con este diseño.", 14, 0xFFB3C5D1));
+        button(root, "Color de la manta", this::chooseColor);
         root.addView(label("Sobre otras apps", 19, Color.WHITE));
         root.addView(label("Activa el personaje flotante para acompañarte por la pantalla. Arrástralo para moverlo; el botón × lo cierra.", 14, 0xFFB3C5D1));
         button(root, "Mostrar sobre otras apps", this::showOverlay);
@@ -65,21 +72,15 @@ public final class AvatarRoomActivity extends Activity {
         setContentView(scroll);
         updateStatus();
     }
-    private void wear(AvatarState.Outfit outfit) {
-        store.change(s -> s.wear(outfit, s.getAccent(), s.getPattern()));
+    private void preview(AvatarMotion.Gesture gesture, AvatarMotion.Expression expression) {
+        if (store.state().getPose() == AvatarState.Pose.SLEEPING) store.change(AvatarState::wake);
+        AvatarMotionController.get().previewGesture(gesture, expression);
     }
     private void chooseColor() {
         int[] colors = {0xFF15CCC8, 0xFF9A86E8, 0xFFE19CAD, 0xFF609EE8, 0xFFE1B36C};
-        new AlertDialog.Builder(this).setTitle("Color de ropa y manta")
+        new AlertDialog.Builder(this).setTitle("Color de la manta")
                 .setItems(new String[]{"Turquesa", "Lavanda", "Rosa", "Azul", "Ámbar"}, (d, i) ->
                         store.change(s -> s.wear(s.getOutfit(), colors[i], s.getPattern())))
-                .setNegativeButton("Cancelar", null).show();
-    }
-    private void choosePattern() {
-        AvatarState.Pattern[] patterns = AvatarState.Pattern.values();
-        new AlertDialog.Builder(this).setTitle("Diseño de la prenda")
-                .setItems(new String[]{"Liso", "Estrellas", "Rayas"}, (d, i) ->
-                        store.change(s -> s.wear(s.getOutfit(), s.getAccent(), patterns[i])))
                 .setNegativeButton("Cancelar", null).show();
     }
     private void showOverlay() {
@@ -122,7 +123,7 @@ public final class AvatarRoomActivity extends Activity {
         AvatarState s = store.state();
         status.setText((s.getPose() == AvatarState.Pose.SLEEPING ? "Descansando en la cama"
                 : s.isGoingToSleep() ? "Caminando hacia la cama" : s.getPose() == AvatarState.Pose.WALKING ? "Caminando" : "Despierta")
-                + " · " + (s.getOutfit() == AvatarState.Outfit.PAJAMAS ? "Pijama" : "Vestido")
+                + " · Vestido original"
                 + " · " + (s.hasBed() ? "Cama creada" : "Sin cama"));
     }
     private TextView label(String value, int size, int color) {
