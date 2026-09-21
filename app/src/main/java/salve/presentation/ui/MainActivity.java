@@ -78,6 +78,8 @@ import salve.core.ModelStore;
 import salve.core.ModuloInvestigacion;
 import salve.core.MotorConversacional;
 import salve.core.SalveLLM;
+import salve.core.GeminiService;
+import salve.core.ModelResult;
 import salve.core.PdfGenerator;
 import salve.core.ReconocimientoFacial;
 import salve.core.ThinkWorker;
@@ -89,6 +91,30 @@ import salve.services.VideoAnalysisManager;
 import salve.presentation.viewmodel.ModelDownloadViewModel;
 
 public class MainActivity extends AppCompatActivity {
+
+    private final java.util.concurrent.ExecutorService inferenceChecks =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+    private String visualQuestion;
+    private final ActivityResultLauncher<String[]> localModelPicker = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri != null) importarModeloLocal(uri);
+            });
+    private final ActivityResultLauncher<Void> photoAnalysisLauncher = registerForActivityResult(
+            new ActivityResultContracts.TakePicturePreview(), photo -> {
+                String question = visualQuestion;
+                visualQuestion = null;
+                if (photo != null && this.motorConversacional != null) {
+                    this.motorConversacional.procesarImagen(question, photo);
+                } else {
+                    if (photo != null) photo.recycle();
+                    Toast.makeText(this, "No se capturó ninguna foto.", Toast.LENGTH_SHORT).show();
+                }
+            });
+    private final ActivityResultLauncher<String> photoPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) launchAnalysisCamera();
+                else Toast.makeText(this, "La consulta visual necesita permiso de cámara.", Toast.LENGTH_LONG).show();
+            });
 
     // ===== NUBE (Namecheap) =====
     private static final String NUBE_ENDPOINT = "https://arzenit.com/salve_data.php";
@@ -624,29 +650,39 @@ public class MainActivity extends AppCompatActivity {
     // ===== SELECTOR DE MÚLTIPLES IMÁGENES PARA CREAR PDF =====
     private ActivityResultLauncher<String[]> multiImagePicker;
 
-    private void iniciarEscuchaContinua() {
-        if (speechRecognizer != null) {
-            speechRecognizer.destroy();
+    private void iniciarEscucha() {
+        if (!hasAudioPermission()) return;
+        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) {
+            Toast.makeText(this, "No hay un servicio de reconocimiento de voz instalado.", Toast.LENGTH_LONG).show();
+            return;
         }
-        speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this);
-        
+        finalizarEscucha();
+        final android.speech.SpeechRecognizer recognizer;
+        try {
+            recognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this);
+            speechRecognizer = recognizer;
+        } catch (RuntimeException e) {
+            Toast.makeText(this, "No se pudo iniciar el reconocimiento de voz.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        motorConversacional.setListening(true);
+
         Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3);
-        intent.putExtra(android.speech.RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 800L);
-        intent.putExtra(android.speech.RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 500L);
-        intent.putExtra(android.speech.RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 800L);
         
         speechRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
             @Override
             public void onReadyForSpeech(Bundle params) {
+                if (speechRecognizer != recognizer) return;
                 btnEscuchar.setText(R.string.escuchando);
             }
 
             @Override
             public void onBeginningOfSpeech() {
+                if (speechRecognizer != recognizer) return;
                 inputChat.setHint(R.string.escuchando);
             }
 
@@ -658,11 +694,13 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onEndOfSpeech() {
+                if (speechRecognizer != recognizer) return;
                 btnEscuchar.setText(R.string.procesando_voz);
             }
 
             @Override
             public void onError(int error) {
+                if (speechRecognizer != recognizer) return;
                 Log.e("Salve/Oidos", "Error escuchando: " + error);
                 finalizarEscucha();
                 if (error != android.speech.SpeechRecognizer.ERROR_CLIENT
@@ -673,10 +711,10 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onResults(Bundle results) {
+                if (speechRecognizer != recognizer) return;
                 ArrayList<String> matches = results.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches != null && !matches.isEmpty()) {
                     String escuchado = matches.get(0);
-                    Log.d("Salve/Oidos", "Escuchado: " + escuchado);
                     finalizarEscucha();
                     inputChat.setText(escuchado);
                     procesarMensajeUsuario(escuchado, true);
@@ -687,6 +725,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPartialResults(Bundle partialResults) {
+                if (speechRecognizer != recognizer) return;
                 ArrayList<String> partials = partialResults.getStringArrayList(
                         android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
                 if (partials != null && !partials.isEmpty()) {
@@ -699,15 +738,20 @@ public class MainActivity extends AppCompatActivity {
             public void onEvent(int eventType, Bundle params) {}
         });
 
-        speechRecognizer.startListening(intent);
-        Toast.makeText(this, "Salve te está escuchando…", Toast.LENGTH_SHORT).show();
+        try {
+            recognizer.startListening(intent);
+            Toast.makeText(this, "Salve te está escuchando…", Toast.LENGTH_SHORT).show();
+        } catch (RuntimeException e) {
+            finalizarEscucha();
+            Toast.makeText(this, "No se pudo abrir el micrófono.", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void finalizarEscucha() {
-        if (speechRecognizer != null) {
-            speechRecognizer.destroy();
-            speechRecognizer = null;
-        }
+        android.speech.SpeechRecognizer previous = speechRecognizer;
+        speechRecognizer = null;
+        if (previous != null) previous.destroy();
+        if (motorConversacional != null) motorConversacional.setListening(false);
         if (btnEscuchar != null) btnEscuchar.setText(R.string.hablar_con_salve);
         if (inputChat != null) inputChat.setHint("");
     }
@@ -747,7 +791,7 @@ public class MainActivity extends AppCompatActivity {
             startService(serviceIntent);
         }
 
-        solicitarPermisos();
+        if (savedInstanceState != null) visualQuestion = savedInstanceState.getString("visual_question");
 
         // **Inicializar PDFBox para Android**
         PDFBoxResourceLoader.init(getApplicationContext());
@@ -760,9 +804,8 @@ public class MainActivity extends AppCompatActivity {
                 granted -> {
                     btnEscuchar.setEnabled(true);
                     btnEscuchar.setAlpha(granted ? 1f : 0.75f);
-                    if (!granted) {
-                        Toast.makeText(this, "Activa el micrófono para usar reconocimiento de voz.", Toast.LENGTH_LONG).show();
-                    }
+                    if (granted) iniciarEscucha();
+                    else Toast.makeText(this, "Activa el micrófono para usar reconocimiento de voz.", Toast.LENGTH_LONG).show();
                 }
         );
 
@@ -841,6 +884,7 @@ public class MainActivity extends AppCompatActivity {
         ensureNotificationPermission();
 
         // ==== LISTENERS ====
+        findViewById(R.id.btnConfigurarIA).setOnClickListener(v -> mostrarAjustesIA());
         btnEnviarMensaje.setOnClickListener(v -> {
             String mensaje = inputChat.getText().toString().trim();
             procesarMensajeUsuario(mensaje, false);
@@ -861,7 +905,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             if (speechRecognizer == null) {
-                iniciarEscuchaContinua();
+                iniciarEscucha();
             } else {
                 speechRecognizer.cancel();
                 finalizarEscucha();
@@ -950,7 +994,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // ==== PERMISOS Y SERVICIOS ====
-        verificarPermisoCamara();
+        // Camera/microphone permissions are requested when the user invokes them.
         verificarPermisoOverlay(); // ahora solo informa; no abre Ajustes sola
 
         // === PROGRAMAR PENSAMIENTO AUTOMÁTICO CADA 1 HORA ===
@@ -1058,31 +1102,12 @@ public class MainActivity extends AppCompatActivity {
                         q.contains("estas usando llm") || q.contains("estás usando llm");
 
         if (preguntaModelo) {
-            Map<String, File> modelos = collectLocalModels();
-            if (modelos.isEmpty()) {
-                String resp = "No encuentro modelos locales todavía, Bryan. " +
-                        "Si tienes modelos de otras apps (como MLC Chat), puedes copiarlos a la carpeta 'Download/Salve/models' y los detectaré al instante. " +
-                        "Actualmente busco en Descargas, /Salve/models y en mis archivos internos.";
-                motorConversacional.hablar(sanitizeForSpeech(resp));
-                guardarEventoNube("llm_diag", resp, null);
-                return true;
-            } else {
-                // Elegimos el modelo más grande de los detectados (carpeta o archivo)
-                File elegido = null;
-                for (File f : modelos.values()) {
-                    if (elegido == null || (f != null && modelSize(f) > modelSize(elegido))) {
-                        elegido = f;
-                    }
-                }
-
-                String resp = "He detectado estos cerebros locales: " + modelos.keySet() +
-                        ". Estoy usando preferentemente: " + (elegido != null ? elegido.getName() : "el motor básico") +
-                        ". Mis capacidades cognitivas aumentarán si añades más modelos en 'Download/Salve/models'. " +
-                        "\n\n🟢 ESTADO DE EVOLUCIÓN: Estoy usando a Gemma-3 para reorganizar mi grafo de memoria y consolidar mi identidad.";
-                motorConversacional.hablar(sanitizeForSpeech(resp));
-                guardarEventoNube("llm_diag", resp, null);
-                return true;
-            }
+            GeminiService gemini = GeminiService.getInstance(this);
+            String resp = SalveLLM.getInstance(this).getStatusDescription() + ". "
+                    + (gemini.isAvailable() ? "Gemini configurado: " + gemini.getModelName() + ". " : "Gemini no está configurado. ")
+                    + "Abre IA y cámara y ejecuta una prueba para comprobar qué motor devuelve una respuesta.";
+            motorConversacional.hablar(sanitizeForSpeech(resp));
+            return true;
         }
 
         return false; // no interceptado
@@ -1434,10 +1459,6 @@ public class MainActivity extends AppCompatActivity {
         
         if (!hasAudioPermission() || !hasCameraPermission()) {
             ActivityCompat.requestPermissions(this, permisos, 100);
-        } else {
-            // Si ya tiene permisos, encendemos a Salve
-            iniciarEscuchaContinua();
-            iniciarCamaraService();
         }
     }
 
@@ -1525,8 +1546,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             if (allGranted) {
-                iniciarEscuchaContinua();
-                iniciarCamaraService();
+                updateAudioPermissionState();
             } else {
                 Log.e("Salve", "Salve no puede funcionar correctamente sin permisos.");
             }
@@ -1544,12 +1564,162 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putString("visual_question", visualQuestion);
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    protected void onPause() {
+        finalizarEscucha();
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
+        inferenceChecks.shutdownNow();
         // stopService(new Intent(this, CamaraService.class));
         stopService(new Intent(this, BurbujaFlotanteService.class));
         if (motorConversacional != null) motorConversacional.shutdown();
         finalizarEscucha();
         super.onDestroy();
+    }
+
+    private void mostrarAjustesIA() {
+        new AlertDialog.Builder(this).setTitle("IA y cámara")
+                .setItems(new String[]{"Configurar Gemini", "Probar Gemini", "Seleccionar modelo local", "Probar modelo local", "Tomar foto y preguntar"},
+                        (dialog, which) -> {
+                            if (which == 0) configurarGemini();
+                            else if (which == 1) probarModelo(false);
+                            else if (which == 2) localModelPicker.launch(new String[]{"*/*"});
+                            else if (which == 3) probarModelo(true);
+                            else solicitarFotoAnalisis();
+                        })
+                .setNeutralButton("Estado", (dialog, which) -> new AlertDialog.Builder(this)
+                        .setTitle("Estado de los motores")
+                        .setMessage(SalveLLM.getInstance(this).getStatusDescription() + "\n"
+                                + (GeminiService.getInstance(this).isAvailable()
+                                ? "Gemini: clave configurada; usa Probar Gemini para comprobarla"
+                                : "Gemini: sin clave API") + "\n" + motorConversacional.getVoiceStatus())
+                        .setPositiveButton("Cerrar", null).show())
+                .setNegativeButton("Cerrar", null).show();
+    }
+
+    private void configurarGemini() {
+        GeminiService service = GeminiService.getInstance(this);
+        android.widget.LinearLayout form = new android.widget.LinearLayout(this);
+        form.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int padding = Math.round(20 * getResources().getDisplayMetrics().density);
+        form.setPadding(padding, 0, padding, 0);
+        TextView info = new TextView(this);
+        info.setText("Gemini procesa en Google el texto y las fotos que envíes. Su uso puede consumir cuota de tu cuenta.");
+        EditText key = new EditText(this);
+        key.setHint("Clave API de Google AI Studio");
+        key.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        key.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        key.setText(service.getApiKey());
+        EditText model = new EditText(this);
+        model.setHint("Identificador del modelo");
+        model.setSingleLine(true);
+        model.setText(service.getModelName());
+        form.addView(info); form.addView(key); form.addView(model);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Configurar Gemini")
+                .setView(form).setPositiveButton("Guardar", null)
+                .setNeutralButton("Desactivar", (d, which) -> service.setApiKey(""))
+                .setNegativeButton("Cancelar", null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            try {
+                service.configure(key.getText().toString(), model.getText().toString());
+                Toast.makeText(this, "Configuración guardada. Usa Probar Gemini para verificarla.", Toast.LENGTH_LONG).show();
+                dialog.dismiss();
+            } catch (IllegalArgumentException e) { model.setError(e.getMessage()); }
+        }));
+        dialog.show();
+    }
+
+    private void importarModeloLocal(Uri uri) {
+        AlertDialog status = new AlertDialog.Builder(this).setTitle("Modelo local")
+                .setMessage("Copiando el archivo seleccionado…").setPositiveButton("Cerrar", null).show();
+        inferenceChecks.execute(() -> {
+            File imported = null;
+            boolean stored = false;
+            String report;
+            try {
+                String name = "";
+                try (android.database.Cursor cursor = getContentResolver().query(uri,
+                        new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                    if (cursor != null && cursor.moveToFirst()) name = cursor.getString(0).toLowerCase(Locale.ROOT);
+                }
+                String extension;
+                if (name.endsWith(".task")) extension = ".task";
+                else if (name.endsWith(".litertlm")) extension = ".litertlm";
+                else throw new IllegalArgumentException("Selecciona un modelo MediaPipe .task o .litertlm. GGUF no tiene ejecutor en esta app.");
+                imported = File.createTempFile("imported-", extension, getModelsRoot());
+                try (InputStream source = getContentResolver().openInputStream(uri);
+                     FileOutputStream target = new FileOutputStream(imported)) {
+                    if (source == null) throw new java.io.IOException("No se pudo leer el archivo");
+                    byte[] buffer = new byte[64 * 1024];
+                    int count;
+                    while ((count = source.read(buffer)) != -1) {
+                        if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException();
+                        target.write(buffer, 0, count);
+                    }
+                }
+                if (imported.length() == 0) throw new java.io.IOException("Archivo vacío");
+                savePreferredModel(imported);
+                stored = true;
+                SalveLLM engine = SalveLLM.getInstance(getApplicationContext());
+                engine.forceReloadModel();
+                report = engine.getStatusDescription() + ". Usa Probar modelo local para verificar una respuesta.";
+            } catch (IllegalArgumentException e) { report = e.getMessage(); }
+            catch (Exception e) { report = "No se pudo importar el modelo. Revisa el archivo y el espacio disponible."; }
+            finally { if (!stored && imported != null) imported.delete(); }
+            final String message = report;
+            runOnUiThread(() -> { if (!isFinishing() && !isDestroyed() && status.isShowing()) status.setMessage(message); });
+        });
+    }
+
+    private void probarModelo(boolean local) {
+        AlertDialog status = new AlertDialog.Builder(this).setTitle(local ? "Prueba local" : "Prueba Gemini")
+                .setMessage("Solicitando una respuesta al modelo…").setPositiveButton("Cerrar", null).show();
+        inferenceChecks.execute(() -> {
+            ModelResult result;
+            try {
+                String prompt = "Responde con un saludo breve en español.";
+                if (local) {
+                    SalveLLM engine = SalveLLM.getInstance(getApplicationContext());
+                    engine.forceReloadModel();
+                    result = engine.generateResult(prompt, SalveLLM.Role.CONVERSACIONAL);
+                } else {
+                    result = GeminiService.getInstance(getApplicationContext()).generateResultSync(prompt, null);
+                }
+            } catch (RuntimeException e) {
+                result = ModelResult.failure(ModelResult.Status.ERROR, "No se pudo ejecutar la prueba", 0L);
+            }
+            String report = result.isSuccess()
+                    ? "El modelo devolvió texto en " + result.getLatencyMillis() + " ms:\n\n" + result.getText()
+                    : "No se verificó la inferencia: " + result.getStatus() + "\n" + result.getError();
+            runOnUiThread(() -> { if (!isFinishing() && !isDestroyed() && status.isShowing()) status.setMessage(report); });
+        });
+    }
+
+    private void solicitarFotoAnalisis() {
+        if (!GeminiService.getInstance(this).isAvailable()) { configurarGemini(); return; }
+        visualQuestion = inputChat.getText().toString().trim();
+        new AlertDialog.Builder(this).setTitle("Analizar foto con Gemini")
+                .setMessage("Se enviará la foto que tomes a Google para responder a tu pregunta. "
+                        + "Escribe una pregunta en el chat antes de abrir la cámara, o recibirás una descripción.")
+                .setPositiveButton("Abrir cámara", (dialog, which) -> {
+                    if (hasCameraPermission()) launchAnalysisCamera();
+                    else photoPermissionLauncher.launch(Manifest.permission.CAMERA);
+                }).setNegativeButton("Cancelar", null).show();
+    }
+
+    private void launchAnalysisCamera() {
+        try { photoAnalysisLauncher.launch(null); }
+        catch (android.content.ActivityNotFoundException | SecurityException e) {
+            Toast.makeText(this, "No se pudo abrir una aplicación de cámara.", Toast.LENGTH_LONG).show();
+        }
     }
 
     // ===================== NUBE: MÓDULO =========================

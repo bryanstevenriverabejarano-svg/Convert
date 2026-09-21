@@ -17,7 +17,6 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
-import salve.core.cognitive.CognitiveCore;
 import salve.core.cognitive.HipocampoSemantico;
 import salve.core.cognitive.ReasoningEngine;
 import salve.core.conversation.ConversationAnalysis;
@@ -34,6 +33,7 @@ import salve.core.memory.MemoryForgetRequest;
 import salve.core.memory.PendingMemoryDeletion;
 import salve.core.tools.PendingToolAction;
 import salve.core.voice.VoiceResponsePolicy;
+import salve.core.conversation.ConversationModelRouter;
 import salve.presentation.ui.GaleriaVisualActivity;
 import salve.presentation.ui.ObjetoCreativoActivity;
 import salve.services.SalveAccessibilityService;
@@ -54,13 +54,10 @@ public class MotorConversacional {
     private final MemoriaEmocional memoria;
     private final DiarioSecreto diario;
     private final IntentRecognizer intentRecognizer;
-    private final DetectorEmociones detectorEmociones;
     private final ModuloInterpretacionSemantica moduloInterpretacion;
-    private final ModuloComprension moduloComprension;
     private final SalveLLM llm;
     private final GeminiService gemini;
     private final ConsciousnessState conciencia;
-    private final CognitiveCore cognitiveCore;
     private final IdentidadNucleo identidad;
     private final MemoriaProcedimental cerebelo;
     private final CortexSeguridad cortexSeguridad;
@@ -76,6 +73,9 @@ public class MotorConversacional {
     private int mensajesEnSesion = 0;
     private final SharedPreferences preferencias;
     private TextToSpeech tts;
+    private volatile boolean ttsReady;
+    private volatile boolean listening;
+    private volatile boolean closed;
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
     private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
@@ -107,7 +107,6 @@ public class MotorConversacional {
         this.diario   = diario;
         this.intentRecognizer     = new IntentRecognizer(context);
         this.moduloInterpretacion = new ModuloInterpretacionSemantica();
-        this.moduloComprension    = new ModuloComprension(300, 42L);
         this.conciencia = ConsciousnessState.getInstance(context);
         this.identidad = IdentidadNucleo.getInstance(context);
         this.cerebelo = new MemoriaProcedimental(context);
@@ -118,18 +117,10 @@ public class MotorConversacional {
         this.motorRazonamiento = new ReasoningEngine();
         this.gestorAjedrez = new GestorAjedrez(context);
 
-        DetectorEmociones tmpDetector = null;
-        try { tmpDetector = new DetectorEmociones(context); } catch (Exception e) { Log.e(TAG, "DetectorEmociones falló", e); }
-        this.detectorEmociones = tmpDetector;
-
         SalveLLM tmpLlm = null;
         try { tmpLlm = SalveLLM.getInstance(context); } catch (Exception e) { Log.e(TAG, "SalveLLM no disponible", e); }
         this.llm = tmpLlm;
         this.cortexSeguridad = new CortexSeguridad(this.llm, this.memoria);
-
-        CognitiveCore tmpCore = null;
-        try { tmpCore = CognitiveCore.getInstance(context); } catch (Exception e) { Log.w(TAG, "CognitiveCore no disponible", e); }
-        this.cognitiveCore = tmpCore;
 
         try {
             EmbeddingsIndex index = new EmbeddingsIndex(context);
@@ -140,12 +131,15 @@ public class MotorConversacional {
 
         this.preferencias = context.getSharedPreferences("config_salve", Context.MODE_PRIVATE);
 
-        this.tts = new TextToSpeech(context, status -> {
+        this.tts = new TextToSpeech(context, status -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            if (closed || this.tts == null) return;
             if (status == TextToSpeech.SUCCESS) {
-                this.tts.setLanguage(new Locale("es", "ES"));
-                this.tts.setSpeechRate(0.9f);
+                int language = this.tts.setLanguage(new Locale("es", "ES"));
+                ttsReady = language != TextToSpeech.LANG_MISSING_DATA && language != TextToSpeech.LANG_NOT_SUPPORTED;
+                this.tts.setSpeechRate(1.0f);
+                if (!ttsReady) Log.w(TAG, "No hay voz en español disponible");
             }
-        });
+        }));
     }
 
     public void procesarEntrada(String entrada, boolean entradaPorVoz) {
@@ -571,12 +565,8 @@ public class MotorConversacional {
         // Protocolos Oraculares Locales
         if (procesarProtocolosEspeciales(inputLower, entrada)) return;
 
-        String emocionDetectada = "neutral";
-        if (estadoCritico) {
-            emocionDetectada = "agonia_sin_energia";
-        } else {
-            try { if (detectorEmociones != null) emocionDetectada = detectorEmociones.detectarEmocion(entrada); } catch (Exception e) {}
-        }
+        // DetectorEmociones is a placeholder, not an emotion inference model.
+        String emocionDetectada = "no evaluada";
 
         ConversationAnalysis conversationAnalysis = ConversationRequestAnalyzer.analyze(entrada, hasPriorContext);
         if (conversationAnalysis.needsClarification()) {
@@ -617,29 +607,15 @@ public class MotorConversacional {
         boolean truncated = false;
         boolean repetitionDetected = false;
 
-        if (gemini.isAvailable()) {
-            respuesta = generarRespuestaGemini(entrada, emocionDetectada, responseContext,
-                    resumenAccion, reasoningPlan, entradaPorVoz);
-        }
-
-        if (respuesta == null && cognitiveCore != null) {
-            try {
-                String bestConcept = moduloComprension.getConceptoMasRelacionado(entrada);
-                cognitiveCore.perceive(entrada, emocionDetectada, Collections.singletonList(bestConcept));
-                cognitiveCore.process(3);
-                respuesta = cognitiveCore.verbalize(entrada, emocionDetectada, resumenAccion);
-            } catch (Exception e) {}
-        }
-
-        if (respuesta == null) {
-            respuesta = generarRespuestaConversacionalLocal(
-                    entrada, emocionDetectada, responseContext, resumenAccion, reasoningPlan, entradaPorVoz);
-        }
-
-        if (respuesta == null || respuesta.trim().isEmpty()) {
-            fallbackUsed = true;
-            respuesta = generarFallbackPorEmocion(emocionDetectada, resumenAccion);
-        }
+        final String modelEmotion = emocionDetectada;
+        ModelResult inference = ConversationModelRouter.generate(false,
+                gemini.isAvailable() ? () -> generarRespuestaGemini(entrada, modelEmotion, responseContext,
+                        resumenAccion, reasoningPlan, entradaPorVoz) : null,
+                () -> generarRespuestaConversacionalLocal(entrada, modelEmotion, responseContext,
+                        resumenAccion, reasoningPlan, entradaPorVoz));
+        fallbackUsed = !inference.isSuccess();
+        respuesta = inference.isSuccess() ? inference.getText()
+                : (resumenAccion == null ? "" : resumenAccion + "\n") + modelFailureMessage(inference);
 
         // Las propuestas JSON se convierten en acciones pendientes de aprobación humana.
         if (interceptarComandoJSON(respuesta)) {
@@ -681,24 +657,20 @@ public class MotorConversacional {
     }
 
     private boolean procesarProtocolosEspeciales(String input, String original) {
-        if (input.contains("creador") || input.contains("bryan") || input.contains("bejarano")) {
-            hablar("Te escucho, Bryan Steven Rivera Bejarano, mi Creador. Mi núcleo oracular está a tu disposición. " + sensores.obtenerEstadoFisico());
+        if (input.equals("estado de los sensores") || input.equals("consultar sensores")) {
+            hablar(sensores.obtenerEstadoFisico());
             return true;
         }
-        if (input.equals("como estas") || input.contains("estado") || input.contains("sensores")) {
-            hablar("Mis sistemas cognitivos fluyen correctamente. " + sensores.obtenerEstadoFisico());
-            return true;
-        }
-        if (input.startsWith("mira esto") || input.startsWith("te enseño") || input.startsWith("esto es")) {
+        if (input.equals("mira esto") || input.startsWith("aprende esta imagen como ")) {
             anclarRealidadVisual(original);
             return true;
         }
-        if (input.contains("galeria") || input.contains("hipocampo")) {
+        if (input.equals("abrir galeria") || input.equals("abrir galería")) {
             hablar("Desplegando mi interfaz de memoria semántica visual.");
             context.startActivity(new Intent(context, GaleriaVisualActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             return true;
         }
-        if (input.contains("que ves") || input.contains("reconoce esto")) {
+        if (input.equals("que ves") || input.equals("qué ves") || input.equals("reconoce esto")) {
             reconocerEntornoVisual();
             return true;
         }
@@ -739,7 +711,7 @@ public class MotorConversacional {
         });
     }
 
-    private String generarRespuestaGemini(String entrada, String emocion, String contexto,
+    private ModelResult generarRespuestaGemini(String entrada, String emocion, String contexto,
                                           String accion, ReasoningPlan reasoningPlan, boolean porVoz) {
         try {
             String sistema = buildSystemPrompt(emocion, contexto, porVoz);
@@ -751,22 +723,21 @@ public class MotorConversacional {
                     + "\n\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
             if (accion != null) prompt += "\n(Acción realizada: " + accion + ")";
 
-            List<Bitmap> frames = VideoAnalysisManager.getInstance().getRecentFrames();
-            ModelResult result = gemini.generateResultSync(prompt, frames);
+            // Images are sent only by the explicit photo action, never from an ambient buffer.
+            ModelResult result = gemini.generateResultSync(prompt, null);
             if (!result.isSuccess()) {
                 Log.w(TAG, "Gemini no respondió: " + result.getStatus());
-                return null;
             }
-            return result.getText();
+            return result;
         } catch (Exception e) {
             Log.e(TAG, "Fallo construyendo respuesta Gemini", e);
-            return null;
+            return ModelResult.failure(ModelResult.Status.ERROR, "No se pudo preparar la consulta", 0L);
         }
     }
 
-    private String generarRespuestaConversacionalLocal(String entrada, String emocion, String contexto,
+    private ModelResult generarRespuestaConversacionalLocal(String entrada, String emocion, String contexto,
                                                        String accion, ReasoningPlan reasoningPlan, boolean porVoz) {
-        if (llm == null) return null;
+        if (llm == null) return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Sin modelo local", 0L);
         String recuerdos = reasoningPlan.shouldRetrieveLongTermMemory()
                 ? memoria.recuperarContextoRelevante(entrada, 3)
                 : "";
@@ -777,9 +748,8 @@ public class MotorConversacional {
         ModelResult result = llm.generateResult(prompt, SalveLLM.Role.CONVERSACIONAL);
         if (!result.isSuccess()) {
             Log.w(TAG, "Modelo local no respondió: " + result.getStatus());
-            return null;
         }
-        return result.getText();
+        return result;
     }
 
     private String buildSystemPrompt(String emocion, String contexto, boolean porVoz) {
@@ -838,21 +808,60 @@ public class MotorConversacional {
         return "No entiendo qué quieres que investigue.";
     }
 
-    private String generarFallbackPorEmocion(String emocion, String base) {
-        if (base != null && !base.isEmpty()) return base;
-        return "Sigo aquí, Bryan. Te escucho.";
+    private String modelFailureMessage(ModelResult result) {
+        if (result.getStatus() == ModelResult.Status.UNAVAILABLE) {
+            return "No tengo un modelo de lenguaje disponible para responder. Abre IA y cámara para configurar y probar uno.";
+        }
+        if (result.getStatus() == ModelResult.Status.CANCELLED) return "La consulta se ha cancelado.";
+        return "No pude completar la respuesta con el modelo. " + result.getError();
     }
 
-    public void hablar(String texto) {
-        if (texto == null || texto.trim().isEmpty()) return;
+    /** The caller transfers ownership of this photo; it is not retained in visual memory. */
+    public void procesarImagen(String pregunta, Bitmap foto) {
+        if (foto == null || foto.isRecycled()) { hablar("No recibí una foto válida."); return; }
+        String entrada = pregunta == null || pregunta.trim().isEmpty() ? "Describe esta foto." : pregunta.trim();
+        try {
+            conversationExecutor.execute(() -> {
+                try {
+                    conversationSession.addUser(entrada + " [Foto adjunta solo a este turno]");
+                    String prompt = buildSystemPrompt("no evaluada", "CONSULTA_VISUAL", false)
+                            + "\nDescribe solo lo que puedas observar. Reconoce cualquier incertidumbre."
+                            + "\nCONVERSACIÓN ACTUAL:\n" + conversationSession.asPromptTranscript();
+                    ModelResult result = ConversationModelRouter.generate(true,
+                            () -> gemini.generateResultSync(prompt, Collections.singletonList(foto)), null);
+                    String respuesta = result.isSuccess() ? result.getText() : modelFailureMessage(result);
+                    hablar(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)));
+                } finally {
+                    foto.recycle();
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            foto.recycle();
+        }
+    }
+
+    public synchronized void hablar(String texto) {
+        if (closed || texto == null || texto.trim().isEmpty()) return;
         conversationSession.addAssistant(texto);
-        if (tts != null && texto != null && !texto.isEmpty()) {
-            tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, "salve_tts");
+        if (ttsReady && !listening && tts != null) {
+            if (tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, "salve_tts") == TextToSpeech.ERROR) {
+                Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
+            }
         }
         if (listener != null) listener.onHablar(texto);
     }
 
+    public synchronized void setListening(boolean value) {
+        listening = value;
+        if (value && tts != null) tts.stop();
+    }
+
+    public String getVoiceStatus() {
+        return ttsReady ? "Voz: síntesis en español lista" : "Voz: esperando motor o datos de español";
+    }
+
     public void shutdown() {
+        closed = true;
         conversationExecutor.shutdownNow();
         if (tts != null) {
             tts.stop();
@@ -989,7 +998,7 @@ public class MotorConversacional {
 
     private void anclarRealidadVisual(String original) {
         List<Bitmap> frames = VideoAnalysisManager.getInstance().getRecentFrames();
-        if (frames == null || frames.isEmpty()) return;
+        if (frames == null || frames.isEmpty()) { hablar("Usa IA y cámara para tomar una foto y analizarla."); return; }
         Bitmap foto = frames.get(frames.size() - 1);
         String concepto = extraerConcepto(original);
         if (hipocampo != null) hipocampo.aprenderConceptoNuevo(concepto, original, foto);
@@ -998,7 +1007,7 @@ public class MotorConversacional {
 
     private void reconocerEntornoVisual() {
         List<Bitmap> frames = VideoAnalysisManager.getInstance().getRecentFrames();
-        if (frames == null || frames.isEmpty()) return;
+        if (frames == null || frames.isEmpty()) { hablar("Usa IA y cámara para tomar una foto y analizarla."); return; }
         Bitmap foto = frames.get(frames.size() - 1);
         if (gemini.isAvailable()) {
             Executors.newSingleThreadExecutor().execute(() -> {

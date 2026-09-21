@@ -58,17 +58,16 @@ public class SalveLLM {
     private String modelPath;   // ruta absoluta a la carpeta o archivo del modelo
     private String modelLib;    // nombre de la librería del modelo (solo MLC)
     private boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
-    private boolean engineInitialized = false;
-    private boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
-    private String lastErrorMessage   = null;
+    private volatile boolean engineInitialized = false;
+    private volatile boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
+    private volatile String lastErrorMessage   = null;
 
     private SalveLLM(Context context) {
         this.appContext = context.getApplicationContext();
-        // Intentamos cargar info de modelo y preparar el motor.
-        // Pero NUNCA reventamos la app si algo va mal.
+        // Validate the selected files. Native loading runs with the first worker request.
         try {
             reloadModelInfoFromPrefs();
-            initEngineIfNeeded();
+            // Native initialization is deferred to the inference worker, not Activity.onCreate.
             modelAvailable = true;
         } catch (Exception e) {
             Log.e(TAG,
@@ -161,15 +160,7 @@ public class SalveLLM {
         if (this.modelLib.endsWith(".so")) {
             // Es un .so local → debe existir en la carpeta del modelo
             if (!isModelLibPresent(effectiveDir, this.modelLib)) {
-                File fallback = findFirstSoRecursive(effectiveDir);
-                if (fallback != null) {
-                    this.modelLib = fallback.getName();
-                    Log.w(TAG, "No se encontró model_lib exacto. Usando .so detectado: " + this.modelLib);
-                } else {
-                    throw new IllegalStateException(
-                            "No se encontró la librería del modelo (" + this.modelLib + ") en " + effectiveDir.getAbsolutePath()
-                    );
-                }
+                throw new IllegalStateException("Falta la librería exacta del modelo: " + this.modelLib);
             }
         } else {
             // Es una system lib (ej: "Phi-4-mini-instruct-q4f16_1-android-arm64")
@@ -214,76 +205,13 @@ public class SalveLLM {
         return modelDir;
     }
 
-    /**
-     * Intenta sacar model_lib del JSON.
-     * Si no existe o hay problemas, hace fallback a "libpenguin.so" (nombre fijo).
-     * Nunca devuelve null.
-     */
-    private String detectModelLibFromConfig(File modelDir) {
-        File cfg = new File(modelDir, MODEL_CONFIG_FILENAME);
-        if (!cfg.exists()) {
-            Log.e(TAG,
-                    "No se encontró " + MODEL_CONFIG_FILENAME +
-                            " en la carpeta del modelo: " + modelDir.getAbsolutePath() +
-                            ". Usando libpenguin.so por defecto.");
-            // Fallback directo: nombre fijo
-            return "libpenguin.so";
-        }
-
-        String libFromJson = null;
-
-        try (FileInputStream fis = new FileInputStream(cfg)) {
-            byte[] data = new byte[(int) cfg.length()];
-            int read = fis.read(data);
-            if (read <= 0) {
-                Log.e(TAG, "No se pudo leer " + MODEL_CONFIG_FILENAME + ". Usando libpenguin.so.");
-            } else {
-                String json = new String(data, StandardCharsets.UTF_8);
-                JSONObject obj = new JSONObject(json);
-
-                if (obj.has("model_lib")) {
-                    libFromJson = obj.optString("model_lib", null);
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error leyendo/parsing " + MODEL_CONFIG_FILENAME + ". Usando libpenguin.so.", e);
-        }
-
-        Log.d(TAG, "model_lib (from json) = " + libFromJson);
-
-        if (libFromJson != null && !libFromJson.trim().isEmpty()) {
-            // IMPORTANTE: MLC espera el nombre (libpenguin.so), no una ruta absoluta.
-            return libFromJson.trim();
-        }
-
-        Log.w(TAG, MODEL_CONFIG_FILENAME +
-                " no contiene campo 'model_lib'. Usando libpenguin.so por defecto.");
-
-        // 🔴 Fallback definitivo: siempre damos un nombre válido.
-        return "libpenguin.so";
-    }
-
-    /**
-     * Busca recursivamente el primer fichero .so dentro de dir.
-     * (Ahora mismo no se usa, pero lo dejamos por si en el futuro quieres
-     * volver a auto-detectar librerías dentro del modelo).
-     */
-    private File findFirstSoRecursive(File dir) {
-        File[] files = dir.listFiles();
-        if (files == null) return null;
-
-        for (File f : files) {
-            if (f.isFile() && f.getName().toLowerCase().endsWith(".so")) {
-                return f;
-            }
-        }
-        for (File f : files) {
-            if (f.isDirectory()) {
-                File found = findFirstSoRecursive(f);
-                if (found != null) return found;
-            }
-        }
-        return null;
+    /** The compiled library must be declared explicitly; never guess a binary. */
+    private String detectModelLibFromConfig(File modelDir) throws Exception {
+        File config = new File(modelDir, MODEL_CONFIG_FILENAME);
+        String json = new String(java.nio.file.Files.readAllBytes(config.toPath()), StandardCharsets.UTF_8);
+        String lib = new JSONObject(json).optString("model_lib", "").trim();
+        if (lib.isEmpty()) throw new IllegalStateException("El modelo MLC no declara model_lib; falta su biblioteca compilada");
+        return lib;
     }
 
     /**
@@ -300,17 +228,18 @@ public class SalveLLM {
         if (isLiteRT) {
             Log.d(TAG, "Inicializando LiteRTLlm con modelPath=" + modelPath);
             LiteRTLlm.init(appContext, modelPath);
-            engineInitialized = true;
+            engineInitialized = LiteRTLlm.isInitialized();
         } else {
             if (modelLib == null) {
                 throw new IllegalStateException("initEngineIfNeeded MLC sin modelLib.");
             }
             Log.d(TAG, "Inicializando BasicLocalLlm con modelPath=" + modelPath +
                     " modelLib=" + modelLib);
-            BasicLocalLlm.INSTANCE.init(modelPath, modelLib);
-            engineInitialized = true;
+            BasicLocalLlm.init(modelPath, modelLib);
+            engineInitialized = BasicLocalLlm.isInitialized();
         }
 
+        if (!engineInitialized) throw new IllegalStateException("El runtime no confirmó la carga del modelo");
         Log.d(TAG, "initEngineIfNeeded OK");
     }
 
@@ -322,56 +251,46 @@ public class SalveLLM {
      * @return Texto generado, o null si algo falla o si no hay modelo local.
      */
     public String generate(String prompt, Role role) {
-        if (prompt == null || prompt.trim().isEmpty()) return "";
+        ModelResult result = generateResult(prompt, role);
+        // Preserve the legacy string API for older modules; conversation uses generateResult.
+        if (result.isSuccess()) return result.getText();
+        return result.getStatus() == ModelResult.Status.UNAVAILABLE ? "Error: modelo local no disponible"
+                : "El modelo local falló al responder: " + result.getError();
+    }
 
-        if (!modelAvailable) {
-            Log.w(TAG,
-                    "generate() llamado pero el modelo local NO está disponible. " +
-                            "Devolviendo error silencioso para que MotorConversacional active su síntesis fractal.");
-            return "Error: modelo local no disponible";
-        }
-
+    /** Serializes reload and generation across conversation/background consumers. */
+    public synchronized ModelResult generateResult(String prompt, Role role) {
+        long start = System.nanoTime();
+        if (Thread.currentThread().isInterrupted()) return ModelResult.failure(
+                ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
+        if (!modelAvailable) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
+                "No hay un modelo local configurado y válido", 0L);
+        if (prompt == null || prompt.trim().isEmpty()) return ModelResult.failure(
+                ModelResult.Status.ERROR, "Prompt vacío", 0L);
         try {
             initEngineIfNeeded();
-        } catch (Exception e) {
+            String decorated = decoratePrompt(prompt, role);
+            String text = isLiteRT ? LiteRTLlm.generate(decorated) : BasicLocalLlm.chatSinglePrompt(decorated);
+            long latency = (System.nanoTime() - start) / 1_000_000L;
+            if (text == null || text.trim().isEmpty()) return ModelResult.failure(
+                    ModelResult.Status.ERROR, "El modelo local no devolvió texto", latency);
+            lastErrorMessage = null;
+            Log.i(TAG, "provider=local runtime=" + (isLiteRT ? "mediapipe" : "mlc") + " latency_ms=" + latency);
+            return ModelResult.success(text, latency);
+        } catch (Exception | LinkageError e) {
             lastErrorMessage = e.getMessage();
-            Log.e(TAG, "Error inicializando el LLM local en generate()", e);
-            return "No pude preparar el modelo local: " + e.getMessage();
-        }
-
-        String decoratedPrompt = decoratePrompt(prompt, role);
-
-        try {
-            if (isLiteRT) {
-                return LiteRTLlm.generate(decoratedPrompt);
-            } else {
-                return BasicLocalLlm.INSTANCE.chatSinglePrompt(decoratedPrompt);
-            }
-        } catch (Exception e) {
-            lastErrorMessage = e.getMessage();
-            Log.e(TAG, "Error generando respuesta con el motor local", e);
-            return "El modelo local falló al responder: " + e.getMessage();
+            Log.e(TAG, "Falló la inferencia local", e);
+            return ModelResult.failure(Thread.currentThread().isInterrupted()
+                    ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR,
+                    "El modelo local no pudo completar la inferencia. Revisa su formato y el runtime.",
+                    (System.nanoTime() - start) / 1_000_000L);
         }
     }
 
-    /** Variante tipada para consumidores que necesitan distinguir fallo de texto generado. */
-    public ModelResult generateResult(String prompt, Role role) {
-        long startedAt = System.currentTimeMillis();
-        if (!modelAvailable) {
-            return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
-                    "Modelo local no disponible", 0L);
-        }
-        String text = generate(prompt, role);
-        long latency = System.currentTimeMillis() - startedAt;
-        if (text == null || text.trim().isEmpty()) {
-            return ModelResult.failure(ModelResult.Status.ERROR,
-                    "El modelo devolvió una respuesta vacía", latency);
-        }
-        if (text.startsWith("No pude preparar el modelo local:")
-                || text.startsWith("El modelo local falló al responder:")) {
-            return ModelResult.failure(ModelResult.Status.ERROR, text, latency);
-        }
-        return ModelResult.success(text, latency);
+    public String getStatusDescription() {
+        if (!modelAvailable) return "Local: sin modelo válido configurado";
+        if (lastErrorMessage != null) return "Local: falló la última carga o inferencia";
+        return engineInitialized ? "Local: runtime cargado" : "Local: modelo seleccionado, pendiente de probar";
     }
 
     /**
@@ -451,8 +370,9 @@ public class SalveLLM {
             reloadModelInfoFromPrefs();
             initEngineIfNeeded();
             modelAvailable = true;
+            lastErrorMessage = null;
             Log.i(TAG, "forceReloadModel OK — modelo cargado: " + modelPath);
-        } catch (Exception e) {
+        } catch (Exception | LinkageError e) {
             Log.e(TAG, "Error al recargar modelo en forceReloadModel()", e);
             modelPath = null;
             modelLib = null;

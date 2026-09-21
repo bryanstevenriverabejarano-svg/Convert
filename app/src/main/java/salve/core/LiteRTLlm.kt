@@ -3,7 +3,6 @@ package salve.core
 import android.content.Context
 import android.util.Log
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
-import java.io.File
 
 /**
  * Motor para modelos .litertlm y .task usando MediaPipe LLM Inference API.
@@ -22,9 +21,10 @@ object LiteRTLlm {
     @Synchronized
     fun reset() {
         Log.i(TAG, "Liberando motor LiteRT")
-        llmInference?.close()
+        val previous = llmInference
         llmInference = null
         initialized = false
+        previous?.close()
     }
 
     @JvmStatic
@@ -44,20 +44,25 @@ object LiteRTLlm {
         } catch (e: Exception) {
             Log.e(TAG, "Error inicializando LiteRT LLM: ${e.message}", e)
             initialized = false
+            throw IllegalStateException("No se pudo cargar el modelo MediaPipe", e)
+        } catch (e: LinkageError) {
+            initialized = false
+            throw IllegalStateException("Runtime MediaPipe incompatible con el dispositivo", e)
         }
     }
 
     @JvmStatic
+    @Synchronized
     fun generate(prompt: String): String {
         if (!initialized || llmInference == null) {
-            return "LiteRT LLM no inicializado"
+            throw IllegalStateException("El modelo MediaPipe no está inicializado")
         }
         
         return try {
-            llmInference?.generateResponse(prompt) ?: "Error: Respuesta nula de LiteRT"
+            llmInference!!.generateResponse(prompt)
         } catch (e: Exception) {
             Log.e(TAG, "Error en generación LiteRT: ${e.message}")
-            "Error en LiteRT: ${e.message}"
+            throw IllegalStateException("Falló la inferencia MediaPipe", e)
         }
     }
 }
