@@ -1488,7 +1488,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{"Descargar o reanudar Gemma 4 (2,6 GB)", "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaGemma(); break;
                         case 1:
@@ -1513,6 +1513,7 @@ public class MainActivity extends AppCompatActivity {
                         case 7: probarModelo(false); break;
                         case 8: mostrarVozSalve(); break;
                         case 9: mostrarEquipoProgramacion(); break;
+                        case 10: startActivity(new Intent(this, BusinessFinanceActivity.class)); break;
                         default: break;
                     }
                 })

@@ -47,12 +47,40 @@ public class CodeAnalyzerEnhanced {
         return Collections.emptyList();
     }
 
+    /** An explicit source allowlist replaces discovery when no classes carry @CoreComponent. */
+    public List<AnalysisReport> analyzeSourceTargets(List<String> classNames) {
+        if (classNames == null || classNames.size() > AutoImprovementSourceSnapshot.MAX_FILES) {
+            throw new IllegalArgumentException("Lista de fuentes inválida");
+        }
+        List<Class<?>> classes = new ArrayList<>();
+        for (String name : classNames) {
+            if (Thread.currentThread().isInterrupted()) break;
+            if (name == null || !name.matches("[A-Za-z_][A-Za-z0-9_]*")) throw new IllegalArgumentException("Clase inválida");
+            try {
+                classes.add(Class.forName("salve.core." + name, false, context.getClassLoader()));
+            } catch (ClassNotFoundException | LinkageError error) {
+                Log.w(TAG, "El APK no contiene una clase analizable para la fuente " + name);
+            }
+        }
+        return inspect(classes);
+    }
+
     /** Lógica de detección e inspección. */
     private List<AnalysisReport> performAnalysis() {
+        return inspect(discoverCoreClasses());
+    }
+
+    private List<AnalysisReport> inspect(List<Class<?>> classes) {
         List<AnalysisReport> reports = new ArrayList<>();
-        for (Class<?> cls : discoverCoreClasses()) {
+        for (Class<?> cls : classes) {
+            final Method[] methods;
+            try { methods = cls.getDeclaredMethods(); }
+            catch (LinkageError missingDependency) {
+                Log.w(TAG, "Faltan dependencias para inspeccionar " + cls.getSimpleName());
+                continue;
+            }
             AnalysisReport report = new AnalysisReport(cls.getSimpleName());
-            for (Method m : cls.getDeclaredMethods()) {
+            for (Method m : methods) {
                 int params = m.getParameterCount();
                 IssueLevel level = (params > 4) ? IssueLevel.WARNING : IssueLevel.INFO;
                 String suggestion = (params > 4)

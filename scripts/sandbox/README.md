@@ -94,7 +94,10 @@ generar PR se mantiene; las credenciales para publicarlos siguen en Git/GitHub C
 del anfitrión. Tras comprobar los pasos anteriores se puede usar el puente y su
 modo `--watch`, que leen la misma variable `SALVE_SANDBOX_IMAGE`.
 
-Limitaciones previas fuera de este cambio: el runner todavía no instala
-`generatedTests` de la propuesta; ejecuta las pruebas ya versionadas. Tampoco se
-ha resuelto la generación de diffs sin proporcionar al LLM el código fuente
-exacto. Las pruebas de este PR no certifican el circuito completo en un teléfono.
+El runner todavía no instala `generatedTests` de la propuesta; ejecuta las
+pruebas ya versionadas. Las propuestas nuevas pueden proporcionar identidad de
+fuente: el runner rechaza una fuente base distinta antes de aplicar el diff.
+La app requiere una [instantánea de fuente exacta](../../docs/AUTO_MEJORA_CON_FUENTE.md)
+para generarlas. Las propuestas antiguas sin huella mantienen la comprobación
+de diff y las pruebas, con esa limitación indicada en el PR. Estas comprobaciones
+no certifican el circuito completo en un teléfono.

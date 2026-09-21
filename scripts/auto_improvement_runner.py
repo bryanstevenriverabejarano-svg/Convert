@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
@@ -86,6 +87,21 @@ def validate_proposal(proposal: dict) -> None:
         raise ProposalError("El parche supera el tamaño permitido")
     if changed_paths(patch) != {target.as_posix()}:
         raise ProposalError("El parche modifica rutas distintas del objetivo declarado")
+    if "sourceRevision" in proposal or "sourceSha256" in proposal:
+        for field, length in (("sourceRevision", 40), ("sourceSha256", 64)):
+            value = proposal.get(field)
+            if not isinstance(value, str) or re.fullmatch(r"[a-f0-9]{" + str(length) + r"}", value) is None:
+                raise ProposalError(f"Identidad de fuente inválida: {field}")
+
+
+def check_source_context(proposal: dict, repo: Path) -> None:
+    """New proposals require byte-identical source, even if a stale hunk would still apply."""
+    if "sourceSha256" not in proposal:
+        return  # Existing schema-3 proposals predate exact-source export.
+    result = subprocess.run(["git", "show", "HEAD:" + proposal["targetPath"]], cwd=repo,
+                            check=True, capture_output=True)
+    if hashlib.sha256(result.stdout).hexdigest() != proposal["sourceSha256"]:
+        raise ProposalError("La fuente cambió desde la instantánea; exporta una revisión nueva y regenera el parche")
 
 
 def changed_paths(patch: str) -> set[str]:
@@ -142,6 +158,7 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
         run(["git", "worktree", "add", "--detach", str(worktree), f"origin/{base}"], repo)
         branch_created = False
         try:
+            check_source_context(proposal, worktree)
             patch_file = Path(temporary) / "proposal.patch"
             patch_file.write_text(proposal["patch"], encoding="utf-8")
             run(["git", "apply", "--index", "--check", str(patch_file)], worktree)
@@ -167,10 +184,16 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
             if committed_tree != tested_tree:
                 raise ProposalError("El commit difiere del árbol probado; no se publica")
             run(["git", "push", "--set-upstream", "origin", branch], worktree)
+            source_note = (
+                f"Fuente de contexto: {proposal['sourceRevision']}\nSHA-256 de fuente: {proposal['sourceSha256']}\n\n"
+                if "sourceRevision" in proposal
+                else "Propuesta anterior sin huella de fuente; solo comprobación del diff y pruebas.\n\n"
+            )
             body = (
                 "Propuesta generada por Salve; tarea testDebugUnitTest ejecutada en Docker sin red.\n\n"
                 f"Diagnóstico:\n{proposal.get('issueSummary', '')}\n\n"
                 f"Árbol probado: {tested_tree}\nImagen del sandbox: {image}\n\n"
+                f"{source_note}"
                 f"salve-proposal-id:{proposal['proposalId']}"
             )
             body_file = Path(temporary) / "pr-body.md"
