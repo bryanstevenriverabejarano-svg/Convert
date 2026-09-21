@@ -7,6 +7,8 @@ local.properties
 /app/build/
 build/
 *.iml
+__pycache__/
+*.py[cod]
 
 # Evitar volver a incluir volcados de mlc-chat dentro del código fuente
 **/mlc-chat/.idea/

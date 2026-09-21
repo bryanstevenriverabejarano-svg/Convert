@@ -1,0 +1,25 @@
+{
+  "junit": {
+    "tests": 544,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": 66,
+  "apk_bytes": 156055095,
+  "apk_sha256": "8925f236595a90580ba569ef19e947ce8119c87eaa3e0db612896b817a8d8902",
+  "abis": [
+    "arm64-v8a"
+  ],
+  "bundled_llm_weights": [],
+  "build_tasks": [
+    ":app:testDebugUnitTest",
+    ":app:assembleDebug"
+  ],
+  "build_result": "SUCCESS",
+  "python_tests": 5,
+  "apk_signature_verified": "v2",
+  "device_tests": "not_run",
+  "voice_latency_device_measurements": "not_run",
+  "llm_inference_device_test": "not_run"
+}

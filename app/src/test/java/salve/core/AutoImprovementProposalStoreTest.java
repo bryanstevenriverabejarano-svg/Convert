@@ -44,7 +44,7 @@ public class AutoImprovementProposalStoreTest {
         File directory = Files.createTempDirectory("salve-source-proposal").toFile();
         File output = new AutoImprovementProposalStore(directory).enqueue(bound);
         try {
-            String json = Files.readString(output.toPath());
+            String json = new String(Files.readAllBytes(output.toPath()), StandardCharsets.UTF_8);
             assertTrue(json.contains("\"sourceRevision\": \"" + "a".repeat(40) + "\""));
             assertTrue(json.contains("\"sourceSha256\": \"" + "b".repeat(64) + "\""));
         } finally { output.delete(); directory.delete(); }
