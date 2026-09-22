@@ -17,6 +17,16 @@ runner = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(runner)
 
+GENERATED_TESTS = """package salve.core;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+public class ExampleTestHarness {
+    @Test public void correctedValue() { assertEquals(2, new Example().value); }
+    @Test public void stableValue() { assertEquals(new Example().value, new Example().value); }
+}
+"""
+GENERATED_PATH = "app/src/test/java/salve/core/ExampleTestHarness.java"
+
 
 class ProposalValidationTest(unittest.TestCase):
     def proposal(self):
@@ -119,6 +129,49 @@ class ProposalValidationTest(unittest.TestCase):
         with self.assertRaises(runner.ProposalError):
             runner.validate_proposal(proposal)
 
+    def test_generated_suite_has_derived_path_and_preserves_valid_source(self):
+        proposal = self.proposal()
+        proposal["generatedTests"] = GENERATED_TESTS
+        runner.validate_proposal(proposal)
+        self.assertEqual((GENERATED_PATH, GENERATED_TESTS), runner.generated_test(proposal))
+
+    def test_generated_suite_without_package_is_bound_to_target_package(self):
+        proposal = self.proposal()
+        proposal["generatedTests"] = GENERATED_TESTS.replace("package salve.core;\n", "")
+        path, source = runner.generated_test(proposal)
+        self.assertEqual(GENERATED_PATH, path)
+        self.assertTrue(source.startswith("package salve.core;\n\n"))
+        self.assertIn("public class ExampleTestHarness", source)
+
+    def test_generated_suite_rejects_wrong_type_size_class_package_and_ignored_tests(self):
+        for source in (None, 1, [], "a" * (runner.MAX_GENERATED_TEST_BYTES + 1),
+                       GENERATED_TESTS.replace("salve.core", "other.package"),
+                       GENERATED_TESTS.replace("ExampleTestHarness", "AnotherTest"),
+                       GENERATED_TESTS.replace("@Test", "@org.junit.Ignore @Test"),
+                       GENERATED_TESTS.replace("@Test", "/* @Test */"),
+                       GENERATED_TESTS + "\x00", GENERATED_TESTS + r"\u0061"):
+            proposal = self.proposal()
+            proposal["generatedTests"] = source
+            with self.subTest(source=str(source)[:50]), self.assertRaises(runner.ProposalError):
+                runner.validate_proposal(proposal)
+
+    def test_comments_and_strings_cannot_spoof_test_declarations(self):
+        proposal = self.proposal()
+        proposal["generatedTests"] = '// public class ExampleTestHarness { @Test }\nclass Decoy {}'
+        with self.assertRaises(runner.ProposalError):
+            runner.validate_proposal(proposal)
+        proposal["generatedTests"] = GENERATED_TESTS.replace("@Test", "") + '\n// @Test\n'
+        with self.assertRaises(runner.ProposalError):
+            runner.validate_proposal(proposal)
+
+    def test_legacy_missing_or_blank_suite_remains_explicitly_supported(self):
+        for source in (None, "", "  \n"):
+            proposal = self.proposal()
+            if source is not None:
+                proposal["generatedTests"] = source
+            runner.validate_proposal(proposal)
+            self.assertIsNone(runner.generated_test(proposal))
+
     @mock.patch.object(runner, "run")
     def test_finds_existing_pull_request(self, run):
         run.return_value = mock.Mock(stdout='[{"url":"https://github.com/example/pr/7"}]')
@@ -144,7 +197,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.target = "app/src/main/java/salve/core/Example.java"
         target_file = self.repo / self.target
         target_file.parent.mkdir(parents=True)
-        target_file.write_text("class Example { int value = 1; }\n")
+        target_file.write_text("package salve.core;\nclass Example { int value = 1; }\n")
         # Si vuelve la ejecución directa, esta prueba revela el efecto en el host.
         self.marker = root / "HOST_EXECUTED"
         (self.repo / "gradlew").write_text(f"#!/bin/sh\ntouch '{self.marker}'\nexit 0\n")
@@ -155,7 +208,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.git("remote", "add", "origin", str(self.remote))
         self.git("push", "origin", "main")
         (self.repo / "HOST_SECRET").write_text("untracked credential fixture")
-        target_file.write_text("class Example { int value = 2; }\n")
+        target_file.write_text("package salve.core;\nclass Example { int value = 2; }\n")
         patch = self.git("diff", "--", self.target)
         self.git("checkout", "--", self.target)
         self.proposal = ProposalValidationTest().proposal()
@@ -187,7 +240,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         worktrees = self.git("worktree", "list", "--porcelain")
         self.assertEqual(1, worktrees.count("worktree "))
         self.assertEqual("untracked credential fixture", (self.repo / "HOST_SECRET").read_text())
-        self.assertEqual("class Example { int value = 1; }\n", (self.repo / self.target).read_text())
+        self.assertEqual("package salve.core;\nclass Example { int value = 1; }\n", (self.repo / self.target).read_text())
 
     def test_snapshot_excludes_credentials_and_published_tree_matches(self):
         def verify_snapshot(archive, image):
@@ -195,7 +248,7 @@ class RunnerIntegrationTest(unittest.TestCase):
             with tarfile.open(archive) as snapshot:
                 self.assertNotIn("HOST_SECRET", snapshot.getnames())
                 self.assertFalse(any(".git" in Path(name).parts for name in snapshot.getnames()))
-                self.assertEqual(b"class Example { int value = 2; }\n",
+                self.assertEqual(b"package salve.core;\nclass Example { int value = 2; }\n",
                                  snapshot.extractfile(self.target).read())
         with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
                 mock.patch.object(runner.sandbox, "run_sandbox", side_effect=verify_snapshot):
@@ -204,6 +257,84 @@ class RunnerIntegrationTest(unittest.TestCase):
         tree = self.git("rev-parse", f"origin/{self.branch}^{{tree}}").strip()
         self.assertIn(tree, self.pr_bodies[0])
         self.assertIn(self.image, self.pr_bodies[0])
+        self.assert_cleaned()
+
+    def with_generated_suite(self):
+        self.proposal["generatedTests"] = GENERATED_TESTS
+        self.proposal_path.write_text(json.dumps(self.proposal))
+
+    def test_generated_suite_is_in_tested_snapshot_and_published_exact_tree(self):
+        self.with_generated_suite()
+        observed_hash = []
+        def verify_snapshot(archive, image):
+            with tarfile.open(archive) as snapshot:
+                generated = snapshot.extractfile(GENERATED_PATH).read()
+                self.assertEqual(GENERATED_TESTS.encode(), generated)
+                self.assertEqual(b"package salve.core;\nclass Example { int value = 2; }\n",
+                                 snapshot.extractfile(self.target).read())
+                observed_hash.append(hashlib.sha256(generated).hexdigest())
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox", side_effect=verify_snapshot):
+            runner.execute(self.proposal_path, self.repo, "main", False)
+        self.assertEqual(GENERATED_TESTS, self.git("show", f"origin/{self.branch}:" + GENERATED_PATH))
+        self.assertIn(GENERATED_PATH, self.pr_bodies[0])
+        self.assertIn(observed_hash[0], self.pr_bodies[0])
+        self.assertIn(self.git("rev-parse", f"origin/{self.branch}^{{tree}}").strip(), self.pr_bodies[0])
+        self.assert_cleaned()
+
+    def test_generated_suite_failure_never_publishes_or_executes_on_host(self):
+        self.with_generated_suite()
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox", side_effect=runner.sandbox.SandboxError("generated suite failed")):
+            with self.assertRaises(runner.sandbox.SandboxError):
+                runner.execute(self.proposal_path, self.repo, "main", False)
+        self.assertEqual("", self.git("ls-remote", "--heads", "origin", self.branch))
+        self.assertEqual([], self.pr_bodies)
+        self.assert_cleaned()
+
+    def test_generated_suite_never_overwrites_existing_versioned_test(self):
+        self.with_generated_suite()
+        existing = self.repo / GENERATED_PATH
+        existing.parent.mkdir(parents=True)
+        existing.write_text("// existing trusted test\n")
+        self.git("add", GENERATED_PATH)
+        self.git("commit", "-m", "existing test fixture")
+        self.git("push", "origin", "main")
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox") as sandbox_run:
+            with self.assertRaisesRegex(runner.ProposalError, "colisiona"):
+                runner.execute(self.proposal_path, self.repo, "main", False)
+            sandbox_run.assert_not_called()
+        self.assertEqual("// existing trusted test\n", existing.read_text())
+        self.assertEqual("", self.git("ls-remote", "--heads", "origin", self.branch))
+        self.assert_cleaned()
+
+    def test_generated_suite_rejects_symlink_parent_before_writing(self):
+        self.with_generated_suite()
+        external = Path(self.temporary.name) / "outside-tests"
+        external.mkdir()
+        (self.repo / "app/src/test").symlink_to(external, target_is_directory=True)
+        self.git("add", "app/src/test")
+        self.git("commit", "-m", "symlink fixture")
+        self.git("push", "origin", "main")
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox") as sandbox_run:
+            with self.assertRaisesRegex(runner.ProposalError, "enlace"):
+                runner.execute(self.proposal_path, self.repo, "main", False)
+            sandbox_run.assert_not_called()
+        self.assertEqual([], list(external.iterdir()))
+        self.assert_cleaned()
+
+    def test_dry_run_includes_generated_suite_without_publication(self):
+        self.with_generated_suite()
+        def check(archive, image):
+            with tarfile.open(archive) as snapshot:
+                self.assertIn(GENERATED_PATH, snapshot.getnames())
+        with mock.patch.object(runner, "run", side_effect=self.quiet_run), \
+                mock.patch.object(runner.sandbox, "run_sandbox", side_effect=check):
+            runner.execute(self.proposal_path, self.repo, "main", True)
+        self.assertEqual("", self.git("ls-remote", "--heads", "origin", self.branch))
+        self.assertEqual([], self.pr_bodies)
         self.assert_cleaned()
 
     def test_failed_sandbox_never_pushes_or_creates_pr(self):

@@ -35,7 +35,7 @@ public final class CloudSyncManager {
 
     private static final String TAG = "CloudSync";
 
-    // === Configura estos dos valores (mismos que en tu PHP) ===
+    // Legacy transport: provisioning per-install credentials and validated receipts remains pending.
     private static final String ENDPOINT = "https://arzenit.com/salve_data.php";
     private static final String SECRET   = "pon_aqui_tu_clave_larga";
 
@@ -107,7 +107,7 @@ public final class CloudSyncManager {
      * Devuelve cuántos envió correctamente (2xx).
      */
     public static int flush(Context ctx, int maxBatch) {
-        if (!isEnabled(ctx)) return 0;
+        if (!isEnabled(ctx) || !CloudUploadPolicy.isConfigured(ENDPOINT, SECRET)) return 0;
         int sent = 0;
         try {
             MemoriaDatabase db = MemoriaDatabase.getInstance(ctx);
@@ -123,8 +123,7 @@ public final class CloudSyncManager {
                 }
             }
 
-            // Protección: purga los que fallaron demasiadas veces
-            dao.purgeFailed(20);
+            // Failed events remain local for recovery; exhaustion is not an acknowledgement.
 
             Log.d(TAG, "flush: enviados=" + sent + " / batch=" + batch.size());
         } catch (Exception ex) {
@@ -139,6 +138,7 @@ public final class CloudSyncManager {
 
     /** Envía ahora un JSON al endpoint. True si la respuesta es 2xx. */
     private static boolean sendNow(String jsonPayload) {
+        if (!CloudUploadPolicy.isConfigured(ENDPOINT, SECRET)) return false;
         HttpURLConnection conn = null;
         try {
             URL url = new URL(ENDPOINT);
@@ -240,6 +240,7 @@ public final class CloudSyncManager {
      *   - $_FILES['file']
      */
     private static boolean uploadFileMultipart(File file, String kind) throws Exception {
+        if (!CloudUploadPolicy.isConfigured(ENDPOINT, SECRET)) return false;
         String boundary = "----SalveBoundary" + System.currentTimeMillis();
         HttpURLConnection conn = null;
         try {

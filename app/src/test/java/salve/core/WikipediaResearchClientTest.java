@@ -38,4 +38,17 @@ public class WikipediaResearchClientTest {
         assertEquals(1, urls.size());
         assertTrue(urls.get(0).contains("ok.org"));
     }
+
+    @Test public void cancellationAndInvalidDestinationAreReportedBeforeNetwork() {
+        assertEquals(WikipediaResearchClient.Status.CANCELLED,
+                client.researchResult("https://example.org/", () -> true).status);
+        assertEquals(WikipediaResearchClient.Status.ERROR,
+                client.researchResult("https://127.0.0.1/private", () -> false).status);
+        assertEquals(WikipediaResearchClient.Status.ERROR,
+                client.researchResult("http://example.org/unsupported", () -> false).status);
+    }
+
+    @Test public void unclosedExecutableMarkupIsNotPresentedAsVisibleText() {
+        assertEquals("Texto", WikipediaResearchClient.extractText("<p>Texto</p><script>neverRun()", "text/html"));
+    }
 }

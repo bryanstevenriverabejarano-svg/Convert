@@ -1,0 +1,3822 @@
+{
+  "schema": 1,
+  "expected_cases": 104,
+  "expected_rounds_per_case": 4,
+  "expected_executions": 416,
+  "received_executions": 416,
+  "passed_executions": 416,
+  "failed_executions": 0,
+  "missing_executions": [],
+  "passed": true,
+  "families": {
+    "route": {
+      "cases": 26,
+      "expected_executions": 104,
+      "passed_executions": 104
+    },
+    "knapsack": {
+      "cases": 26,
+      "expected_executions": 104,
+      "passed_executions": 104
+    },
+    "schedule": {
+      "cases": 26,
+      "expected_executions": 104,
+      "passed_executions": 104
+    },
+    "dependencies": {
+      "cases": 26,
+      "expected_executions": 104,
+      "passed_executions": 104
+    }
+  },
+  "scope": "Certificación finita de herramientas acotadas; no demuestra superinteligencia ni creatividad general.",
+  "reasoning_record": "Decisiones y feedback observables, no cadenas de pensamiento privadas.",
+  "observed_metrics": {
+    "executions": 416,
+    "adapted": 145,
+    "reused": 0,
+    "promoted": 416,
+    "previous_program_rejected": 0,
+    "candidate_attempts": 596,
+    "rejected_candidates": 180,
+    "regression_checks": 0,
+    "operations": 617869,
+    "latency_ms": {
+      "environment": "JVM host; no mide latencia del móvil ni inferencia de un LLM",
+      "percentile_method": "nearest_rank",
+      "samples": 416,
+      "p50": 0.353973,
+      "p95": 2.050477,
+      "max": 27.686868
+    }
+  },
+  "rounds": {
+    "1": {
+      "executions": 104,
+      "adapted": 33,
+      "reused": 0,
+      "promoted": 104,
+      "previous_program_rejected": 0,
+      "candidate_attempts": 143,
+      "rejected_candidates": 39,
+      "regression_checks": 0,
+      "operations": 148551,
+      "latency_ms": {
+        "environment": "JVM host; no mide latencia del móvil ni inferencia de un LLM",
+        "percentile_method": "nearest_rank",
+        "samples": 104,
+        "p50": 0.589741,
+        "p95": 4.882487,
+        "max": 27.686868
+      }
+    },
+    "2": {
+      "executions": 104,
+      "adapted": 29,
+      "reused": 0,
+      "promoted": 104,
+      "previous_program_rejected": 0,
+      "candidate_attempts": 141,
+      "rejected_candidates": 37,
+      "regression_checks": 0,
+      "operations": 187410,
+      "latency_ms": {
+        "environment": "JVM host; no mide latencia del móvil ni inferencia de un LLM",
+        "percentile_method": "nearest_rank",
+        "samples": 104,
+        "p50": 0.299942,
+        "p95": 0.956161,
+        "max": 5.287725
+      }
+    },
+    "3": {
+      "executions": 104,
+      "adapted": 35,
+      "reused": 0,
+      "promoted": 104,
+      "previous_program_rejected": 0,
+      "candidate_attempts": 157,
+      "rejected_candidates": 53,
+      "regression_checks": 0,
+      "operations": 152986,
+      "latency_ms": {
+        "environment": "JVM host; no mide latencia del móvil ni inferencia de un LLM",
+        "percentile_method": "nearest_rank",
+        "samples": 104,
+        "p50": 0.304069,
+        "p95": 0.963022,
+        "max": 1.520574
+      }
+    },
+    "4": {
+      "executions": 104,
+      "adapted": 48,
+      "reused": 0,
+      "promoted": 104,
+      "previous_program_rejected": 0,
+      "candidate_attempts": 155,
+      "rejected_candidates": 51,
+      "regression_checks": 0,
+      "operations": 128922,
+      "latency_ms": {
+        "environment": "JVM host; no mide latencia del móvil ni inferencia de un LLM",
+        "percentile_method": "nearest_rank",
+        "samples": 104,
+        "p50": 0.265312,
+        "p95": 0.612715,
+        "max": 4.279086
+      }
+    }
+  },
+  "assessments": [
+    {
+      "id": "route-001-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-002-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-003-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-004-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-005-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-006-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 8,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-007-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-008-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-009-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-010-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-011-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-012-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-013-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 2,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-014-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-015-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-016-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-017-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 12,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-018-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 12,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-019-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-020-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-021-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-022-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-023-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 8,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-024-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-025-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 0,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-026-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 10,
+        "reachable": true
+      }
+    },
+    {
+      "id": "knapsack-001-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2,
+        "optimum": 8
+      }
+    },
+    {
+      "id": "knapsack-002-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 20
+      }
+    },
+    {
+      "id": "knapsack-003-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "knapsack-004-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "knapsack-005-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "knapsack-006-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "knapsack-007-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "knapsack-008-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 23
+      }
+    },
+    {
+      "id": "knapsack-009-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 8
+      }
+    },
+    {
+      "id": "knapsack-010-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "knapsack-011-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 32
+      }
+    },
+    {
+      "id": "knapsack-012-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 22
+      }
+    },
+    {
+      "id": "knapsack-013-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 30
+      }
+    },
+    {
+      "id": "knapsack-014-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 64
+      }
+    },
+    {
+      "id": "knapsack-015-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 39
+      }
+    },
+    {
+      "id": "knapsack-016-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "knapsack-017-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 23
+      }
+    },
+    {
+      "id": "knapsack-018-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 28
+      }
+    },
+    {
+      "id": "knapsack-019-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 1300
+      }
+    },
+    {
+      "id": "knapsack-020-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 31
+      }
+    },
+    {
+      "id": "knapsack-021-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 196
+      }
+    },
+    {
+      "id": "knapsack-022-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 46
+      }
+    },
+    {
+      "id": "knapsack-023-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 39
+      }
+    },
+    {
+      "id": "knapsack-024-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 29
+      }
+    },
+    {
+      "id": "knapsack-025-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4096,
+        "optimum": 84
+      }
+    },
+    {
+      "id": "knapsack-026-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 108
+      }
+    },
+    {
+      "id": "schedule-001-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2,
+        "optimum": 7
+      }
+    },
+    {
+      "id": "schedule-002-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "schedule-003-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "schedule-004-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 11
+      }
+    },
+    {
+      "id": "schedule-005-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-006-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-007-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 13
+      }
+    },
+    {
+      "id": "schedule-008-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "schedule-009-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 25
+      }
+    },
+    {
+      "id": "schedule-010-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "schedule-011-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-012-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "schedule-013-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 28
+      }
+    },
+    {
+      "id": "schedule-014-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "schedule-015-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 11
+      }
+    },
+    {
+      "id": "schedule-016-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "schedule-017-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 32
+      }
+    },
+    {
+      "id": "schedule-018-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 12
+      }
+    },
+    {
+      "id": "schedule-019-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "schedule-020-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 15
+      }
+    },
+    {
+      "id": "schedule-021-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "schedule-022-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "schedule-023-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "schedule-024-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "schedule-025-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4096,
+        "optimum": 59
+      }
+    },
+    {
+      "id": "schedule-026-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 82
+      }
+    },
+    {
+      "id": "dependencies-001-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 1
+      }
+    },
+    {
+      "id": "dependencies-002-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-003-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-004-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-005-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "dependencies-006-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "dependencies-007-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-008-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-009-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 13
+      }
+    },
+    {
+      "id": "dependencies-010-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "dependencies-011-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-012-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "dependencies-013-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 10
+      }
+    },
+    {
+      "id": "dependencies-014-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-015-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-016-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-017-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-018-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-019-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-020-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-021-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-022-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "dependencies-023-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-024-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 14
+      }
+    },
+    {
+      "id": "dependencies-025-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 5
+      }
+    },
+    {
+      "id": "dependencies-026-r1",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "route-001-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-002-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 10,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-003-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 12,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-004-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-005-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 9,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-006-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 8,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-007-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 9,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-008-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-009-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-010-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-011-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-012-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-013-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-014-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-015-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 15,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-016-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 10,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-017-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-018-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 30,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-019-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-020-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-021-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-022-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-023-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 8,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-024-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-025-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 0,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-026-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 10,
+        "reachable": true
+      }
+    },
+    {
+      "id": "knapsack-001-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4,
+        "optimum": 9
+      }
+    },
+    {
+      "id": "knapsack-002-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "knapsack-003-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 25
+      }
+    },
+    {
+      "id": "knapsack-004-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "knapsack-005-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "knapsack-006-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "knapsack-007-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 31
+      }
+    },
+    {
+      "id": "knapsack-008-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "knapsack-009-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "knapsack-010-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 35
+      }
+    },
+    {
+      "id": "knapsack-011-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 44
+      }
+    },
+    {
+      "id": "knapsack-012-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "knapsack-013-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 51
+      }
+    },
+    {
+      "id": "knapsack-014-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 145
+      }
+    },
+    {
+      "id": "knapsack-015-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 49
+      }
+    },
+    {
+      "id": "knapsack-016-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 34
+      }
+    },
+    {
+      "id": "knapsack-017-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 29
+      }
+    },
+    {
+      "id": "knapsack-018-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 35
+      }
+    },
+    {
+      "id": "knapsack-019-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 1701
+      }
+    },
+    {
+      "id": "knapsack-020-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 41
+      }
+    },
+    {
+      "id": "knapsack-021-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 224
+      }
+    },
+    {
+      "id": "knapsack-022-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 62
+      }
+    },
+    {
+      "id": "knapsack-023-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 45
+      }
+    },
+    {
+      "id": "knapsack-024-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 42
+      }
+    },
+    {
+      "id": "knapsack-025-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 87
+      }
+    },
+    {
+      "id": "knapsack-026-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 108
+      }
+    },
+    {
+      "id": "schedule-001-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4,
+        "optimum": 7
+      }
+    },
+    {
+      "id": "schedule-002-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "schedule-003-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "schedule-004-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 11
+      }
+    },
+    {
+      "id": "schedule-005-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "schedule-006-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-007-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 16
+      }
+    },
+    {
+      "id": "schedule-008-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "schedule-009-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 33
+      }
+    },
+    {
+      "id": "schedule-010-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "schedule-011-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 22
+      }
+    },
+    {
+      "id": "schedule-012-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 1
+      }
+    },
+    {
+      "id": "schedule-013-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 28
+      }
+    },
+    {
+      "id": "schedule-014-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "schedule-015-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 11
+      }
+    },
+    {
+      "id": "schedule-016-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "schedule-017-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 32
+      }
+    },
+    {
+      "id": "schedule-018-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 12
+      }
+    },
+    {
+      "id": "schedule-019-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "schedule-020-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 16
+      }
+    },
+    {
+      "id": "schedule-021-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "schedule-022-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "schedule-023-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "schedule-024-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1024,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "schedule-025-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 59
+      }
+    },
+    {
+      "id": "schedule-026-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 82
+      }
+    },
+    {
+      "id": "dependencies-001-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 2
+      }
+    },
+    {
+      "id": "dependencies-002-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-003-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-004-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-005-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-006-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-007-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-008-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-009-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-010-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-011-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-012-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-013-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-014-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-015-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-016-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-017-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-018-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-019-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-020-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-021-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-022-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-023-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-024-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-025-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-026-r2",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "route-001-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-002-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -12,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-003-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 1,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-004-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 0,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-005-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-006-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-007-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-008-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-009-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 1,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-010-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-011-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-012-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -1,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-013-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 1,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-014-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-015-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -9,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-016-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-017-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-018-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-019-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -9,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-020-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-021-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -9,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-022-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -12,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-023-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-024-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-025-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 0,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-026-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "knapsack-001-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4,
+        "optimum": 9
+      }
+    },
+    {
+      "id": "knapsack-002-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "knapsack-003-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "knapsack-004-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "knapsack-005-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "knapsack-006-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 3
+      }
+    },
+    {
+      "id": "knapsack-007-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 21
+      }
+    },
+    {
+      "id": "knapsack-008-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "knapsack-009-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 9
+      }
+    },
+    {
+      "id": "knapsack-010-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 31
+      }
+    },
+    {
+      "id": "knapsack-011-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 37
+      }
+    },
+    {
+      "id": "knapsack-012-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 23
+      }
+    },
+    {
+      "id": "knapsack-013-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 35
+      }
+    },
+    {
+      "id": "knapsack-014-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 100
+      }
+    },
+    {
+      "id": "knapsack-015-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 42
+      }
+    },
+    {
+      "id": "knapsack-016-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "knapsack-017-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "knapsack-018-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 32
+      }
+    },
+    {
+      "id": "knapsack-019-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 1300
+      }
+    },
+    {
+      "id": "knapsack-020-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 36
+      }
+    },
+    {
+      "id": "knapsack-021-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 196
+      }
+    },
+    {
+      "id": "knapsack-022-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 54
+      }
+    },
+    {
+      "id": "knapsack-023-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 39
+      }
+    },
+    {
+      "id": "knapsack-024-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 33
+      }
+    },
+    {
+      "id": "knapsack-025-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 85
+      }
+    },
+    {
+      "id": "knapsack-026-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 106
+      }
+    },
+    {
+      "id": "schedule-001-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4,
+        "optimum": 8
+      }
+    },
+    {
+      "id": "schedule-002-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "schedule-003-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "schedule-004-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 11
+      }
+    },
+    {
+      "id": "schedule-005-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-006-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-007-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-008-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "schedule-009-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 25
+      }
+    },
+    {
+      "id": "schedule-010-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "schedule-011-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 15
+      }
+    },
+    {
+      "id": "schedule-012-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 1
+      }
+    },
+    {
+      "id": "schedule-013-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 29
+      }
+    },
+    {
+      "id": "schedule-014-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "schedule-015-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 15
+      }
+    },
+    {
+      "id": "schedule-016-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "schedule-017-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 32
+      }
+    },
+    {
+      "id": "schedule-018-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 12
+      }
+    },
+    {
+      "id": "schedule-019-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 28
+      }
+    },
+    {
+      "id": "schedule-020-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 16
+      }
+    },
+    {
+      "id": "schedule-021-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "schedule-022-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 25
+      }
+    },
+    {
+      "id": "schedule-023-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 20
+      }
+    },
+    {
+      "id": "schedule-024-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1024,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "schedule-025-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 60
+      }
+    },
+    {
+      "id": "schedule-026-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 82
+      }
+    },
+    {
+      "id": "dependencies-001-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 2
+      }
+    },
+    {
+      "id": "dependencies-002-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-003-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-004-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-005-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "dependencies-006-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "dependencies-007-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-008-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "dependencies-009-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 13
+      }
+    },
+    {
+      "id": "dependencies-010-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "dependencies-011-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-012-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "dependencies-013-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 10
+      }
+    },
+    {
+      "id": "dependencies-014-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 2
+      }
+    },
+    {
+      "id": "dependencies-015-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "dependencies-016-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "dependencies-017-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "dependencies-018-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-019-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-020-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-021-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-022-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "dependencies-023-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-024-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 14
+      }
+    },
+    {
+      "id": "dependencies-025-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 5
+      }
+    },
+    {
+      "id": "dependencies-026-r3",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "route-001-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 8,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-002-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-003-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-004-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-005-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-006-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 9,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-007-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-008-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 8,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-009-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-010-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 5,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-011-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-012-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-013-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-014-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 8,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-015-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-016-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-017-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 13,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-018-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 13,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-019-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-020-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 8,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-021-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-022-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 4,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-023-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 9,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-024-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "route-025-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 1,
+        "reachable": true
+      }
+    },
+    {
+      "id": "route-026-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "knapsack-001-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "knapsack-002-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4,
+        "optimum": 13
+      }
+    },
+    {
+      "id": "knapsack-003-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4,
+        "optimum": 9
+      }
+    },
+    {
+      "id": "knapsack-004-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "knapsack-005-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 12
+      }
+    },
+    {
+      "id": "knapsack-006-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "knapsack-007-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "knapsack-008-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 20
+      }
+    },
+    {
+      "id": "knapsack-009-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 8
+      }
+    },
+    {
+      "id": "knapsack-010-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "knapsack-011-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "knapsack-012-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "knapsack-013-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 25
+      }
+    },
+    {
+      "id": "knapsack-014-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 49
+      }
+    },
+    {
+      "id": "knapsack-015-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 30
+      }
+    },
+    {
+      "id": "knapsack-016-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 21
+      }
+    },
+    {
+      "id": "knapsack-017-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "knapsack-018-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "knapsack-019-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 700
+      }
+    },
+    {
+      "id": "knapsack-020-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "knapsack-021-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 156
+      }
+    },
+    {
+      "id": "knapsack-022-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 46
+      }
+    },
+    {
+      "id": "knapsack-023-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 31
+      }
+    },
+    {
+      "id": "knapsack-024-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "knapsack-025-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 73
+      }
+    },
+    {
+      "id": "knapsack-026-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 90
+      }
+    },
+    {
+      "id": "schedule-001-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "schedule-002-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 16
+      }
+    },
+    {
+      "id": "schedule-003-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4,
+        "optimum": 15
+      }
+    },
+    {
+      "id": "schedule-004-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 4
+      }
+    },
+    {
+      "id": "schedule-005-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-006-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-007-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 13
+      }
+    },
+    {
+      "id": "schedule-008-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 19
+      }
+    },
+    {
+      "id": "schedule-009-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "schedule-010-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 16
+      }
+    },
+    {
+      "id": "schedule-011-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 14
+      }
+    },
+    {
+      "id": "schedule-012-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 0
+      }
+    },
+    {
+      "id": "schedule-013-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 28
+      }
+    },
+    {
+      "id": "schedule-014-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 17
+      }
+    },
+    {
+      "id": "schedule-015-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 11
+      }
+    },
+    {
+      "id": "schedule-016-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 12
+      }
+    },
+    {
+      "id": "schedule-017-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 27
+      }
+    },
+    {
+      "id": "schedule-018-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 12
+      }
+    },
+    {
+      "id": "schedule-019-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 22
+      }
+    },
+    {
+      "id": "schedule-020-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 15
+      }
+    },
+    {
+      "id": "schedule-021-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8,
+        "optimum": 20
+      }
+    },
+    {
+      "id": "schedule-022-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 16
+      }
+    },
+    {
+      "id": "schedule-023-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 18
+      }
+    },
+    {
+      "id": "schedule-024-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 26
+      }
+    },
+    {
+      "id": "schedule-025-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 59
+      }
+    },
+    {
+      "id": "schedule-026-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 77
+      }
+    },
+    {
+      "id": "dependencies-001-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 2
+      }
+    },
+    {
+      "id": "dependencies-002-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-003-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "dependencies-004-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "dependencies-005-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "dependencies-006-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 5
+      }
+    },
+    {
+      "id": "dependencies-007-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 2
+      }
+    },
+    {
+      "id": "dependencies-008-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-009-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 5
+      }
+    },
+    {
+      "id": "dependencies-010-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "dependencies-011-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "dependencies-012-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "dependencies-013-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "dependencies-014-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-015-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-016-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-017-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-018-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-019-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-020-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "dependencies-021-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "dependencies-022-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-023-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-024-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "dependencies-025-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "dependencies-026-r4",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    }
+  ]
+}

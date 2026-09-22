@@ -37,7 +37,8 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
                 when (event) {
                     is ModelDownloadEvent.Status -> updateProgress(event.percent, event.message)
                     is ModelDownloadEvent.Prepared -> {
-                        ready = "Gemma 4 E2B activo. Prueba de respuesta: ${event.latencyMillis} ms. Chat y fotos en modo local."
+                        ready = "${event.modelName} activo. Prueba de texto: ${event.latencyMillis} ms. Chat en modo local." +
+                            if (event.supportsVision) " Visión declarada por el catálogo; pendiente de probar con una foto." else ""
                     }
                     is ModelDownloadEvent.Error -> {
                         failure = event.error.message ?: "No se pudo preparar el modelo"

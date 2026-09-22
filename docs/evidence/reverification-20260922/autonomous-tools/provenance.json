@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "compiled_release": 11,
+  "java_heap_limit": "256m",
+  "timeout_per_stage_seconds": 180,
+  "gson": {
+    "filename": "gson-2.13.2.jar",
+    "sha256": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0"
+  },
+  "source_sha256": {
+    "app/src/main/java/salve/core/autonomy/AutonomousToolCommand.java": "31d0162f86aa13c7828010fb6d1a78976bfd25427145063b803b5054b4aeb581",
+    "app/src/main/java/salve/core/autonomy/AutonomousToolLab.java": "7bd2e53f1ab9484e4b18d7c256af4ec07efb569fa1b17db283906acfd38682e0",
+    "app/src/main/java/salve/core/autonomy/AutonomousToolReply.java": "3da3fade1fb8b7236b323ebd3be4ad8e4053041dfd8d418751852013a295c1ff",
+    "app/src/main/java/salve/core/autonomy/FileToolStateStore.java": "81c0ba980cb298c88760b1af83ff4dcadbcb85498e0b9e6c2d900285d38041a9",
+    "app/src/main/java/salve/core/autonomy/OperationBudget.java": "1d6e0f646e416c5054f710fa16d8a12eb39552be23a8d9544f8f70635969b98a",
+    "app/src/main/java/salve/core/autonomy/ToolExperienceMemory.java": "936a9be4b05200f8126e18e076b7aad4e1678ac2066d5f326fc6a6d6c06cd4b0",
+    "app/src/main/java/salve/core/autonomy/ToolInterpreter.java": "3c1c1423557dfe0d7ce464935d66e0c0e14bd7a83ee8486e59c22fe7732aa996",
+    "app/src/main/java/salve/core/autonomy/ToolKernels.java": "ca7ecb5cd12ece9c61a3e2af6356131ebff91af99dc4b171c832f53a84661636",
+    "app/src/main/java/salve/core/autonomy/ToolProgram.java": "4ccdff6e59ff232576da56f1e519e7652f43b1b542ad421f0e879827d939779c",
+    "app/src/main/java/salve/core/autonomy/ToolRegistry.java": "8b9101367952351270da5f6886c25c8029345246d07465f096ec562c9a31823f",
+    "app/src/main/java/salve/core/autonomy/ToolVerifier.java": "d98e1893ff7696187e78fbc98be8534938f393384ea357351535aa5a108d5148",
+    "tools/autonomy/AutonomyEvaluation.java": "dcd00a62cfedf3e7cc13f11d5ba33db3a386b5e46d92209316dc4822008ce147",
+    "scripts/evaluate_autonomous_tools.py": "aff0273345e2d100c2a4aa727f59e316fd342a0b9936661a6bc2cc8591dfdd76",
+    "scripts/run_autonomous_tool_evaluation.py": "dda0aeaf1a316dd757e05351952587cd2b55f6d6a763022c07e44207defb6711"
+  },
+  "corpus_sha256": "ab811bed9b6407011a31f7a06e6c2c06426431a331171007365552ea623747e9",
+  "reports_sha256": "1004aa44b0cdcf11df82410e2cab854740f51a537b679b9ac177ea59eb68393b",
+  "reports_without_memory_sha256": "8ae611e63f70c1d82338a0899aaa2f3e55235a891a34a7fa66e59f33c5db1dac",
+  "stages": [
+    {
+      "stage": "java-version",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 0.064
+    },
+    {
+      "stage": "compile",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 1.073
+    },
+    {
+      "stage": "reject-invalid-cli-option",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "elapsed_seconds": 0.065
+    },
+    {
+      "stage": "generate",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 0.066
+    },
+    {
+      "stage": "execute",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 0.675
+    },
+    {
+      "stage": "verify",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 0.52
+    },
+    {
+      "stage": "execute-without-memory",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 0.468
+    },
+    {
+      "stage": "verify-without-memory",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 0.468
+    }
+  ],
+  "scope": "JVM de escritorio; no mide rendimiento ni capacidades generales en el móvil."
+}
