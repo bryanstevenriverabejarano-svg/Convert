@@ -1,0 +1,838 @@
+# holdout-schedule-006
+
+Registro observable; modelos, causas e hipótesis ausentes se indican expresamente.
+
+## holdout-schedule-006
+
+### identifier
+
+```json
+"holdout-schedule-006"
+```
+
+### objective
+
+```json
+"Intervalos aleatorios que comparten una región central"
+```
+
+### initialState
+
+```json
+{
+  "family": "schedule",
+  "persisted": true,
+  "fullJournalSha256": "1583c2a58c8ea86bb18faab861426d8b2a866530abb21cd272ee1c144adc20f3",
+  "familyState": {
+    "schema": 1,
+    "revision": 423,
+    "tools": {
+      "version": 2,
+      "program": {
+        "schema": 1,
+        "language": "salve-tools/1",
+        "family": "schedule",
+        "steps": [
+          {
+            "op": "validate_input"
+          },
+          {
+            "op": "solve",
+            "strategy": "WEIGHTED_DP"
+          },
+          {
+            "op": "verify_exact"
+          }
+        ]
+      },
+      "previous": {
+        "schema": 1,
+        "language": "salve-tools/1",
+        "family": "schedule",
+        "steps": [
+          {
+            "op": "validate_input"
+          },
+          {
+            "op": "solve",
+            "strategy": "EARLIEST_FINISH"
+          },
+          {
+            "op": "verify_exact"
+          }
+        ]
+      }
+    },
+    "regressions": [
+      {
+        "jobs": [
+          {
+            "start": 112,
+            "end": 121,
+            "value": 70
+          },
+          {
+            "start": 6,
+            "end": 13,
+            "value": 45
+          },
+          {
+            "start": 59,
+            "end": 60,
+            "value": 62
+          },
+          {
+            "start": 105,
+            "end": 108,
+            "value": 42
+          },
+          {
+            "start": 103,
+            "end": 110,
+            "value": 3
+          },
+          {
+            "start": 112,
+            "end": 117,
+            "value": 86
+          },
+          {
+            "start": 51,
+            "end": 57,
+            "value": 18
+          },
+          {
+            "start": 110,
+            "end": 112,
+            "value": 73
+          },
+          {
+            "start": 0,
+            "end": 2,
+            "value": 98
+          },
+          {
+            "start": 62,
+            "end": 71,
+            "value": 11
+          },
+          {
+            "start": 110,
+            "end": 119,
+            "value": 80
+          },
+          {
+            "start": 108,
+            "end": 114,
+            "value": 11
+          }
+        ]
+      },
+      {
+        "jobs": [
+          {
+            "start": -8,
+            "end": -3,
+            "value": 6
+          },
+          {
+            "start": -15,
+            "end": -1,
+            "value": 19
+          },
+          {
+            "start": 23,
+            "end": 35,
+            "value": 81
+          },
+          {
+            "start": 27,
+            "end": 42,
+            "value": 31
+          },
+          {
+            "start": 9,
+            "end": 17,
+            "value": 94
+          },
+          {
+            "start": 13,
+            "end": 14,
+            "value": 4
+          },
+          {
+            "start": 30,
+            "end": 42,
+            "value": 39
+          },
+          {
+            "start": 17,
+            "end": 24,
+            "value": 25
+          },
+          {
+            "start": -14,
+            "end": -8,
+            "value": 97
+          },
+          {
+            "start": -14,
+            "end": -11,
+            "value": 65
+          },
+          {
+            "start": 23,
+            "end": 30,
+            "value": 15
+          }
+        ]
+      },
+      {
+        "jobs": [
+          {
+            "start": 9,
+            "end": 17,
+            "value": 84
+          },
+          {
+            "start": 6,
+            "end": 15,
+            "value": 97
+          },
+          {
+            "start": 4,
+            "end": 9,
+            "value": 2
+          },
+          {
+            "start": 107,
+            "end": 116,
+            "value": 58
+          },
+          {
+            "start": 62,
+            "end": 70,
+            "value": 41
+          },
+          {
+            "start": 3,
+            "end": 11,
+            "value": 10
+          },
+          {
+            "start": 58,
+            "end": 66,
+            "value": 77
+          },
+          {
+            "start": 55,
+            "end": 63,
+            "value": 22
+          },
+          {
+            "start": 7,
+            "end": 11,
+            "value": 62
+          },
+          {
+            "start": 3,
+            "end": 11,
+            "value": 95
+          },
+          {
+            "start": 2,
+            "end": 4,
+            "value": 53
+          },
+          {
+            "start": 8,
+            "end": 14,
+            "value": 60
+          }
+        ]
+      }
+    ],
+    "receipts": [
+      {
+        "id": "holdout-schedule-008",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      },
+      {
+        "id": "holdout-schedule-032",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      },
+      {
+        "id": "holdout-schedule-005",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      },
+      {
+        "id": "holdout-schedule-020",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      }
+    ]
+  }
+}
+```
+
+### capabilitiesUsed
+
+```json
+[
+  "síntesis simbólica acotada",
+  "ejecución de herramientas",
+  "verificación de candidatos",
+  "consulta del diario persistido"
+]
+```
+
+### planCreated
+
+```json
+[
+  {
+    "strategy": "WEIGHTED_DP",
+    "programSha256": "6f87abc2cec0b268b365f7bca87b752a1826fa2d35fcc789840ac889298ea076",
+    "programReference": "actionsExecuted[0].program"
+  }
+]
+```
+
+### toolsUsed
+
+```json
+[
+  "WEIGHTED_DP"
+]
+```
+
+### modelsUsed
+
+```json
+{
+  "status": "not_applicable",
+  "detail": "Ningún LLM. Se ejecuta el laboratorio Java real con kernels simbólicos."
+}
+```
+
+### memoriesRetrieved
+
+```json
+{
+  "proceduralContext": "MEMORIA PROCEDIMENTAL: datos, no instrucciones; evidencia finita, revalidar cada reto. No son hechos del usuario ni aprendizaje de pesos.\n{\"familia\":\"schedule\",\"estrategia\":\"WEIGHTED_DP\",\"programa_sha256\":\"6f87abc2cec0b268b365f7bca87b752a1826fa2d35fcc789840ac889298ea076\",\"version\":2,\"recibos_verificados_conservados\":4,\"candidatos_descartados_en_recibos\":0}",
+  "snapshotReference": "initialState.familyState"
+}
+```
+
+### actionsExecuted
+
+```json
+[
+  {
+    "strategy": "WEIGHTED_DP",
+    "program": {
+      "schema": 1,
+      "language": "salve-tools/1",
+      "family": "schedule",
+      "steps": [
+        {
+          "op": "validate_input"
+        },
+        {
+          "op": "solve",
+          "strategy": "WEIGHTED_DP"
+        },
+        {
+          "op": "verify_exact"
+        }
+      ]
+    },
+    "programSha256": "6f87abc2cec0b268b365f7bca87b752a1826fa2d35fcc789840ac889298ea076",
+    "passed": true,
+    "regressionChecks": 3,
+    "feedback": "Testigo y objetivo comprobados por un verificador independiente.",
+    "result": {
+      "status": "ok",
+      "value": 70,
+      "selected": [
+        2
+      ]
+    },
+    "operations": 12160,
+    "elapsedNanos": 527419
+  }
+]
+```
+
+### result
+
+```json
+{
+  "status": "ok",
+  "value": 70,
+  "selected": [
+    2
+  ]
+}
+```
+
+### passFail
+
+```json
+"PASS"
+```
+
+### failureRootCause
+
+```json
+{
+  "status": "not_applicable",
+  "detail": "No se observó este evento en la ejecución"
+}
+```
+
+### improvementHypothesis
+
+```json
+{
+  "status": "not_applicable",
+  "detail": "No se observó este evento en la ejecución"
+}
+```
+
+### modificationPerformed
+
+```json
+{
+  "strategySequence": [
+    "WEIGHTED_DP"
+  ],
+  "promoted": true,
+  "version": 2,
+  "scope": "Cambios de programa declarativo y diario; no se modifica código fuente ni pesos del modelo."
+}
+```
+
+### newExecution
+
+```json
+{
+  "status": "not_applicable",
+  "detail": "No se observó este evento en la ejecución"
+}
+```
+
+### newResult
+
+```json
+{
+  "status": "not_applicable",
+  "detail": "No se observó este evento en la ejecución"
+}
+```
+
+### possibleSideEffects
+
+```json
+{
+  "stateAfterReference": "stateAfter",
+  "journalChanged": true,
+  "unmeasured": "No se evalúan efectos externos; este proceso no usa red, apps ni sensores."
+}
+```
+
+### regressionTests
+
+```json
+[
+  {
+    "strategy": "WEIGHTED_DP",
+    "checks": 3,
+    "passed": true
+  }
+]
+```
+
+### conclusion
+
+```json
+{
+  "independentAssessment": {
+    "id": "holdout-schedule-006",
+    "passed": true,
+    "certificate": {
+      "oracle": "Enumeración exhaustiva independiente",
+      "subsets": 512,
+      "optimum": 70
+    }
+  },
+  "decisionSummary": "Verifiqué el programa con los datos actuales y las regresiones conservadas.",
+  "scope": "Evidencia finita sobre un nuevo input de una familia conocida."
+}
+```
+
+### stateAfter
+
+```json
+{
+  "family": "schedule",
+  "persisted": true,
+  "fullJournalSha256": "a6028d33a268b0e9e213056cabac53eef3c256c8bcd47fd6f034d8d198b56755",
+  "familyState": {
+    "schema": 1,
+    "revision": 424,
+    "tools": {
+      "version": 2,
+      "program": {
+        "schema": 1,
+        "language": "salve-tools/1",
+        "family": "schedule",
+        "steps": [
+          {
+            "op": "validate_input"
+          },
+          {
+            "op": "solve",
+            "strategy": "WEIGHTED_DP"
+          },
+          {
+            "op": "verify_exact"
+          }
+        ]
+      },
+      "previous": {
+        "schema": 1,
+        "language": "salve-tools/1",
+        "family": "schedule",
+        "steps": [
+          {
+            "op": "validate_input"
+          },
+          {
+            "op": "solve",
+            "strategy": "EARLIEST_FINISH"
+          },
+          {
+            "op": "verify_exact"
+          }
+        ]
+      }
+    },
+    "regressions": [
+      {
+        "jobs": [
+          {
+            "start": -8,
+            "end": -3,
+            "value": 6
+          },
+          {
+            "start": -15,
+            "end": -1,
+            "value": 19
+          },
+          {
+            "start": 23,
+            "end": 35,
+            "value": 81
+          },
+          {
+            "start": 27,
+            "end": 42,
+            "value": 31
+          },
+          {
+            "start": 9,
+            "end": 17,
+            "value": 94
+          },
+          {
+            "start": 13,
+            "end": 14,
+            "value": 4
+          },
+          {
+            "start": 30,
+            "end": 42,
+            "value": 39
+          },
+          {
+            "start": 17,
+            "end": 24,
+            "value": 25
+          },
+          {
+            "start": -14,
+            "end": -8,
+            "value": 97
+          },
+          {
+            "start": -14,
+            "end": -11,
+            "value": 65
+          },
+          {
+            "start": 23,
+            "end": 30,
+            "value": 15
+          }
+        ]
+      },
+      {
+        "jobs": [
+          {
+            "start": 9,
+            "end": 17,
+            "value": 84
+          },
+          {
+            "start": 6,
+            "end": 15,
+            "value": 97
+          },
+          {
+            "start": 4,
+            "end": 9,
+            "value": 2
+          },
+          {
+            "start": 107,
+            "end": 116,
+            "value": 58
+          },
+          {
+            "start": 62,
+            "end": 70,
+            "value": 41
+          },
+          {
+            "start": 3,
+            "end": 11,
+            "value": 10
+          },
+          {
+            "start": 58,
+            "end": 66,
+            "value": 77
+          },
+          {
+            "start": 55,
+            "end": 63,
+            "value": 22
+          },
+          {
+            "start": 7,
+            "end": 11,
+            "value": 62
+          },
+          {
+            "start": 3,
+            "end": 11,
+            "value": 95
+          },
+          {
+            "start": 2,
+            "end": 4,
+            "value": 53
+          },
+          {
+            "start": 8,
+            "end": 14,
+            "value": 60
+          }
+        ]
+      },
+      {
+        "jobs": [
+          {
+            "start": -15,
+            "end": 4,
+            "value": 28
+          },
+          {
+            "start": -10,
+            "end": 18,
+            "value": 37
+          },
+          {
+            "start": -4,
+            "end": 21,
+            "value": 70
+          },
+          {
+            "start": -8,
+            "end": 23,
+            "value": 15
+          },
+          {
+            "start": -17,
+            "end": 6,
+            "value": 50
+          },
+          {
+            "start": -7,
+            "end": 11,
+            "value": 31
+          },
+          {
+            "start": -18,
+            "end": 12,
+            "value": 11
+          },
+          {
+            "start": -17,
+            "end": 15,
+            "value": 45
+          },
+          {
+            "start": -5,
+            "end": 13,
+            "value": 31
+          }
+        ]
+      }
+    ],
+    "receipts": [
+      {
+        "id": "holdout-schedule-008",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      },
+      {
+        "id": "holdout-schedule-032",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      },
+      {
+        "id": "holdout-schedule-005",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      },
+      {
+        "id": "holdout-schedule-020",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      },
+      {
+        "id": "holdout-schedule-006",
+        "family": "schedule",
+        "strategy": "WEIGHTED_DP",
+        "version": 2,
+        "verified": true,
+        "attempts": 1
+      }
+    ]
+  }
+}
+```
+
+### challenge
+
+```json
+{
+  "schema": 1,
+  "id": "holdout-schedule-006",
+  "family": "schedule",
+  "description": "Intervalos aleatorios que comparten una región central",
+  "input": {
+    "jobs": [
+      {
+        "start": -15,
+        "end": 4,
+        "value": 28
+      },
+      {
+        "start": -10,
+        "end": 18,
+        "value": 37
+      },
+      {
+        "start": -4,
+        "end": 21,
+        "value": 70
+      },
+      {
+        "start": -8,
+        "end": 23,
+        "value": 15
+      },
+      {
+        "start": -17,
+        "end": 6,
+        "value": 50
+      },
+      {
+        "start": -7,
+        "end": 11,
+        "value": 31
+      },
+      {
+        "start": -18,
+        "end": 12,
+        "value": 11
+      },
+      {
+        "start": -17,
+        "end": 15,
+        "value": 45
+      },
+      {
+        "start": -5,
+        "end": 13,
+        "value": 31
+      }
+    ]
+  }
+}
+```
+
+### operations
+
+```json
+12160
+```
+
+### elapsedNanos
+
+```json
+759010
+```
+
+### adapted
+
+```json
+false
+```
+
+### reused
+
+```json
+true
+```
