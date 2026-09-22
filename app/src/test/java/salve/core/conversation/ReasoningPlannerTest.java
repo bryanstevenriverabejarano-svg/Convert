@@ -47,4 +47,20 @@ public class ReasoningPlannerTest {
         assertFalse(local.isExternalKnowledgeRequested());
         assertTrue(external.isExternalKnowledgeRequested());
     }
+    @Test public void chronologyAndProfileQuestionsRetrieveWithoutMagicWord() {
+        for (String question : new String[]{"¿Cuál fue tu primer recuerdo?", "¿Dónde vivo?",
+                "¿Cuál es mi ubicación?", "¿Cómo se relaciona mi proyecto con ese nodo?"}) {
+            assertTrue(question, ReasoningPlanner.plan(question,
+                    ConversationRequestAnalyzer.analyze(question, true), false)
+                    .shouldRetrieveLongTermMemory());
+        }
+    }
+
+    @Test public void naturalQuestionWithoutQuestionMarksRetrievesMemory() {
+        String question = "donde vivo";
+        assertTrue(ReasoningPlanner.plan(question,
+                ConversationRequestAnalyzer.analyze(question, true), false)
+                .shouldRetrieveLongTermMemory());
+    }
+
 }

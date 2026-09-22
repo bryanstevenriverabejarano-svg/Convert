@@ -7,7 +7,8 @@ import android.util.Log;
 import salve.data.db.MemoriaDatabase;
 import salve.data.db.RecuerdoDao;
 import salve.data.db.ReflexionDao;
-import salve.core.memory.MemoryQueryTerms;
+import salve.core.memory.ConversationMemoryGrounding;
+import salve.core.memory.OrderedMemoryWrites;
 import salve.data.db.RecuerdoEntity;
 import salve.data.db.ReflexionEntity;
 
@@ -32,8 +33,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import salve.data.util.CloudLogger;
 import android.text.TextUtils;   // <— para TextUtils.isEmpty(...)
@@ -43,8 +42,8 @@ import java.util.Locale;         // <— para Locale.getDefault()
  * MemoriaEmocional.java
  *
  * Gestiona la "memoria" de la IA Salve, tanto en RAM como en Room:
- *  - Guarda SOLO versiones binarias de los recuerdos (ahorro de espacio).
- *  - Decodifica a texto solo cuando sea necesario.
+ *  - Conserva texto original, fecha y codificación histórica de los recuerdos.
+ *  - Recupera evidencia desde Room para la conversación.
  *  - Filtra y pondera recuerdos automáticamente según comprensión semántica.
  *  - Mantiene buffer de contexto y genera reflexiones.
  *
@@ -82,7 +81,8 @@ public class MemoriaEmocional {
     private final MemoriaDatabase database;
     private final RecuerdoDao recuerdoDao;
     private final ReflexionDao reflexionDao;
-    private final ExecutorService profileWriteExecutor = Executors.newSingleThreadExecutor();
+    private final ConversationMemoryGrounding conversationMemory;
+    private final OrderedMemoryWrites memoryWriteExecutor = new OrderedMemoryWrites();
 
     // ===== CONFIGURACIÓN =====
     private static final int CAPACIDAD_MAX_CORTO_PLAZO = 10;
@@ -143,6 +143,8 @@ public class MemoriaEmocional {
         database     = MemoriaDatabase.getInstance(context);
         recuerdoDao  = database.recuerdoDao();
         reflexionDao = database.reflexionDao();
+        conversationMemory = new ConversationMemoryGrounding(recuerdoDao,
+                database.knowledgeNodeDao(), database.knowledgeRelationDao());
 
         // ⚠️ GrafoConocimientoVivo lanza Exception en su constructor.
         // Lo blindamos para que si falla no rompa MemoriaEmocional.
@@ -568,7 +570,7 @@ public class MemoriaEmocional {
                 codificador
         );
         recuerdos.add(nuevo);
-        new Thread(() -> insertarRecuerdoDB(nuevo)).start();
+        insertarRecuerdoDB(nuevo);
         memoriaCortoPlazo.remove(temp);
 
         // ===== NUBE: registrar recuerdo consolidado =====
@@ -636,7 +638,7 @@ public class MemoriaEmocional {
                 codificador
         );
         recuerdos.add(r);
-        new Thread(() -> insertarRecuerdoDB(r)).start();
+        insertarRecuerdoDB(r);
         zonaReservada.registrarIntensidad((int) Math.round(score * 10));
 
         // ===== NUBE: recuerdo guardado por score =====
@@ -654,7 +656,7 @@ public class MemoriaEmocional {
                 texto, tipo, intensidad, intensidad, etiquetas, codificador
         );
         recuerdos.add(r);
-        new Thread(() -> insertarRecuerdoDB(r)).start();
+        insertarRecuerdoDB(r);
         zonaReservada.registrarIntensidad(intensidad);
 
         // ===== PUENTE DE IMPORTANCIA: Integración con el Grafo en tiempo real =====
@@ -702,11 +704,12 @@ public class MemoriaEmocional {
             }
             recuerdos.add(recuerdo);
         }
-        profileWriteExecutor.execute(() -> {
+        memoryWriteExecutor.execute(() -> {
             try {
                 recuerdoDao.reemplazarPorEtiqueta(etiqueta, crearRecuerdoEntity(recuerdo));
             } catch (Exception e) {
                 Log.e(TAG, "No se pudo reemplazar el dato de perfil " + categoria, e);
+                throw new IllegalStateException("Falló la escritura del perfil", e);
             }
         });
         CloudLogger.log("memoria_perfil", categoria, 7);
@@ -717,7 +720,7 @@ public class MemoriaEmocional {
         if (categoria == null || categoria.trim().isEmpty()) return false;
         String etiqueta = "profile:" + categoria.trim().toLowerCase(Locale.ROOT);
         try {
-            return profileWriteExecutor.submit(() -> {
+            return memoryWriteExecutor.submit(() -> {
                 boolean removedFromMemory = false;
                 synchronized (recuerdos) {
                     for (int i = recuerdos.size() - 1; i >= 0; i--) {
@@ -748,33 +751,31 @@ public class MemoriaEmocional {
     public List<String> recordarPorTexto(String palabraClave) {
         List<String> out = new ArrayList<>();
         for (RecuerdoEntity e : recuerdoDao.filtrarRecuerdos(palabraClave)) {
-            out.add(codificador.decodificar(e.binario)
+            out.add((e.frase == null ? "" : e.frase)
                     + " | Emoción: " + e.emocion
                     + " | Intensidad: " + e.intensidad);
         }
         return out;
     }
 
-    /** Recupera pocos recuerdos relacionados con la entrada actual. */
-    public String recuperarContextoRelevante(String consulta, int limite) {
-        if (limite <= 0) return "";
-        java.util.LinkedHashSet<String> encontrados = new java.util.LinkedHashSet<>();
-        for (String termino : MemoryQueryTerms.extract(consulta, 4)) {
-            try {
-                for (RecuerdoEntity entity : recuerdoDao.buscarRecientes(termino, limite)) {
-                    String texto = codificador.decodificar(entity.binario);
-                    if (texto != null && !texto.trim().isEmpty()) encontrados.add(texto.trim());
-                    if (encontrados.size() >= limite) break;
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "No se pudo recuperar memoria para: " + termino, e);
-            }
-            if (encontrados.size() >= limite) break;
+    /** Reads after queued writes, including a just-saved fact in this same turn. */
+    public ConversationMemoryGrounding.Result recuperarContextoConversacional(String consulta) {
+        try {
+            memoryWriteExecutor.awaitReady(3, TimeUnit.SECONDS);
+            return conversationMemory.retrieve(consulta);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return ConversationMemoryGrounding.Result.unavailable(consulta);
+        } catch (Exception unavailable) {
+            // No text, locations or remembered content in diagnostic logs.
+            Log.w(TAG, "Memoria conversacional no disponible: escritura fallida o pendiente");
+            return ConversationMemoryGrounding.Result.unavailable(consulta);
         }
-        if (encontrados.isEmpty()) return "";
-        StringBuilder out = new StringBuilder();
-        for (String recuerdo : encontrados) out.append("- ").append(recuerdo).append('\n');
-        return out.toString().trim();
+    }
+
+    /** Legacy callers share the same grounded retrieval instead of a second lexical path. */
+    public String recuperarContextoRelevante(String consulta, int limite) {
+        return limite <= 0 ? "" : recuperarContextoConversacional(consulta).getContext();
     }
 
     /** Recupera de RAM recuerdos cuya emoción coincide. */
@@ -1355,13 +1356,14 @@ public class MemoriaEmocional {
     // PERSISTENCIA EN ROOM
     // ============================================================
     private void insertarRecuerdoDB(Recuerdo r) {
-        new Thread(() -> {
+        memoryWriteExecutor.execute(() -> {
             try {
                 recuerdoDao.insertRecuerdo(crearRecuerdoEntity(r));
             } catch (Exception ex) {
                 Log.e("Salve", "Error insertando recuerdo", ex);
+                throw new IllegalStateException("Falló la escritura del recuerdo", ex);
             }
-        }).start();
+        });
     }
 
     private RecuerdoEntity crearRecuerdoEntity(Recuerdo recuerdo) {
@@ -1371,7 +1373,7 @@ public class MemoriaEmocional {
         entity.emocion = recuerdo.getEmocionPrincipal();
         entity.intensidad = recuerdo.getIntensidad();
         entity.etiquetas = new JSONArray(recuerdo.getEtiquetas()).toString();
-        entity.timestamp = System.currentTimeMillis();
+        entity.timestamp = recuerdo.getTimestamp();
         return entity;
     }
 

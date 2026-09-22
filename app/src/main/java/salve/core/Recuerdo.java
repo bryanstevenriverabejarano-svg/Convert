@@ -20,6 +20,8 @@ public class Recuerdo {
 
     /** Fecha y hora de creación (formato yyyy-MM-dd HH:mm:ss) */
     private final String fecha;
+    private final long timestamp;
+    private final String textoOriginal;
 
     /** Emoción principal detectada (ej: "tristeza", "alegría") */
     private final String emocionPrincipal;
@@ -62,6 +64,16 @@ public class Recuerdo {
             List<String> etiquetas,
             CodificadorBinario codificador
     ) {
+        this(fraseOriginal, emocion, intensidad, weight, etiquetas,
+                codificador::codificar, System.currentTimeMillis());
+    }
+
+    /** Injectable capture time and legacy encoding, without requiring Android in tests. */
+    Recuerdo(String fraseOriginal, String emocion, int intensidad, int weight,
+             List<String> etiquetas, java.util.function.Function<String, String> encoder,
+             long capturedAtMillis) {
+        this.timestamp = capturedAtMillis;
+        this.textoOriginal = fraseOriginal == null ? "" : fraseOriginal;
         this.fecha = obtenerFechaActual();
         this.emocionPrincipal = emocion;
         this.intensidad = intensidad;
@@ -75,7 +87,7 @@ public class Recuerdo {
         }
 
         // Codifica la frase original a binario
-        this.binarioCodificado = codificador.codificar(fraseOriginal);
+        this.binarioCodificado = encoder.apply(this.textoOriginal);
 
         // Inicializa conexiones vacías
         this.conexiones = new ArrayList<>();
@@ -92,7 +104,7 @@ public class Recuerdo {
     private String obtenerFechaActual() {
         SimpleDateFormat sdf =
                 new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        return sdf.format(new Date());
+        return sdf.format(new Date(timestamp));
     }
 
     /**
@@ -107,10 +119,11 @@ public class Recuerdo {
     }
 
     /**
-     * Decodifica y devuelve el texto original.
+     * Devuelve el texto original sin perder mayúsculas o depender del diccionario.
+     * El argumento se conserva por compatibilidad con los consumidores existentes.
      */
     public String getTexto(CodificadorBinario codificador) {
-        return codificador.decodificar(binarioCodificado);
+        return textoOriginal;
     }
 
     /**
@@ -127,6 +140,9 @@ public class Recuerdo {
     }
 
     // ========================== Getters =============================
+
+    /** Capture time, independent of when the database writer runs. */
+    public long getTimestamp() { return timestamp; }
 
     public String getFecha() {
         return fecha;

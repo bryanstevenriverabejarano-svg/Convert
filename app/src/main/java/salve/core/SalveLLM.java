@@ -399,6 +399,13 @@ public class SalveLLM {
         }
     }
 
+    /** Conservative character budget; the runtime tokenizer remains authoritative. */
+    public int getConversationPromptBudgetChars() {
+        String path = modelPath;
+        return isLiteRT && path != null && path.toLowerCase(java.util.Locale.ROOT).endsWith(".task")
+                ? 3200 : 10500;
+    }
+
     /**
      * Ajusta ligeramente el prompt según el rol.
      */

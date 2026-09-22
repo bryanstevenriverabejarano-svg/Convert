@@ -26,6 +26,12 @@ public interface KnowledgeNodeDao {
     @Query("SELECT * FROM knowledge_nodes WHERE tipo = :tipo ORDER BY creadoEn DESC LIMIT :limit")
     List<KnowledgeNodeEntity> fetchPorTipo(String tipo, int limit);
 
+    @Query("SELECT * FROM knowledge_nodes WHERE id = :id LIMIT 1")
+    KnowledgeNodeEntity findById(long id);
+
+    @Query("SELECT * FROM knowledge_nodes WHERE etiqueta LIKE '%' || :texto || '%' OR resumen LIKE '%' || :texto || '%' OR etiquetasSerializadas LIKE '%' || :texto || '%' ORDER BY relevanciaCreativa DESC, creadoEn DESC, id ASC LIMIT :limit")
+    List<KnowledgeNodeEntity> buscarPorTexto(String texto, int limit);
+
     @Query("UPDATE knowledge_nodes SET relevanciaCreativa = relevanciaCreativa + :delta WHERE id = :nodeId")
     void incrementarRelevancia(long nodeId, int delta);
 }

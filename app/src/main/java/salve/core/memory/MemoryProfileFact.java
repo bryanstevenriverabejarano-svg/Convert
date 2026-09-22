@@ -34,7 +34,8 @@ public final class MemoryProfileFact {
 
     public static MemoryProfileFact parse(String input) {
         if (input == null || input.trim().isEmpty() || input.trim().endsWith("?")) return null;
-        String normalized = normalize(input);
+        String normalized = normalize(input).replaceFirst(
+                "^(?:(?:correccion|en realidad)[,:]?\\s+|no,\\s+)?(?:ahora\\s+)?", "");
 
         Matcher fixed = FIXED_FACT.matcher(normalized);
         if (fixed.matches()) {

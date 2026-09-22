@@ -33,4 +33,19 @@ public class MemoryProfileFactTest {
         assertNull(MemoryProfileFact.parse("¿Prefiero café?"));
         assertNull(MemoryProfileFact.parse("Hola, ¿cómo estás?"));
     }
+    @Test public void residenceCorrectionsReplaceTheSamePersistentCategory() {
+        for (String correction : new String[]{"Ahora vivo en Lima", "No, vivo en Lima",
+                "En realidad vivo en Lima", "Corrección: ahora vivo en Lima"}) {
+            MemoryProfileFact fact = MemoryWritePolicy.extractProfileFact(correction);
+            assertEquals("profile:residence", fact.getStorageTag());
+            assertEquals(correction, fact.getStatement());
+        }
+    }
+
+    @Test public void negationsAreNotTurnedIntoPositiveProfileFacts() {
+        assertNull(MemoryProfileFact.parse("No vivo en Lima"));
+        assertNull(MemoryProfileFact.parse("No me llamo Bryan"));
+        assertNull(MemoryProfileFact.parse("Si ahora vivo en Lima"));
+    }
+
 }
