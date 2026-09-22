@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "experiment": "Same corpus and solver; only the tool/regression journal is retained or reset",
+  "corpus_cases": 104,
+  "rounds": 4,
+  "executions_per_condition": 416,
+  "conditions": {
+    "with_memory": "Journal retained across challenges and reloaded at each full-round boundary",
+    "without_memory": "New empty StateStore and AutonomousToolLab before every challenge"
+  },
+  "correctness": {
+    "with_memory": {
+      "passed": true,
+      "passed_executions": 416
+    },
+    "without_memory": {
+      "passed": true,
+      "passed_executions": 416
+    }
+  },
+  "comparison": {
+    "executions": {
+      "with_memory": 416,
+      "without_memory": 416,
+      "with_minus_without": 0
+    },
+    "candidate_attempts": {
+      "with_memory": 424,
+      "without_memory": 596,
+      "with_minus_without": -172,
+      "reduction_fraction": 0.28859060402684567
+    },
+    "rejected_candidates": {
+      "with_memory": 8,
+      "without_memory": 180,
+      "with_minus_without": -172,
+      "reduction_fraction": 0.9555555555555556
+    },
+    "operations": {
+      "with_memory": 1519591,
+      "without_memory": 617869,
+      "with_minus_without": 901722,
+      "reduction_fraction": -1.4594064437607324
+    },
+    "reused": {
+      "with_memory": 407,
+      "without_memory": 0,
+      "with_minus_without": 407
+    },
+    "adapted": {
+      "with_memory": 5,
+      "without_memory": 145,
+      "with_minus_without": -140
+    },
+    "promoted": {
+      "with_memory": 416,
+      "without_memory": 416,
+      "with_minus_without": 0
+    },
+    "previous_program_rejected": {
+      "with_memory": 5,
+      "without_memory": 0,
+      "with_minus_without": 5
+    },
+    "regression_checks": {
+      "with_memory": 1227,
+      "without_memory": 0,
+      "with_minus_without": 1227
+    }
+  },
+  "host_jvm_latency_ms": {
+    "with_memory": {
+      "environment": "JVM host; no mide latencia del móvil ni inferencia de un LLM",
+      "percentile_method": "nearest_rank",
+      "samples": 416,
+      "p50": 1.592369,
+      "p95": 4.690732,
+      "max": 29.612608
+    },
+    "without_memory": {
+      "environment": "JVM host; no mide latencia del móvil ni inferencia de un LLM",
+      "percentile_method": "nearest_rank",
+      "samples": 416,
+      "p50": 0.261656,
+      "p95": 2.118308,
+      "max": 26.54567
+    }
+  },
+  "interpretation": "Positive with_minus_without means more of that metric with memory. A negative reduction is a cost, not an improvement. Regression checks also consume operations.",
+  "scope": "Measures reuse of symbolic tools and saved regression cases. No LLM, neural-weight training, phone benchmark or general intelligence claim.",
+  "tuning": "This comparison does not modify solver parameters, the corpus, operation budgets or acceptance criteria."
+}

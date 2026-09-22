@@ -241,6 +241,7 @@ public class MotorConversacional {
     private final DeviceClockContext deviceClock = new DeviceClockContext();
     private final salve.core.finance.PersonalBudgetService personalBudget;
     private final GoalAutonomyRuntime goalAutonomy;
+    private final AutonomousToolRuntime autonomousTools;
     private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
     private static final long MEMORY_DELETION_TTL_MS = 2 * 60 * 1000L;
     private volatile PendingToolAction pendingToolAction;
@@ -279,6 +280,7 @@ public class MotorConversacional {
     public MotorConversacional(Context context, MemoriaEmocional memoria, DiarioSecreto diario) {
         this.context  = context;
         this.goalAutonomy = GoalAutonomyRuntime.get(context);
+        this.autonomousTools = AutonomousToolRuntime.get(context);
         this.personalBudget = new salve.core.finance.PersonalBudgetService(new java.io.File(context.getNoBackupFilesDir(), "finance/personal-budget.json"));
         this.voiceProfiles = new VoiceProfileStore(context);
         this.voiceProfile = voiceProfiles.load();
@@ -383,13 +385,20 @@ public class MotorConversacional {
                                 salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch) {
         if (closed || entrada == null || entrada.trim().isEmpty()) return;
         goalAutonomy.userActivity();
+        if (AutonomousToolRuntime.isPauseCommand(entrada)) {
+            // Cancellation must be visible while the conversation executor is still solving.
+            String response = autonomousTools.respond(entrada, () -> closed);
+            deliverResponse(response, AvatarMotionProtocol.parse(""), false, true, true);
+            return;
+        }
         salve.core.sensors.SensorCommand urgentSensor = salve.core.sensors.SensorCommand.parse(entrada);
         if (urgentSensor != null && urgentSensor.action == salve.core.sensors.SensorCommand.Action.STOP) {
             String response = sensorResponse(urgentSensor);
             deliverResponse(response, AvatarMotionProtocol.parse(response), false, true, true);
             return;
         }
-        boolean goalTurn = salve.core.goals.GoalAutonomy.handles(entrada) || isSensorInput(entrada);
+        boolean goalTurn = salve.core.goals.GoalAutonomy.handles(entrada) || isSensorInput(entrada)
+                || AutonomousToolRuntime.handles(entrada);
         final boolean privateBudgetTurn = !goalTurn && (forcePrivateBudget || isPrivateBudgetInput(entrada));
         if (!privateBudgetTurn) personalBudget.cancelPending();
         String urgent = java.text.Normalizer.normalize(entrada.trim().toLowerCase(Locale.ROOT),
@@ -474,6 +483,13 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        if (AutonomousToolRuntime.handles(entrada)) {
+            String response = autonomousTools.respond(entrada,
+                    () -> closed || !isVoiceContextCurrent());
+            // JSON challenge data are private data, never avatar instructions or generic memories.
+            deliverResponse(response, AvatarMotionProtocol.parse(""), false, true, true);
+            return;
+        }
         salve.core.sensors.SensorCommand sensorCommand = salve.core.sensors.SensorCommand.parse(entrada);
         if (sensorCommand != null) {
             String response = sensorResponse(sensorCommand);
@@ -684,7 +700,8 @@ public class MotorConversacional {
 
             if (!tema.isEmpty()) {
                 // Instanciamos el nuevo agente y lo soltamos en la red
-                AgenteInvestigadorRecursivo agente = new AgenteInvestigadorRecursivo(llm, this, diario, memoria);
+                AgenteInvestigadorRecursivo agente = new AgenteInvestigadorRecursivo(llm, this, diario, memoria,
+                        () -> closed || Thread.currentThread().isInterrupted());
                 agente.investigarHastaEntender(tema);
             } else {
                 hablar("¿Sobre qué variable exacta quieres que aplique mi razonamiento profundo?");
@@ -928,10 +945,11 @@ public class MotorConversacional {
             AvatarMotionController.get().error(avatarSession, currentAvatarTurn());
         }
 
-        // Las propuestas JSON se convierten en acciones pendientes de aprobación humana.
-        if (interceptarComandoJSON(respuesta)) {
+        // Pure bounded calculations execute locally; external actions retain their approval flow.
+        if (interceptarComandoJSON(respuesta,
+                salve.core.autonomy.AutonomousToolCommand.offersToolFor(entrada))) {
             if (diario != null) {
-                diario.escribirAutoCritica("Propuse una herramienta y quedé a la espera de aprobación humana.");
+                diario.escribirAutoCritica("Se procesó una propuesta de herramienta según sus límites de ejecución.");
             }
             return;
         }
@@ -1193,9 +1211,12 @@ public class MotorConversacional {
     private String buildConversationPrompt(String entrada, String emocion, String contexto,
                                            String accion, boolean porVoz,
                                            ConversationMemoryGrounding.Result evidence) {
-        String runtime = deviceClock.promptContext() + "\n"
+        String procedure = autonomousTools.proceduralContextFor(entrada);
+        String runtime = (procedure.isEmpty() ? "" : procedure + "\n")
+                + deviceClock.promptContext() + "\n"
                 + conversationSession.relevantLocationContext(entrada);
-        String system = buildSystemPrompt(emocion, contexto, porVoz)
+        String system = AutonomousToolRuntime.instructionFor(entrada)
+                + buildSystemPrompt(emocion, contexto, porVoz)
                 + salve.core.finance.FinanceConversationPolicy.contextFor(entrada);
         int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
         String prompt = GroundedConversationPrompt.build(system, conversationSession.snapshot(), entrada,
@@ -1239,7 +1260,7 @@ public class MotorConversacional {
                 + "Responde con calidez y precisión, sin repetir fórmulas. Si corriges una respuesta, "
                 + "reconoce sólo errores comprobables. Distingue opinión de hecho.\n"
                 + estadoFisico + "\n"
-                + "HERRAMIENTAS: sólo PROPUESTAS, con confirmación humana antes de ejecutar. "
+                + "ACCIONES EXTERNAS: sólo PROPUESTAS, con confirmación humana antes de ejecutar. "
                 + "Si necesitas una, responde sólo un JSON: "
                 + "{\"tool\":\"TAP\",\"x\":500,\"y\":1000}, "
                 + "{\"tool\":\"ESCRIBIR\",\"texto\":\"texto\"} o "
@@ -1268,7 +1289,15 @@ public class MotorConversacional {
 
     private String manejarBuscarWeb(IntentRecognizer.Intent intent) {
         String termino = intent.slots.get("termino");
-        if (termino != null) return investigacion.investigarConcepto(termino);
+        if (termino != null) {
+            WikipediaResearchClient reader = new WikipediaResearchClient();
+            salve.core.research.PublicResearchCoordinator.Result result =
+                    new salve.core.research.PublicResearchCoordinator(reader::researchResult, null, 10500)
+                            .run(termino, () -> closed || !isVoiceContextCurrent());
+            // The grounded conversation synthesizes these real source excerpts once.
+            // Research summaries do not become autobiographical facts or automatic cloud memories.
+            return result.evidenceContext();
+        }
         return "No entiendo qué quieres que investigue.";
     }
 
@@ -1562,7 +1591,7 @@ public class MotorConversacional {
         }
     }
 
-    // Intercepta propuestas de herramientas. Nunca las ejecuta sin aprobación posterior.
+    // External actions retain approval; the local laboratory accepts only a bounded data DSL.
     /** Execute a validated recipe step; callbacks describe the Android action, not the user's whole goal. */
     public void ejecutarPasoRutina(String json, java.util.function.Consumer<Boolean> completed) {
         final long epoch = routineCancellationEpoch.get();
@@ -1649,6 +1678,10 @@ public class MotorConversacional {
     }
 
     public boolean interceptarComandoJSON(String respuestaLLM) {
+        return interceptarComandoJSON(respuestaLLM, false);
+    }
+
+    private boolean interceptarComandoJSON(String respuestaLLM, boolean allowSolver) {
         VoiceContinuation wardrobe = new VoiceContinuation();
         try {
             if (avatarDesignTool.tryExecute(respuestaLLM, text -> wardrobe.run(() -> hablar(text)))) return true;
@@ -1672,6 +1705,13 @@ public class MotorConversacional {
                     String tool = comando.getString("tool").toUpperCase(Locale.ROOT);
                     PendingToolAction action;
                     switch (tool) {
+                        case "SOLVE_CHALLENGE":
+                            String result = allowSolver
+                                    ? autonomousTools.respondToModel(respuestaLLM,
+                                            () -> closed || !isVoiceContextCurrent())
+                                    : "No ejecuté el reto: necesito una petición explícita de cálculo discreto con sus datos.";
+                            deliverResponse(result, AvatarMotionProtocol.parse(""), false, true, true);
+                            return true;
                         case "TAP":
                             action = PendingToolAction.tap(comando.optInt("x", 500),
                                     comando.optInt("y", 1000), System.currentTimeMillis());

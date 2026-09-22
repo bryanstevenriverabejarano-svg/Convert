@@ -66,6 +66,8 @@ public class SalveLLM {
     private volatile boolean engineInitialized = false;
     private volatile boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
     private volatile String lastErrorMessage   = null;
+    private volatile ModelCatalog.RuntimeSnapshot modelSnapshot = new ModelCatalog.RuntimeSnapshot(
+            null, java.util.Collections.emptySet());
 
     private SalveLLM(Context context) {
         this.appContext = context.getApplicationContext();
@@ -285,12 +287,16 @@ public class SalveLLM {
             String decorated = decoratePrompt(prompt, role);
             String text = isLiteRT ? LiteRTLlm.generate(decorated) : BasicLocalLlm.chatSinglePrompt(decorated);
             long latency = (System.nanoTime() - start) / 1_000_000L;
-            if (text == null || text.trim().isEmpty()) return ModelResult.failure(
-                    ModelResult.Status.ERROR, "El modelo local no devolvió texto", latency);
+            if (text == null || text.trim().isEmpty()) {
+                recordInference(ModelCatalog.Capability.TEXT, false);
+                return ModelResult.failure(ModelResult.Status.ERROR, "El modelo local no devolvió texto", latency);
+            }
+            recordInference(ModelCatalog.Capability.TEXT, true);
             lastErrorMessage = null;
             Log.i(TAG, "provider=local runtime=" + (isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
             return ModelResult.success(text, latency);
         } catch (Exception | LinkageError e) {
+            recordInference(ModelCatalog.Capability.TEXT, false);
             lastErrorMessage = e.getMessage();
             Log.e(TAG, "Falló la inferencia local", e);
             return ModelResult.failure(Thread.currentThread().isInterrupted()
@@ -319,6 +325,20 @@ public class SalveLLM {
 
     public boolean supportsVision() { return modelAvailable && isLiteRT && visionModel; }
 
+    /** Nonblocking snapshot for diagnostics/selection; it never starts native inference on the UI thread. */
+    public ModelCatalog.RuntimeSnapshot getModelSnapshot() { return modelSnapshot; }
+
+    private void recordInference(ModelCatalog.Capability capability, boolean success) {
+        java.util.EnumSet<ModelCatalog.Capability> verified = java.util.EnumSet.noneOf(ModelCatalog.Capability.class);
+        if (modelPath != null && modelPath.equals(modelSnapshot.path)) verified.addAll(modelSnapshot.verifiedCapabilities);
+        if (success) verified.add(capability); else verified.remove(capability);
+        modelSnapshot = new ModelCatalog.RuntimeSnapshot(modelPath, verified);
+    }
+
+    private void clearModelSnapshot() {
+        modelSnapshot = new ModelCatalog.RuntimeSnapshot(null, java.util.Collections.emptySet());
+    }
+
     /** Activate a verified download or an explicitly imported file only after inference succeeds. */
     public synchronized ModelResult activateDownloadedModel(String path, boolean supportsVision,
                                                             java.util.function.BooleanSupplier cancelled) {
@@ -331,6 +351,7 @@ public class SalveLLM {
         ModelResult result;
         try {
             if (cancelled.getAsBoolean()) throw new java.io.InterruptedIOException("Instalación pausada");
+            clearModelSnapshot();
             BasicLocalLlm.reset();
             LiteRTLlm.reset();
             modelPath = path;
@@ -370,6 +391,7 @@ public class SalveLLM {
         try { LiteRTLlm.reset(); } catch (Exception | LinkageError e) { Log.w(TAG, "Fallo liberando el candidato", e); }
         engineInitialized = false;
         modelAvailable = false;
+        clearModelSnapshot();
         // Restore from the captured selection even if storage failed again during rollback.
         try { reloadModelInfo(previousPath, previousVisionPath); modelAvailable = true; }
         catch (Exception e) { modelPath = null; visionModel = false; }
@@ -388,9 +410,12 @@ public class SalveLLM {
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
             if (!image.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) throw new java.io.IOException("No se pudo leer la foto");
             String text = LiteRTLlm.generateImage(prompt, bytes.toByteArray());
+            ModelResult result = ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L);
+            recordInference(ModelCatalog.Capability.VISION, result.isSuccess());
             lastErrorMessage = null;
-            return ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L);
+            return result;
         } catch (Exception | LinkageError e) {
+            recordInference(ModelCatalog.Capability.VISION, false);
             engineInitialized = LiteRTLlm.isInitialized();
             lastErrorMessage = e.getMessage();
             Log.e(TAG, "Fallo de visión local", e);
@@ -470,6 +495,7 @@ public class SalveLLM {
     public synchronized void forceReloadModel() {
         engineInitialized = false;
         modelAvailable = false;
+        clearModelSnapshot();
 
         // Resetear motores para que puedan reinicializarse con un nuevo modelo.
         try {

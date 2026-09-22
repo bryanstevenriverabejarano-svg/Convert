@@ -15,7 +15,7 @@ import java.io.IOException
 class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDownloader()) {
     fun downloadAndPrepareModels(context: Context, jsonBytes: ByteArray): Flow<ModelDownloadEvent> = flow {
         val jobContext = currentCoroutineContext()
-        downloader.downloadAll(context, jsonBytes.inputStream()).collect { event ->
+        downloader.downloadSelected(context, jsonBytes.inputStream()).collect { event ->
             when (event) {
                 is ModelDownloader.DownloadEvent.Started -> emit(ModelDownloadEvent.Status("Descargando ${event.id}", 0))
                 is ModelDownloader.DownloadEvent.Progress -> emit(ModelDownloadEvent.Status(
@@ -29,7 +29,8 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
                             event.supportsVision, { !jobContext.isActive })
                     }
                     jobContext.ensureActive()
-                    if (result.isSuccess) emit(ModelDownloadEvent.Prepared(event.file, result.latencyMillis))
+                    if (result.isSuccess) emit(ModelDownloadEvent.Prepared(event.file, result.latencyMillis,
+                        event.name, event.supportsVision))
                     else emit(ModelDownloadEvent.Error(IOException(result.error ?: "No se verificó la inferencia local")))
                 }
                 is ModelDownloader.DownloadEvent.Error -> emit(ModelDownloadEvent.Error(event.error))
@@ -41,6 +42,7 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
 
 sealed class ModelDownloadEvent {
     data class Status(val message: String, val percent: Int) : ModelDownloadEvent()
-    data class Prepared(val file: File, val latencyMillis: Long) : ModelDownloadEvent()
+    data class Prepared(val file: File, val latencyMillis: Long, val modelName: String,
+                        val supportsVision: Boolean) : ModelDownloadEvent()
     data class Error(val error: Exception) : ModelDownloadEvent()
 }

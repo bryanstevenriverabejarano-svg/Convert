@@ -94,10 +94,28 @@ generar PR se mantiene; las credenciales para publicarlos siguen en Git/GitHub C
 del anfitrión. Tras comprobar los pasos anteriores se puede usar el puente y su
 modo `--watch`, que leen la misma variable `SALVE_SANDBOX_IMAGE`.
 
-El runner todavía no instala `generatedTests` de la propuesta; ejecuta las
-pruebas ya versionadas. Las propuestas nuevas pueden proporcionar identidad de
-fuente: el runner rechaza una fuente base distinta antes de aplicar el diff.
+El runner incorpora `generatedTests` al worktree antes de crear el snapshot de
+Docker. Admite una clase pública `<ClaseObjetivo>TestHarness`, en una ruta
+derivada dentro de `app/src/test/java` y con el paquete del objetivo. Si la
+suite omite el paquete, el runner lo añade. El prechequeo limita tamaño y
+estructura, requiere `@Test` y rechaza `@Ignore`; no demuestra la calidad de
+las aserciones ni sustituye la compilación y la ejecución de Gradle. Se rechazan
+enlaces, paquetes incompatibles y colisiones con pruebas existentes, sin
+sobrescribirlas. Por ello, propuestas posteriores para una clase que ya tenga
+ese harness pueden necesitar consolidación manual de las pruebas.
+
+El índice final sólo puede contener la modificación Java objetivo y la nueva
+suite. Ambos quedan en el snapshot que recibe Docker; el PR incluye el árbol
+probado, la ruta del test y el SHA-256 de sus bytes indexados. Las propuestas de
+esquema 3 con `generatedTests` ausente o vacío siguen ejecutando únicamente las
+pruebas ya versionadas, y el PR lo indica. Las propuestas nuevas pueden
+proporcionar identidad de fuente: el runner rechaza una fuente base distinta
+antes de aplicar el diff.
 La app requiere una [instantánea de fuente exacta](../../docs/AUTO_MEJORA_CON_FUENTE.md)
 para generarlas. Las propuestas antiguas sin huella mantienen la comprobación
 de diff y las pruebas, con esa limitación indicada en el PR. Estas comprobaciones
-no certifican el circuito completo en un teléfono.
+no certifican el circuito completo en un teléfono. El cambio de instalación de
+suites se verificó con Git, worktrees y archivos tar reales, sustituyendo Docker
+y GitHub explícitamente en los tests. No se ejecutó aquí el sandbox Docker ni
+Java propuesto; la ausencia de Docker sigue bloqueando el runner, sin ejecución
+alternativa en el anfitrión.

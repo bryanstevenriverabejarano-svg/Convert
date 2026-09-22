@@ -1,0 +1,1225 @@
+{
+  "schema": 1,
+  "warmup_expected": 416,
+  "warmup_passed": 416,
+  "holdout_expected": 128,
+  "holdout_received": 128,
+  "holdout_passed": 128,
+  "passed": true,
+  "seed": "23865494274557189258270834515272387938",
+  "seed_origin": "secrets_after_source_freeze",
+  "source_frozen_at": "2026-09-22T17:54:57.171509+00:00",
+  "inputs_generated_at": "2026-09-22T17:54:57.171533+00:00",
+  "source_sha256": {
+    "app/src/main/java/salve/core/autonomy/AutonomousToolCommand.java": "31d0162f86aa13c7828010fb6d1a78976bfd25427145063b803b5054b4aeb581",
+    "app/src/main/java/salve/core/autonomy/AutonomousToolLab.java": "7bd2e53f1ab9484e4b18d7c256af4ec07efb569fa1b17db283906acfd38682e0",
+    "app/src/main/java/salve/core/autonomy/AutonomousToolReply.java": "3da3fade1fb8b7236b323ebd3be4ad8e4053041dfd8d418751852013a295c1ff",
+    "app/src/main/java/salve/core/autonomy/FileToolStateStore.java": "81c0ba980cb298c88760b1af83ff4dcadbcb85498e0b9e6c2d900285d38041a9",
+    "app/src/main/java/salve/core/autonomy/OperationBudget.java": "1d6e0f646e416c5054f710fa16d8a12eb39552be23a8d9544f8f70635969b98a",
+    "app/src/main/java/salve/core/autonomy/ToolExperienceMemory.java": "936a9be4b05200f8126e18e076b7aad4e1678ac2066d5f326fc6a6d6c06cd4b0",
+    "app/src/main/java/salve/core/autonomy/ToolInterpreter.java": "3c1c1423557dfe0d7ce464935d66e0c0e14bd7a83ee8486e59c22fe7732aa996",
+    "app/src/main/java/salve/core/autonomy/ToolKernels.java": "ca7ecb5cd12ece9c61a3e2af6356131ebff91af99dc4b171c832f53a84661636",
+    "app/src/main/java/salve/core/autonomy/ToolProgram.java": "4ccdff6e59ff232576da56f1e519e7652f43b1b542ad421f0e879827d939779c",
+    "app/src/main/java/salve/core/autonomy/ToolRegistry.java": "8b9101367952351270da5f6886c25c8029345246d07465f096ec562c9a31823f",
+    "app/src/main/java/salve/core/autonomy/ToolVerifier.java": "d98e1893ff7696187e78fbc98be8534938f393384ea357351535aa5a108d5148",
+    "tools/autonomy/AutonomyGeneralization.java": "79f3bcea8d5f61eafeb8366efd705393a58b5b5e93fa031c1cd42c23029c1700",
+    "scripts/evaluate_autonomy_generalization.py": "8d87f510f1a41f16c381aa615a02328eaa9052331b4b70079a0abb291214b287",
+    "scripts/evaluate_autonomous_tools.py": "aff0273345e2d100c2a4aa727f59e316fd342a0b9936661a6bc2cc8591dfdd76",
+    "scripts/run_autonomous_tool_evaluation.py": "dda0aeaf1a316dd757e05351952587cd2b55f6d6a763022c07e44207defb6711"
+  },
+  "gson_sha256": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0",
+  "novelty": "No semantic input fingerprint overlaps any of the 416 known inputs; list reordering is ignored.",
+  "family_results": {
+    "route": {
+      "expected": 32,
+      "passed": 32
+    },
+    "knapsack": {
+      "expected": 32,
+      "passed": 32
+    },
+    "schedule": {
+      "expected": 32,
+      "passed": 32
+    },
+    "dependencies": {
+      "expected": 32,
+      "passed": 32
+    }
+  },
+  "observed_metrics": {
+    "executions": 128,
+    "adapted": 0,
+    "reused": 128,
+    "promoted": 128,
+    "previous_program_rejected": 0,
+    "candidate_attempts": 128,
+    "rejected_candidates": 0,
+    "regression_checks": 384,
+    "operations": 1395640,
+    "latency_ms": {
+      "environment": "JVM host; no mide latencia del móvil ni inferencia de un LLM",
+      "percentile_method": "nearest_rank",
+      "samples": 128,
+      "p50": 0.664641,
+      "p95": 1.399877,
+      "max": 8.357024
+    }
+  },
+  "assessments": [
+    {
+      "id": "holdout-route-019",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "holdout-knapsack-007",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 178
+      }
+    },
+    {
+      "id": "holdout-dependencies-032",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-schedule-019",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 299
+      }
+    },
+    {
+      "id": "holdout-dependencies-024",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-schedule-010",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 80
+      }
+    },
+    {
+      "id": "holdout-schedule-013",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 366
+      }
+    },
+    {
+      "id": "holdout-route-032",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 7,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-route-016",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 44,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-route-008",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 28,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-knapsack-002",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 204
+      }
+    },
+    {
+      "id": "holdout-dependencies-002",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 5
+      }
+    },
+    {
+      "id": "holdout-route-004",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 20,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-schedule-015",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1024,
+        "optimum": 133
+      }
+    },
+    {
+      "id": "holdout-dependencies-030",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "holdout-route-023",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "holdout-dependencies-005",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "holdout-route-024",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 29,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-dependencies-013",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "holdout-schedule-031",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1024,
+        "optimum": 195
+      }
+    },
+    {
+      "id": "holdout-schedule-025",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 225
+      }
+    },
+    {
+      "id": "holdout-dependencies-021",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 5
+      }
+    },
+    {
+      "id": "holdout-dependencies-006",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 7
+      }
+    },
+    {
+      "id": "holdout-route-017",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-dependencies-022",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 6
+      }
+    },
+    {
+      "id": "holdout-knapsack-019",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 160
+      }
+    },
+    {
+      "id": "holdout-dependencies-027",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-route-007",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "holdout-dependencies-031",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-schedule-005",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 280
+      }
+    },
+    {
+      "id": "holdout-route-022",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-schedule-017",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 235
+      }
+    },
+    {
+      "id": "holdout-schedule-028",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 384
+      }
+    },
+    {
+      "id": "holdout-schedule-009",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 233
+      }
+    },
+    {
+      "id": "holdout-schedule-006",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 95
+      }
+    },
+    {
+      "id": "holdout-route-018",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 22,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-knapsack-032",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 90
+      }
+    },
+    {
+      "id": "holdout-knapsack-015",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 258
+      }
+    },
+    {
+      "id": "holdout-schedule-002",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 100
+      }
+    },
+    {
+      "id": "holdout-knapsack-028",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 200
+      }
+    },
+    {
+      "id": "holdout-dependencies-023",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-route-026",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 17,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-route-029",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-dependencies-017",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 3
+      }
+    },
+    {
+      "id": "holdout-knapsack-011",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 161
+      }
+    },
+    {
+      "id": "holdout-schedule-032",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 326
+      }
+    },
+    {
+      "id": "holdout-schedule-021",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 387
+      }
+    },
+    {
+      "id": "holdout-route-010",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 16,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-schedule-011",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4096,
+        "optimum": 182
+      }
+    },
+    {
+      "id": "holdout-knapsack-027",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 130
+      }
+    },
+    {
+      "id": "holdout-knapsack-012",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 188
+      }
+    },
+    {
+      "id": "holdout-route-015",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "holdout-schedule-030",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 96
+      }
+    },
+    {
+      "id": "holdout-knapsack-003",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 78
+      }
+    },
+    {
+      "id": "holdout-knapsack-004",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 64
+      }
+    },
+    {
+      "id": "holdout-dependencies-020",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-knapsack-030",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 24
+      }
+    },
+    {
+      "id": "holdout-knapsack-008",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1024,
+        "optimum": 216
+      }
+    },
+    {
+      "id": "holdout-route-025",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 2,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-knapsack-022",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 70
+      }
+    },
+    {
+      "id": "holdout-schedule-022",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 97
+      }
+    },
+    {
+      "id": "holdout-route-001",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 2,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-knapsack-018",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 37
+      }
+    },
+    {
+      "id": "holdout-knapsack-009",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 245
+      }
+    },
+    {
+      "id": "holdout-route-031",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "holdout-route-013",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-dependencies-025",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 2
+      }
+    },
+    {
+      "id": "holdout-dependencies-015",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-schedule-001",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 251
+      }
+    },
+    {
+      "id": "holdout-schedule-014",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 76
+      }
+    },
+    {
+      "id": "holdout-knapsack-010",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 215
+      }
+    },
+    {
+      "id": "holdout-knapsack-031",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 63
+      }
+    },
+    {
+      "id": "holdout-schedule-020",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 227
+      }
+    },
+    {
+      "id": "holdout-schedule-018",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 100
+      }
+    },
+    {
+      "id": "holdout-knapsack-014",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 158
+      }
+    },
+    {
+      "id": "holdout-route-006",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 25,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-knapsack-021",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 362
+      }
+    },
+    {
+      "id": "holdout-schedule-029",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 454
+      }
+    },
+    {
+      "id": "holdout-knapsack-025",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 285
+      }
+    },
+    {
+      "id": "holdout-knapsack-001",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 200
+      }
+    },
+    {
+      "id": "holdout-route-011",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "holdout-dependencies-001",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 5
+      }
+    },
+    {
+      "id": "holdout-route-028",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -9,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-route-014",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 19,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-schedule-027",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 146
+      }
+    },
+    {
+      "id": "holdout-knapsack-020",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 4096,
+        "optimum": 66
+      }
+    },
+    {
+      "id": "holdout-route-003",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "holdout-dependencies-016",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-dependencies-007",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-knapsack-024",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 226
+      }
+    },
+    {
+      "id": "holdout-dependencies-019",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-knapsack-023",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 100
+      }
+    },
+    {
+      "id": "holdout-knapsack-005",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1024,
+        "optimum": 279
+      }
+    },
+    {
+      "id": "holdout-schedule-026",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 87
+      }
+    },
+    {
+      "id": "holdout-route-005",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -6,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-schedule-016",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 256,
+        "optimum": 234
+      }
+    },
+    {
+      "id": "holdout-dependencies-008",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-schedule-004",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 146
+      }
+    },
+    {
+      "id": "holdout-schedule-007",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 128,
+        "optimum": 115
+      }
+    },
+    {
+      "id": "holdout-knapsack-016",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 75
+      }
+    },
+    {
+      "id": "holdout-knapsack-013",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 389
+      }
+    },
+    {
+      "id": "holdout-dependencies-014",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "holdout-schedule-024",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 381
+      }
+    },
+    {
+      "id": "holdout-dependencies-028",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-dependencies-018",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 10
+      }
+    },
+    {
+      "id": "holdout-route-012",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -20,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-dependencies-010",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 8
+      }
+    },
+    {
+      "id": "holdout-route-021",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": -3,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-dependencies-009",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 2
+      }
+    },
+    {
+      "id": "holdout-knapsack-006",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 8192,
+        "optimum": 152
+      }
+    },
+    {
+      "id": "holdout-knapsack-029",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16384,
+        "optimum": 355
+      }
+    },
+    {
+      "id": "holdout-route-030",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 10,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-schedule-003",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 1024,
+        "optimum": 175
+      }
+    },
+    {
+      "id": "holdout-route-027",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "reachable": false
+      }
+    },
+    {
+      "id": "holdout-schedule-008",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 64,
+        "optimum": 114
+      }
+    },
+    {
+      "id": "holdout-dependencies-011",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-route-020",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 26,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-dependencies-012",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-dependencies-004",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-route-009",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 2,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-dependencies-029",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "holdout-route-002",
+      "passed": true,
+      "certificate": {
+        "oracle": "Floyd–Warshall independiente",
+        "optimum": 12,
+        "reachable": true
+      }
+    },
+    {
+      "id": "holdout-knapsack-026",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 2048,
+        "optimum": 82
+      }
+    },
+    {
+      "id": "holdout-dependencies-026",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y validación de todas las aristas",
+        "acyclic": true,
+        "layer_count": 4
+      }
+    },
+    {
+      "id": "holdout-schedule-012",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 512,
+        "optimum": 261
+      }
+    },
+    {
+      "id": "holdout-schedule-023",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 16,
+        "optimum": 199
+      }
+    },
+    {
+      "id": "holdout-dependencies-003",
+      "passed": true,
+      "certificate": {
+        "oracle": "Eliminación independiente de fuentes y testigo de ciclo",
+        "acyclic": false
+      }
+    },
+    {
+      "id": "holdout-knapsack-017",
+      "passed": true,
+      "certificate": {
+        "oracle": "Enumeración exhaustiva independiente",
+        "subsets": 32,
+        "optimum": 317
+      }
+    }
+  ],
+  "baseline_before_module": {
+    "status": "not_available",
+    "detail": "The old main branch lacks this module; no fabricated 0/104 score is assigned."
+  },
+  "scope": "Finite holdout generalization inside the same four bounded symbolic domains. No LLM or neural learning, new tool primitives, internet research or cross-domain intelligence is demonstrated.",
+  "adaptation_policy": "The frozen laboratory may update its journal while evaluating sequential inputs. Source code, corpus and independent oracles remain fixed.",
+  "stages": [
+    {
+      "stage": "compile-generalization",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 1.223
+    },
+    {
+      "stage": "execute-generalization",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "elapsed_seconds": 1.18
+    }
+  ],
+  "artifacts_sha256": {
+    "warmup-corpus.jsonl": "ab811bed9b6407011a31f7a06e6c2c06426431a331171007365552ea623747e9",
+    "holdout-corpus.jsonl": "145e6dc7f45451a9dad69550caa31d4a74f878ae623e005fd50baa90cb849885",
+    "warmup-reports.jsonl": "602b28cc8b709a2b5aad931055f007b5fb5080a59b4c3dcd89f81cbce8581919",
+    "holdout-reports.jsonl": "cb2408fd8f6b4a214665534d62cb10055ec955770e0b9c10e9da1c2066884053"
+  }
+}
