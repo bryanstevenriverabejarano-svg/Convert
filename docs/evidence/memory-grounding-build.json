@@ -1,0 +1,28 @@
+{
+  "base_main": "86f9b7ef74fb73c83280f45e8ceca97095d59034",
+  "jvm": {
+    "tests": 617,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": 72,
+  "python": {
+    "tests": 50,
+    "passed": 49,
+    "skipped": 1,
+    "memory_sql_tests": 5
+  },
+  "apk": {
+    "bytes": 156397934,
+    "sha256": "5ee62b6fcb1f3b2e359e372479cb256eae774c423aa4152d799f651b9c603fef",
+    "abis": [
+      "arm64-v8a"
+    ],
+    "bundled_model_weights": [],
+    "signature_verified": true,
+    "same_signer_as_previous_shared_apk": true
+  },
+  "device_tests": "not_run",
+  "model_inference_with_user_memory": "not_run"
+}

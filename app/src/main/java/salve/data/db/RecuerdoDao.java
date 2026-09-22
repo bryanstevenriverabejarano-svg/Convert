@@ -31,10 +31,20 @@ public interface RecuerdoDao {
     @Query("SELECT * FROM recuerdos WHERE frase LIKE '%' || :palabraClave || '%'")
     List<RecuerdoEntity> filtrarRecuerdos(String palabraClave);
 
-    @Query("SELECT * FROM recuerdos WHERE frase LIKE '%' || :palabraClave || '%' ORDER BY timestamp DESC LIMIT :limite")
+    @Query("SELECT * FROM recuerdos WHERE frase LIKE '%' || :palabraClave || '%' ORDER BY timestamp DESC, id DESC LIMIT :limite")
     List<RecuerdoEntity> buscarRecientes(String palabraClave, int limite);
 
-    @Query("DELETE FROM recuerdos WHERE etiquetas LIKE '%' || :etiqueta || '%'")
+    @Query("SELECT * FROM recuerdos ORDER BY timestamp ASC, id ASC LIMIT 1")
+    RecuerdoEntity primerRecuerdo();
+
+    @Query("SELECT * FROM recuerdos ORDER BY timestamp DESC, id DESC LIMIT 1")
+    RecuerdoEntity ultimoRecuerdo();
+
+    /** Exact JSON tag boundaries avoid matching profile:name_extra for profile:name. */
+    @Query("SELECT * FROM recuerdos WHERE instr(etiquetas, '\"' || :etiqueta || '\"') > 0 ORDER BY timestamp DESC, id DESC LIMIT 1")
+    RecuerdoEntity ultimoPorEtiqueta(String etiqueta);
+
+    @Query("DELETE FROM recuerdos WHERE instr(etiquetas, '\"' || :etiqueta || '\"') > 0")
     int eliminarPorEtiqueta(String etiqueta);
 
     @Transaction
