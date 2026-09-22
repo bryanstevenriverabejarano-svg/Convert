@@ -1,5 +1,6 @@
 package salve.core.conversation;
 
+import salve.core.memory.ConversationMemoryGrounding;
 import java.text.Normalizer;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -19,6 +20,9 @@ public final class ReasoningPlanner {
         String normalized = normalize(input);
         ConversationAct act = analysis.getAct();
         boolean retrieveMemory = MEMORY_CUE.matcher(normalized).matches()
+                || ConversationMemoryGrounding.shouldRetrieve(input)
+                || act == ConversationAct.QUESTION
+                || act == ConversationAct.EXPLANATION_REQUEST
                 || act == ConversationAct.CORRECTION;
         boolean verify = explicitExternalSearch
                 || act == ConversationAct.QUESTION

@@ -47,6 +47,9 @@ jobs:
       - name: Test the voice timing report
         run: python3 -m unittest discover -s scripts -p test_summarize_voice_metrics.py -v
 
+      - name: Test the actual memory and graph SQL queries
+        run: python3 -m unittest discover -s scripts -p test_memory_queries.py -v
+
       - name: Prepare Android SDK 36 and Build Tools 36.0.0
         timeout-minutes: 10
         run: bash scripts/setup-android-sdk.sh
