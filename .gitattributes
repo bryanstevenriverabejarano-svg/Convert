@@ -7,3 +7,4 @@ docs/evidence/autonomy-generalization/** linguist-generated=true
 
 # Preserve raw process logs byte-for-byte, including diagnostic trailing spaces.
 docs/evidence/**/*.log -whitespace
+docs/evidence/reverification-20260922/** linguist-generated=true

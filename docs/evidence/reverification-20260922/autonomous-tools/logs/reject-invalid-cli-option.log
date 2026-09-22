@@ -1,0 +1,2 @@
+Exception in thread "main" java.lang.IllegalArgumentException: Uso: corpus.jsonl report.jsonl [--fresh-each-case]
+	at AutonomyEvaluation.main(AutonomyEvaluation.java:21)

@@ -31,7 +31,7 @@ La conversación se conecta a un laboratorio con registro de capacidades, intér
 | Seleccionar modelos | Catálogo y selección implementados | Un modelo descargable real; sin benchmark de varios modelos instalados |
 | Aprendizaje neuronal continuo | No implementado en este grupo | Conservar una estrategia no modifica los pesos del LLM |
 | Jev | Investigado, sin activar | Falta credencial y comparación mediante inferencia real |
-| Nube Namecheap | Cliente parcial, infraestructura desconocida | Token de ejemplo; sin backend versionado ni acceso administrativo acreditado |
+| Nube Namecheap | Cliente protegido, infraestructura desconocida | Envíos bloqueados con token de ejemplo; sin backend versionado ni acceso administrativo acreditado |
 | Automejora general | Parcial | Parches y tests trazables; aislamiento real y promoción general pendientes |
 
 ## 4. Herramientas añadidas
@@ -70,7 +70,7 @@ Existe adaptación de estrategia y reutilización posterior. La comparación con
 
 ## 10. Cambios en infraestructura cloud
 
-No se creó ni modificó infraestructura remota. Se inspeccionaron `CloudSyncManager`, `CloudLogger`, cola Room y configuración. No hay PHP/backend versionado; el token es una cadena de ejemplo. No se conocen CPU, RAM, GPU, cuotas o servicios de Namecheap. La consulta pública al endpoint no proporcionó acceso verificable; no se enviaron credenciales de ejemplo ni datos privados.
+No se creó ni modificó infraestructura remota. En la recuperación final se bloquean envíos con configuración de ejemplo; `CloudLogger` usa la cola duradera común y se elimina la purga automática de eventos fallidos. Los eventos agotados permanecen locales, pero reanudarlos y verificar acuses remotos sigue pendiente. Se inspeccionaron `CloudSyncManager`, `CloudLogger`, cola Room y configuración. No hay PHP/backend versionado; el token es una cadena de ejemplo. No se conocen CPU, RAM, GPU, cuotas o servicios de Namecheap. La consulta pública al endpoint no proporcionó acceso verificable; no se enviaron credenciales de ejemplo ni datos privados.
 
 Para continuar hacen falta acceso administrativo acotado o inventario verificable, autenticación por instalación, acuses de envío, reintento/idempotencia y borrado propagado. La autorización de trabajo no sustituye esos recursos.
 
@@ -134,3 +134,46 @@ Hay ejecución real de herramientas declarativas, rechazo de candidatos incorrec
 Checkpoint del laboratorio y sus evaluaciones: `8af05de`, sobre la base estable del PR 82. Las integraciones se añaden después de ese checkpoint en la misma rama y se entregan en un nuevo PR. `main` no se modifica ni se fusiona automáticamente. Los hashes de código y artefactos acompañan cada evaluación; el commit del PR identifica la revisión entregada.
 
 El rollback del diario recupera programas anteriores; Git permite recuperar el código. Ninguno sustituye backups de datos personales o una estrategia operativa de recuperación cloud. Los fallos registrados no se borran para mejorar una métrica.
+
+## 21. Recuperación y verificación final del 22 de septiembre
+
+Se encontró el checkpoint `8af05de` y las integraciones sin commit; no existía rama remota ni PR de esta rama. Se guardaron las integraciones como `d37a45d`. El código del laboratorio, los evaluadores y el corpus coinciden por SHA-256 con la evaluación original. Los resultados anteriores se conservan; las ejecuciones nuevas están en [reverification-20260922](evidence/reverification-20260922).
+
+| Ronda | Correctos | Intentos | Candidatos rechazados | Reutilizaciones | Regresiones comprobadas |
+|---|---:|---:|---:|---:|---:|
+| 1 | 104/104 | 112 | 8 | 95 | 291 |
+| 2 | 104/104 | 104 | 0 | 104 | 312 |
+| 3 | 104/104 | 104 | 0 | 104 | 312 |
+| 4 | 104/104 | 104 | 0 | 104 | 312 |
+
+Las cuatro rondas ejecutan el mismo solver con memoria que evoluciona y entradas del corpus previsto; **no son cuatro versiones de código ni cuatro generaciones de LLM**. La primera ronda presenta cinco adaptaciones frente a programas anteriores rechazados. Las siguientes reutilizan estrategias. No hay una medida de conversación general, memoria autobiográfica o planificación abierta entre rondas: esas capacidades no fueron evaluadas por este corpus.
+
+La repetición sin memoria obtiene 416/416, con 596 intentos y 180 candidatos rechazados. Con memoria: 424 intentos, ocho candidatos rechazados, 407 reutilizaciones y 1.227 regresiones. Se conserva el coste adicional (1.519.591 frente a 617.869 operaciones). La semilla nueva del holdout es `23865494274557189258270834515272387938`: 128/128 tras 416 calentamientos; generalización dentro de las mismas cuatro familias.
+
+Verificación Android final: **760 tests JVM, cero fallos, errores u omisiones**, ejecutados con `:app:testDebugUnitTest --rerun`; APK ARM64 compilado y firma v2 validada. Python: **107 tests, 106 correctos y uno omitido**, correspondiente al smoke Docker; no existe Docker en este entorno. No se cambió el criterio de éxito para conseguir estos resultados.
+
+El log interrumpido conserva el fallo de compilación `Files.readString`: su sustitución compatible con `readAllBytes` ya estaba en el árbol local al recuperar el trabajo y se verificó, sin repetir la corrección. Los fallos del diario, suites omitidas y contratos del catálogo descritos arriba tienen cobertura de regresión. El hallazgo nuevo fue el envío con credencial de ejemplo y la eliminación tras agotar reintentos: ahora se bloquea el transporte no configurado, se unifica el logger con la cola y se retienen los eventos. Tres tests nuevos comprueban el rechazo de configuración ausente, insegura o de ejemplo; no simulan almacenamiento remoto real.
+
+### Estado de los ocho requisitos
+
+1. Auditoría y evaluación verificable: completadas para el alcance local documentado.
+2. Generación/adaptación y recuperación: completadas para el DSL y las cuatro familias; programación general y nuevas primitivas siguen pendientes.
+3. 104 casos × cuatro rondas: completados y reproducidos, con resultados individuales originales y nuevos conservados.
+4. Comparación: completada para memoria procedural, planificación finita, herramientas, adaptación y recuperación; comportamiento conversacional y aprendizaje neuronal no medidos.
+5. Regresiones: suites JVM/Python ejecutadas, APK compilado; Docker y dispositivo físico no validados.
+6. Memoria y agentes: integración local terminada; ningún LLM nuevo activado. Jev permanece sin integrar/activar y requiere credencial de proveedor y comparación real.
+7. Persistencia: diario procedural local verificado; **nube no completada**. Faltan backend accesible, autenticación por instalación y protocolo de acuse, idempotencia, retención y borrado. No se afirma que existan aprendizajes subidos.
+8. Documentación: informe, límites, fallos y evidencia actualizados. Se solicita revisión mediante PR, sin fusionar `main`.
+
+### Reproducción
+
+Usar el SDK/JDK configurados y dependencias Gradle disponibles:
+
+```sh
+python3 -m unittest discover -s scripts -p 'test_*.py'
+bash gradlew --no-daemon --max-workers=2 --init-script scripts/android-arm64.init.gradle :app:testDebugUnitTest --rerun :app:assembleDebug
+python3 scripts/run_autonomous_tool_evaluation.py --output build/reverification/autonomous-tools
+python3 scripts/evaluate_autonomy_generalization.py --output build/reverification/generalization --seed 23865494274557189258270834515272387938
+```
+
+Los logs de compilación y resultados XML comprimidos están junto a `verification.json`, que conserva hashes de fuentes y APK. La inferencia real, la lectura web en producción, Jev y Namecheap son bloqueos explícitos: esta entrega no cierra la totalidad del objetivo de autonomía general.

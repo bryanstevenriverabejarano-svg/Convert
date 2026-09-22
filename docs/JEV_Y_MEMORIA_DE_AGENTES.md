@@ -38,8 +38,8 @@ Para recuerdos generales, conservar por separado declaración del usuario, obser
 
 ## Nube: bloqueo encontrado
 
-`CloudSyncManager` y `CloudLogger` usan actualmente un endpoint fijo y una cadena de credencial de ejemplo. Existe una cola Room para ciertos eventos y un ajuste de consentimiento, pero eso no demuestra que el servidor acepte y conserve los aprendizajes. Este PR no marca como enviado ningún dato ni cambia el ajuste silenciosamente.
+`CloudSyncManager` conserva un endpoint fijo y una credencial de ejemplo, ahora bloqueada antes de enviar. `CloudLogger` delega en su cola local duradera; los eventos fallidos ya no se purgan automáticamente. Existe una cola Room para ciertos eventos y un ajuste de consentimiento, pero eso no demuestra que el servidor acepte y conserve los aprendizajes. Este PR no marca como enviado ningún dato ni cambia el ajuste silenciosamente.
 
-Para una sincronización real faltan configuración autenticada por instalación, un único transporte, eventos con identificadores idempotentes, acuses validados y política de retención/borrado. Los recibos compartibles deben contener versión del programa, resultado de validación y alcance; los inputs privados requieren una decisión separada de almacenamiento. La autorización de Bryan permite trabajar en esa integración, pero no proporciona una credencial de servidor ni prueba su funcionamiento.
+Para una sincronización real faltan configuración autenticada por instalación, eventos con identificadores idempotentes, acuses validados y política de retención/borrado. Los recibos compartibles deben contener versión del programa, resultado de validación y alcance; los inputs privados requieren una decisión separada de almacenamiento. La autorización de Bryan permite trabajar en esa integración, pero no proporciona una credencial de servidor ni prueba su funcionamiento.
 
 Hasta disponer de esa conexión y un proveedor real para la comparación, el estado correcto es: **herramientas locales verificadas y memoria procedural implementadas; combinación LLM–Jev y sincronización autenticada pendientes de validación**.

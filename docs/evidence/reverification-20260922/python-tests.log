@@ -1,0 +1,10 @@
+.......Ciclo autónomo fallido (1): uno
+Ciclo autónomo fallido (2): dos
+...............................s.........................................................[literal] ejecutando
+..[failed] ejecutando
+[timeout] ejecutando
+.........
+----------------------------------------------------------------------
+Ran 107 tests in 2.088s
+
+OK (skipped=1)
