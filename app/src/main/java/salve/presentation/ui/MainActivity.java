@@ -50,9 +50,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.BreakIterator;
 import java.text.Normalizer;
@@ -110,10 +107,6 @@ public class MainActivity extends AppCompatActivity {
                 if (granted) launchAnalysisCamera();
                 else Toast.makeText(this, "La consulta visual necesita permiso de cámara.", Toast.LENGTH_LONG).show();
             });
-
-    // ===== NUBE (Namecheap) =====
-    private static final String NUBE_ENDPOINT = "https://arzenit.com/salve_data.php";
-    private static final String NUBE_SECRET   = "pon_aqui_tu_clave_larga"; // la misma que pusiste en el PHP
 
     // ===== VISTAS UI =====
     private EditText inputChat;
@@ -1825,35 +1818,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // ===================== NUBE: MÓDULO =========================
-    private void enviarAServidor(String jsonPayload) {
-        new Thread(() -> {
-            HttpURLConnection conn = null;
-            try {
-                URL url = new URL(NUBE_ENDPOINT);
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(15000);
-                conn.setDoInput(true);
-                conn.setDoOutput(true);
-                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                conn.setRequestProperty("X-Salve-Token", NUBE_SECRET);
-
-                try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
-                    os.write(input, 0, input.length);
-                }
-
-                int code = conn.getResponseCode();
-                Log.d("Salve/Nube", "Respuesta servidor: " + code);
-            } catch (Exception e) {
-                Log.e("Salve/Nube", "Error enviando a la nube", e);
-            } finally {
-                if (conn != null) conn.disconnect();
-            }
-        }).start();
-    }
-
     private void guardarEventoNube(String tipo, String contenido, Integer emocion) {
         if (!CloudSyncManager.isEnabled(getApplicationContext())) {
             Log.d("Salve/Nube", "Sincronización omitida: falta consentimiento explícito.");
@@ -1868,7 +1832,6 @@ public class MainActivity extends AppCompatActivity {
 
             CloudSyncManager.enqueue(getApplicationContext(), obj.toString());
             SyncWorker.enqueueWhenOnline(getApplicationContext());
-            enviarAServidor(obj.toString());
         } catch (Exception e) {
             Log.e("Salve/Nube", "Error creando/encolando JSON", e);
         }
