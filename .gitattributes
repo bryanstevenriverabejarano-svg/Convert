@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Keep the full reproducible evidence in Git while focusing PR review on implementation.
+docs/evidence/autonomous-tools/** linguist-generated=true
+docs/evidence/autonomy-generalization/** linguist-generated=true
+
+# Preserve raw process logs byte-for-byte, including diagnostic trailing spaces.
+docs/evidence/**/*.log -whitespace

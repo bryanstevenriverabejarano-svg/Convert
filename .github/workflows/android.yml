@@ -44,11 +44,8 @@ jobs:
             app/build.gradle
             mlc4j/build.gradle
 
-      - name: Test the voice timing report
-        run: python3 -m unittest discover -s scripts -p test_summarize_voice_metrics.py -v
-
-      - name: Test the actual memory and graph SQL queries
-        run: python3 -m unittest discover -s scripts -p test_memory_queries.py -v
+      - name: Test evaluation oracles, memory queries and development scripts
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
 
       - name: Prepare Android SDK 36 and Build Tools 36.0.0
         timeout-minutes: 10
@@ -62,6 +59,14 @@ jobs:
           bash ./gradlew --no-daemon --stacktrace --console=plain --max-workers=2
           --init-script scripts/android-arm64.init.gradle
           :app:testDebugUnitTest :app:assembleDebug
+
+      - name: Execute 104 autonomous tool challenges in four rounds
+        timeout-minutes: 5
+        run: python3 scripts/run_autonomous_tool_evaluation.py --output build/autonomy-evaluation
+
+      - name: Check new inputs after freezing the solver
+        timeout-minutes: 5
+        run: python3 scripts/evaluate_autonomy_generalization.py --output build/autonomy-generalization
 
       - name: Verify APK signature and record checksum
         run: |
@@ -78,6 +83,8 @@ jobs:
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
             build/reports/problems/
+            build/autonomy-evaluation/
+            build/autonomy-generalization/
           if-no-files-found: warn
           retention-days: 14
 

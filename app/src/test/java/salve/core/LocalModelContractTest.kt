@@ -18,6 +18,8 @@ class LocalModelContractTest {
         assertEquals("181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c", item.sha256)
         assertTrue(item.url.contains("/resolve/6e5c4f1e395deb959c494953478fa5cec4b8008f/"))
         assertTrue(item.supportsVision)
+        assertEquals("Apache-2.0", item.license)
+        assertNull("Unknown hardware must stay unknown", item.ramBytes)
         val bundled = catalog().parentFile.parentFile.walkTopDown().filter { it.isFile }
             .any { it.extension in setOf("litertlm", "task", "gguf") }
         assertFalse("Language model weights must not enter APK assets", bundled)

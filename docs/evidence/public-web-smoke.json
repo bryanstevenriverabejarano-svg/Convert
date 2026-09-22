@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "checkedAtUtc": "2026-09-22T17:30:00.957068+00:00",
+  "kind": "live_public_https_read",
+  "client": "production WikipediaResearchClient",
+  "llmExecuted": false,
+  "domRendered": false,
+  "checks": [
+    {
+      "requestedUrl": "https://docs.typesafe.ai/introduction",
+      "adapter": "WikipediaResearchClient.fetch(String)",
+      "proxy": "NO_PROXY",
+      "status": "NOT_VALIDATED",
+      "errorType": "UnknownHostException",
+      "error": "docs.typesafe.ai: Temporary failure in name resolution",
+      "elapsedMillis": 280
+    },
+    {
+      "requestedUrl": "https://developer.android.com/",
+      "adapter": "WikipediaResearchClient.fetch(String)",
+      "proxy": "NO_PROXY",
+      "status": "NOT_VALIDATED",
+      "errorType": "UnknownHostException",
+      "error": "developer.android.com: Temporary failure in name resolution",
+      "elapsedMillis": 262
+    }
+  ],
+  "notes": [
+    "No proxy, custom IP validation, ordinary TLS verification.",
+    "bodyBytes counts the decompressed response body; extractSha256 hashes the UTF-8 text excerpt, not the whole document.",
+    "Failure means this environment did not validate access; fixture tests are reported separately."
+  ]
+}

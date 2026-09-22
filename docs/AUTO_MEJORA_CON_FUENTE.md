@@ -65,9 +65,24 @@ ADB recoge la bandeja, Docker aplica las pruebas sobre un snapshot sin red,
 y Git/GitHub del anfitrión publican una rama separada. Se requiere preparar una
 imagen Docker inmutable, dependencias y credenciales del anfitrión. Este cambio
 no activa ese servicio, fusiona PR ni instala actualizaciones automáticamente.
-El runner sigue ejecutando las pruebas versionadas, sin incorporar las pruebas
-generadas de la propuesta. No se ha probado el circuito completo con inferencia
-local, Docker Android y teléfono físico.
+El runner añade ahora `generatedTests`, cuando contiene una suite válida, antes
+de exportar el snapshot para Docker. La ruta se deriva del objetivo:
+`app/src/test/java/<paquete>/<Clase>TestHarness.java`. Si falta la declaración
+de paquete, incorpora la del objetivo; rechaza un paquete distinto, clases
+incompatibles, `@Ignore`, enlaces y colisiones con archivos existentes. No
+sobrescribe pruebas anteriores: una segunda propuesta para la misma clase puede
+necesitar consolidación manual de su suite. El prechequeo es estructural; la
+compilación y ejecución de las pruebas corresponden a Gradle dentro de Docker.
+El PR registra la ruta y el SHA-256 del test indexado, además del árbol exacto
+que contiene el parche y la suite. Las propuestas de esquema 3 sin
+`generatedTests`, o con ese campo vacío, conservan el flujo anterior y el PR
+indica que sólo se ejecutaron las pruebas ya versionadas.
+
+No se ha ejecutado aquí el sandbox Docker ni código Java propuesto: las pruebas
+del runner usan Git y snapshots reales, con Docker y publicación sustituidos
+explícitamente. No se ha probado el circuito completo con inferencia local,
+Docker Android y teléfono físico; si Docker no está disponible, el runner
+rechaza la ejecución y no compila la propuesta en el anfitrión.
 
 Pruebas reproducibles del exportador y runner:
 

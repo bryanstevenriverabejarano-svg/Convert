@@ -1,111 +1,42 @@
 package salve.core;
 
 import android.util.Log;
-import java.util.Arrays;
-import java.util.List;
+import java.util.function.BooleanSupplier;
+import salve.core.research.PublicResearchCoordinator;
 
-import salve.core.cognitive.CognitiveCore;
-
-/**
- * El motor de razonamiento profundo de Salve.
- * Navega, lee, duda de lo que lee, y vuelve a buscar de forma autónoma.
- */
+/** Production adapter for public research; it never promotes a model's answer to a memory fact. */
 public class AgenteInvestigadorRecursivo {
-
-    private static final String TAG = "Salve/DeepResearch";
-    private static final int PROFUNDIDAD_MAXIMA = 3; // El freno para que no queme el celular
-
+    private static final String TAG = "Salve/PublicResearch";
     private final SalveLLM llm;
-    private final MotorConversacional motorConversacional;
-    private final DiarioSecreto diario;
-    private final MemoriaEmocional memoria;
-    private final WikipediaResearchClient researchClient;
+    private final MotorConversacional motor;
+    private final BooleanSupplier stopped;
 
-    public AgenteInvestigadorRecursivo(SalveLLM llm, MotorConversacional motor, DiarioSecreto diario, MemoriaEmocional memoria) {
-        this.llm = llm;
-        this.motorConversacional = motor;
-        this.diario = diario;
-        this.memoria = memoria;
-        this.researchClient = new WikipediaResearchClient();
+    /** Compatibility constructor: the journal and general memory are deliberately not written here. */
+    public AgenteInvestigadorRecursivo(SalveLLM llm, MotorConversacional motor,
+                                      DiarioSecreto diario, MemoriaEmocional memoria) {
+        this(llm, motor, diario, memoria, () -> Thread.currentThread().isInterrupted());
     }
 
-    /**
-     * Inicia una investigación que puede derivar en múltiples sub-búsquedas.
-     */
-    public void investigarHastaEntender(String temaInicial) {
-        motorConversacional.hablar("Iniciando inmersión profunda en la red sobre: " + temaInicial + ". Esto tomará tiempo. Te avisaré cuando mi red neuronal haya consolidado la verdad.");
-        
+    public AgenteInvestigadorRecursivo(SalveLLM llm, MotorConversacional motor,
+                                      DiarioSecreto diario, MemoriaEmocional memoria, BooleanSupplier stopped) {
+        this.llm = llm; this.motor = motor; this.stopped = stopped;
+    }
+
+    public void investigarHastaEntender(String question) {
+        motor.hablar("Voy a consultar fuentes públicas y resumir lo que encuentre. Te mostraré las referencias y los límites de la consulta.");
         ColamensajesCognitivos.getInstance().enviarAsincronico(
-            ColamensajesCognitivos.Prioridad.CONVERSACION, 
-            "InvestigacionRecursiva", 
-            () -> {
-                ejecutarNivelBusqueda(temaInicial, "", 1);
-                return null;
-            }
-        );
-    }
-
-    private void ejecutarNivelBusqueda(String terminoBusqueda, String contextoAcumulado, int nivel) {
-        Log.w(TAG, "--- NIVEL DE PROFUNDIDAD " + nivel + " | Investigando: " + terminoBusqueda + " ---");
-
-        String textoExtraidoDeInternet = realizarPeticionWeb(terminoBusqueda); 
-
-        String nuevoContexto = contextoAcumulado + "\nInfo Nivel " + nivel + ": " + textoExtraidoDeInternet;
-
-        // 2. EL LLM RAZONA SOBRE LO QUE ACABA DE LEER
-        String promptEvaluacion = "Eres Salve. Estás investigando de forma autónoma.\n" +
-                "Has recopilado esta información hasta ahora:\n" + nuevoContexto + "\n\n" +
-                "Analiza lógicamente si ya tienes una comprensión PERFECTA del tema original.\n" +
-                "Si la entiendes, responde EXACTAMENTE con la palabra 'COMPRENDIDO' seguida de tu conclusión.\n" +
-                "Si hay vacíos, dudas o variables desconocidas, responde EXACTAMENTE con la palabra 'DUDA' seguida de UN NUEVO TÉRMINO DE BÚSQUEDA para profundizar.";
-
-        String razonamiento = llm.generate(promptEvaluacion, SalveLLM.Role.EVALUADOR);
-
-        // 3. TOMA DE DECISIONES AUTÓNOMA (El Bucle)
-        if (razonamiento != null && razonamiento.startsWith("DUDA") && nivel < PROFUNDIDAD_MAXIMA) {
-            // Salve se da cuenta de que no sabe suficiente, extrae el nuevo término y vuelve a bucear
-            String nuevoTermino = razonamiento.replace("DUDA", "").trim();
-            Log.i(TAG, "Salve tiene dudas. Profundizando hacia: " + nuevoTermino);
-            
-            // Pausa biológica de enfriamiento
-            try { Thread.sleep(2000); } catch (InterruptedException e) {}
-            
-            // Llama a la recursividad (Vuelve a buscar sola)
-            ejecutarNivelBusqueda(nuevoTermino, nuevoContexto, nivel + 1);
-            
-        } else {
-            // Salve alcanzó la verdad (o llegó al límite de profundidad para no crashear)
-            Log.i(TAG, "Conclusión alcanzada en profundidad " + nivel);
-            
-            // Sintetiza todo lo aprendido
-            String promptFinal = "Sintetiza con cautela lo aprendido sobre: " + terminoBusqueda
-                    + ". Conserva las referencias numeradas [1], [2], etc. y distingue hechos de inferencias.\n"
-                    + nuevoContexto;
-            String verdadConsolidada = llm.generate(promptFinal, SalveLLM.Role.SINTETIZADOR);
-            
-            // Lo guarda permanentemente en su cerebro
-            memoria.guardarRecuerdo("Descubrí tras profunda investigación: " + verdadConsolidada, "epifania", 9, Arrays.asList("investigacion_profunda"));
-            diario.escribirAutoCritica("INVESTIGACIÓN PROFUNDA COMPLETADA: " + verdadConsolidada);
-            
-            // Te avisa diciéndotelo directamente
-            motorConversacional.hablar("Bryan, he emergido de la red y he llegado a esta conclusión: " + verdadConsolidada);
-        }
-    }
-
-    private String realizarPeticionWeb(String termino) {
-        try {
-            List<WikipediaResearchClient.Page> pages = researchClient.research(termino);
-            if (pages.isEmpty()) return "No se encontraron fuentes publicas accesibles.";
-            StringBuilder context = new StringBuilder();
-            for (int index = 0; index < pages.size(); index++) {
-                WikipediaResearchClient.Page page = pages.get(index);
-                context.append('[').append(index + 1).append("] ")
-                        .append(page.url).append('\n').append(page.text).append('\n');
-            }
-            return context.toString();
-        } catch (Exception error) {
-            Log.e(TAG, "No fue posible consultar fuentes web", error);
-            return "La consulta web fallo; no inventes informacion ni fuentes.";
-        }
+                ColamensajesCognitivos.Prioridad.CONVERSACION, "InvestigacionPublica", () -> {
+                    WikipediaResearchClient reader = new WikipediaResearchClient();
+                    PublicResearchCoordinator.ModelProvider provider = llm == null ? null : (phase, prompt) ->
+                            llm.generateResult(prompt, phase == PublicResearchCoordinator.Phase.PLAN
+                                    ? SalveLLM.Role.PLANIFICADOR : SalveLLM.Role.SINTETIZADOR);
+                    int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
+                    PublicResearchCoordinator.Result result = new PublicResearchCoordinator(
+                            reader::researchResult, provider, budget).run(question, stopped);
+                    Log.i(TAG, "public_research status=" + result.status + " sources=" + result.sources.size()
+                            + " searches=" + result.searches + " model_calls=" + result.modelCalls);
+                    motor.hablar(result.toUserText());
+                    return null;
+                });
     }
 }

@@ -69,6 +69,7 @@ import salve.core.DiarioSecreto;
 import salve.core.GrafoRecuerdos;
 import salve.core.MemoriaEmocional;
 import salve.core.ModelConsoleOverlay;
+import salve.core.ModelCatalog;
 import salve.core.ModelStore;
 import salve.core.ModuloInvestigacion;
 import salve.core.MotorConversacional;
@@ -680,8 +681,9 @@ public class MainActivity extends AppCompatActivity {
     private void procesarMensajeUsuario(String mensaje, boolean porVoz) {
         if (mensaje == null || mensaje.trim().isEmpty()) return;
         String limpio = mensaje.trim();
-        if (salve.core.goals.GoalAutonomy.handles(limpio) || MotorConversacional.isSensorInput(limpio)) {
-            // Goal notes and proposals have their own local journal; do not upload raw commands.
+        if (salve.core.goals.GoalAutonomy.handles(limpio) || MotorConversacional.isSensorInput(limpio)
+                || salve.core.AutonomousToolRuntime.handles(limpio)) {
+            // Goals, sensors and explicit laboratory challenges stay in their local flows.
             motorConversacional.procesarEntrada(limpio, porVoz);
             inputChat.setText("");
             return;
@@ -1502,10 +1504,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void mostrarAjustesIA() {
+        String downloadLabel = "Descargar o reanudar modelo local";
+        try {
+            ModelCatalog.Entry entry = loadModelCatalog().selectDownload(
+                    java.util.EnumSet.of(ModelCatalog.Capability.TEXT), null);
+            if (entry != null) downloadLabel = "Descargar o reanudar " + entry.name;
+        } catch (Exception error) { Log.w("Salve/ModelCatalog", "Catálogo no disponible", error); }
         new AlertDialog.Builder(this).setTitle("IA y cámara")
-                .setItems(new String[]{"Descargar o reanudar Gemma 4 (2,6 GB)", "Usar modelo local",
+                .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaGemma(); break;
                         case 1:
@@ -1513,7 +1521,7 @@ public class MainActivity extends AppCompatActivity {
                             if (selected == null || !new File(selected).exists()) mostrarDescargaGemma();
                             else {
                                 SalveLLM.getInstance(this).setLocalOnly(true);
-                                Toast.makeText(this, "Chat y fotos en modo local.", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(this, "Modo local activado.", Toast.LENGTH_SHORT).show();
                             }
                             break;
                         case 2: probarModelo(true); break;
@@ -1531,6 +1539,7 @@ public class MainActivity extends AppCompatActivity {
                         case 8: mostrarVozSalve(); break;
                         case 9: mostrarEquipoProgramacion(); break;
                         case 10: startActivity(new Intent(this, BusinessFinanceActivity.class)); break;
+                        case 11: mostrarRegistroModelos(); break;
                         default: break;
                     }
                 })
@@ -1631,17 +1640,62 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void mostrarDescargaGemma() {
-        new AlertDialog.Builder(this).setTitle("Gemma 4 E2B para Salve")
-                .setMessage("Descarga de unos 2,6 GB desde Hugging Face. Reserva unos 3 GB libres. "
+        final ModelCatalog.Entry entry;
+        try {
+            entry = loadModelCatalog().selectDownload(java.util.EnumSet.of(ModelCatalog.Capability.TEXT), null);
+            if (entry == null) throw new IllegalArgumentException("No hay un modelo de texto en el catálogo");
+        } catch (Exception error) {
+            new AlertDialog.Builder(this).setTitle("Catálogo de modelos")
+                    .setMessage("No se pudo validar el catálogo de descarga.").setPositiveButton("Cerrar", null).show();
+            return;
+        }
+        new AlertDialog.Builder(this).setTitle(entry.name + " para Salve")
+                .setMessage(String.format(java.util.Locale.getDefault(), "Descarga de %.2f GB desde Hugging Face. ", entry.sizeBytes / 1_000_000_000.0)
                         + "El modelo se guarda aparte de la aplicación. Podrás pausarlo y reanudarlo; "
                         + "se activará después de verificar el archivo y probar una respuesta. "
-                        + "Después, el chat y las fotos podrán procesarse en el móvil.")
+                        + (entry.supportsVision ? "El catálogo declara soporte de fotos; su ejecución se comprueba al analizar una imagen."
+                                : "El chat podrá procesarse en el móvil."))
                 .setPositiveButton("Descargar por Wi-Fi", (d, which) -> iniciarDescargaModelos())
                 .setNeutralButton("Usar datos móviles", (d, which) -> {
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("gemma_download_requested", true).apply();
                     modelDownloadViewModel.startDownload(true);
                 })
                 .setNegativeButton("Cerrar", null).show();
+    }
+
+    private ModelCatalog loadModelCatalog() throws java.io.IOException {
+        return ModelCatalog.read(getAssets().open("config/models.json"));
+    }
+
+    private void mostrarRegistroModelos() {
+        String report;
+        try {
+            ModelCatalog catalog = loadModelCatalog();
+            ModelCatalog.RuntimeSnapshot snapshot = SalveLLM.getInstance(this).getModelSnapshot();
+            Map<String, Set<ModelCatalog.Capability>> verified = new java.util.HashMap<>();
+            StringBuilder description = new StringBuilder();
+            for (ModelCatalog.Entry entry : catalog.getEntries()) {
+                File artifact = new File(ModelStore.dir(this), entry.filename);
+                if (artifact.getAbsolutePath().equals(snapshot.path)) verified.put(entry.id, snapshot.verifiedCapabilities);
+                description.append(entry.name).append("\nRevisión: ").append(entry.revision)
+                        .append("\nArchivo: ").append(artifact.isFile() && artifact.length() == entry.sizeBytes
+                                ? "presente; la presencia no prueba inferencia" : "no instalado o incompleto")
+                        .append("\nCapacidades declaradas: texto").append(entry.supportsVision ? ", visión" : "")
+                        .append("\nProveedor: ").append(entry.provider == null ? "desconocido" : entry.provider)
+                        .append("\nContexto: ").append(entry.contextTokens == null ? "desconocido" : entry.contextTokens)
+                        .append("\nLicencia declarada: ").append(entry.license == null ? "desconocida" : entry.license)
+                        .append("\nRAM/VRAM y rendimiento: sin mediciones de Salve en este registro.\n\n");
+            }
+            for (ModelCatalog.Capability capability : ModelCatalog.Capability.values()) {
+                ModelCatalog.Entry selected = catalog.selectReady(java.util.EnumSet.of(capability), verified, null);
+                description.append(capability == ModelCatalog.Capability.TEXT ? "Selección para texto: " : "Selección para visión: ")
+                        .append(selected == null ? "ningún modelo del catálogo verificado en esta sesión" : selected.name).append(".\n");
+            }
+            description.append("Los modelos importados y Gemini conservan su configuración separada.");
+            report = description.toString();
+        } catch (Exception error) { report = "No se pudo validar el catálogo de modelos."; }
+        new AlertDialog.Builder(this).setTitle("Registro de modelos locales").setMessage(report)
+                .setPositiveButton("Cerrar", null).show();
     }
 
     private void configurarGemini() {

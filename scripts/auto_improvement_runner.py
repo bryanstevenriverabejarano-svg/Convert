@@ -21,8 +21,11 @@ else:
 
 
 ALLOWED_SOURCE_ROOT = PurePosixPath("app/src/main/java/salve/core")
+JAVA_SOURCE_ROOT = PurePosixPath("app/src/main/java")
+JAVA_TEST_ROOT = PurePosixPath("app/src/test/java")
 MAX_PROPOSAL_BYTES = 1_000_000
 MAX_PATCH_BYTES = 500_000
+MAX_GENERATED_TEST_BYTES = 250_000
 
 
 class ProposalError(ValueError):
@@ -92,6 +95,80 @@ def validate_proposal(proposal: dict) -> None:
             value = proposal.get(field)
             if not isinstance(value, str) or re.fullmatch(r"[a-f0-9]{" + str(length) + r"}", value) is None:
                 raise ProposalError(f"Identidad de fuente inválida: {field}")
+    generated_test(proposal)
+
+
+def generated_test(proposal: dict) -> tuple[str, str] | None:
+    """Bound one Java test compilation unit to a derived path, never a model-supplied path.
+
+    This is a structural precheck only. Compilation and test execution stay inside Docker.
+    Missing/empty suites preserve compatibility with older schema-3 proposals explicitly.
+    """
+    source = proposal.get("generatedTests", "")
+    if not isinstance(source, str):
+        raise ProposalError("generatedTests debe ser código Java en texto")
+    try:
+        size = len(source.encode("utf-8"))
+    except UnicodeError as invalid:
+        raise ProposalError("La suite generada contiene Unicode inválido") from invalid
+    if size > MAX_GENERATED_TEST_BYTES:
+        raise ProposalError("La suite generada supera el tamaño permitido")
+    if not source.strip():
+        return None
+    if "\x00" in source or re.search(r"\\u+[0-9a-fA-F]{4}", source):
+        raise ProposalError("La suite contiene escapes o bytes incompatibles con el prechequeo")
+    target = PurePosixPath(proposal["targetPath"])
+    relative = target.relative_to(JAVA_SOURCE_ROOT)
+    if any(re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", part) is None
+           for part in (*relative.parts[:-1], target.stem)):
+        raise ProposalError("La ruta Java no permite derivar un paquete de pruebas inequívoco")
+    test_class = target.stem + "TestHarness"
+    package = ".".join(relative.parts[:-1])
+    # Mask comments and literal values before looking for declarations; the compiler is authoritative.
+    masked = re.sub(r'//[^\r\n]*|/\*[\s\S]*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'',
+                    lambda match: re.sub(r"[^\r\n]", " ", match.group()), source)
+    declarations = re.findall(r"\bpublic\s+(?:(?:final|strictfp)\s+)*class\s+([A-Za-z_$][A-Za-z0-9_$]*)\b", masked)
+    if declarations != [test_class]:
+        raise ProposalError(f"La suite debe declarar una única clase pública {test_class}")
+    packages = re.findall(r"\bpackage\s+([A-Za-z_$][A-Za-z0-9_$]*(?:\s*\.\s*[A-Za-z_$][A-Za-z0-9_$]*)*)\s*;", masked)
+    if packages and (len(packages) != 1 or re.sub(r"\s+", "", packages[0]) != package):
+        raise ProposalError("El paquete de la suite no coincide con el objetivo")
+    if not re.search(r"@(?:org\s*\.\s*junit\s*\.\s*)?Test\b", masked):
+        raise ProposalError("La suite debe contener al menos un método JUnit @Test")
+    if re.search(r"@(?:org\s*\.\s*junit\s*\.\s*)?Ignore\b", masked):
+        raise ProposalError("La suite generada no puede desactivar sus pruebas con @Ignore")
+    normalized = source if packages else f"package {package};\n\n" + source
+    path = JAVA_TEST_ROOT.joinpath(*relative.parts[:-1], test_class + ".java").as_posix()
+    return path, normalized
+
+
+def install_generated_test(proposal: dict, worktree: Path) -> tuple[str, str] | None:
+    suite = generated_test(proposal)
+    if suite is None:
+        return None
+    relative, source = suite
+    destination = worktree / relative
+    cursor = worktree
+    for part in PurePosixPath(relative).parts[:-1]:
+        cursor /= part
+        if cursor.is_symlink() or (cursor.exists() and not cursor.is_dir()):
+            raise ProposalError("La ruta de pruebas contiene un enlace o un directorio inválido")
+    if destination.exists() or destination.is_symlink():
+        raise ProposalError("La suite generada colisiona con un archivo existente; no se sobrescribe")
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("x", encoding="utf-8", newline="") as output:
+            output.write(source)
+        destination.chmod(0o644)
+    except OSError as unavailable:
+        raise ProposalError("No se pudo añadir la suite generada al snapshot") from unavailable
+    run(["git", "add", "--", relative], worktree)
+    entry = run(["git", "ls-files", "--stage", "--", relative], worktree, capture=True).stdout
+    if not entry.startswith("100644 "):
+        raise ProposalError("La suite debe ser un archivo Java regular")
+    indexed_source = subprocess.run(["git", "show", ":" + relative], cwd=worktree,
+                                    check=True, capture_output=True).stdout
+    return relative, hashlib.sha256(indexed_source).hexdigest()
 
 
 def check_source_context(proposal: dict, repo: Path) -> None:
@@ -171,6 +248,14 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
                         worktree, capture=True).stdout
             if not entry.startswith("100644 "):
                 raise ProposalError("El objetivo debe seguir siendo un archivo Java regular")
+            generated = install_generated_test(proposal, worktree)
+            expected_changes = "M\0" + proposal["targetPath"] + "\0"
+            if generated is not None:
+                expected_changes += "A\0" + generated[0] + "\0"
+            final_changes = run(["git", "diff", "--cached", "--name-status", "--no-renames", "-z"],
+                                worktree, capture=True).stdout
+            if final_changes != expected_changes:
+                raise ProposalError("El snapshot debe contener solo el objetivo y la nueva suite declarada")
             tested_tree = run(["git", "write-tree"], worktree, capture=True).stdout.strip()
             archive = Path(temporary) / "source.tar"
             run(["git", "archive", "--format=tar", "--output=" + str(archive), tested_tree], worktree)
@@ -189,11 +274,18 @@ def execute(proposal_path: Path, repo: Path, base: str, dry_run: bool) -> str:
                 if "sourceRevision" in proposal
                 else "Propuesta anterior sin huella de fuente; solo comprobación del diff y pruebas.\n\n"
             )
+            test_note = (
+                f"Suite generada añadida al árbol probado: {generated[0]}\n"
+                f"SHA-256 de la suite añadida: {generated[1]}\n"
+                "El prechequeo de la suite es estructural; la compilación y la tarea de pruebas se ejecutan en Docker.\n\n"
+                if generated is not None
+                else "Propuesta sin suite generada: se ejecutaron únicamente las pruebas ya versionadas.\n\n"
+            )
             body = (
                 "Propuesta generada por Salve; tarea testDebugUnitTest ejecutada en Docker sin red.\n\n"
                 f"Diagnóstico:\n{proposal.get('issueSummary', '')}\n\n"
                 f"Árbol probado: {tested_tree}\nImagen del sandbox: {image}\n\n"
-                f"{source_note}"
+                f"{source_note}{test_note}"
                 f"salve-proposal-id:{proposal['proposalId']}"
             )
             body_file = Path(temporary) / "pr-body.md"
