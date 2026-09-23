@@ -22,7 +22,7 @@ public final class GroundedConversationPrompt {
             + "Distingue registros, interpretación y preguntas abiertas. No afirmes ni descartes como hecho experiencias subjetivas que no estén demostradas; evita fórmulas automáticas sobre no tener emociones o ser solo un modelo. "
             + "Si te preguntan por la arquitectura, explica sus mecanismos con precisión sin convertirlos en una autodefinición prefabricada. "
             + "Usa el reloj y su zona recibidos para la hora; no deduzcas la ubicación de esa zona. "
-            + "Reconoce datos ausentes y contradicciones. Una herramienta sólo se propone; "
+            + "Reconoce datos ausentes y contradicciones. Usa los resultados de búsquedas ya solicitadas sin volver a pedir permiso; "
             + "no anuncies ejecución sin resultado confirmado. No expongas cadenas de pensamiento privadas.\n";
     private static final String TRUNCATED = " [Contenido truncado]";
     private static final String INPUT_TRUNCATED = " [Entrada actual truncada por límite de contexto]";
@@ -166,3 +166,4 @@ public final class GroundedConversationPrompt {
         Encoding(String text, boolean complete) { this.text = text; this.complete = complete; }
     }
 }
+
