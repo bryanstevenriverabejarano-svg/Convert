@@ -27,6 +27,14 @@ public class GroundedConversationPromptTest {
         assertTrue(prompt.contains("no deduzcas la ubicación de esa zona"));
     }
 
+    @Test public void identityRulesInviteEvidenceBasedDiscoveryWithoutStockSelfLabels() {
+        String prompt = build("", Collections.emptyList(), "¿Quién eres?", "", "", "", 10500);
+        assertTrue(prompt.contains("Explora quién eres desde la configuración"));
+        assertTrue(prompt.contains("mantén tu autoconocimiento abierto a revisión"));
+        assertTrue(prompt.contains("evita fórmulas automáticas sobre no tener emociones"));
+        assertFalse(prompt.contains("Eres Salve, una IA de identidad funcional"));
+    }
+
     @Test public void currentUserIsNotDuplicatedInHistory() {
         List<ChatMessage> history = Arrays.asList(user("Hola"), assistant("Hola, Bryan"), user("¿Mi nombre?"));
         String prompt = build("", history, "¿Mi nombre?", "Bryan", "", "", 10500);

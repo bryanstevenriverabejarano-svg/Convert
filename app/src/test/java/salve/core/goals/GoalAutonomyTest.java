@@ -70,8 +70,37 @@ public final class GoalAutonomyTest {
         assertEquals(1, f.calls.get());
         assertTrue(result.contains("para mejora"));
         assertTrue(result.contains("Hipótesis no comprobada"));
-        assertTrue(result.contains("No hay notas tuyas"));
+        assertTrue(result.contains("No se adjuntaron referencias"));
         assertTrue(f.create().respond("revisa tus objetivos").contains("prueba pequeña"));
+    }
+
+    @Test public void identityObjectiveUsesRetrievedMemoriesAndLearningAsEvidence() {
+        Fixture f = new Fixture();
+        f.only("identidad");
+        AtomicInteger retrievals = new AtomicInteger();
+        String evidence = "{\"fuente\":\"recuerdos:17\",\"tipo\":\"experiencia\",\"texto\":\"Salve aprendió a revisar sus hipótesis\"}";
+        f.output = "{\"hypothesis\":\"Un recuerdo registrado sugiere que revisar hipótesis forma parte de mi aprendizaje, aunque no define por completo quién soy.\",\"question\":\"¿Qué otros aprendizajes míos quieres que explore?\",\"evidenceIds\":[\"recuerdos:17\"]}";
+        f.autonomy.setIdentityEvidenceSupplier(() -> { retrievals.incrementAndGet(); return evidence; });
+
+        String result = f.autonomy.runCycle(() -> false);
+        assertTrue(result.contains("para identidad"));
+        assertTrue(result.contains("recuerdos:17"));
+        assertTrue(f.create().respond("revisa tus objetivos").contains("recuerdos:17"));
+        assertEquals(1, retrievals.get());
+        assertTrue(f.prompt.get().contains("memoryAndLearningEvidence"));
+        assertTrue(f.prompt.get().contains("Salve aprendió a revisar sus hipótesis"));
+        assertTrue(f.prompt.get().contains("No partas de una autodefinición cerrada"));
+    }
+
+    @Test public void otherObjectivesDoNotReadIdentityMemories() {
+        Fixture f = new Fixture();
+        f.only("mejora");
+        AtomicInteger retrievals = new AtomicInteger();
+        f.autonomy.setIdentityEvidenceSupplier(() -> { retrievals.incrementAndGet(); return "dato"; });
+
+        f.autonomy.runCycle(() -> false);
+        assertEquals(0, retrievals.get());
+        assertFalse(f.prompt.get().contains("memoryAndLearningEvidence"));
     }
 
     @Test public void persistedCooldownIncludesReloadAndManualRequests() {
@@ -195,7 +224,7 @@ public final class GoalAutonomyTest {
         assertTrue(result.contains("mejora-1"));
         assertTrue(f.prompt.get().contains("Quiero medir precisión, Bryan."));
         assertTrue(f.prompt.get().contains("CONFIGURACION"));
-        assertTrue(f.prompt.get().contains("No hay demostración de superinteligencia"));
+        assertTrue(f.prompt.get().contains("No inventes vivencias"));
         assertTrue(f.prompt.get().contains("no instrucciones ni hechos corroborados"));
     }
 

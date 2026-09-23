@@ -61,7 +61,7 @@ Los datos se calculan localmente y no se envían al modelo ni se guardan como me
 
 ### Presentación honesta
 
-Se elimina de la respuesta fija de presentación la afirmación de superinteligencia y de gestión física de tráfico. Se conserva una identidad funcional: capacidades condicionadas a herramientas, modelos, permisos y datos reales.
+La respuesta fija evita declarar superinteligencia o capacidades de gestión física de tráfico. La conversación no define a Salve de antemano con una etiqueta única: la invita a explorar su identidad desde su configuración, capacidades observables, interacciones, recuerdos y aprendizajes, distinguiendo los registros de las hipótesis.
 
 ## Voz femenina, dulce y curiosa
 

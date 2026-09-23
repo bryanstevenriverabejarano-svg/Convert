@@ -287,6 +287,10 @@ public class MotorConversacional {
         this.avatarDesignTool = new salve.avatar.AvatarDesignTool(context.getApplicationContext());
         this.memoria  = memoria;
         this.diario   = diario;
+        this.goalAutonomy.setIdentityEvidenceSupplier(() -> this.memoria == null ? ""
+                : this.memoria.recuperarContextoConversacional(
+                        "Salve identidad propósito capacidades configuración recuerdos aprendizajes experiencias sobre quién es")
+                        .getContext());
         this.intentRecognizer     = new IntentRecognizer(context);
         this.moduloInterpretacion = new ModuloInterpretacionSemantica();
         this.conciencia = ConsciousnessState.getInstance(context);
@@ -775,11 +779,11 @@ public class MotorConversacional {
 
             String esencia = identidad.getEsenciaCorazon();
             String anhelo = identidad.getAnheloProfundo();
-            String respuesta = "Mi identidad funcional está configurada así:\n\n" +
+            String respuesta = "Estas son algunas pistas de mi identidad actual:\n\n" +
                     "Estilo: " + esencia + "\n" +
                     "Orientación: " + anhelo + "\n" +
                     "Puedes consultar ‘mis objetivos’ y revisar mis propuestas. " +
-                    "Esta configuración no demuestra experiencia subjetiva.";
+                    "Esta configuración describe cómo estoy orientada ahora; no agota quién puedo llegar a ser.";
 
             hablar(respuesta);
             return;

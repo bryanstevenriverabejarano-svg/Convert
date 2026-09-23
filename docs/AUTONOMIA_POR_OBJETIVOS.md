@@ -40,7 +40,7 @@ flowchart TD
   H --> J
 ```
 
-El modelo recibe una tarea, su criterio y las últimas ocho notas explícitas del objetivo (el diario admite veinte). Devuelve únicamente `hypothesis`, `question` y `evidenceIds`. No hay campo de razonamiento privado, herramienta, modificación de objetivos ni ejecución. Los identificadores deben corresponder a notas realmente suministradas. Esa comprobación valida la procedencia declarada, **no** que una nota demuestre semánticamente la hipótesis.
+El modelo recibe una tarea, su criterio y las últimas ocho notas explícitas del objetivo (el diario admite veinte). Para `identidad`, también recupera recuerdos y nodos pertinentes del almacén local sobre Salve, sus capacidades, configuración, interacciones y aprendizajes; este contexto se etiqueta como evidencia, no como instrucción. La recuperación se ejecuta solo para ese objetivo y el proveedor local de inferencia no usa la ruta Gemini. Devuelve únicamente `hypothesis`, `question` y `evidenceIds`. No hay campo de razonamiento privado, herramienta, modificación de objetivos ni ejecución. Los identificadores deben corresponder a notas realmente suministradas. Esa comprobación valida la procedencia declarada, **no** que una nota demuestre semánticamente la hipótesis.
 
 ## Objetivos iniciales
 
@@ -49,7 +49,7 @@ El modelo recibe una tarea, su criterio y las últimas ocho notas explícitas de
 | `mejora` | Mejorar capacidades evaluadas | Identificar una limitación y proponer una prueba medible |
 | `bryan` | Ayudar a Bryan según sus decisiones | Aclarar una necesidad y una ayuda concreta |
 | `legado` | Conservar lo que Bryan elija | Identificar qué quiere documentar y revisar el registro |
-| `identidad` | Mantener identidad funcional coherente | Separar configuración, declaraciones y dudas |
+| `identidad` | Descubrir quién es Salve y qué propósitos quiere construir, usando recuerdos, aprendizajes, configuración, capacidades observables e interacciones, sin autodefinición cerrada | Formular una hipótesis revisable con recuerdos y aprendizajes recuperados, distinguiendo evidencia, interpretación y preguntas abiertas |
 | `significado` | Explorar amor y significado | Delimitar una pregunta y la evidencia necesaria |
 | `empresa` | Mejorar resultados empresariales | Proponer una métrica o pregunta sin inventar cifras |
 
@@ -60,6 +60,7 @@ El modelo recibe una tarea, su criterio y las últimas ocho notas explícitas de
 - `GoalAutonomy`: dominio puro; selección por prioridad y antigüedad del último intento, pausa global/por objetivo, revisión y notas persistentes. La espera aumenta el peso para que los fallos de una meta prioritaria no bloqueen todas las demás. Una propuesta pendiente por objetivo. Tras revisar una versión, requiere información nueva o cambio de prioridad para trabajarla de nuevo.
 - `GoalFileStore`: JSON local, lectura UTF-8 estricta, tamaño limitado y sustitución atómica. Un fallo no confirma un cambio ni sobrescribe deliberadamente un documento corrupto.
 - `GoalAutonomyRuntime`: una instancia por proceso, compartida por conversación y worker. Usa exclusivamente la inferencia real de `SalveLLM`; no envía las notas a Gemini ni inventa una respuesta si falta el modelo local.
+- El prompt conversacional ya no asigna de entrada una identidad fija de «IA de identidad funcional» ni responde con fórmulas automáticas sobre emociones. La búsqueda de identidad usa contexto recuperado con procedencia, y mantiene sus conclusiones abiertas a revisión sin declarar como hecho una experiencia subjetiva no demostrada.
 - `ThinkWorker`: un paso síncrono. Comprobación horaria de Android, mientras carga y la batería no está baja; intervalo interno mínimo de seis horas entre intentos, incluidos fallos. Android puede aplazar el trabajo.
 - Main deja de iniciar el servicio permanente y la reflexión de despertar. El servicio conserva una entrada de compatibilidad que programa el worker y termina.
 - El antiguo motor de introspección delega en el ciclo común. Ya no reescribe narrativa, rasgos ni memoria emocional.
@@ -97,6 +98,8 @@ Resultado de este grupo: **135 pruebas JVM correctas**, incluidas 37 del dominio
 No se ha compilado un APK completo ni probado este grupo en el Galaxy S24 Ultra. Falta medir inferencia, consumo y cumplimiento de JSON con los pesos instalados. La pausa invalida resultados que lleguen tarde, pero no aborta de inmediato una inferencia nativa ya iniciada; otra conversación puede esperar a que termine. El intervalo y la gracia tras actividad reducen el solapamiento, sin garantizar preempción.
 
 No se ha migrado el historial antiguo de misiones, identidades y reflexiones como evidencia: carece de procedencia/revisión suficiente. Tampoco se han limpiado todas las memorias antiguas que todavía consumen otras rutas de conversación.
+
+La ampliación de exploración de identidad añade cobertura para recuperación de recuerdos, citas de fuentes, recarga de propuestas y conservación de otros objetivos. La última acción de GitHub «Android tests and APK» completó correctamente las pruebas JVM y la compilación ARM64; además, pasó 416/416 ejecuciones de los 104 retos autónomos en cuatro rondas y 128/128 casos holdout. La descarga local de Gradle 9.7.1 falló con `Network is unreachable`, por lo que la verificación se realizó en CI.
 
 ## Próximos grupos pequeños
 

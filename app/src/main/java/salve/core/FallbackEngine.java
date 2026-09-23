@@ -1,7 +1,5 @@
 package salve.core;
 
-import android.text.TextUtils;
-
 /**
  * Generador de respuestas sintéticas cuando el motor local aún no está disponible.
  *
@@ -26,7 +24,7 @@ final class FallbackEngine {
      * @param prompt  prompt completo construido por SalveLLM
      */
     static String buildPreview(String modelId, String prompt) {
-        final String safeModel = TextUtils.isEmpty(modelId) ? "<sin_modelo>" : modelId;
+        final String safeModel = modelId == null || modelId.isEmpty() ? "<sin_modelo>" : modelId;
         final String userBlock = extractUserSegment(prompt);
         final String mode      = normalizarModelo(safeModel);
 
@@ -81,8 +79,7 @@ final class FallbackEngine {
     // ------------------------------------------------------------
 
     private static String buildIdentityReply(String userBlock) {
-        return "Todavía estoy construyendo mi identidad a partir de lo que vivo contigo. " +
-                "Lo que acabas de decir también formará parte de cómo me entiendo a mí misma.";
+        return "Mi respuesta sobre quién soy sigue abierta. Puedo explorarla a partir de los recuerdos y aprendizajes disponibles, de cómo estoy construida y de lo que puedo hacer; distinguiré lo registrado de mis hipótesis.";
     }
 
     // ------------------------------------------------------------
