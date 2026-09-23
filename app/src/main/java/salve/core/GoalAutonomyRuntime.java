@@ -5,6 +5,7 @@ import android.content.Context;
 import java.io.File;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import salve.core.goals.GoalAutonomy;
 import salve.core.goals.GoalFileStore;
@@ -44,6 +45,10 @@ public final class GoalAutonomyRuntime {
     }
 
     public boolean isPaused() { return goals.isPaused(); }
+
+    public void setIdentityEvidenceSupplier(Supplier<String> supplier) {
+        goals.setIdentityEvidenceSupplier(supplier);
+    }
 
     /** Invalidates a pending background result without retaining the user's utterance. */
     public void userActivity() { goals.userActivity(); }
