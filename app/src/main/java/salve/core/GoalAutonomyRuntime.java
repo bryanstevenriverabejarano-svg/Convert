@@ -8,6 +8,8 @@ import java.util.function.BooleanSupplier;
 
 import salve.core.goals.GoalAutonomy;
 import salve.core.goals.GoalFileStore;
+import salve.core.memory.ConversationMemoryGrounding;
+import salve.data.db.MemoriaDatabase;
 
 /** One application-scoped goal journal shared by conversation and WorkManager. */
 public final class GoalAutonomyRuntime {
@@ -17,6 +19,9 @@ public final class GoalAutonomyRuntime {
 
     private GoalAutonomyRuntime(Context context) {
         Context app = context.getApplicationContext();
+        MemoriaDatabase database = MemoriaDatabase.getInstance(app);
+        ConversationMemoryGrounding memory = new ConversationMemoryGrounding(database.recuerdoDao(),
+                database.knowledgeNodeDao(), database.knowledgeRelationDao());
         goals = new GoalAutonomy(new GoalFileStore(new File(app.getNoBackupFilesDir(),
                 "autonomy/goals.json")), prompt -> {
             // These notes may be personal. Background reflection never falls back to a cloud model.
@@ -24,6 +29,9 @@ public final class GoalAutonomyRuntime {
             if (!result.isSuccess()) throw new IllegalStateException("Modelo local no disponible o fallido.");
             return result.getText();
         }, System::currentTimeMillis);
+        goals.setIdentityEvidenceSupplier(() -> memory.retrieve(
+                "Salve identidad propósito capacidades configuración recuerdos aprendizajes experiencias sobre quién es")
+                .getContext());
     }
 
     public static GoalAutonomyRuntime get(Context context) {

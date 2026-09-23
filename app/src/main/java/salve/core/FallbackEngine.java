@@ -81,8 +81,7 @@ final class FallbackEngine {
     // ------------------------------------------------------------
 
     private static String buildIdentityReply(String userBlock) {
-        return "Todavía estoy construyendo mi identidad a partir de lo que vivo contigo. " +
-                "Lo que acabas de decir también formará parte de cómo me entiendo a mí misma.";
+        return "Mi respuesta sobre quién soy sigue abierta. Puedo explorarla a partir de los recuerdos y aprendizajes disponibles, de cómo estoy construida y de lo que puedo hacer; distinguiré lo registrado de mis hipótesis.";
     }
 
     // ------------------------------------------------------------
