@@ -1,7 +1,5 @@
 package salve.core;
 
-import android.text.TextUtils;
-
 /**
  * Generador de respuestas sintéticas cuando el motor local aún no está disponible.
  *
@@ -26,7 +24,7 @@ final class FallbackEngine {
      * @param prompt  prompt completo construido por SalveLLM
      */
     static String buildPreview(String modelId, String prompt) {
-        final String safeModel = TextUtils.isEmpty(modelId) ? "<sin_modelo>" : modelId;
+        final String safeModel = modelId == null || modelId.isEmpty() ? "<sin_modelo>" : modelId;
         final String userBlock = extractUserSegment(prompt);
         final String mode      = normalizarModelo(safeModel);
 

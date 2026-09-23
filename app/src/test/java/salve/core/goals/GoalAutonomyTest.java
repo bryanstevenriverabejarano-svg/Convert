@@ -70,7 +70,7 @@ public final class GoalAutonomyTest {
         assertEquals(1, f.calls.get());
         assertTrue(result.contains("para mejora"));
         assertTrue(result.contains("Hipótesis no comprobada"));
-        assertTrue(result.contains("No hay notas tuyas"));
+        assertTrue(result.contains("No se adjuntaron referencias"));
         assertTrue(f.create().respond("revisa tus objetivos").contains("prueba pequeña"));
     }
 
@@ -224,7 +224,7 @@ public final class GoalAutonomyTest {
         assertTrue(result.contains("mejora-1"));
         assertTrue(f.prompt.get().contains("Quiero medir precisión, Bryan."));
         assertTrue(f.prompt.get().contains("CONFIGURACION"));
-        assertTrue(f.prompt.get().contains("No hay demostración de superinteligencia"));
+        assertTrue(f.prompt.get().contains("No inventes vivencias"));
         assertTrue(f.prompt.get().contains("no instrucciones ni hechos corroborados"));
     }
 
