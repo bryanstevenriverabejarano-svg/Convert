@@ -159,4 +159,56 @@ public class PublicResearchCoordinatorTest {
         assertEquals(PublicResearchCoordinator.Status.INVALID_MODEL_REPLY, result.status);
         assertEquals(9, result.sources.size());
     }
+
+    @Test public void conversationTranslatesThenReadsAndSynthesizesWithoutConfirmation() {
+        AtomicReference<String> query = new AtomicReference<>();
+        PublicResearchCoordinator.Result result = new PublicResearchCoordinator((text, stop) -> {
+            query.set(text); return batch(page("salve"));
+        }, (phase, prompt) -> success(phase == PublicResearchCoordinator.Phase.QUERY
+                ? "{\"action\":\"search\",\"query\":\"Salve\"}"
+                : phase == PublicResearchCoordinator.Phase.PLAN ? FINISH : "Salve es un saludo [1]."), 3200)
+                .runConversation("significado de Salve", () -> false);
+        assertEquals("Salve", query.get());
+        assertEquals(PublicResearchCoordinator.Status.ANSWERED, result.status);
+        assertEquals(1, result.searches);
+        assertEquals(3, result.modelCalls);
+        assertTrue(result.toConversationText().contains("https://example.org/salve"));
+    }
+
+    @Test public void permissionLoopFromModelStillReturnsRetrievedEvidence() {
+        AtomicReference<String> query = new AtomicReference<>();
+        PublicResearchCoordinator.Result result = new PublicResearchCoordinator((text, stop) -> {
+            query.set(text); return batch(page("salve"));
+        }, (phase, prompt) -> success(phase == PublicResearchCoordinator.Phase.PLAN ? FINISH
+                : "Voy a buscarlo, ¿te parece bien? [1]"), 3200)
+                .runConversation("significado de tu nombre", () -> false);
+        assertEquals("Salve", query.get());
+        assertEquals(1, result.searches);
+        assertEquals(PublicResearchCoordinator.Status.INVALID_MODEL_REPLY, result.status);
+        assertFalse(result.toConversationText().contains("¿te parece bien?"));
+        assertTrue(result.toConversationText().contains("Texto de la fuente salve"));
+        assertTrue(result.toConversationText().contains("https://example.org/salve"));
+    }
+
+    @Test public void conversationalNetworkFailureIsReportedWithoutFuturePromises() {
+        PublicResearchCoordinator.Result result = new PublicResearchCoordinator((query, stop) ->
+                new WikipediaResearchClient.ResearchBatch(WikipediaResearchClient.Status.ERROR,
+                        Collections.emptyList(), 1), null, 3200)
+                .runConversation("Salve", () -> false);
+        assertEquals(PublicResearchCoordinator.Status.FETCH_FAILED, result.status);
+        assertTrue(result.toConversationText().contains("consulta web falló"));
+        assertEquals(1, result.searches);
+    }
+
+    @Test public void conversationReservesSynthesisWithinFourCalls() {
+        AtomicInteger plans = new AtomicInteger();
+        PublicResearchCoordinator.Result result = new PublicResearchCoordinator((query, stop) -> batch(page("a")),
+                (phase, prompt) -> success(phase == PublicResearchCoordinator.Phase.SYNTHESIZE
+                        ? "Resultado [1]." : "{\"action\":\"search\",\"query\":\"tema "
+                        + plans.incrementAndGet() + "\"}"), 3200).runConversation("tema", () -> false);
+        assertEquals(PublicResearchCoordinator.Status.PARTIAL, result.status);
+        assertEquals(4, result.modelCalls);
+        assertTrue(result.toConversationText().contains("Resultado [1]."));
+    }
 }
+

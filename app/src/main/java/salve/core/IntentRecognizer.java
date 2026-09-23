@@ -132,25 +132,19 @@ public class IntentRecognizer {
         // --------------------------------------------------------
         // 7) BUSCAR_WEB (NUEVA INTENCIÓN)
         // --------------------------------------------------------
-        if (text.matches(".*\\b(qu[eé] es|busca|investiga|quien es|qui[eé]n es)\\b.*")
-                || text.matches(".*\\b(qu[eé] significa|significado de)\\b.*")
-                || text.matches(".*\\b(mimetiza|copia a gemini|aprende de gemini)\\b.*")) {
-
+        String topic = salve.core.research.ResearchConversation.requestTopic(input);
+        // Preserve existing explicit research aliases.
+        if (topic == null && text.matches(".*\\b(mimetiza|copia a gemini|aprende de gemini)\\b.*")) {
+            topic = text.replaceFirst(".*?(?:mimetiza|copia a gemini|aprende de gemini)\\s+", "").trim();
+        }
+        if (topic != null && !topic.isEmpty()) {
             Intent i = new Intent(IntentType.BUSCAR_WEB);
-            // Intentar extraer el término
-            String termino = text.replaceFirst(".*?(?:qu[eé] es|busca|investiga|quien es|qui[eé]n es|qu[eé] significa|significado de|mimetiza|copia a gemini|aprende de gemini)\\s+", "").trim();
-            
-            if (text.contains("mimetiza") || text.contains("copia") || text.contains("aprende de gemini")) {
-                i.slots.put("mimetismo", "true");
-            }
-
-            if (!termino.isEmpty()) {
-                i.slots.put("termino", termino);
-                return i;
-            }
+            i.slots.put("termino", topic);
+            return i;
         }
 
         // Una entrada sin acción explícita continúa como conversación normal.
         return new Intent(IntentType.NINGUNO);
     }
 }
+

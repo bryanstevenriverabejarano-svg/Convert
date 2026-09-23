@@ -238,6 +238,8 @@ public class MotorConversacional {
     }
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
+    private final salve.core.research.ResearchConversation researchConversation =
+            new salve.core.research.ResearchConversation();
     private final DeviceClockContext deviceClock = new DeviceClockContext();
     private final salve.core.finance.PersonalBudgetService personalBudget;
     private final GoalAutonomyRuntime goalAutonomy;
@@ -515,6 +517,8 @@ public class MotorConversacional {
         long turnStartedAtNanos = System.nanoTime();
         boolean hasPriorContext = conversationSession.hasPriorContext();
         conversationSession.addUser(entrada);
+        salve.core.research.ResearchConversation.Route researchRoute =
+                researchConversation.route(entrada, conversationSession.snapshot());
 
         String approvalInput = entrada.trim().toLowerCase(Locale.ROOT);
         if (approvalInput.equals("confirmar olvido")) {
@@ -875,6 +879,11 @@ public class MotorConversacional {
         // DetectorEmociones is a placeholder, not an emotion inference model.
         String emocionDetectada = "no evaluada";
 
+        if (researchRoute.kind != salve.core.research.ResearchConversation.Kind.NONE) {
+            responderInvestigacionPublica(researchRoute);
+            return;
+        }
+
         ConversationAnalysis conversationAnalysis = ConversationRequestAnalyzer.analyze(entrada, hasPriorContext);
         if (conversationAnalysis.needsClarification()) {
             if (avatarSession != null) AvatarMotionController.get().clarification(avatarSession, currentAvatarTurn());
@@ -883,6 +892,11 @@ public class MotorConversacional {
         }
 
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
+        // Legacy explicit search aliases also produce a completed tool reply, never a promise.
+        if (intent.type == IntentType.BUSCAR_WEB) {
+            hablar(manejarBuscarWeb(intent));
+            return;
+        }
         ReasoningPlan reasoningPlan = ReasoningPlanner.plan(
                 entrada,
                 conversationAnalysis,
@@ -1224,7 +1238,8 @@ public class MotorConversacional {
                 + salve.core.finance.FinanceConversationPolicy.contextFor(entrada);
         int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
         String prompt = GroundedConversationPrompt.build(system, conversationSession.snapshot(), entrada,
-                evidence == null ? "" : evidence.getContext(), runtime, accion, budget);
+                evidence == null ? "" : evidence.getContext(), runtime,
+                accion == null ? researchConversation.context() : accion, budget);
         Log.i(TAG, "conversation_context memory=" + (evidence == null ? "SKIPPED" : evidence.getStatus())
                 + " prompt_chars=" + prompt.length());
         return prompt;
@@ -1261,10 +1276,11 @@ public class MotorConversacional {
                 + "RASGOS CONFIGURADOS: " + ResponseLimiter.limit(esencia, 250) + "\n"
                 + "OBJETIVO CONFIGURADO: " + ResponseLimiter.limit(anhelo, 250) + "\n"
                 + "ACTO Y CONTEXTO: " + contexto + "\n"
-                + "Responde con calidez y precisión, sin repetir fórmulas. Si corriges una respuesta, "
+                + "Continúa el hilo sin repetir saludos. Responde con precisión. Si corriges una respuesta, "
                 + "reconoce sólo errores comprobables. Distingue opinión de hecho.\n"
                 + estadoFisico + "\n"
-                + "ACCIONES EXTERNAS: sólo PROPUESTAS, con confirmación humana antes de ejecutar. "
+                + "Las búsquedas públicas solicitadas se ejecutan directamente; entrega sus resultados sin pedir permiso. "
+                + "CONTROL DE PANTALLA Y PUBLICACIÓN: propuestas con confirmación antes de ejecutar. "
                 + "Si necesitas una, responde sólo un JSON: "
                 + "{\"tool\":\"TAP\",\"x\":500,\"y\":1000}, "
                 + "{\"tool\":\"ESCRIBIR\",\"texto\":\"texto\"} o "
@@ -1291,18 +1307,36 @@ public class MotorConversacional {
         }
     }
 
-    private String manejarBuscarWeb(IntentRecognizer.Intent intent) {
-        String termino = intent.slots.get("termino");
-        if (termino != null) {
-            WikipediaResearchClient reader = new WikipediaResearchClient();
-            salve.core.research.PublicResearchCoordinator.Result result =
-                    new salve.core.research.PublicResearchCoordinator(reader::researchResult, null, 10500)
-                            .run(termino, () -> closed || !isVoiceContextCurrent());
-            // The grounded conversation synthesizes these real source excerpts once.
-            // Research summaries do not become autobiographical facts or automatic cloud memories.
-            return result.evidenceContext();
+    private void responderInvestigacionPublica(salve.core.research.ResearchConversation.Route route) {
+        if (route.kind == salve.core.research.ResearchConversation.Kind.SEARCH) {
+            hablar(ejecutarInvestigacionPublica(route.question));
+        } else {
+            hablar(route.text);
         }
-        return "No entiendo qué quieres que investigue.";
+    }
+
+    private String manejarBuscarWeb(IntentRecognizer.Intent intent) {
+        String question = intent.slots.get("termino");
+        return question == null || question.trim().isEmpty()
+                ? "¿Qué tema quieres que busque?" : ejecutarInvestigacionPublica(question);
+    }
+
+    private String ejecutarInvestigacionPublica(String question) {
+        WikipediaResearchClient reader = new WikipediaResearchClient();
+        int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
+        salve.core.research.PublicResearchCoordinator.Result result =
+                new salve.core.research.PublicResearchCoordinator(reader::researchResult,
+                        (phase, prompt) -> ConversationModelRouter.generate(false,
+                                llm != null && llm.isLocalOnly(), false,
+                                gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
+                                () -> generarRespuestaConversacionalLocal(prompt)), budget)
+                        .runConversation(question, () -> closed || !isVoiceContextCurrent());
+        String answer = result.toConversationText();
+        if (!closed && isVoiceContextCurrent()) researchConversation.complete(question, answer);
+        Log.i(TAG, "public_research status=" + result.status + " searches=" + result.searches
+                + " sources=" + result.sources.size());
+        // Record/display the actual tool result; never send it back through the proposal parser.
+        return answer;
     }
 
     private String modelFailureMessage(ModelResult result) {
@@ -1905,6 +1939,7 @@ public class MotorConversacional {
 
     private void limpiarContextoConversacional() {
         conversationSession.clear();
+        researchConversation.clear();
         Log.i(TAG, "Contexto conversacional de corto plazo reiniciado.");
     }
 
@@ -1995,3 +2030,4 @@ public class MotorConversacional {
                 });
     }
 }
+
