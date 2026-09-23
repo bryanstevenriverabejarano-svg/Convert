@@ -99,7 +99,7 @@ No se ha compilado un APK completo ni probado este grupo en el Galaxy S24 Ultra.
 
 No se ha migrado el historial antiguo de misiones, identidades y reflexiones como evidencia: carece de procedencia/revisión suficiente. Tampoco se han limpiado todas las memorias antiguas que todavía consumen otras rutas de conversación.
 
-La ampliación de exploración de identidad añade cobertura para recuperación de recuerdos, citas de fuentes, recarga de propuestas y conservación de otros objetivos. No se pudo ejecutar Gradle en este entorno: la descarga de Gradle 9.7.1 falló con `Network is unreachable`; las pruebas quedan pendientes de un runner con la distribución disponible.
+La ampliación de exploración de identidad añade cobertura para recuperación de recuerdos, citas de fuentes, recarga de propuestas y conservación de otros objetivos. La última acción de GitHub «Android tests and APK» completó correctamente las pruebas JVM y la compilación ARM64; además, pasó 416/416 ejecuciones de los 104 retos autónomos en cuatro rondas y 128/128 casos holdout. La descarga local de Gradle 9.7.1 falló con `Network is unreachable`, por lo que la verificación se realizó en CI.
 
 ## Próximos grupos pequeños
 
