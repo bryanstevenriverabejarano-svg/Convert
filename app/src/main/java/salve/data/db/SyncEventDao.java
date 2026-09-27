@@ -9,28 +9,29 @@ import java.util.List;
 
 @Dao
 public interface SyncEventDao {
-
-    // Inserta un evento en cola
     @Insert
     long insert(SyncEventEntity e);
 
-    // Pendientes de envío (orden temporal ascendente), ignorando los que fallaron demasiadas veces
+    /** Pending outbox entries. tries=-1 means synchronized and retained in the local journal. */
     @Query("SELECT * FROM sync_events WHERE tries >= 0 AND tries < 20 ORDER BY createdAt ASC LIMIT :limit")
     List<SyncEventEntity> getPending(int limit);
 
-    // ✅ NUEVO: últimos N eventos (enviados o no) para construir el grafo
     @Query("SELECT * FROM sync_events ORDER BY createdAt DESC LIMIT :n")
     List<SyncEventEntity> getLast(int n);
 
-    // Borra un evento (por ejemplo, tras enviarlo con éxito)
+    /** Kept for explicit maintenance; cloud synchronization does not delete successful entries. */
     @Delete
     void delete(SyncEventEntity e);
 
-    // Incrementa contador de reintentos cuando falla el envío
+    @Query("UPDATE sync_events SET tries = -1 WHERE id = :id")
+    void markSynced(long id);
+
     @Query("UPDATE sync_events SET tries = tries + 1 WHERE id = :id")
     void incTries(long id);
 
-    // Purga los que superaron el máximo de reintentos
+    @Query("SELECT COUNT(*) FROM sync_events WHERE createdAt = :createdAt AND payload = :payload")
+    int countExact(long createdAt, String payload);
+
     @Query("DELETE FROM sync_events WHERE tries >= :maxTries")
     void purgeFailed(int maxTries);
 }
