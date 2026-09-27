@@ -23,16 +23,22 @@ Flujo:
 - Las rutas remotas rechazan traversal (`..`).
 - La sincronización continúa requiriendo consentimiento local explícito.
 
-## Integración OAuth pendiente del front
+## Conexión desde Android
 
-Este PR implementa el backend receptor del OAuth. El punto que ya completa el flujo es:
+En la ficha **Salve Android** de https://docs.pcloud.com/my_apps/ añade exactamente esta Redirect URI y guarda los cambios:
+
+`http://localhost:8765/callback`
+
+Instala la versión de Salve que incluya esta pantalla. En la app abre **IA y cámara → Nube pCloud → Conectar**, introduce el **Client ID** público de la ficha (nunca el Client secret) y autoriza en el navegador del mismo móvil. El navegador vuelve a un receptor local temporal de Salve. El callback verifica un estado aleatorio y el host oficial antes de guardar el token cifrado en Android Keystore. El receptor se cierra al completar o tras tres minutos. Luego se activa el worker.
+
+El enlace con el backend es:
 
 ```java
 CloudSyncManager.configurePCloud(context, accessToken, apiHostname);
 CloudSyncManager.setEnabled(context, true);
 ```
 
-No se incluye `client_id`, token ni redirect URI en el código. Si el OAuth ya fue realizado fuera de esta revisión, el token/hostname deben entregarse a este punto desde el callback autorizado de la app.
+El Client ID se guarda localmente para reconexiones; el Client secret y el token nunca se incluyen en Git. La carpeta `/Salve` y sus subcarpetas se crean con la primera subida, no al registrar la aplicación en pCloud. Sólo los eventos encolados mientras la sincronización está activada se envían; no se vuelcan automáticamente recuerdos anteriores.
 
 ## Prueba end-to-end en teléfono
 

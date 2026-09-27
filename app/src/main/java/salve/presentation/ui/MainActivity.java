@@ -77,6 +77,7 @@ import salve.core.PdfGenerator;
 import salve.core.ReconocimientoFacial;
 import salve.core.ThinkWorker;
 import salve.data.sync.CloudSyncManager;
+import salve.data.sync.PCloudOAuth;
 import salve.data.sync.SyncWorker;
 import salve.services.VideoAnalysisManager;
 import salve.presentation.viewmodel.ModelDownloadViewModel;
@@ -85,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final java.util.concurrent.ExecutorService inferenceChecks =
             java.util.concurrent.Executors.newSingleThreadExecutor();
+    private PCloudOAuth pCloudOAuth;
     private String visualQuestion;
     private boolean visualLocalOnly;
     private final ActivityResultLauncher<String[]> localModelPicker = registerForActivityResult(
@@ -1488,6 +1490,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (pCloudOAuth != null) pCloudOAuth.cancel();
         if (liveVoiceDialog != null) { liveVoiceDialog.dismiss(); liveVoiceDialog = null; }
         inferenceChecks.shutdownNow();
         // stopService(new Intent(this, CamaraService.class));
@@ -1506,7 +1509,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaGemma(); break;
                         case 1:
@@ -1533,6 +1536,7 @@ public class MainActivity extends AppCompatActivity {
                         case 9: mostrarEquipoProgramacion(); break;
                         case 10: startActivity(new Intent(this, BusinessFinanceActivity.class)); break;
                         case 11: mostrarRegistroModelos(); break;
+                        case 12: mostrarPCloud(); break;
                         default: break;
                     }
                 })
@@ -1544,6 +1548,51 @@ public class MainActivity extends AppCompatActivity {
                                 + "\n" + motorConversacional.getVoiceStatus())
                         .setPositiveButton("Cerrar", null).show())
                 .setNegativeButton("Cerrar", null).show();
+    }
+
+    private void mostrarPCloud() {
+        boolean connected = CloudSyncManager.isPCloudConfigured(this);
+        new AlertDialog.Builder(this).setTitle("Memoria en pCloud")
+                .setMessage(connected ? "Cuenta conectada. Sincronización: "
+                        + (CloudSyncManager.isEnabled(this) ? "activa" : "pausada")
+                        : "Cuenta sin conectar. Primero registra en pCloud esta Redirect URI:\n"
+                        + PCloudOAuth.REDIRECT_URI + "\nDespués pulsa Conectar e introduce el Client ID de Salve Android. Nunca introduzcas el Client secret.")
+                .setPositiveButton(connected ? "Sincronizar ahora" : "Conectar", (d, w) -> {
+                    if (connected) {
+                        CloudSyncManager.setEnabled(this, true);
+                        CloudSyncManager.uploadGrafoBundle(this);
+                        Toast.makeText(this, "Sincronización solicitada", Toast.LENGTH_SHORT).show();
+                    } else solicitarClientIdPCloud();
+                })
+                .setNeutralButton(connected ? "Pausar" : "Cerrar", (d, w) -> {
+                    if (connected) CloudSyncManager.setEnabled(this, false);
+                }).setNegativeButton("Cancelar", null).show();
+    }
+
+    private void solicitarClientIdPCloud() {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint("Client ID (no Client secret)");
+        input.setText(getPreferences(MODE_PRIVATE).getString("pcloud_client_id", ""));
+        new AlertDialog.Builder(this).setTitle("Conectar pCloud")
+                .setView(input).setPositiveButton("Abrir pCloud", (d, w) -> {
+                    try {
+                        if (pCloudOAuth != null) pCloudOAuth.cancel();
+                        String id = input.getText().toString().trim();
+                        pCloudOAuth = new PCloudOAuth();
+                        pCloudOAuth.start(this, id, error -> runOnUiThread(() -> {
+                            if (!isFinishing() && !isDestroyed()) {
+                                new AlertDialog.Builder(this).setTitle("pCloud")
+                                        .setMessage(error == null ? "Salve conectada. La carpeta /Salve se creará con la primera subida." : error)
+                                        .setPositiveButton("Cerrar", null).show();
+                            }
+                        }));
+                        getPreferences(MODE_PRIVATE).edit().putString("pcloud_client_id", id).apply();
+                    } catch (Exception e) {
+                        new AlertDialog.Builder(this).setTitle("No se pudo iniciar pCloud")
+                                .setMessage(e.getMessage()).setPositiveButton("Cerrar", null).show();
+                    }
+                }).setNegativeButton("Cancelar", null).show();
     }
 
     private void mostrarVozSalve() {
