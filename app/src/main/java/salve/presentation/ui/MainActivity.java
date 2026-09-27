@@ -1556,43 +1556,34 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage(connected ? "Cuenta conectada. Sincronización: "
                         + (CloudSyncManager.isEnabled(this) ? "activa" : "pausada")
                         : "Cuenta sin conectar. Primero registra en pCloud esta Redirect URI:\n"
-                        + PCloudOAuth.REDIRECT_URI + "\nDespués pulsa Conectar e introduce el Client ID de Salve Android. Nunca introduzcas el Client secret.")
+                        + PCloudOAuth.REDIRECT_URI + "\nDespués pulsa Conectar y autoriza Salve en el navegador.")
                 .setPositiveButton(connected ? "Sincronizar ahora" : "Conectar", (d, w) -> {
                     if (connected) {
                         CloudSyncManager.setEnabled(this, true);
                         CloudSyncManager.uploadGrafoBundle(this);
                         Toast.makeText(this, "Sincronización solicitada", Toast.LENGTH_SHORT).show();
-                    } else solicitarClientIdPCloud();
+                    } else conectarPCloud();
                 })
                 .setNeutralButton(connected ? "Pausar" : "Cerrar", (d, w) -> {
                     if (connected) CloudSyncManager.setEnabled(this, false);
                 }).setNegativeButton("Cancelar", null).show();
     }
 
-    private void solicitarClientIdPCloud() {
-        EditText input = new EditText(this);
-        input.setSingleLine(true);
-        input.setHint("Client ID (no Client secret)");
-        input.setText(getPreferences(MODE_PRIVATE).getString("pcloud_client_id", ""));
-        new AlertDialog.Builder(this).setTitle("Conectar pCloud")
-                .setView(input).setPositiveButton("Abrir pCloud", (d, w) -> {
-                    try {
-                        if (pCloudOAuth != null) pCloudOAuth.cancel();
-                        String id = input.getText().toString().trim();
-                        pCloudOAuth = new PCloudOAuth();
-                        pCloudOAuth.start(this, id, error -> runOnUiThread(() -> {
-                            if (!isFinishing() && !isDestroyed()) {
-                                new AlertDialog.Builder(this).setTitle("pCloud")
-                                        .setMessage(error == null ? "Salve conectada. La carpeta /Salve se creará con la primera subida." : error)
-                                        .setPositiveButton("Cerrar", null).show();
-                            }
-                        }));
-                        getPreferences(MODE_PRIVATE).edit().putString("pcloud_client_id", id).apply();
-                    } catch (Exception e) {
-                        new AlertDialog.Builder(this).setTitle("No se pudo iniciar pCloud")
-                                .setMessage(e.getMessage()).setPositiveButton("Cerrar", null).show();
-                    }
-                }).setNegativeButton("Cancelar", null).show();
+    private void conectarPCloud() {
+        try {
+            if (pCloudOAuth != null) pCloudOAuth.cancel();
+            pCloudOAuth = new PCloudOAuth();
+            pCloudOAuth.start(this, PCloudOAuth.CLIENT_ID, error -> runOnUiThread(() -> {
+                if (!isFinishing() && !isDestroyed()) {
+                    new AlertDialog.Builder(this).setTitle("pCloud")
+                            .setMessage(error == null ? "Salve conectada. La carpeta /Salve se creará con la primera subida." : error)
+                            .setPositiveButton("Cerrar", null).show();
+                }
+            }));
+        } catch (Exception e) {
+            new AlertDialog.Builder(this).setTitle("No se pudo iniciar pCloud")
+                    .setMessage(e.getMessage()).setPositiveButton("Cerrar", null).show();
+        }
     }
 
     private void mostrarVozSalve() {
