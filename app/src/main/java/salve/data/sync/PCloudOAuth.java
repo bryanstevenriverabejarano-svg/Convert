@@ -19,7 +19,7 @@ import java.util.Map;
 /** One-shot loopback receiver for pCloud's mobile implicit grant. No client secret is used. */
 public final class PCloudOAuth {
     // Public OAuth client identifier. The client secret must never be shipped in the APK.
-    public static final String CLIENT_ID = "YSI7EDHzBkH";
+    public static final String CLIENT_ID = "YSI7EDHZBkH";
     public static final String REDIRECT_URI = "http://localhost:8765/callback";
     private static final int PORT = 8765;
     private volatile boolean cancelled;
