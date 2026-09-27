@@ -15,7 +15,7 @@ public interface SyncEventDao {
     long insert(SyncEventEntity e);
 
     // Pendientes de envío (orden temporal ascendente), ignorando los que fallaron demasiadas veces
-    @Query("SELECT * FROM sync_events WHERE tries < 20 ORDER BY createdAt ASC LIMIT :limit")
+    @Query("SELECT * FROM sync_events WHERE tries >= 0 AND tries < 20 ORDER BY createdAt ASC LIMIT :limit")
     List<SyncEventEntity> getPending(int limit);
 
     // ✅ NUEVO: últimos N eventos (enviados o no) para construir el grafo
