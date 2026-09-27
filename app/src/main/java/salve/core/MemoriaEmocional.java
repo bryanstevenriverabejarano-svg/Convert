@@ -35,6 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import salve.data.util.CloudLogger;
+import salve.data.sync.CloudSyncManager;
 import android.text.TextUtils;   // <— para TextUtils.isEmpty(...)
 import java.util.Locale;         // <— para Locale.getDefault()
 
@@ -1358,7 +1359,20 @@ public class MemoriaEmocional {
     private void insertarRecuerdoDB(Recuerdo r) {
         memoryWriteExecutor.execute(() -> {
             try {
-                recuerdoDao.insertRecuerdo(crearRecuerdoEntity(r));
+                RecuerdoEntity entity = crearRecuerdoEntity(r);
+                recuerdoDao.insertRecuerdo(entity);
+                try {
+                    JSONObject cloud = new JSONObject();
+                    cloud.put("type", "memory");
+                    cloud.put("content", entity.frase == null ? "" : entity.frase);
+                    cloud.put("emotion", entity.emocion == null ? "" : entity.emocion);
+                    cloud.put("intensity", entity.intensidad);
+                    cloud.put("tags", entity.etiquetas == null ? "[]" : entity.etiquetas);
+                    cloud.put("time_ms", entity.timestamp);
+                    CloudSyncManager.enqueue(context, cloud.toString());
+                } catch (Exception cloudError) {
+                    Log.w(TAG, "Recuerdo local guardado; no se pudo encolar copia cloud", cloudError);
+                }
             } catch (Exception ex) {
                 Log.e("Salve", "Error insertando recuerdo", ex);
                 throw new IllegalStateException("Falló la escritura del recuerdo", ex);
