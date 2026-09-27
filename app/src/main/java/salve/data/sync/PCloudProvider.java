@@ -10,6 +10,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -87,7 +90,7 @@ public final class PCloudProvider implements CloudProvider {
             if (!ok(uploaded)) return false;
 
             JsonArray metadata = uploaded.getAsJsonArray("metadata");
-            if (metadata == null || metadata.isEmpty()) return false;
+            if (metadata == null || metadata.size() == 0) return false;
             JsonObject meta = metadata.get(0).getAsJsonObject();
             long fileId = meta.get("fileid").getAsLong();
 
@@ -100,6 +103,29 @@ public final class PCloudProvider implements CloudProvider {
             return remote != null && remote.equalsIgnoreCase(digest(file, algorithm));
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    public List<String> listFiles(String folderPath) {
+        Credentials c = credentials();
+        if (c == null) return Collections.emptyList();
+        try {
+            String normalized = normalizeRemotePath(folderPath);
+            JsonObject result = json(authenticatedGet(c, "listfolder", "path", normalized), c);
+            if (!ok(result) || !result.has("metadata")) return Collections.emptyList();
+            JsonObject metadata = result.getAsJsonObject("metadata");
+            JsonArray contents = metadata.getAsJsonArray("contents");
+            if (contents == null) return Collections.emptyList();
+            List<String> paths = new ArrayList<>();
+            for (int i = 0; i < contents.size(); i++) {
+                JsonObject item = contents.get(i).getAsJsonObject();
+                if (!item.has("isfolder") || !item.get("isfolder").getAsBoolean()) {
+                    if (item.has("path")) paths.add(item.get("path").getAsString());
+                }
+            }
+            return paths;
+        } catch (Exception e) {
+            return Collections.emptyList();
         }
     }
 
