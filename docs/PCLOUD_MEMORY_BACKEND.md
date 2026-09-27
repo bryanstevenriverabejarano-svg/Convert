@@ -29,7 +29,7 @@ En la ficha **Salve Android** de https://docs.pcloud.com/my_apps/ añade exactam
 
 `http://localhost:8765/callback`
 
-Instala la versión de Salve que incluya esta pantalla. En la app abre **IA y cámara → Nube pCloud → Conectar**, introduce el **Client ID** público de la ficha (nunca el Client secret) y autoriza en el navegador del mismo móvil. El navegador vuelve a un receptor local temporal de Salve. El callback verifica un estado aleatorio y el host oficial antes de guardar el token cifrado en Android Keystore. El receptor se cierra al completar o tras tres minutos. Luego se activa el worker.
+Instala la versión de Salve que incluya esta pantalla. En la app abre **IA y cámara → Nube pCloud → Conectar** y autoriza en el navegador del mismo móvil. El Client ID público ya está incorporado en la app; el Client secret no se usa. El navegador vuelve a un receptor local temporal de Salve. El callback verifica un estado aleatorio y el host oficial antes de guardar el token cifrado en Android Keystore. El receptor se cierra al completar o tras tres minutos. Luego se activa el worker. En usos posteriores se conserva la autorización local y no se abre el navegador mientras siga conectada.
 
 El enlace con el backend es:
 
@@ -38,7 +38,7 @@ CloudSyncManager.configurePCloud(context, accessToken, apiHostname);
 CloudSyncManager.setEnabled(context, true);
 ```
 
-El Client ID se guarda localmente para reconexiones; el Client secret y el token nunca se incluyen en Git. La carpeta `/Salve` y sus subcarpetas se crean con la primera subida, no al registrar la aplicación en pCloud. Sólo los eventos encolados mientras la sincronización está activada se envían; no se vuelcan automáticamente recuerdos anteriores.
+El Client ID es público y está en el código; el Client secret y el token nunca se incluyen en Git. La carpeta `/Salve` y sus subcarpetas se crean con la primera subida, no al registrar la aplicación en pCloud. Sólo los eventos encolados mientras la sincronización está activada se envían; no se vuelcan automáticamente recuerdos anteriores.
 
 ## Prueba end-to-end en teléfono
 
