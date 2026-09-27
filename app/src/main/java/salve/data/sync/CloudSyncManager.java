@@ -129,7 +129,53 @@ public final class CloudSyncManager {
         if (viewer != null && viewer.isFile()) uploadAsync(provider, viewer, ROOT + "/graphs/viewer.html");
     }
 
-    /** Restore one text artifact into app-private external storage after a verified authenticated read. */
+    /** Restore synchronized event journal entries without duplicating existing local rows. */
+    public static int restoreEvents(Context ctx, int maxEvents) {
+        if (!isEnabled(ctx) || maxEvents <= 0) return 0;
+        PCloudProvider provider = new PCloudProvider(ctx);
+        if (!provider.isConfigured()) return 0;
+        try {
+            SyncEventDao dao = MemoriaDatabase.getInstance(ctx).syncEventDao();
+            List<String> files = provider.listFiles(ROOT + "/events");
+            int restored = 0;
+            for (int i = Math.max(0, files.size() - maxEvents); i < files.size(); i++) {
+                String remote = files.get(i);
+                byte[] bytes = provider.download(remote);
+                if (bytes == null) continue;
+                String payload = new String(bytes, StandardCharsets.UTF_8);
+                long createdAt = timestampFromEventPath(remote);
+                if (createdAt <= 0) {
+                    try { createdAt = new JSONObject(payload).optLong("time_ms", 0L); }
+                    catch (Exception ignored) {}
+                }
+                if (createdAt <= 0) continue;
+                if (dao.countExact(createdAt, payload) > 0) continue;
+                SyncEventEntity e = new SyncEventEntity();
+                e.payload = payload;
+                e.createdAt = createdAt;
+                e.tries = -1;
+                dao.insert(e);
+                restored++;
+            }
+            return restored;
+        } catch (Exception e) {
+            Log.e(TAG, "restoreEvents error", e);
+            return 0;
+        }
+    }
+
+    /** Restore graph/index/viewer plus event journal from pCloud. */
+    public static int restoreCoreMemory(Context ctx, int maxEvents) {
+        if (ctx == null) return 0;
+        File base = new File(ctx.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "recuerdos");
+        int restored = restoreEvents(ctx, maxEvents);
+        if (restoreTextArtifact(ctx, ROOT + "/graphs/graph.json", new File(base, "graph.json"))) restored++;
+        if (restoreTextArtifact(ctx, ROOT + "/memory/memories_index.json", new File(base, "memories_index.json"))) restored++;
+        if (restoreTextArtifact(ctx, ROOT + "/graphs/viewer.html", new File(base, "viewer.html"))) restored++;
+        return restored;
+    }
+
+    /** Restore one text artifact into app-private external storage after an authenticated read. */
     public static boolean restoreTextArtifact(Context ctx, String remotePath, File localTarget) {
         if (!isEnabled(ctx) || localTarget == null) return false;
         PCloudProvider provider = new PCloudProvider(ctx);
@@ -145,6 +191,18 @@ public final class CloudSyncManager {
         } catch (Exception e) {
             Log.e(TAG, "restore error", e);
             return false;
+        }
+    }
+
+    static long timestampFromEventPath(String path) {
+        if (path == null) return 0L;
+        try {
+            String name = path.substring(path.lastIndexOf('/') + 1);
+            int dash = name.indexOf('-');
+            if (dash <= 0) return 0L;
+            return Long.parseLong(name.substring(0, dash));
+        } catch (Exception e) {
+            return 0L;
         }
     }
 
