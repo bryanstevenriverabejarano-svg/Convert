@@ -46,6 +46,9 @@ public final class AgentEngine {
         try {
             while (true) {
                 check(stopped);
+                if (new Gson().toJson(run.goal).length() > budget() - 1800) {
+                    finish(run, "BLOCKED", "El objetivo completo no cabe en el contexto del modelo actual; divídelo o reanuda con un modelo de mayor contexto."); return store.get(id);
+                }
                 if (!run.answer.isEmpty()) { review(run, stopped); return store.get(id); }
                 if (run.pending != null) { execute(run, stopped); continue; }
                 if (run.modelCalls >= MAX_MODEL_CALLS) {
@@ -168,7 +171,7 @@ public final class AgentEngine {
     private int budget() { return Math.max(3000, Math.min(10_000, model.promptBudget() - 160)); }
     private String snapshot(AgentRun run, int limit, boolean reviewing) {
         JsonObject o = new JsonObject();
-        o.addProperty("objetivo", bounded(run.goal, Math.max(160, limit / 5)));
+        o.addProperty("objetivo", run.goal);
         if (reviewing) o.addProperty("respuesta", run.answer);
         o.addProperty("correccion", bounded(run.feedback, 160));
         // The full journal is durable. Only bounded excerpts enter a small on-device context.

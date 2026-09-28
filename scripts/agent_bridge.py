@@ -251,7 +251,7 @@ def execute(tool, value, *, fetch=fetch_public, executor=None):
         text, urls = [], []
         for result in results:
             target = result.get("url", "")
-            if len(target) <= 500 and target.startswith("https://"):
+            if isinstance(target, str) and len(target) <= 500 and target.startswith("https://"):
                 urls.append(target)
                 text.append(target + "\n" + str(result.get("description", ""))[:800])
         return {"status": "PARTIAL" if urls else "ERROR", "text": "Resultados de búsqueda; deben contrastarse leyendo las páginas:\n" + "\n".join(text)[:5600], "sources": urls, "links": urls}
@@ -277,7 +277,7 @@ def execute(tool, value, *, fetch=fetch_public, executor=None):
                         pass
             return {"status": "PARTIAL", "text": "Renderizado sin red; recursos externos y sesiones no cargados.\n" + result.get("text", "")[:5700], "sources": [url], "links": links}
         text, links = document(raw, url, kind)
-        return {"status": "SUCCESS", "text": text, "sources": [url], "links": links}
+        return {"status": "PARTIAL" if len(text) >= 6000 else "SUCCESS", "text": text, "sources": [url], "links": links}
     raise ToolError("Herramienta no registrada")
 
 

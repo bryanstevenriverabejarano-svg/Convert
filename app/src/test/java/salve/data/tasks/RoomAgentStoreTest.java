@@ -158,6 +158,15 @@ public class RoomAgentStoreTest {
         };
         assertEquals("SUCCEEDED", execute(r.id, small, tools("SUCCESS")).status);
     }
+    @Test public void oversizedGoalIsBlockedRatherThanSilentlyChangingTheTask() {
+        AgentRun r = store.create("x".repeat(1800), false, "", now);
+        AgentEngine.Model small = new AgentEngine.Model() {
+            public int promptBudget() { return 3200; }
+            public ModelResult generate(String prompt) { throw new AssertionError("Truncated goal must never reach the model"); }
+        };
+        assertEquals("BLOCKED", execute(r.id, small, tools("SUCCESS")).status);
+        assertEquals(0, memories()); assertEquals(1800, store.get(r.id).goal.length());
+    }
     @Test public void localOnlyResultsDoNotEnterCloudOutbox() {
         sync = false; execute(create().id, model(), tools("SUCCESS")); assertEquals(1, memories()); assertTrue(db.syncEventDao().getPending(10).isEmpty());
     }

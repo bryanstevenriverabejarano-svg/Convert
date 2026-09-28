@@ -1,5 +1,6 @@
 """Runs INSIDE a disposable no-network container, never directly on a workstation."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -16,9 +17,17 @@ elif sys.argv[1] == "browser.render":
     if not isinstance(html, str) or len(html) > 256_000:
         raise ValueError("Invalid document size")
     Path("/tmp/page.html").write_text(html, encoding="utf-8")
+    # Crashpad uses XDG configuration independently of --user-data-dir on Linux.
+    # Both directories live in the container's bounded tmpfs, with the root still read-only.
+    chrome_env = dict(os.environ, XDG_CONFIG_HOME="/tmp/chrome-config", XDG_CACHE_HOME="/tmp/chrome-cache")
+    Path(chrome_env["XDG_CONFIG_HOME"]).mkdir(mode=0o700, exist_ok=True)
+    Path(chrome_env["XDG_CACHE_HOME"]).mkdir(mode=0o700, exist_ok=True)
     rendered = subprocess.run(["chromium", "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
                                "--user-data-dir=/tmp/chromium", "--virtual-time-budget=2000", "--timeout=8000",
-                               "--dump-dom", "file:///tmp/page.html"], capture_output=True, timeout=12, check=True)
+                               "--dump-dom", "file:///tmp/page.html"], capture_output=True, timeout=12, check=False, env=chrome_env)
+    if rendered.returncode:
+        sys.stderr.write(rendered.stderr[:2000].decode("utf-8", errors="replace"))
+        raise SystemExit(1)
 
     class Reader(HTMLParser):
         def __init__(self):

@@ -237,8 +237,15 @@ public class WikipediaResearchClient {
     /** Bounded public hyperlinks; callers still validate each destination when it is fetched. */
     public static List<String> extractLinks(String html, String base) {
         List<String> links = new ArrayList<>();
-        Matcher match = Pattern.compile("(?is)<a\\b[^>]*\\bhref\\s*=\\s*([\"'])(.*?)\\1").matcher(html);
-        while (match.find() && links.size() < 12) {
+        Matcher anchors = Pattern.compile("(?is)<a\\b").matcher(html);
+        Pattern href = Pattern.compile("(?is)\\bhref\\s*=\\s*([\"'])(.*?)\\1");
+        int cursor = 0, inspected = 0;
+        while (cursor < html.length() && anchors.find(cursor) && links.size() < 12 && inspected++ < 128) {
+            int from = anchors.end(), end = html.indexOf('>', from);
+            if (end < 0 || end - from > 4096) { cursor = Math.min(html.length(), from + 4096); continue; }
+            cursor = end + 1;
+            Matcher match = href.matcher(html.substring(from, end));
+            if (!match.find()) continue;
             try {
                 String link = URI.create(base).resolve(match.group(2).replace("&amp;", "&")).toString();
                 if (link.length() <= 500 && NetworkResourcePolicy.validateKnowledgeUrl(link).allowed && !links.contains(link)) links.add(link);

@@ -18,11 +18,12 @@ public final class AndroidAgentTools implements AgentEngine.Tools {
         memory = new ConversationMemoryGrounding(db.recuerdoDao(), db.knowledgeNodeDao(), db.knowledgeRelationDao());
     }
     @Override public String capabilities(AgentRun run) {
-        return "memory.lookup: consulta local; web.search: objetivo literal (Wikipedia o búsqueda del puente); "
-                + "web.read y api.get: lectura HTTPS de URL del objetivo/enlaces observados. "
-                + "browser.render: renderizado externo, " + (run.bridge.isEmpty() ? "sin configurar" : "configurado; disponibilidad por comprobar")
-                + "; code.python: " + (run.codeAllowed && !run.bridge.isEmpty() ? "autorizado; requiere sandbox externo disponible" : "no disponible para este plan")
-                + ". Los contadores son resultados operativos, no una prueba de verdad: " + statistics.get();
+        String metrics = statistics.get();
+        return "memory.lookup: " + (run.codeAllowed ? "no autorizada" : "memoria local")
+                + "; web.search: objetivo literal, Wikipedia/puente; web.read/api.get: URL pública autorizada; "
+                + "browser.render: " + (run.bridge.isEmpty() ? "sin configurar" : "puente configurado, disponibilidad por comprobar")
+                + "; code.python: " + (run.codeAllowed && !run.bridge.isEmpty() ? "autorizado, requiere sandbox disponible" : "no disponible")
+                + ". Contadores observados (no prueban verdad): " + metrics.substring(0, Math.min(280, metrics.length()));
     }
     @Override public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call, BooleanSupplier stopped) throws Exception {
         if (call.tool.equals("memory.lookup")) {
@@ -51,6 +52,7 @@ public final class AndroidAgentTools implements AgentEngine.Tools {
             observation.status = batch.status == WikipediaResearchClient.Status.COMPLETE ? "SUCCESS" : "PARTIAL";
             StringBuilder text = new StringBuilder("Descubrimiento público mediante Wikipedia/URLs explícitas:\n");
             for (WikipediaResearchClient.Page page : batch.pages) {
+                if (page.text.length() >= WikipediaResearchClient.MAX_EXTRACT_CHARS) observation.status = "PARTIAL";
                 observation.sources.add(page.url);
                 text.append(page.url).append('\n').append(page.text.substring(0, Math.min(1400, page.text.length()))).append('\n');
                 for (String url : page.links) if (observation.links.size() < 12 && !observation.links.contains(url)) observation.links.add(url);
@@ -58,6 +60,7 @@ public final class AndroidAgentTools implements AgentEngine.Tools {
             observation.text = text.substring(0, Math.min(6000, text.length()));
         } else if (call.tool.equals("web.read") || call.tool.equals("api.get")) {
             WikipediaResearchClient.Page page = web.fetch(call.input, stopped);
+            observation.status = page.text.length() >= WikipediaResearchClient.MAX_EXTRACT_CHARS ? "PARTIAL" : "SUCCESS";
             observation.text = page.text; observation.sources.add(page.url); observation.links.addAll(page.links);
         } else return new AgentRun.Observation(call.id, call.tool, "BLOCKED", "No hay ejecutor registrado.");
         return observation;
