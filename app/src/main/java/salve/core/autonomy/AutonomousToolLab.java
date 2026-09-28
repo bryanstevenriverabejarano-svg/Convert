@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
+import salve.core.autonomy.VerifiedStrategyPolicy;
 
 /** Bounded symbolic synthesis, exact feedback, regression checks and versioned tool promotion. */
 public final class AutonomousToolLab {
@@ -56,6 +57,8 @@ public final class AutonomousToolLab {
         if (!value.get("schema").toString().equals("1"))
             throw new IllegalArgumentException("Estado no compatible");
         counter(value.get("revision"), 0);
+        ToolLearningSupport.policy(value);
+        ToolLearningSupport.enabled(value);
         JsonObject tools = value.getAsJsonObject("tools");
         if (tools.size() > 4 || value.getAsJsonArray("receipts").size() > 24) throw new IllegalArgumentException();
         for (String family : tools.keySet()) {
@@ -140,8 +143,18 @@ public final class AutonomousToolLab {
             if (existingStrategy != null) candidates.add(existingStrategy);
             candidates.addAll(available);
             JsonArray regressions = state.getAsJsonObject("regressions").getAsJsonArray(family);
+            boolean learning = ToolLearningSupport.enabled(state);
+            VerifiedStrategyPolicy policy = ToolLearningSupport.policy(state);
+            String policyContext = learning ? ToolLearningSupport.context(family, input) : "";
+            String problemId = learning ? ToolLearningSupport.fingerprint(input) : "";
+            String trialId = learning ? ToolLearningSupport.trialId(input, regressions) : "";
+            List<String> baselineOrder = new ArrayList<>(candidates);
+            List<String> candidateOrder = learning ? policy.order(policyContext, baselineOrder) : baselineOrder;
+            report.addProperty("experimentalLearning", learning);
+            report.addProperty("policyReordered", !candidateOrder.equals(baselineOrder));
+            report.addProperty("learningOperations", 0);
             boolean invalidatedExisting = false;
-            for (String strategy : candidates) {
+            for (String strategy : candidateOrder) {
                 if (attempts.size() >= MAX_ATTEMPTS) break;
                 OperationBudget budget = new OperationBudget(ATTEMPT_OPERATIONS, stopped);
                 JsonObject program = ToolProgram.generate(family, strategy);
@@ -153,24 +166,10 @@ public final class AutonomousToolLab {
                 JsonObject result = null;
                 boolean passed = false;
                 try {
-                    ToolInterpreter.Execution execution = ToolInterpreter.run(program, input, budget);
-                    result = execution.result;
-                    passed = execution.verification.passed;
-                    attempt.addProperty("feedback", execution.verification.summary);
-                    int checked = 0;
-                    if (passed && regressions != null) {
-                        for (JsonElement old : regressions) {
-                            if (old.equals(input)) continue;
-                            ToolInterpreter.Execution regression = ToolInterpreter.run(program, old.getAsJsonObject(), budget);
-                            checked++;
-                            if (!regression.verification.passed) {
-                                passed = false;
-                                attempt.addProperty("feedback", "El candidato falla una regresión previamente verificada");
-                                break;
-                            }
-                        }
-                    }
-                    attempt.addProperty("regressionChecks", checked);
+                    ToolLearningSupport.Trial trial = ToolLearningSupport.evaluate(program, input, regressions, budget);
+                    result = trial.result; passed = trial.passed;
+                    attempt.addProperty("feedback", trial.feedback);
+                    attempt.addProperty("regressionChecks", trial.replayChecks);
                 } catch (OperationBudget.Exhausted exhausted) {
                     passed = false;
                     attempt.addProperty("feedback", "Presupuesto del candidato agotado; no se acepta");
@@ -193,9 +192,44 @@ public final class AutonomousToolLab {
                     if (strategy.equals(existingStrategy)) invalidatedExisting = true;
                     continue;
                 }
+                // Learn only when a candidate has established that the challenge is valid.
+                // No policy mutation becomes durable independently of the tool transaction.
+                if (learning) {
+                    for (JsonElement tried : attempts) {
+                        JsonObject a = tried.getAsJsonObject();
+                        policy.observe(policyContext, problemId, trialId, a.get("strategy").getAsString(),
+                                a.get("passed").getAsBoolean(), a.get("operations").getAsInt());
+                    }
+                    String probeStrategy = policy.probe(policyContext, problemId, available, strategy);
+                    if (probeStrategy != null) {
+                        OperationBudget probeBudget = new OperationBudget(ToolLearningSupport.PROBE_OPERATIONS, stopped);
+                        JsonObject probe = new JsonObject();
+                        probe.addProperty("strategy", probeStrategy);
+                        boolean probePassed = false;
+                        try {
+                            ToolLearningSupport.Trial trial = ToolLearningSupport.evaluate(
+                                    ToolProgram.generate(family, probeStrategy), input, regressions, probeBudget);
+                            probePassed = trial.passed;
+                            probe.addProperty("feedback", trial.feedback);
+                            probe.addProperty("regressionChecks", trial.replayChecks);
+                        } catch (CancellationException cancelled) {
+                            throw cancelled;
+                        } catch (RuntimeException rejected) {
+                            probe.addProperty("feedback", "Sonda no verificada o presupuesto agotado; no se adopta.");
+                        } finally {
+                            totalOperations += probeBudget.getUsed();
+                            probe.addProperty("verified", probePassed);
+                            probe.addProperty("operations", probeBudget.getUsed());
+                            report.addProperty("learningOperations", probeBudget.getUsed());
+                            report.add("learningProbe", probe);
+                        }
+                        policy.observe(policyContext, problemId, trialId, probeStrategy, probePassed, probeBudget.getUsed());
+                    }
+                }
                 // Re-check cancellation immediately before committing a candidate.
                 new OperationBudget(1, stopped).tick();
                 JsonObject next = state.deepCopy();
+                if (learning) next.addProperty("learningPolicy", policy.encode());
                 JsonObject entry = new JsonObject();
                 boolean changed = existing == null || !program.equals(existing.getAsJsonObject("program"));
                 long version = existing == null ? 1
@@ -311,7 +345,29 @@ public final class AutonomousToolLab {
         return "Laboratorio " + (paused.get() ? "pausado" : "disponible") + ". Herramientas declarativas verificadas: "
                 + tools.size() + ". Familias: " + String.join(", ", tools.keySet())
                 + ". Revisiones guardadas: " + state.get("revision").getAsLong()
-                + ". Síntesis simbólica acotada; no demuestra superinteligencia ni ejecuta código libre.";
+                + ". " + learningStatus()
+                + " Síntesis simbólica acotada; no demuestra superinteligencia ni ejecuta código libre.";
+    }
+
+    public synchronized String learningStatus() {
+        return "Aprendizaje experimental " + (ToolLearningSupport.enabled(state) ? "activo" : "desactivado")
+                + ": " + ToolLearningSupport.policy(state).size() + " observaciones locales. "
+                + "Una sonda como máximo por reto, hasta 100000 operaciones adicionales; "
+                + "adopción por tres problemas distintos comparados y al menos 10% menos operaciones, "
+                + "sin fallos ni regresiones observadas. No es entrenamiento de los pesos del modelo.";
+    }
+
+    public synchronized String setExperimentalLearning(boolean enabled) {
+        if (paused.get()) return "El laboratorio está pausado; reanúdalo para cambiar el aprendizaje.";
+        JsonObject next = state.deepCopy();
+        next.addProperty("experimentalLearning", enabled);
+        try {
+            next.addProperty("revision", Math.addExact(state.get("revision").getAsLong(), 1L));
+            store.write(next.toString()); state = next;
+        } catch (Exception unavailable) {
+            return "No pude guardar la configuración; se mantiene el estado anterior.";
+        }
+        return learningStatus();
     }
 
     public synchronized String proceduralContext(String family) {
@@ -331,6 +387,9 @@ public final class AutonomousToolLab {
             return "El contador del registro alcanzó su límite; conservé la versión actual.";
         }
         JsonObject next = state.deepCopy();
+        VerifiedStrategyPolicy policy = ToolLearningSupport.policy(next);
+        policy.forgetFamily(family);
+        next.addProperty("learningPolicy", policy.encode());
         JsonObject entry = next.getAsJsonObject("tools").getAsJsonObject(family);
         JsonObject previous = entry.getAsJsonObject("previous").deepCopy();
         checkProgramFamily(previous, family);
