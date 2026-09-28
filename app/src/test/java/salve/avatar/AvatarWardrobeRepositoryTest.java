@@ -23,7 +23,7 @@ public final class AvatarWardrobeRepositoryTest {
         assertEquals("pajamas", restarted.selected().template);
         assertEquals(AvatarDesignSpec.Palette.LAVENDER, restarted.selected().palette);
         assertEquals(AvatarDesignSpec.Pattern.STARS, restarted.selected().pattern);
-        assertEquals(2, restarted.list().size());
+        assertEquals(4, restarted.list().size());
     }
     @Test public void creatingWithoutWearingPreservesSelection() throws Exception {
         AvatarWardrobeRepository store = new AvatarWardrobeRepository(new File(temp.getRoot(), "wardrobe.json"));
@@ -36,19 +36,19 @@ public final class AvatarWardrobeRepositoryTest {
         File file = new File(temp.getRoot(), "wardrobe.json"); AvatarWardrobeRepository store = new AvatarWardrobeRepository(file);
         AvatarDesignSpec removed = store.create(design("Borrar", true)); store.delete(removed.id);
         AvatarWardrobeRepository restarted = new AvatarWardrobeRepository(file);
-        assertEquals("original", restarted.selected().id); assertEquals(1, restarted.list().size());
+        assertEquals(AvatarDesignSpec.KURO_ID, restarted.selected().id); assertEquals(3, restarted.list().size());
     }
     @Test public void originalAndUnknownSelectionCannotBeDeletedOrSubstituted() throws Exception {
         AvatarWardrobeRepository store = new AvatarWardrobeRepository(new File(temp.getRoot(), "wardrobe.json"));
         try { store.delete("original"); fail(); } catch (IllegalArgumentException expected) { }
         try { store.select("00000000-0000-0000-0000-000000000000"); fail(); } catch (IllegalArgumentException expected) { }
-        assertEquals("original", store.selected().id);
+        assertEquals(AvatarDesignSpec.KURO_ID, store.selected().id);
     }
     @Test public void duplicateNamesDoNotOverwriteExistingWork() throws Exception {
         AvatarWardrobeRepository store = new AvatarWardrobeRepository(new File(temp.getRoot(), "wardrobe.json"));
         AvatarDesignSpec first = store.create(design("Café", true));
         try { store.create(design(" CAFE\u0301 ", true)); fail(); } catch (IllegalArgumentException expected) { }
-        assertEquals(first.id, store.selected().id); assertEquals(2, store.list().size());
+        assertEquals(first.id, store.selected().id); assertEquals(4, store.list().size());
     }
     @Test public void quotaIsEnforcedAndDeletionFreesCapacity() throws Exception {
         AvatarWardrobeRepository store = new AvatarWardrobeRepository(new File(temp.getRoot(), "wardrobe.json"));
@@ -57,16 +57,34 @@ public final class AvatarWardrobeRepositoryTest {
             AvatarDesignSpec created = store.create(design("Diseño " + i, false)); if (first == null) first = created;
         }
         try { store.create(design("Extra", true)); fail(); } catch (IllegalArgumentException expected) { }
-        assertEquals("original", store.selected().id);
+        assertEquals(AvatarDesignSpec.KURO_ID, store.selected().id);
         store.delete(first.id); store.create(design("Extra", true));
-        assertEquals(AvatarWardrobeRepository.MAX_DESIGNS + 1, store.list().size());
+        assertEquals(AvatarWardrobeRepository.MAX_DESIGNS + 3, store.list().size());
     }
     @Test public void failedDiskWriteDoesNotAnnounceOrPublishANewDesign() throws Exception {
         File parent = new File(temp.getRoot(), "blocked"); File file = new File(parent, "wardrobe.json");
         AvatarWardrobeRepository store = new AvatarWardrobeRepository(file);
         Files.write(parent.toPath(), new byte[]{1});
         try { store.create(design("No guardado", true)); fail(); } catch (IOException expected) { }
-        assertEquals(1, store.list().size()); assertEquals("original", store.selected().id);
+        assertEquals(3, store.list().size()); assertEquals(AvatarDesignSpec.KURO_ID, store.selected().id);
+    }
+    @Test public void bundledOutfitsPersistAndCannotBeDeleted() throws Exception {
+        File file = new File(temp.getRoot(), "wardrobe.json");
+        AvatarWardrobeRepository store = new AvatarWardrobeRepository(file);
+        assertEquals("Kuro", store.selected().name);
+        store.select(AvatarDesignSpec.SHIRO_ID);
+        assertEquals("Shiro", new AvatarWardrobeRepository(file).selected().name);
+        for (String id : new String[]{AvatarDesignSpec.KURO_ID, AvatarDesignSpec.SHIRO_ID}) {
+            try { store.delete(id); fail(); } catch (IllegalArgumentException expected) { }
+        }
+    }
+    @Test public void oldDefaultMigratesOnceButOriginalRemainsSelectable() throws Exception {
+        File file = new File(temp.getRoot(), "wardrobe.json");
+        Files.write(file.toPath(), "{\"version\":1,\"selected\":\"original\",\"designs\":[]}".getBytes(StandardCharsets.UTF_8));
+        AvatarWardrobeRepository store = new AvatarWardrobeRepository(file);
+        assertEquals(AvatarDesignSpec.KURO_ID, store.selected().id);
+        store.select(AvatarDesignSpec.ORIGINAL_ID);
+        assertEquals(AvatarDesignSpec.ORIGINAL_ID, new AvatarWardrobeRepository(file).selected().id);
     }
     @Test public void corruptPersistedFileIsPreservedForRecovery() throws Exception {
         File file = new File(temp.getRoot(), "wardrobe.json");

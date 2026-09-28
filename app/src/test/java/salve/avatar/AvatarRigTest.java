@@ -32,7 +32,7 @@ public final class AvatarRigTest {
     }
     @Test public void approvedOriginalTextureHasNotBeenReplaced() throws Exception {
         byte[] digest = MessageDigest.getInstance("SHA-256").digest(
-                Files.readAllBytes(mainFile("res/drawable/salve_imagen.png")));
+                Files.readAllBytes(mainFile("res/drawable/salve_original.png")));
         StringBuilder sha = new StringBuilder();
         for (byte b : digest) sha.append(String.format("%02x", b & 255));
         assertEquals("32346faf7219f417eb0983262ae7ac20a2e80063781a0ea32b843d3eb03fb0ec", sha.toString());

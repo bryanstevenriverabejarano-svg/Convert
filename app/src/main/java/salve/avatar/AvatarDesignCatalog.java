@@ -13,6 +13,8 @@ public final class AvatarDesignCatalog {
         }
     }
     private static final List<Template> TEMPLATES = Collections.unmodifiableList(Arrays.asList(
+            new Template("kuro", "Kuro", "avatar/wardrobe/kuro.png"),
+            new Template("shiro", "Shiro", "avatar/wardrobe/shiro.png"),
             new Template("original_dress", "Vestido original", null),
             new Template("pajamas", "Pijama", "avatar/wardrobe/pajamas.png"),
             new Template("explorer", "Exploradora", "avatar/wardrobe/explorer.png")));

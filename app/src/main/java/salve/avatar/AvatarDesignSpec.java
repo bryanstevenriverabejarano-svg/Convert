@@ -11,6 +11,11 @@ public final class AvatarDesignSpec {
         Palette(int color) { this.color = color; }
     }
     public enum Pattern { NONE, STARS, STRIPES }
+    public static final String KURO_ID = "00000000-0000-0000-0000-000000000001";
+    public static final String SHIRO_ID = "00000000-0000-0000-0000-000000000002";
+    public static boolean isBundled(String id) { return ORIGINAL_ID.equals(id) || KURO_ID.equals(id) || SHIRO_ID.equals(id); }
+    public static AvatarDesignSpec kuro() { return new AvatarDesignSpec(KURO_ID, "Kuro", "kuro", Palette.ORIGINAL, Pattern.NONE); }
+    public static AvatarDesignSpec shiro() { return new AvatarDesignSpec(SHIRO_ID, "Shiro", "shiro", Palette.ORIGINAL, Pattern.NONE); }
     public static final String ORIGINAL_ID = "original";
     public final String id, name, template;
     /** Zero preserves the template's original colors. Other colors apply only to validated clothing masks. */
@@ -26,6 +31,8 @@ public final class AvatarDesignSpec {
         if (palette == null || pattern == null) throw new IllegalArgumentException("Falta el color o el patrón.");
         if (id.equals(ORIGINAL_ID) && (!template.equals("original_dress") || palette != Palette.ORIGINAL || pattern != Pattern.NONE))
             throw new IllegalArgumentException("El diseño original se conserva intacto.");
+        if ((template.equals("kuro") || template.equals("shiro")) && (palette != Palette.ORIGINAL || pattern != Pattern.NONE))
+            throw new IllegalArgumentException("Kuro y Shiro conservan los colores y patrones de sus ilustraciones.");
         this.id = id; this.template = template; this.palette = palette; this.pattern = pattern; color = palette.color;
     }
     public static AvatarDesignSpec original() {
