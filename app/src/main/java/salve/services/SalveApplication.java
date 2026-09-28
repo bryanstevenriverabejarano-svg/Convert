@@ -12,6 +12,12 @@ public class SalveApplication extends Application {
         super.onCreate();
         CloudLogger.initialize(this);
         ttsManager = new TTSManager(this);
+        salve.core.tasks.ResearchTaskRuntime.CONTROLS.execute(() -> {
+            try { salve.core.tasks.ResearchTaskRuntime.get(this).recover(); }
+            catch (RuntimeException unavailable) {
+                android.util.Log.w("Salve/Tasks", "El diario no está disponible; no se modifica ni se borra.");
+            }
+        });
     }
 
     public static TTSManager getTTS() {

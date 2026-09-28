@@ -55,6 +55,8 @@ public final class GoalAutonomyRuntime {
 
     public void beginUserTurn() { activeTurns.incrementAndGet(); }
 
+    public boolean hasActiveConversation() { return activeTurns.get() > 0; }
+
     public void endUserTurn() { activeTurns.decrementAndGet(); }
 
     public String respond(String input) { return goals.respond(input); }
