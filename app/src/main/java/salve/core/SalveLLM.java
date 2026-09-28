@@ -390,6 +390,17 @@ public class SalveLLM {
         modelSnapshot = new ModelCatalog.RuntimeSnapshot(null, java.util.Collections.emptySet());
     }
 
+    /** Recheck under the same monitor as reload/generation, even if a fallback download began earlier. */
+    public synchronized ModelResult activateFallbackModel(String path, boolean supportsVision,
+            java.util.function.BooleanSupplier cancelled, String expectedFailure) {
+        String currentFailure = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(LocalModelPolicy.FAILURE_KEY, null);
+        if (!LocalModelPolicy.fallbackStillNeeded(expectedFailure, currentFailure)) {
+            throw new LocalModelPolicy.SupersededFallbackException();
+        }
+        return activateDownloadedModel(path, supportsVision, cancelled);
+    }
+
     /** Activate a verified download or an explicitly imported file only after inference succeeds. */
     public synchronized ModelResult activateDownloadedModel(String path, boolean supportsVision,
                                                             java.util.function.BooleanSupplier cancelled) {
@@ -577,11 +588,29 @@ public class SalveLLM {
             reloadModelInfoFromPrefs();
             initEngineIfNeeded();
             modelAvailable = true;
+            if (LocalModelPolicy.isDolphin(modelPath)) {
+                // A manual retry must be allowed past the persisted failure guard. Suppress
+                // fallback during the probe; a failed probe is handled once by the catch below.
+                fallbackRequested = false;
+                activationInProgress = true;
+                ModelResult probe;
+                try {
+                    probe = LocalModelPolicy.confirmRecovery(
+                            () -> generateResult("Responde con un saludo breve en español.", Role.CONVERSACIONAL),
+                            () -> appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                                    .remove(LocalModelPolicy.FAILURE_KEY).apply());
+                } finally {
+                    activationInProgress = false;
+                }
+                if (probe.getStatus() == ModelResult.Status.CANCELLED)
+                    throw new java.util.concurrent.CancellationException("Prueba local cancelada");
+                if (!probe.isSuccess()) throw new IllegalStateException(probe.getError());
+            }
             lastErrorMessage = null;
             Log.i(TAG, "forceReloadModel OK — modelo cargado: " + modelPath);
         } catch (Exception | LinkageError e) {
             Log.e(TAG, "Error al recargar modelo en forceReloadModel()", e);
-            if (!Thread.currentThread().isInterrupted()) requestDolphinFallback(e);
+            if (!Thread.currentThread().isInterrupted() && !(e instanceof java.util.concurrent.CancellationException)) requestDolphinFallback(e);
             modelPath = null;
             modelLib = null;
             isLiteRT = false;

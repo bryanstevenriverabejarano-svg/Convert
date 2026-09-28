@@ -56,4 +56,38 @@ class LocalModelPolicyTest {
         assertFalse(LocalModelPolicy.isDolphin("/models/Gemma.litertlm"))
         assertTrue(LocalModelPolicy.isDolphin("/models/Dolphin3.0-Llama3.2-3B-Q4_K_M-ac6b1ee.gguf"))
     }
+    @Test fun successfulRetryClearsSavedFailureOnlyAfterRealInference() {
+        var failure: String? = "old native error"
+        val events = mutableListOf<String>()
+        val result = LocalModelPolicy.confirmRecovery({
+            assertEquals("old native error", failure)
+            events += "probe"
+            ModelResult.success("Hola Bryan", 10)
+        }, { events += "clear"; failure = null })
+        assertTrue(result.isSuccess)
+        assertNull(failure)
+        assertEquals(listOf("probe", "clear"), events)
+        assertFalse(LocalModelPolicy.fallbackStillNeeded("old native error", failure))
+    }
+    @Test fun failedCancelledAndEmptyRetryDoNotClaimRecovery() {
+        for (result in listOf(
+            ModelResult.failure(ModelResult.Status.ERROR, "native error", 1),
+            ModelResult.failure(ModelResult.Status.CANCELLED, "cancelled", 1),
+            ModelResult.success("   ", 1))) {
+            val recovered = LocalModelPolicy.confirmRecovery({ result }, { fail("Must keep previous failure") })
+            assertFalse(recovered.isSuccess)
+        }
+    }
+    @Test fun exceptionDuringRetryDoesNotEraseFailureEvidence() {
+        assertThrows(IllegalStateException::class.java) {
+            LocalModelPolicy.confirmRecovery({ throw IllegalStateException("broken native load") }, { fail("Not recovered") })
+        }
+    }
+    @Test fun oldFallbackCannotReplaceRecoveredDolphinOrNewFailure() {
+        assertTrue(LocalModelPolicy.fallbackStillNeeded("failed A", "failed A"))
+        assertFalse(LocalModelPolicy.fallbackStillNeeded("failed A", null))
+        assertFalse(LocalModelPolicy.fallbackStillNeeded("failed A", "failed B"))
+        assertFalse(LocalModelPolicy.fallbackStillNeeded(null, null))
+        assertFalse(LocalModelPolicy.fallbackStillNeeded("", ""))
+    }
 }
