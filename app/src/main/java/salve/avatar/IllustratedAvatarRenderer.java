@@ -32,14 +32,14 @@ public final class IllustratedAvatarRenderer {
     private static final class Assets {
         final Bitmap original;
         final Artwork baseArtwork;
-        final AvatarRig rig, cyberRig;
+        final AvatarRig rig, cyberRig, coreRig;
         final Context context;
         final ExecutorService wardrobeWorker=Executors.newSingleThreadExecutor();
         final AtomicLong revision=new AtomicLong();
         final Handler main=new Handler(Looper.getMainLooper());
         final List<Runnable> listeners=new ArrayList<>();
         volatile Artwork dressed;
-        private String requestedId=AvatarDesignSpec.KURO_ID;
+        private String requestedId=AvatarDesignSpec.CORE_ID;
         Assets(Context context) throws java.io.IOException {
             this.context=context;
             BitmapFactory.Options options = new BitmapFactory.Options(); options.inScaled = false;
@@ -48,12 +48,13 @@ public final class IllustratedAvatarRenderer {
                 rig = new AvatarRig(reader);
             }
             try (InputStreamReader reader = new InputStreamReader(context.getAssets().open("avatar/cyber-rig.json"), StandardCharsets.UTF_8)) { cyberRig = new AvatarRig(reader); }
+            try (InputStreamReader reader = new InputStreamReader(context.getAssets().open("avatar/core/rig.json"), StandardCharsets.UTF_8)) { coreRig = new AvatarRig(reader); }
             if (original == null || original.getWidth() != rig.width || original.getHeight() != rig.height)
                 throw new IllegalArgumentException("The portrait and its rig do not match");
             Bitmap base=BitmapFactory.decodeResource(context.getResources(),R.drawable.salve_imagen,options);
-            if(base==null || base.getWidth()!=cyberRig.width || base.getHeight()!=cyberRig.height)
-                throw new java.io.IOException("Missing or invalid Kuro artwork");
-            baseArtwork=new Artwork(base,cyberRig);
+            if(base==null || base.getWidth()!=coreRig.width || base.getHeight()!=coreRig.height)
+                throw new java.io.IOException("Missing or invalid core artwork");
+            baseArtwork=new Artwork(base,coreRig);
             dressed=baseArtwork;
         }
         synchronized void select(AvatarDesignSpec design) {
@@ -67,7 +68,7 @@ public final class IllustratedAvatarRenderer {
                     publish(task,ready);
                 } catch(java.io.IOException|RuntimeException error) {
                     publish(task,baseArtwork);
-                    Log.w("SalveAvatar","No pude componer el vestuario; muestro Kuro como imagen base",error);
+                    Log.w("SalveAvatar","No pude componer el vestuario; muestro el núcleo como imagen base",error);
                 }
             });
         }
@@ -84,8 +85,9 @@ public final class IllustratedAvatarRenderer {
             if(source==null||source.getWidth()!=rig.width||source.getHeight()!=rig.height)
                 throw new java.io.IOException("Artwork does not match the frontal rig");
             int[] pixels=new int[rig.width*rig.height];source.getPixels(pixels,0,rig.width,0,0,rig.width,rig.height);
+            boolean core="core".equals(design.template);
             boolean cyber="kuro".equals(design.template)||"shiro".equals(design.template);
-            if(source!=original && !cyber) {
+            if(source!=original && !cyber && !core) {
                 // New frontal clothing has its own silhouette. Preserve the approved face/head above
                 // the collar; blending only at the hair/neck boundary avoids hard horizontal seams.
                 int[] head=new int[rig.width*390];original.getPixels(head,0,rig.width,0,0,rig.width,390);
@@ -99,7 +101,7 @@ public final class IllustratedAvatarRenderer {
                 int at=y*rig.width+x;pixels[at]=AvatarClothingStyle.pixel(design.template,x,y,pixels[at],design.color,pattern);
             }
             if(source!=original)source.recycle();
-            return new Artwork(Bitmap.createBitmap(pixels,rig.width,rig.height,Bitmap.Config.ARGB_8888),cyber?cyberRig:rig);
+            return new Artwork(Bitmap.createBitmap(pixels,rig.width,rig.height,Bitmap.Config.ARGB_8888),core?coreRig:cyber?cyberRig:rig);
         }
     }
     // Main, room and overlay share immutable decoded textures, not three copies of the illustration.

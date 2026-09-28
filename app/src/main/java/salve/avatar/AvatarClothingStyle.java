@@ -7,7 +7,7 @@ public final class AvatarClothingStyle {
         return pixel("original_dress",x,y,argb,palette,pattern);
     }
     public static int pixel(String template,int x,int y,int argb,int palette,String pattern) {
-        if("kuro".equals(template)||"shiro".equals(template))return argb;
+        if("core".equals(template)||"kuro".equals(template)||"shiro".equals(template))return argb;
         if(palette==0&&"NONE".equals(pattern))return argb;
         int alpha=argb>>>24,r=(argb>>>16)&255,g=(argb>>>8)&255,b=argb&255;
         if(alpha<128||y<420||y>960)return argb;

@@ -78,6 +78,7 @@ public final class AvatarRoomActivity extends Activity {
             else store.change(AvatarState::sleep);
         });
         row(root, "Despertar", () -> store.change(AvatarState::wake), "Guardar cama", () -> store.change(AvatarState::removeBed));
+        button(root, "Núcleo · vistas y movimiento", () -> startActivity(new Intent(this, AvatarCoreActivity.class)));
         button(root, "Taller de posturas · avatar anterior", () -> startActivity(new Intent(this, AvatarPoseActivity.class)));
         root.addView(label("Cómo me muevo", 19, Color.WHITE));
         motionStatus = label("", 14, 0xFFB3C5D1); root.addView(motionStatus);
@@ -88,7 +89,8 @@ public final class AvatarRoomActivity extends Activity {
         root.addView(label("Vestuario", 19, Color.WHITE));
         root.addView(label("Crea diseños con las prendas ilustradas disponibles, colores y patrones. Salve conserva su rostro y guarda cada diseño en el armario.", 14, 0xFFB3C5D1));
         button(root, "Diseñar una prenda", this::createDesign);
-        row(root, "Kuro · base", () -> wardrobe.wearTemplate("kuro", this::toast),
+        button(root, "Núcleo · nueva base", () -> wardrobe.wearTemplate("core", this::toast));
+        row(root, "Kuro", () -> wardrobe.wearTemplate("kuro", this::toast),
                 "Shiro", () -> wardrobe.wearTemplate("shiro", this::toast));
         row(root, "Vestido original", () -> wardrobe.wearTemplate("original_dress", this::toast),
                 "Pijama", () -> wardrobe.wearTemplate("pajamas", this::toast));

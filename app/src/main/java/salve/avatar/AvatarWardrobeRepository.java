@@ -24,17 +24,18 @@ public final class AvatarWardrobeRepository {
     private static final long MAX_BYTES = 32_768;
     private final File file;
     private List<AvatarDesignSpec> designs = new ArrayList<>();
-    private String selectedId = AvatarDesignSpec.KURO_ID;
+    private String selectedId = AvatarDesignSpec.CORE_ID;
     public AvatarWardrobeRepository(File file) throws IOException {
         this.file = file;
         if (file.exists()) read();
     }
     public List<AvatarDesignSpec> list() {
-        List<AvatarDesignSpec> result = new ArrayList<>(); result.add(AvatarDesignSpec.kuro()); result.add(AvatarDesignSpec.shiro()); result.add(AvatarDesignSpec.original()); result.addAll(designs);
+        List<AvatarDesignSpec> result = new ArrayList<>(); result.add(AvatarDesignSpec.core()); result.add(AvatarDesignSpec.kuro()); result.add(AvatarDesignSpec.shiro()); result.add(AvatarDesignSpec.original()); result.addAll(designs);
         return Collections.unmodifiableList(result);
     }
     public AvatarDesignSpec selected() { return find(selectedId); }
     public AvatarDesignSpec find(String id) {
+        if (AvatarDesignSpec.CORE_ID.equals(id)) return AvatarDesignSpec.core();
         if (AvatarDesignSpec.KURO_ID.equals(id)) return AvatarDesignSpec.kuro();
         if (AvatarDesignSpec.SHIRO_ID.equals(id)) return AvatarDesignSpec.shiro();
         if (AvatarDesignSpec.ORIGINAL_ID.equals(id)) return AvatarDesignSpec.original();
@@ -59,10 +60,10 @@ public final class AvatarWardrobeRepository {
         if (AvatarDesignSpec.isBundled(id)) throw new IllegalArgumentException("Los vestidos incluidos siempre se conservan.");
         find(id);
         List<AvatarDesignSpec> next = new ArrayList<>(designs); next.removeIf(d -> d.id.equals(id));
-        persist(next, selectedId.equals(id) ? AvatarDesignSpec.KURO_ID : selectedId);
+        persist(next, selectedId.equals(id) ? AvatarDesignSpec.CORE_ID : selectedId);
     }
     private void persist(List<AvatarDesignSpec> next, String selected) throws IOException {
-        Map<String, Object> root = new LinkedHashMap<>(); root.put("version", 2); root.put("selected", selected);
+        Map<String, Object> root = new LinkedHashMap<>(); root.put("version", 3); root.put("selected", selected);
         List<Map<String, Object>> rows = new ArrayList<>();
         for (AvatarDesignSpec design : next) {
             Map<String, Object> row = new LinkedHashMap<>(); row.put("id", design.id); row.put("name", design.name);
@@ -96,7 +97,7 @@ public final class AvatarWardrobeRepository {
                     case "version":
                         if (reader.peek() != JsonToken.NUMBER) throw new IOException("Versión no válida.");
                         version = reader.nextInt();
-                        if (version != 1 && version != 2) throw new IOException("Versión de armario no compatible.");
+                        if (version != 1 && version != 2 && version != 3) throw new IOException("Versión de armario no compatible.");
                         break;
                     case "selected":
                         if (reader.peek() != JsonToken.STRING) throw new IOException("Selección de armario no válida.");
@@ -131,7 +132,8 @@ public final class AvatarWardrobeRepository {
             if (keys.size() != 3 || selected == null || reader.peek() != JsonToken.END_DOCUMENT) throw new IOException("Armario incompleto.");
             designs = loaded; selectedId = selected; find(selected);
             // Migrate only the old default; explicit custom selections remain intact.
-            if (version == 1) selectedId = AvatarDesignSpec.ORIGINAL_ID.equals(selected) ? AvatarDesignSpec.KURO_ID : selected;
+            if ((version == 1 && AvatarDesignSpec.ORIGINAL_ID.equals(selected))
+                    || (version < 3 && AvatarDesignSpec.KURO_ID.equals(selected))) selectedId = AvatarDesignSpec.CORE_ID;
         } catch (IllegalArgumentException | IllegalStateException | NullPointerException invalid) {
             throw new IOException("El archivo del armario no es válido; se ha conservado para recuperarlo.", invalid);
         }
