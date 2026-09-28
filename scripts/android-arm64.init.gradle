@@ -1,7 +1,10 @@
 // Device-specific build invocation only; does not change the repository's universal build.
 gradle.beforeProject { project ->
     project.plugins.withId('com.android.application') {
-        project.android.defaultConfig.ndk.abiFilters.clear()
-        project.android.defaultConfig.ndk.abiFilters.add('arm64-v8a')
+        // Apply after build.gradle: its ABI list must not re-add emulator libraries.
+        project.androidComponents.finalizeDsl { android ->
+            android.defaultConfig.ndk.abiFilters.clear()
+            android.defaultConfig.ndk.abiFilters.add('arm64-v8a')
+        }
     }
 }

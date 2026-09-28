@@ -74,6 +74,15 @@ jobs:
           apk_path=app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk_path"
           sha256sum "$apk_path" > "$apk_path.sha256"
+          python3 - <<'PYTHON'
+          import zipfile
+          with zipfile.ZipFile("app/build/outputs/apk/debug/app-debug.apk") as apk:
+              names = set(apk.namelist())
+          abis = {name.split("/")[1] for name in names if name.startswith("lib/") and name.endswith(".so")}
+          assert abis == {"arm64-v8a"}, f"Unexpected APK ABIs: {abis}"
+          assert "lib/arm64-v8a/libsalve_llama.so" in names, "Missing GGUF runtime"
+          print("ARM64-only APK includes the Dolphin GGUF runtime")
+          PYTHON
 
       - name: Upload test reports
         if: ${{ always() }}
