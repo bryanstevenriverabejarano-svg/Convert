@@ -722,7 +722,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         if (salve.core.goals.GoalAutonomy.handles(limpio) || MotorConversacional.isSensorInput(limpio)
-                || salve.core.AutonomousToolRuntime.handles(limpio)) {
+                || salve.core.AutonomousToolRuntime.handles(limpio)
+                || salve.core.tasks.TaskCommand.parse(limpio) != null) {
             // Goals, sensors and explicit laboratory challenges stay in their local flows.
             motorConversacional.procesarEntrada(limpio, porVoz);
             inputChat.setText("");

@@ -70,7 +70,7 @@ class MemoryQuerySqlTest(unittest.TestCase):
 
     def test_room_4_to_5_migration_preserves_memory_and_revision_state(self):
         self.records((7, "Mi nombre es Bryan", '["profile:name"]', 1234))
-        source = (DAO_ROOT / "MemoriaDatabase.java").read_text(encoding="utf-8")
+        source = (DAO_ROOT / "MemoryMigrations.java").read_text(encoding="utf-8")
         sql = re.search(r'db.execSQL\("([^"\\]+)"\)', source).group(1)
         self.db.execute(sql)
         self.db.execute("INSERT INTO memory_sync_state VALUES ('profile:name', 2000, 1)")

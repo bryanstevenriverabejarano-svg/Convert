@@ -101,6 +101,7 @@ jobs:
             build/autonomy-evaluation/
             build/autonomy-generalization/
             build/native-alignment.json
+            app/schemas/
           if-no-files-found: warn
           retention-days: 14
 

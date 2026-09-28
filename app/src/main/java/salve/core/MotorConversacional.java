@@ -399,6 +399,28 @@ public class MotorConversacional {
                                 salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch) {
         if (closed || entrada == null || entrada.trim().isEmpty()) return;
         goalAutonomy.userActivity();
+        salve.core.tasks.TaskCommand taskControl = salve.core.tasks.TaskCommand.parse(entrada);
+        Boolean globalPause = salve.core.tasks.TaskCommand.globalAutonomyPause(entrada);
+        if (Boolean.TRUE.equals(globalPause) || taskControl != null &&
+                (taskControl.action == salve.core.tasks.TaskCommand.Action.CANCEL
+                || taskControl.action == salve.core.tasks.TaskCommand.Action.PAUSE_ALL)) {
+            // Cancellation has its own executor: never queue it behind model inference or touch Room on the UI thread.
+            if (Boolean.TRUE.equals(globalPause)) goalAutonomy.respond(entrada);
+            salve.core.tasks.ResearchTaskRuntime.CONTROLS.execute(() -> {
+                String response;
+                try {
+                    salve.core.tasks.ResearchTaskRuntime tasks = salve.core.tasks.ResearchTaskRuntime.get(context);
+                    if (Boolean.TRUE.equals(globalPause)) {
+                        tasks.pause(true);
+                        response = "Objetivos y tareas pausados. Sus puntos de recuperación se conservan.";
+                    } else response = tasks.respond(taskControl);
+                } catch (RuntimeException failure) {
+                    response = "No pude actualizar el estado de las tareas; sus datos se conservan.";
+                }
+                if (!closed) deliverResponse(response, AvatarMotionProtocol.parse(""), false, true, true);
+            });
+            return;
+        }
         if (AutonomousToolRuntime.isPauseCommand(entrada)) {
             // Cancellation must be visible while the conversation executor is still solving.
             String response = autonomousTools.respond(entrada, () -> closed);
@@ -412,7 +434,7 @@ public class MotorConversacional {
             return;
         }
         boolean goalTurn = salve.core.goals.GoalAutonomy.handles(entrada) || isSensorInput(entrada)
-                || AutonomousToolRuntime.handles(entrada);
+                || AutonomousToolRuntime.handles(entrada) || taskControl != null;
         final boolean privateBudgetTurn = !goalTurn && (forcePrivateBudget || isPrivateBudgetInput(entrada));
         if (!privateBudgetTurn) personalBudget.cancelPending();
         String urgent = java.text.Normalizer.normalize(entrada.trim().toLowerCase(Locale.ROOT),
@@ -497,6 +519,29 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        salve.core.tasks.TaskCommand taskCommand = salve.core.tasks.TaskCommand.parse(entrada);
+        if (taskCommand != null) {
+            String response;
+            try {
+                salve.core.tasks.ResearchTaskRuntime tasks = salve.core.tasks.ResearchTaskRuntime.get(context);
+                response = tasks.respond(taskCommand);
+                if (taskCommand.action == salve.core.tasks.TaskCommand.Action.RESULT) {
+                    salve.core.tasks.ResearchTask task = tasks.resolve(taskCommand.argument);
+                    if (task != null && task.receipt != null) {
+                        researchConversation.complete(task.question, salve.core.tasks.ResearchReceipt.decode(task.receipt).answer);
+                        conversationSession.addUser(entrada);
+                        conversationSession.addAssistant(response);
+                    }
+                }
+            } catch (IllegalArgumentException invalid) { response = invalid.getMessage(); }
+            catch (RuntimeException failure) { response = "No pude abrir el diario de tareas. Los datos se conservan; no restablezcas el almacenamiento."; }
+            // Tool output is evidence, never an avatar directive or another command.
+            deliverResponse(response, AvatarMotionProtocol.parse(""), false, true, true);
+            return;
+        }
+        if (Boolean.FALSE.equals(salve.core.tasks.TaskCommand.globalAutonomyPause(entrada))) {
+            salve.core.tasks.ResearchTaskRuntime.get(context).pause(false);
+        }
         if (AutonomousToolRuntime.handles(entrada)) {
             String response = autonomousTools.respond(entrada,
                     () -> closed || !isVoiceContextCurrent());

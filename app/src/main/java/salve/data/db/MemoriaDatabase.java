@@ -25,10 +25,12 @@ import androidx.room.RoomDatabase;
                 SyncEventEntity.class,          // Eventos pendientes de sincronizar
                 KnowledgeNodeEntity.class,      // Nodos del grafo de conocimiento vivo
                 KnowledgeRelationEntity.class,  // Relaciones del grafo
-                MemorySyncStateEntity.class
+                MemorySyncStateEntity.class,
+                ResearchTaskEntity.class,
+                AgentControlEntity.class
         },
-        version = 5,                // Non-destructive 4→5: import receipts and profile deletion revisions
-        exportSchema = false
+        version = 6,
+        exportSchema = true
 )
 public abstract class MemoriaDatabase extends RoomDatabase {
 
@@ -55,27 +57,24 @@ public abstract class MemoriaDatabase extends RoomDatabase {
 
     public abstract MemorySyncStateDao memorySyncStateDao();
 
+    public abstract ResearchTaskDao researchTaskDao();
+
     // ============================================================
     // SINGLETON
     // ============================================================
     private static volatile MemoriaDatabase INSTANCE;
 
+    /** Shared production/test configuration; missing migration paths preserve the database. */
+    public static RoomDatabase.Builder<MemoriaDatabase> builder(Context context, String name) {
+        return Room.databaseBuilder(context.getApplicationContext(), MemoriaDatabase.class, name)
+                .addMigrations(MemoryMigrations.FROM_4_TO_5, MemoryMigrations.FROM_5_TO_6);
+    }
+
     public static MemoriaDatabase getInstance(Context context) {
         if (INSTANCE == null) {
             synchronized (MemoriaDatabase.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = Room.databaseBuilder(
-                                    context.getApplicationContext(),
-                                    MemoriaDatabase.class,
-                                    "memoria.db"
-                            )
-                            .addMigrations(new androidx.room.migration.Migration(4, 5) {
-                                @Override public void migrate(@androidx.annotation.NonNull androidx.sqlite.db.SupportSQLiteDatabase db) {
-                                    db.execSQL("CREATE TABLE IF NOT EXISTS memory_sync_state (`key` TEXT NOT NULL, updatedAt INTEGER NOT NULL, deleted INTEGER NOT NULL, PRIMARY KEY(`key`))");
-                                }
-                            })
-                            .fallbackToDestructiveMigration()
-                            .build();
+                    INSTANCE = builder(context, "memoria.db").build();
                 }
             }
         }
