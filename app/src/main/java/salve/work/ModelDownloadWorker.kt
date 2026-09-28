@@ -27,6 +27,7 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
     override suspend fun doWork(): Result {
         var failure: String? = null
         var ready: String? = null
+        var notice: String? = null
         try {
             ensureNotificationChannel()
             setForeground(createForegroundInfo("Preparando la descarga…"))
@@ -38,9 +39,10 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
                     is ModelDownloadEvent.Status -> updateProgress(event.percent, event.message)
                     is ModelDownloadEvent.Prepared -> {
                         failure = null
-                        ready = "${event.modelName} activo. Prueba de texto: ${event.latencyMillis} ms. Chat en modo local." +
+                        ready = salve.core.SalveLLM.getInstance(applicationContext).statusDescription + ". Chat en modo local." +
                             if (event.supportsVision) " Visión declarada por el catálogo; pendiente de probar con una foto." else ""
                     }
+                    is ModelDownloadEvent.Notice -> notice = event.message
                     is ModelDownloadEvent.Skipped -> {
                         failure = null
                         ready = event.message
@@ -59,7 +61,7 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         }
         val errorMessage = failure ?: if (ready == null) "No se confirmó la activación del modelo" else null
         return if (errorMessage != null) Result.failure(workDataOf(KEY_STATUS to "error", KEY_MESSAGE to errorMessage))
-            else Result.success(workDataOf(KEY_STATUS to "ready", KEY_MESSAGE to ready))
+            else Result.success(workDataOf(KEY_STATUS to "ready", KEY_MESSAGE to listOfNotNull(ready, notice).joinToString("\n")))
     }
 
     private suspend fun updateProgress(percent: Int, message: String) {
@@ -101,17 +103,17 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         private const val CHANNEL_ID = "model_download_channel"
         private const val NOTIFICATION_ID = 2001
 
-        /** Called after a real Dolphin inference failure; cached Gemma can be verified offline. */
+        /** Persisted 8B pressure/failure tries 3B first; a 3B failure permits Gemma. */
         @JvmStatic fun enqueueFallback(context: Context) {
             val prefs = context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE)
-            if (prefs.getString(salve.core.LocalModelPolicy.FAILURE_KEY, null).isNullOrBlank()) return
-            val catalog = salve.core.ModelCatalog.read(context.assets.open("config/models.json"))
-            val entry = requireNotNull(catalog.findById(salve.core.LocalModelPolicy.FALLBACK))
-            val cached = java.io.File(salve.core.ModelStore.dir(context), entry.filename).isFile
+            val pending = prefs.getString(salve.core.LocalModelPolicy.PENDING_KEY, null)
+                ?: if (!prefs.getString(salve.core.LocalModelPolicy.FAILURE_KEY, null).isNullOrBlank()) salve.core.LocalModelPolicy.LIGHT else return
+            if (salve.core.LocalModelPolicy.next(pending) == null) return
+            // Cached recovery is performed synchronously by SalveLLM with no socket access.
+            // A corrupt cache may require a new transfer, so background work still requires Wi-Fi.
             val work = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
                 .setInputData(workDataOf(KEY_FALLBACK to true))
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(
-                    if (cached) NetworkType.NOT_REQUIRED else NetworkType.UNMETERED)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED)
                     .setRequiresStorageNotLow(true).build()).build()
             WorkManager.getInstance(context).enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.KEEP, work)
         }

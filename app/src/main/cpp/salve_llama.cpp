@@ -90,16 +90,17 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
-        JNIEnv *env, jclass, jlong handle, jbyteArray input, jobject cancelled) {
+        JNIEnv *env, jclass, jlong handle, jbyteArray input, jbyteArray systemInput, jobject cancelled) {
     try {
         auto *model = reinterpret_cast<llama_model *>(handle);
         Request request(env, cancelled);
         request.check();
         const auto *vocab = llama_model_get_vocab(model);
         std::string content = bytes(env, input);
+        std::string system = bytes(env, systemInput);
         // Dolphin 3.0 uses ChatML. Use GGUF's declared template for other imports.
         llama_chat_message messages[] = {
-            {"system", "Tu nombre es Salve. Responde en español a la persona que te habla. No confundas tu identidad con la suya. Conserva el contexto de la conversación."},
+            {"system", system.c_str()},
             {"user", content.c_str()}
         };
         const char *chatTemplate = llama_model_chat_template(model, nullptr);

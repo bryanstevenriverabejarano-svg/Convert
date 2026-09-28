@@ -1,0 +1,43 @@
+{
+  "model": "Dolphin 3.0 Llama 3.1 8B Q4_K_M",
+  "revision": "fd2736a6e6f4e637b2242b06e267572495d88e2f",
+  "bytes": 4920749472,
+  "sha256": "268390e07edd407ad93ea21a868b7ae995b5950e01cad0db9e1802ae5049d405",
+  "file_verified": true,
+  "runtime": "Salve Android JNI adapter compiled for Linux CPU, llama.cpp b6000",
+  "device": "development Linux x86_64, not Galaxy S24 Ultra",
+  "context_tokens": 4096,
+  "kv_cache_mib": 512,
+  "compute_buffer_mib": 148,
+  "checks": [
+    "load cancellation",
+    "nonempty Spanish UTF-8 response",
+    "generation cancellation",
+    "context overflow rejected",
+    "recovery after cancellation/overflow",
+    "native release",
+    "dynamic system message with current model identity"
+  ],
+  "runs": [
+    {
+      "GREETING": "¡Hola Bryan, estoy a tu servicio!",
+      "ARITHMETIC": "391",
+      "ARITHMETIC_CORRECT": "true",
+      "RECOVERED": "Listo.",
+      "PASSED": "nonempty inference, UTF-8, cancellation, context limit and recovery in 33577 ms (desktop CPU, not Android benchmark)"
+    },
+    {
+      "GREETING": "Hola, Bryan.",
+      "MODEL_IDENTITY": "Dolphin 3.0 Llama 3.1 8B.",
+      "ARITHMETIC": "391",
+      "ARITHMETIC_CORRECT": "true",
+      "RECOVERED": "Listo.",
+      "PASSED": "nonempty inference, UTF-8, cancellation, context limit and recovery in 40689 ms (desktop CPU, not Android benchmark)"
+    }
+  ],
+  "limitations": [
+    "No physical Android performance or RAM pressure measurement",
+    "Sample responses are not a general quality benchmark",
+    "Android memory policy covered by JVM scenarios; real device validation remains necessary"
+  ]
+}
