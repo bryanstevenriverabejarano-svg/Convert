@@ -35,7 +35,7 @@
         android:background="#99050910" android:visibility="gone" android:clickable="true" android:importantForAccessibility="no" />
 
     <LinearLayout android:id="@+id/chatSheet" android:layout_width="match_parent" android:layout_height="match_parent"
-        android:layout_marginTop="56dp" android:orientation="vertical" android:padding="16dp"
+        android:orientation="vertical" android:padding="16dp"
         android:background="@drawable/salve_sheet_background" android:elevation="8dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
         app:behavior_hideable="true" app:behavior_skipCollapsed="true" app:behavior_peekHeight="0dp">
@@ -85,7 +85,7 @@
     </LinearLayout>
 
     <LinearLayout android:id="@+id/optionsSheet" android:layout_width="match_parent" android:layout_height="match_parent"
-        android:layout_marginTop="96dp" android:orientation="vertical" android:padding="16dp"
+        android:orientation="vertical" android:padding="16dp"
         android:background="@drawable/salve_sheet_background" android:elevation="8dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
         app:behavior_hideable="true" app:behavior_skipCollapsed="true" app:behavior_peekHeight="0dp">

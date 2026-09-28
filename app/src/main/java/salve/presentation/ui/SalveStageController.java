@@ -77,12 +77,19 @@ final class SalveStageController {
             // Leave room for the composer when the IME resizes a short/landscape window.
             float density = activity.getResources().getDisplayMetrics().density;
             float heightDp = (b - t) / density;
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) chat.getLayoutParams();
-            int top = heightDp < 480 ? 0 : Math.round(56 * density);
-            if (params.topMargin != top) { params.topMargin = top; chat.setLayoutParams(params); }
+            // BottomSheetBehavior adds its own top offset. Use height, never a top margin,
+            // otherwise a relayout can push the composer below the window.
+            fitSheetHeight(chat, b - t - (heightDp < 480 ? 0 : Math.round(56 * density)));
+            fitSheetHeight(options, b - t - (heightDp < 480 ? 0 : Math.round(96 * density)));
             activity.findViewById(R.id.chatActions).setVisibility(heightDp < 360 ? View.GONE : View.VISIBLE);
         });
         updateChrome();
+    }
+
+    private void fitSheetHeight(View sheet, int height) {
+        ViewGroup.LayoutParams params = sheet.getLayoutParams();
+        height = Math.max(0, height);
+        if (params.height != height) { params.height = height; sheet.setLayoutParams(params); }
     }
 
     private BottomSheetBehavior<View> configure(View sheet, String name) {
