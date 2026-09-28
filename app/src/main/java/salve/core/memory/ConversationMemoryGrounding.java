@@ -145,7 +145,8 @@ public final class ConversationMemoryGrounding {
             if (record.frase == null || record.frase.trim().isEmpty()) return out.result(
                     "Encontré el registro " + qualifier + ", pero no tiene texto legible. No voy a inventar su contenido.");
             String answer = (isConfiguration(record) ? "El registro de configuración "
-                    : MemoryProvenance.kind(record).equals("investigacion_publica") ? "El registro de investigación pública " : "Mi recuerdo guardado ")
+                    : MemoryProvenance.kind(record).equals("investigacion_publica") ? "El registro de investigación pública "
+                    : MemoryProvenance.kind(record).equals("sintesis_agente") ? "El registro de síntesis del agente " : "Mi recuerdo guardado ")
                     + qualifier + " es: «" + shorten(record.frase.trim(), 900) + "». "
                     + (record.timestamp > 0 ? "Se registró el " + date(record.timestamp) + "."
                     : "Su fecha de registro es desconocida.");

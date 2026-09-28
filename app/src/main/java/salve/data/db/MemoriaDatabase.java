@@ -28,9 +28,10 @@ import androidx.room.RoomDatabase;
                 KnowledgeRelationEntity.class,  // Relaciones del grafo
                 MemorySyncStateEntity.class,
                 ResearchTaskEntity.class,
-                AgentControlEntity.class
+                AgentControlEntity.class,
+                AgentRunEntity.class, AgentSubscriptionEntity.class, AgentToolStatEntity.class
         },
-        version = 7,
+        version = 8,
         exportSchema = true
 )
 public abstract class MemoriaDatabase extends RoomDatabase {
@@ -59,6 +60,7 @@ public abstract class MemoriaDatabase extends RoomDatabase {
     public abstract MemorySyncStateDao memorySyncStateDao();
 
     public abstract ResearchTaskDao researchTaskDao();
+    public abstract AgentDao agentDao();
 
     // ============================================================
     // SINGLETON
@@ -69,7 +71,7 @@ public abstract class MemoriaDatabase extends RoomDatabase {
     public static RoomDatabase.Builder<MemoriaDatabase> builder(Context context, String name) {
         return Room.databaseBuilder(context.getApplicationContext(), MemoriaDatabase.class, name)
                 .addMigrations(MemoryMigrations.FROM_4_TO_5, MemoryMigrations.FROM_5_TO_6,
-                        MemoryMigrations.FROM_6_TO_7);
+                        MemoryMigrations.FROM_6_TO_7, MemoryMigrations.FROM_7_TO_8);
     }
 
     public static MemoriaDatabase getInstance(Context context) {

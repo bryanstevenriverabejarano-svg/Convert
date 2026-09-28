@@ -31,13 +31,15 @@ public class MemoryMigrationTest {
              InputStream input = getClass().getResourceAsStream("/salve/memory-v4.sql")) {
             assertNotNull(input);
             String sql = new String(input.readAllBytes(), StandardCharsets.UTF_8).replaceAll("(?m)^--.*$", "");
-            if (version == 6) {
-                try (InputStream schema = getClass().getResourceAsStream("/salve.data.db.MemoriaDatabase/6.json")) {
+            if (version >= 6) {
+                try (InputStream schema = getClass().getResourceAsStream("/salve.data.db.MemoriaDatabase/" + version + ".json")) {
                     assertNotNull(schema);
                     for (JsonElement entity : JsonParser.parseString(new String(schema.readAllBytes(), StandardCharsets.UTF_8))
                             .getAsJsonObject().getAsJsonObject("database").getAsJsonArray("entities")) {
                         String table = entity.getAsJsonObject().get("tableName").getAsString();
                         db.execSQL(entity.getAsJsonObject().get("createSql").getAsString().replace("${TABLE_NAME}", table));
+                        if (entity.getAsJsonObject().has("contentSyncTriggers"))
+                            for (JsonElement trigger : entity.getAsJsonObject().getAsJsonArray("contentSyncTriggers")) db.execSQL(trigger.getAsString());
                         if (entity.getAsJsonObject().has("indices"))
                             for (JsonElement index : entity.getAsJsonObject().getAsJsonArray("indices"))
                                 db.execSQL(index.getAsJsonObject().get("createSql").getAsString().replace("${TABLE_NAME}", table));
@@ -56,7 +58,7 @@ public class MemoryMigrationTest {
                 db.execSQL("CREATE TABLE memory_sync_state (`key` TEXT NOT NULL, updatedAt INTEGER NOT NULL, deleted INTEGER NOT NULL, PRIMARY KEY(`key`))");
                 db.execSQL("INSERT INTO memory_sync_state VALUES ('profile:residence', 9000, 1)");
             }
-            if (version == 6) {
+            if (version >= 6) {
                 db.execSQL("INSERT INTO agent_control VALUES (1, 1)");
                 db.execSQL("INSERT INTO agent_research_tasks VALUES ('pending', 'Tema', 'QUEUED', '', NULL, NULL, 0, 1234, 1234, 0, 0)");
             }
@@ -68,7 +70,7 @@ public class MemoryMigrationTest {
         assertEquals("Mi nombre es Bryan", migrated.recuerdoDao().primerRecuerdo().frase);
         assertEquals(1234, migrated.recuerdoDao().primerRecuerdo().timestamp);
         assertEquals(7, migrated.recuerdoDao().primerRecuerdo().id);
-        assertEquals(7, migrated.getOpenHelper().getWritableDatabase().getVersion());
+        assertEquals(8, migrated.getOpenHelper().getWritableDatabase().getVersion());
         assertEquals(7, migrated.recuerdoDao().buscarIndice("\"bryan\"", true, 4).get(0).id);
         assertEquals(2, migrated.syncEventDao().getPending(1).get(0).tries);
         for (String table : new String[]{"misiones", "reflexiones", "plugins", "knowledge_relations"})
@@ -83,6 +85,15 @@ public class MemoryMigrationTest {
         assertEquals(1, migrated.researchTaskDao().pendingCount());
         assertEquals(1, migrated.researchTaskDao().paused());
         assertEquals("Tema", migrated.researchTaskDao().get("pending").question);
+    }
+    @Test public void migratesExportedSevenPreservesIndexAndAddsAgentTables() throws Exception {
+        legacy(7); assertMigrated();
+        assertEquals(0, migrated.agentDao().pendingCount()); assertTrue(migrated.agentDao().subscriptions().isEmpty());
+        assertTrue(migrated.agentDao().stats().isEmpty());
+        assertEquals(1, migrated.researchTaskDao().paused());
+        migrated.getOpenHelper().getWritableDatabase().execSQL("UPDATE recuerdos SET frase='Memoria renovada' WHERE id=7");
+        assertEquals(0, migrated.recuerdoDao().buscarIndice("\"bryan\"", true, 4).size());
+        assertEquals(1, migrated.recuerdoDao().buscarIndice("\"renovada\"", true, 4).size());
     }
     @Test public void migratesFiveAndPreservesProfileDeletionRevision() throws Exception {
         legacy(5); assertMigrated();

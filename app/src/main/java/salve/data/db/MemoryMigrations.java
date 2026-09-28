@@ -25,4 +25,11 @@ public final class MemoryMigrations {
             db.execSQL("INSERT INTO recuerdos_fts(recuerdos_fts) VALUES ('rebuild')");
         }
     };
+    public static final Migration FROM_7_TO_8 = new Migration(7, 8) {
+        @Override public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS agent_runs (id TEXT NOT NULL, status TEXT NOT NULL, owner TEXT NOT NULL, journal TEXT NOT NULL, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, leaseUntil INTEGER NOT NULL, PRIMARY KEY(id))");
+            db.execSQL("CREATE TABLE IF NOT EXISTS agent_subscriptions (id TEXT NOT NULL, goal TEXT NOT NULL, event TEXT NOT NULL, bridge TEXT NOT NULL, enabled INTEGER NOT NULL, intervalMs INTEGER NOT NULL, nextAt INTEGER NOT NULL, PRIMARY KEY(id))");
+            db.execSQL("CREATE TABLE IF NOT EXISTS agent_tool_stats (tool TEXT NOT NULL, successes INTEGER NOT NULL, failures INTEGER NOT NULL, elapsedMs INTEGER NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(tool))");
+        }
+    };
 }

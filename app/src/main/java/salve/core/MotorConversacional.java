@@ -401,6 +401,17 @@ public class MotorConversacional {
         goalAutonomy.userActivity();
         salve.core.tasks.TaskCommand taskControl = salve.core.tasks.TaskCommand.parse(entrada);
         Boolean globalPause = salve.core.tasks.TaskCommand.globalAutonomyPause(entrada);
+        salve.core.agent.AgentCommand agentControl = salve.core.agent.AgentCommand.parse(entrada);
+        if (agentControl != null && (agentControl.action == salve.core.agent.AgentCommand.Action.CANCEL
+                || agentControl.action == salve.core.agent.AgentCommand.Action.UNSUBSCRIBE)) {
+            salve.core.tasks.ResearchTaskRuntime.CONTROLS.execute(() -> {
+                String response;
+                try { response = salve.core.agent.AgentRuntime.get(context).respond(agentControl); }
+                catch (RuntimeException failed) { response = "No pude actualizar el plan; sus datos se conservan."; }
+                if (!closed) deliverResponse(response, AvatarMotionProtocol.parse(""), false, true, true);
+            });
+            return;
+        }
         if (Boolean.TRUE.equals(globalPause) || taskControl != null &&
                 (taskControl.action == salve.core.tasks.TaskCommand.Action.CANCEL
                 || taskControl.action == salve.core.tasks.TaskCommand.Action.PAUSE_ALL)) {
@@ -412,6 +423,7 @@ public class MotorConversacional {
                     salve.core.tasks.ResearchTaskRuntime tasks = salve.core.tasks.ResearchTaskRuntime.get(context);
                     if (Boolean.TRUE.equals(globalPause)) {
                         tasks.pause(true);
+                        salve.core.agent.AgentRuntime.get(context).pause(true);
                         response = "Objetivos y tareas pausados. Sus puntos de recuperación se conservan.";
                     } else response = tasks.respond(taskControl);
                 } catch (RuntimeException failure) {
@@ -434,7 +446,7 @@ public class MotorConversacional {
             return;
         }
         boolean goalTurn = salve.core.goals.GoalAutonomy.handles(entrada) || isSensorInput(entrada)
-                || AutonomousToolRuntime.handles(entrada) || taskControl != null;
+                || AutonomousToolRuntime.handles(entrada) || taskControl != null || agentControl != null;
         final boolean privateBudgetTurn = !goalTurn && (forcePrivateBudget || isPrivateBudgetInput(entrada));
         if (!privateBudgetTurn) personalBudget.cancelPending();
         String urgent = java.text.Normalizer.normalize(entrada.trim().toLowerCase(Locale.ROOT),
@@ -519,6 +531,24 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        salve.core.agent.AgentCommand agentCommand = salve.core.agent.AgentCommand.parse(entrada);
+        if (agentCommand != null) {
+            String response;
+            try {
+                salve.core.agent.AgentRuntime runtime = salve.core.agent.AgentRuntime.get(context);
+                response = runtime.respond(agentCommand);
+                if (agentCommand.action == salve.core.agent.AgentCommand.Action.RESULT) {
+                    salve.core.agent.AgentRun run = runtime.resolve(agentCommand.argument);
+                    if (run != null && !run.answer.isEmpty()) {
+                        researchConversation.complete(run.goal, run.answer);
+                        conversationSession.addUser(entrada); conversationSession.addAssistant(response);
+                    }
+                }
+            } catch (IllegalArgumentException invalid) { response = invalid.getMessage(); }
+            catch (RuntimeException failed) { response = "No pude abrir los planes; sus datos se conservan."; }
+            deliverResponse(response, AvatarMotionProtocol.parse(""), false, true, true);
+            return;
+        }
         salve.core.tasks.TaskCommand taskCommand = salve.core.tasks.TaskCommand.parse(entrada);
         if (taskCommand != null) {
             String response;
@@ -541,6 +571,7 @@ public class MotorConversacional {
         }
         if (Boolean.FALSE.equals(salve.core.tasks.TaskCommand.globalAutonomyPause(entrada))) {
             salve.core.tasks.ResearchTaskRuntime.get(context).pause(false);
+            salve.core.agent.AgentRuntime.get(context).pause(false);
         }
         if (AutonomousToolRuntime.handles(entrada)) {
             String response = autonomousTools.respond(entrada,

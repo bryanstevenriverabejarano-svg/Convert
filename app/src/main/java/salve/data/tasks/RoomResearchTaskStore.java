@@ -62,7 +62,7 @@ public final class RoomResearchTaskStore implements ResearchTaskEngine.Store {
         db.runInTransaction(() -> {
             AgentControlEntity control = new AgentControlEntity(); control.paused = pause;
             dao.control(control);
-            if (pause) dao.fenceRunning(now);
+            if (pause) { dao.fenceRunning(now); db.agentDao().fence(now); }
         });
     }
     public boolean cancel(String id, long now) { return dao.cancel(id, now) == 1; }

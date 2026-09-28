@@ -97,6 +97,7 @@
         <activity android:name="salve.presentation.ui.AvatarPoseActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.AvatarRoomActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.DeviceControlActivity" android:exported="false" android:theme="@style/Theme.Salve" />
+        <activity android:name="salve.presentation.ui.ToolBridgeActivity" android:exported="false" android:theme="@style/Theme.Salve" />
 
         <activity
             android:name="salve.presentation.ui.GaleriaVisualActivity"

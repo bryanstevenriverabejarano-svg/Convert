@@ -48,6 +48,18 @@ public class WikipediaResearchClientTest {
                 client.researchResult("http://example.org/unsupported", () -> false).status);
     }
 
+    @Test public void publicHyperlinksAreBoundedResolvedAndDeduplicated() {
+        List<String> links = WikipediaResearchClient.extractLinks("<a href='/next?a=1&amp;b=2'>one</a>"
+                + "<a href='/next?a=1&amp;b=2'>duplicate</a><a href='javascript:alert(1)'>bad</a>"
+                + "<a href='https://127.0.0.1/private'>private</a>", "https://example.org/base");
+        assertEquals(1, links.size()); assertEquals("https://example.org/next?a=1&b=2", links.get(0));
+        StringBuilder many = new StringBuilder();
+        for (int i = 0; i < 30; i++) many.append("<a href='/").append(i).append("'>next</a>");
+        assertEquals(12, WikipediaResearchClient.extractLinks(many.toString(), "https://example.org/").size());
+    }
+    @Test(timeout = 2000) public void malformedTagsCannotCauseUnboundedLinkScanning() {
+        assertTrue(WikipediaResearchClient.extractLinks("<a ".repeat(100_000), "https://example.org/").isEmpty());
+    }
     @Test public void unclosedExecutableMarkupIsNotPresentedAsVisibleText() {
         assertEquals("Texto", WikipediaResearchClient.extractText("<p>Texto</p><script>neverRun()", "text/html"));
     }

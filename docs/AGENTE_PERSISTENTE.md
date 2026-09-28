@@ -69,3 +69,5 @@ La [segunda entrega de recuperación de memoria](MEMORIA_INDEXADA.md) implementa
 4. Incorporar suscripciones a eventos autorizados y aprendizaje evaluado con casos reservados.
 
 Los modelos, el avatar, la identidad y la memoria siguen siendo componentes independientes. Esta entrega permite ejecutar y recuperar una tarea acotada real como base de esa evolución.
+
+La [entrega de planes y eventos](AGENTE_PLANIFICADOR.md) conecta el modelo local con herramientas, revisión/corrección, diario por paso y vigilancias autorizadas. Incluye un estado explícito del programa completo y del despliegue pendiente.

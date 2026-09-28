@@ -178,7 +178,9 @@ public class WikipediaResearchClient {
                 String pageTitle = type.startsWith("text/html") && title.find()
                         ? extractText(title.group(1), "text/html") : "";
                 if (pageTitle.length() > 200) pageTitle = pageTitle.substring(0, 200);
-                return new Page(validation.normalizedUrl, extractText(raw, type), status, bodyBytes.length, pageTitle);
+                Page page = new Page(validation.normalizedUrl, extractText(raw, type), status, bodyBytes.length, pageTitle);
+                if (type.startsWith("text/html")) page.links.addAll(extractLinks(raw, validation.normalizedUrl));
+                return page;
             } finally { call.cancel(); }
         }
         throw new IOException("Demasiadas redirecciones");
@@ -219,6 +221,7 @@ public class WikipediaResearchClient {
     }
 
     public static final class Page {
+        public final List<String> links = new ArrayList<>();
         public final String url;
         public final String text;
         public final int statusCode, bodyBytes;
@@ -229,5 +232,25 @@ public class WikipediaResearchClient {
             this.url = url; this.text = text; this.statusCode = statusCode;
             this.bodyBytes = bodyBytes; this.title = title;
         }
+    }
+
+    /** Bounded public hyperlinks; callers still validate each destination when it is fetched. */
+    public static List<String> extractLinks(String html, String base) {
+        List<String> links = new ArrayList<>();
+        Matcher anchors = Pattern.compile("(?is)<a\\b").matcher(html);
+        Pattern href = Pattern.compile("(?is)\\bhref\\s*=\\s*([\"'])(.*?)\\1");
+        int cursor = 0, inspected = 0;
+        while (cursor < html.length() && anchors.find(cursor) && links.size() < 12 && inspected++ < 128) {
+            int from = anchors.end(), end = html.indexOf('>', from);
+            if (end < 0 || end - from > 4096) { cursor = Math.min(html.length(), from + 4096); continue; }
+            cursor = end + 1;
+            Matcher match = href.matcher(html.substring(from, end));
+            if (!match.find()) continue;
+            try {
+                String link = URI.create(base).resolve(match.group(2).replace("&amp;", "&")).toString();
+                if (link.length() <= 500 && NetworkResourcePolicy.validateKnowledgeUrl(link).allowed && !links.contains(link)) links.add(link);
+            } catch (IllegalArgumentException malformed) { }
+        }
+        return links;
     }
 }
