@@ -110,6 +110,22 @@ Verifica previamente tamaño y SHA-256 con el catálogo. Esta prueba usa el mism
 adaptador JNI e incluye saludo, cálculo, cancelación, contexto excesivo y recuperación.
 No es una prueba de rendimiento en Samsung S24 Ultra ni una evaluación de ausencia de filtros.
 
+## Resultado del 8B en Linux
+
+El archivo 8B se descargó completo y coincidió con el tamaño y SHA-256 fijados. Dos
+pruebas del adaptador JNI completaron carga, generación, cancelación, límite de
+contexto, recuperación y liberación. Respondió «¡Hola Bryan, estoy a tu servicio!»
+en la primera y «Hola, Bryan.» en la segunda; calculó 391 en ambas. Al recibir un
+nombre antiguo (Gemma) en el mensaje, el sistema dinámico produjo la respuesta
+«Dolphin 3.0 Llama 3.1 8B.». Las pruebas completas tardaron 33,577 s y 40,689 s;
+**no son latencias ni medidas de RAM del S24 Ultra**. El contexto de 4096 tokens
+reservó 512 MiB de KV y 148 MiB de buffer de cómputo en este equipo. Evidencia:
+`evidence/dolphin-8b-jni-smoke.json`.
+
+Para incluir la comprobación del mensaje de sistema dinámico, añadir el nombre como
+segundo argumento a `DolphinJniSmoke`: `"Dolphin 3.0 Llama 3.1 8B"`. Las respuestas
+se conservan como muestras, sin reintentos para buscar un resultado favorable.
+
 ## Resultado anterior del 3B en Linux
 
 El archivo real coincidió con el SHA-256 del catálogo. El adaptador JNI pasó carga,

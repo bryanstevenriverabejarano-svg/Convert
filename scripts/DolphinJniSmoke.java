@@ -14,6 +14,13 @@ public final class DolphinJniSmoke {
             String greeting = GgufLlm.generate("Hola, me llamo Bryan. Salúdame por mi nombre en una sola frase.", () -> false);
             System.out.println("GREETING: " + greeting);
             if (!greeting.toLowerCase(java.util.Locale.ROOT).contains("bryan")) throw new AssertionError("Greeting missed name");
+            if (args.length > 1) {
+                String identity = GgufLlm.generate("En el historial se mencionaba Gemma. ¿Qué modelo está generando esta respuesta ahora?",
+                        "Tu identidad es Salve. DATO ACTUAL DEL RUNTIME: esta respuesta la genera " + args[1]
+                                + " localmente. Este dato sustituye nombres del historial. Responde brevemente en español.", () -> false);
+                System.out.println("MODEL_IDENTITY: " + identity);
+                if (identity.isEmpty()) throw new AssertionError("No model identity response");
+            }
             String arithmetic = GgufLlm.generate("¿Cuánto es 17 por 23? Responde solo con el número.", () -> false);
             System.out.println("ARITHMETIC: " + arithmetic);
             // This smoke test verifies the runtime contract, not a stochastic model's maths accuracy.

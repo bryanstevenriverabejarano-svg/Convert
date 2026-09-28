@@ -274,7 +274,7 @@ public class SalveLLM {
         if (isGguf) {
             boolean large = LocalModelPolicy.isLarge(modelPath);
             DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
-            markLargeOperation(large);
+            if (large) markLargeOperation(true);
             try { GgufLlm.init(modelPath, large ? watch : installationCancelled); }
             catch (java.util.concurrent.CancellationException e) {
                 if (large && watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
@@ -323,9 +323,10 @@ public class SalveLLM {
                 ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
         if (prompt == null || prompt.trim().isEmpty()) return ModelResult.failure(
                 ModelResult.Status.ERROR, "Prompt vacío", 0L);
-        if (!activationInProgress && (LocalModelPolicy.isDolphin(modelPath) || !modelAvailable)
+        if (!activationInProgress && (LocalModelPolicy.idForPath(modelPath) != null || !modelAvailable)
                 && getPendingFallbackFrom() != null) {
             if (tryCachedFallback()) return generateResult(prompt, role);
+            if (Thread.currentThread().isInterrupted()) return ModelResult.failure(ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
             try { salve.work.ModelDownloadWorker.enqueueFallback(appContext); } catch (Exception ignored) { }
             return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
                     "Preparando el respaldo local. " + getStatusDescription(), 0L);
@@ -342,7 +343,7 @@ public class SalveLLM {
             if (isGguf) {
                 boolean large = LocalModelPolicy.isLarge(modelPath);
                 DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
-                markLargeOperation(large);
+                if (large) markLargeOperation(true);
                 try { text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
                         large ? watch : installationCancelled); }
                 catch (java.util.concurrent.CancellationException e) {
@@ -533,7 +534,10 @@ public class SalveLLM {
                         .putBoolean(KEY_LOCAL_ONLY, true);
                 selection.remove(LocalModelPolicy.PENDING_KEY);
                 if (LocalModelPolicy.isDolphin(path)) selection.remove(LocalModelPolicy.FAILURE_KEY);
-                if (LocalModelPolicy.isLarge(path)) selection.remove(LocalModelPolicy.LARGE_FAILURE_KEY).remove(LocalModelPolicy.REASON_KEY);
+                if (LocalModelPolicy.LIGHT.equals(LocalModelPolicy.idForPath(path)))
+                    selection.putString(LocalModelPolicy.REASON_KEY, prefs.getString(LocalModelPolicy.LARGE_FAILURE_KEY, null));
+                if (LocalModelPolicy.isLarge(path) || LocalModelPolicy.idForPath(path) == null)
+                    selection.remove(LocalModelPolicy.LARGE_FAILURE_KEY).remove(LocalModelPolicy.REASON_KEY);
                 boolean saved = selection.commit();
                 if (saved) {
                     fallbackRequested = false;
@@ -706,8 +710,15 @@ public class SalveLLM {
                 try {
                     probe = LocalModelPolicy.confirmRecovery(
                             () -> generateResult("Responde con un saludo breve en español.", Role.CONVERSACIONAL),
-                            () -> appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-                                    .remove(LocalModelPolicy.FAILURE_KEY).remove(LocalModelPolicy.PENDING_KEY).apply());
+                            () -> {
+                                SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                                SharedPreferences.Editor recovered = prefs.edit().remove(LocalModelPolicy.FAILURE_KEY)
+                                        .remove(LocalModelPolicy.PENDING_KEY);
+                                if (LocalModelPolicy.isLarge(modelPath)) recovered.remove(LocalModelPolicy.LARGE_FAILURE_KEY)
+                                        .remove(LocalModelPolicy.REASON_KEY);
+                                else recovered.putString(LocalModelPolicy.REASON_KEY, prefs.getString(LocalModelPolicy.LARGE_FAILURE_KEY, null));
+                                recovered.apply();
+                            });
                 } finally {
                     activationInProgress = false;
                 }
