@@ -23,7 +23,7 @@ public final class MemoryQueryTerms {
     public static List<String> extract(String input, int maxTerms) {
         List<String> result = new ArrayList<>();
         if (input == null || maxTerms <= 0) return result;
-        String lowercase = input.toLowerCase(Locale.ROOT);
+        String lowercase = Normalizer.normalize(input, Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
         LinkedHashSet<String> unique = new LinkedHashSet<>();
         for (String token : lowercase.split("[^\\p{L}0-9]+")) {
             String folded = Normalizer.normalize(token, Normalizer.Form.NFD).replaceAll("\\p{M}", "");

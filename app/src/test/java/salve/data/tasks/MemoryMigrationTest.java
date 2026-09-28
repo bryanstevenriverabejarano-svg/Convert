@@ -38,8 +38,9 @@ public class MemoryMigrationTest {
                             .getAsJsonObject().getAsJsonObject("database").getAsJsonArray("entities")) {
                         String table = entity.getAsJsonObject().get("tableName").getAsString();
                         db.execSQL(entity.getAsJsonObject().get("createSql").getAsString().replace("${TABLE_NAME}", table));
-                        for (JsonElement index : entity.getAsJsonObject().getAsJsonArray("indices"))
-                            db.execSQL(index.getAsJsonObject().get("createSql").getAsString().replace("${TABLE_NAME}", table));
+                        if (entity.getAsJsonObject().has("indices"))
+                            for (JsonElement index : entity.getAsJsonObject().getAsJsonArray("indices"))
+                                db.execSQL(index.getAsJsonObject().get("createSql").getAsString().replace("${TABLE_NAME}", table));
                     }
                 }
             } else for (String statement : sql.split(";")) if (!statement.trim().isEmpty()) db.execSQL(statement);

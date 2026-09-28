@@ -223,6 +223,16 @@ public class ConversationMemoryGroundingTest {
         assertTrue(result.getContext().contains("ERROR_DE_LECTURA"));
     }
 
+    @Test public void smallestBudgetStillBoundsCombinedReadErrorAndClippingNotices() {
+        Store store = new Store();
+        store.record(1, 1000, "proyecto " + String.join("", Collections.nCopies(200, "texto ")), "[]");
+        store.failGraph = true;
+        String context = new ConversationMemoryGrounding(store.memories, store.nodes, store.relations, 512)
+                .retrieve("proyecto").getContext();
+        assertTrue(context.contains("ERROR_DE_LECTURA")); assertTrue(context.contains("LIMITE_CONTEXTO"));
+        assertTrue(context.length() <= 512);
+    }
+
     @Test public void missingSubjectDoesNotClaimEntireMemoryEmpty() {
         Store store = new Store();
         store.record(1, 1000, "Otro asunto", "[]");
