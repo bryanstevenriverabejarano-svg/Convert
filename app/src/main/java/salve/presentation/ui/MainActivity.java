@@ -36,7 +36,6 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.salve.app.R;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
@@ -121,7 +120,8 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout panelReflexion;
     private TextView tituloReflexion, textoReflexion;
     private Button btnCerrarReflexion, btnSiguienteReflexion, btnResponderReflexion;
-    private FloatingActionButton btnMostrarReflexion;
+    private Button btnMostrarReflexion;
+    private SalveStageController stageController;
 
     // ===== INSTANCIAS DE LÓGICA =====
     private MemoriaEmocional memoria;
@@ -658,8 +658,8 @@ public class MainActivity extends AppCompatActivity {
         speechRecognizer = null;
         if (previous != null) previous.destroy();
         if (motorConversacional != null) motorConversacional.setListening(false);
-        if (btnEscuchar != null) btnEscuchar.setText(R.string.hablar_con_salve);
-        if (inputChat != null) inputChat.setHint("");
+        if (btnEscuchar != null) btnEscuchar.setText("Dictar un mensaje");
+        if (inputChat != null) inputChat.setHint(R.string.salve_chat_hint);
     }
 
     private void abrirModoVoz() {
@@ -680,6 +680,15 @@ public class MainActivity extends AppCompatActivity {
     private void procesarMensajeUsuario(String mensaje, boolean porVoz) {
         if (mensaje == null || mensaje.trim().isEmpty()) return;
         String limpio = mensaje.trim();
+        stageController.appendMessage(false, limpio);
+        salve.core.tools.AssistantControlCommand sceneCommand = salve.core.tools.AssistantControlCommand.parse(limpio);
+        if (sceneCommand != null) {
+            switch (sceneCommand.type) {
+                case BED: case HIDE_BED: case SLEEP: case WAKE: case WALK:
+                    stageController.closePanels(); break;
+                default: break;
+            }
+        }
         if (salve.core.goals.GoalAutonomy.handles(limpio) || MotorConversacional.isSensorInput(limpio)
                 || salve.core.AutonomousToolRuntime.handles(limpio)) {
             // Goals, sensors and explicit laboratory challenges stay in their local flows.
@@ -759,9 +768,10 @@ public class MainActivity extends AppCompatActivity {
         btnSiguienteReflexion = findViewById(R.id.btnSiguienteReflexion);
         btnResponderReflexion = findViewById(R.id.btnResponderReflexion);
         btnMostrarReflexion   = findViewById(R.id.btnMostrarReflexion);
+        btnAdjuntar = findViewById(R.id.btnAdjuntar);
+        btnReflexiones = findViewById(R.id.btnReflexiones);
+        stageController = new SalveStageController(this, savedInstanceState);
 
-        // The native avatar animates its articulated pose and shares persistent room state.
-        imagenSalve.setOnClickListener(v -> startActivity(new Intent(this, AvatarRoomActivity.class)));
 
         updateAudioPermissionState();
 
@@ -777,6 +787,7 @@ public class MainActivity extends AppCompatActivity {
             photoContextPanel.setVisibility(record == null ? View.GONE : View.VISIBLE);
             photoContextPreview.setImageDrawable(null);
             if (record != null) {
+                stageController.showChat(false);
                 photoContextLabel.setText("Foto en el chat" + (record.localOnly ? " · local" : "") + "\n"
                         + (record.personName.isEmpty() ? "Persona sin identificar" : record.personName)
                         + " · " + record.question);
@@ -790,9 +801,7 @@ public class MainActivity extends AppCompatActivity {
         // Conectar la voz de Salve a la pantalla para que puedas leerla siempre
         motorConversacional.setListener(texto -> {
             runOnUiThread(() -> {
-                tituloReflexion.setText("Salve dice:");
-                textoReflexion.setText(texto);
-                panelReflexion.setVisibility(View.VISIBLE);
+                if (!isFinishing() && !isDestroyed()) stageController.appendMessage(true, texto);
             });
         });
 
@@ -824,12 +833,17 @@ public class MainActivity extends AppCompatActivity {
         ensureNotificationPermission();
 
         // ==== LISTENERS ====
-        findViewById(R.id.btnConfigurarIA).setOnClickListener(v -> mostrarAjustesIA());
-        findViewById(R.id.btnAvatar).setOnClickListener(v -> startActivity(new Intent(this, AvatarRoomActivity.class)));
-        findViewById(R.id.btnDispositivos).setOnClickListener(v -> startActivity(new Intent(this, DeviceControlActivity.class)));
+        findViewById(R.id.btnConfigurarIA).setOnClickListener(v -> { stageController.closePanels(); mostrarAjustesIA(); });
+        findViewById(R.id.btnAvatar).setOnClickListener(v -> { stageController.closePanels(); startActivity(new Intent(this, AvatarRoomActivity.class)); });
+        findViewById(R.id.btnDispositivos).setOnClickListener(v -> { stageController.closePanels(); startActivity(new Intent(this, DeviceControlActivity.class)); });
         btnEnviarMensaje.setOnClickListener(v -> {
             String mensaje = inputChat.getText().toString().trim();
             procesarMensajeUsuario(mensaje, false);
+        });
+
+        inputChat.setOnEditorActionListener((v, action, event) -> {
+            if (action != android.view.inputmethod.EditorInfo.IME_ACTION_SEND) return false;
+            btnEnviarMensaje.performClick(); return true;
         });
 
         // Pulsación larga en el botón → menú PDF
@@ -838,9 +852,10 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        btnHablar.setOnClickListener(v -> abrirModoVoz());
+        btnHablar.setOnClickListener(v -> { stageController.closePanels(); abrirModoVoz(); });
 
         btnEscuchar.setOnClickListener(v -> {
+            stageController.closePanels();
             if (!hasAudioPermission()) {
                 pendingLiveVoicePermission = false;
                 audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
@@ -855,23 +870,24 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        btnCerrarReflexion.setOnClickListener(v -> panelReflexion.setVisibility(View.GONE));
+        btnCerrarReflexion.setOnClickListener(v -> stageController.closePanels());
         btnSiguienteReflexion.setOnClickListener(v -> mostrarSiguienteReflexion());
         btnResponderReflexion.setOnClickListener(v -> {
             String reflexion = textoReflexion.getText().toString();
             inputChat.setText(getString(R.string.respuesta_reflexion, reflexion));
-            panelReflexion.setVisibility(View.GONE);
+            stageController.showChat(true);
 
             GrafoRecuerdos.generar(getApplicationContext());
             CloudSyncManager.uploadGrafoBundle(getApplicationContext());
         });
 
-        // FAB rosa
+        // Reflexiones disponibles desde el menú de Salve.
         btnMostrarReflexion.setOnClickListener(v -> mostrarSiguienteReflexion());
 
         // NUEVO botón para ver el Grafo (Mente de Salve)
         if (btnReflexiones != null) {
             btnReflexiones.setOnClickListener(v -> {
+                stageController.closePanels();
                 String[] opciones = {"Grafo de Textos (Teoría)", "Galería Semántica (Visual)"};
                 new AlertDialog.Builder(this)
                         .setTitle("¿Qué parte de la mente deseas ver?")
@@ -929,10 +945,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Botón Adjuntar (si existe en el layout)
         if (btnAdjuntar != null) {
-            btnAdjuntar.setOnClickListener(v -> {
-                multiImagePicker.launch(new String[]{"image/*"});
-                Toast.makeText(this, "Abriendo galería…", Toast.LENGTH_SHORT).show();
-            });
+            btnAdjuntar.setOnClickListener(v -> mostrarMenuPdf());
         }
 
         // ==== PERMISOS Y SERVICIOS ====
@@ -1359,7 +1372,7 @@ public class MainActivity extends AppCompatActivity {
 
         textoReflexion.setText(texto);
         tituloReflexion.setText(getString(R.string.titulo_reflexion));
-        panelReflexion.setVisibility(View.VISIBLE);
+        stageController.showReflections();
 
         guardarEventoNube("reflexion_mostrada", texto, null);
         if (Math.random() > 0.5) {
@@ -1488,6 +1501,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
+        if (stageController != null) stageController.save(outState);
         outState.putString("visual_question", visualQuestion);
         outState.putBoolean("visual_local_only", visualLocalOnly);
         super.onSaveInstanceState(outState);

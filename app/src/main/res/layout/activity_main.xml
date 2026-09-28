@@ -1,243 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/mainLayout"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/fondo_salv"
-    android:padding="16dp">
+    android:id="@+id/mainLayout" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/salve_stage_background" android:fitsSystemWindows="true">
 
-    <LinearLayout
-        android:id="@+id/quickActions"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <Button android:id="@+id/btnAvatar" android:layout_width="0dp"
-            android:layout_weight="1" android:layout_height="48dp" android:text="Habitación"
-            android:textSize="12sp" />
-        <Button android:id="@+id/btnDispositivos" android:layout_width="0dp"
-            android:layout_weight="1" android:layout_height="48dp" android:text="Mi móvil"
-            android:textSize="12sp" />
-        <Button android:id="@+id/btnConfigurarIA" android:layout_width="0dp"
-            android:layout_weight="1" android:layout_height="48dp" android:text="IA y cámara"
-            android:textSize="12sp" />
+    <LinearLayout android:id="@+id/salveStage" android:layout_width="match_parent"
+        android:layout_height="match_parent" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center_vertical" android:paddingStart="24dp" android:paddingEnd="12dp" android:paddingTop="8dp">
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="SALVE" android:letterSpacing="0.22" android:textStyle="bold" android:textSize="18sp" android:textColor="#EAF4F2" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/salve_stage_subtitle" android:textSize="12sp" android:textColor="#ADC5C6" />
+            </LinearLayout>
+            <Button android:id="@+id/btnStageOptions" style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="56dp" android:layout_height="56dp" android:minWidth="48dp"
+                android:text="···" android:textSize="24sp" android:textColor="#EAF4F2" android:padding="0dp"
+                android:contentDescription="@string/salve_options" />
+        </LinearLayout>
+        <salve.avatar.AvatarView android:id="@+id/imagenSalve" android:layout_width="match_parent"
+            android:layout_height="0dp" android:layout_weight="1" android:contentDescription="@string/salve" />
+        <TextView android:id="@+id/salveCaption" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="48dp" android:gravity="center" android:paddingStart="28dp" android:paddingEnd="28dp"
+            android:text="@string/salve_stage_caption" android:textSize="15sp" android:textColor="#EAF4F2"
+            android:maxLines="2" android:ellipsize="end" android:clickable="true" android:focusable="true"
+            android:background="?attr/selectableItemBackground" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/salve_stage_hint" android:gravity="center" android:textColor="#A9BFC3"
+            android:textSize="12sp" android:lineSpacingExtra="3dp" android:paddingBottom="18dp" android:paddingHorizontal="16dp" />
     </LinearLayout>
 
-    <!-- Personaje articulado: mismo estado que habitación y ventana flotante. -->
-    <salve.avatar.AvatarView
-        android:id="@+id/imagenSalve"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:layout_below="@id/quickActions"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="10dp"
-        android:contentDescription="@string/salve" />
+    <View android:id="@+id/stageScrim" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="#99050910" android:visibility="gone" android:clickable="true" android:importantForAccessibility="no" />
 
-    <!-- Nivel de conciencia de Salve -->
-    <TextView
-        android:id="@+id/tvNivelConciencia"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/imagenSalve"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="4dp"
-        android:layout_marginBottom="4dp"
-        android:text="Nivel: DORMIDA"
-        android:textColor="#80CBC4"
-        android:textSize="12sp"
-        android:textStyle="italic" />
-
-    <LinearLayout
-        android:id="@+id/photoContextPanel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/tvNivelConciencia"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="#263238"
-        android:padding="4dp"
-        android:visibility="gone">
-        <ImageView android:id="@+id/photoContextPreview"
-            android:layout_width="56dp" android:layout_height="56dp"
-            android:scaleType="centerCrop" android:contentDescription="Ver foto e identificar persona" />
-        <TextView android:id="@+id/photoContextLabel"
-            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-            android:padding="8dp" android:maxLines="3" android:ellipsize="end"
-            android:textColor="#FFFFFF" android:textSize="12sp" />
-        <Button android:id="@+id/btnRemovePhotoContext"
-            android:layout_width="wrap_content" android:layout_height="48dp"
-            android:text="Quitar" android:contentDescription="Quitar foto del chat y conservar el recuerdo" />
-    </LinearLayout>
-
-    <!-- Campo de texto -->
-    <EditText
-        android:id="@+id/inputChat"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/photoContextPanel"
-        android:layout_marginTop="16dp"
-        android:hint="@string/hint_chat"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#AAAAAA"
-        android:background="#333333"
-        android:padding="10dp"
-        android:minHeight="48dp"
-        android:inputType="text"
-        android:autofillHints="username"
-        android:layout_marginBottom="12dp"/>
-
-    <!-- Botón Enviar -->
-
-
-    <Button
-        android:id="@+id/btnEnviarMensaje"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/inputChat"
-        android:text="@string/enviar_mensaje"
-        android:textColor="#D9E4E4"
-        android:background="@color/design_default_color_primary_variant"
-        android:padding="12dp"
-        android:textSize="18sp"
-        android:layout_marginBottom="12dp" />
-
-    <!-- Botón Hablar -->
-    <Button
-        android:id="@+id/btnHablar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/btnEnviarMensaje"
-        android:text="Modo voz: conversar con Salve"
-        android:textColor="#E9DED2D2"
-        android:background="@color/design_default_color_primary_dark"
-        android:padding="12dp"
-        android:textSize="18sp"
-        android:layout_marginBottom="12dp"/>
-
-    <!-- Botón Escuchar -->
-
-
-
-    <!-- Botón flotante para abrir reflexiones -->
-
-    <!-- Panel Bottom para Reflexiones -->
-
-    <Button
-        android:id="@+id/btnEscuchar"
-        android:layout_width="180dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/btnHablar"
-        android:layout_marginTop="12dp"
-        android:background="#4A19B8"
-        android:padding="12dp"
-        android:text="@string/hablar_con_salve"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp" />
-
-    <Button
-        android:id="@+id/btnReflexiones"
-        android:layout_width="180dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/btnHablar"
-        android:layout_toEndOf="@id/btnEscuchar"
-        android:layout_marginTop="12dp"
-        android:layout_marginStart="8dp"
-        android:background="#00796B"
-        android:padding="12dp"
-        android:text="@string/ver_grafo"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/btnMostrarReflexion"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentBottom="true"
-        android:layout_margin="8dp"
-        android:layout_marginStart="119dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="27dp"
-        android:backgroundTint="#039BE5"
-        android:contentDescription="@string/ver_reflexion"
-        app:srcCompat="@drawable/ic_reflexion" />
-
-    <LinearLayout
-        android:id="@+id/panelReflexion"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:layout_alignParentBottom="true"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="#1E1E1E"
-        android:elevation="10dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/tituloReflexion"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="@string/titulo_reflexion"
-            android:textColor="#FF4081"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/textoReflexion"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:text="@string/contenido_reflexion"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:lineSpacingExtra="6dp"
-            android:background="#262626"
-            android:padding="10dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end"
-            android:layout_marginTop="12dp">
-
-            <Button
-                android:id="@+id/btnCerrarReflexion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/cerrar"
-                android:textColor="#FFFFFF"
-                android:background="#444444"
-                android:layout_marginRight="8dp"
-                style="?android:attr/borderlessButtonStyle"/>
-
-            <Button
-                android:id="@+id/btnResponderReflexion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/responder"
-                android:textColor="@color/design_default_color_primary_variant"
-                android:background="@color/design_default_color_secondary"
-                android:layout_marginRight="8dp" />
-
-            <Button
-                android:id="@+id/btnSiguienteReflexion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/siguiente"
-                android:textColor="#1130B8"
-                android:background="#033FF4"
-                style="?android:attr/borderlessButtonStyle"/>
-
-
+    <LinearLayout android:id="@+id/chatSheet" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_marginTop="56dp" android:orientation="vertical" android:padding="16dp"
+        android:background="@drawable/salve_sheet_background" android:elevation="8dp"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+        app:behavior_hideable="true" app:behavior_skipCollapsed="true" app:behavior_peekHeight="0dp">
+        <View android:layout_width="36dp" android:layout_height="4dp" android:layout_gravity="center_horizontal"
+            android:background="#6C8793" android:importantForAccessibility="no" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:text="@string/salve_chat_title" android:textSize="22sp" android:textColor="#EAF4F2" android:paddingStart="8dp" />
+            <Button android:id="@+id/btnCloseChat" style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="56dp" android:layout_height="56dp" android:minWidth="48dp"
+                android:text="×" android:textSize="26sp" android:textColor="#D4E7E7" android:padding="0dp"
+                android:contentDescription="@string/salve_close_chat" />
+        </LinearLayout>
+        <androidx.core.widget.NestedScrollView android:id="@+id/chatScroll" android:layout_width="match_parent"
+            android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+            <TextView android:id="@+id/chatTranscript" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/salve_chat_empty" android:textColor="#DDE9EA" android:textSize="16sp"
+                android:lineSpacingExtra="6dp" android:padding="12dp" android:textIsSelectable="true" />
+        </androidx.core.widget.NestedScrollView>
+        <LinearLayout android:id="@+id/photoContextPanel" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical" android:padding="4dp" android:visibility="gone">
+            <ImageView android:id="@+id/photoContextPreview" android:layout_width="56dp" android:layout_height="56dp"
+                android:scaleType="centerCrop" android:contentDescription="Ver foto e identificar persona" />
+            <TextView android:id="@+id/photoContextLabel" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:padding="8dp" android:maxLines="2" android:ellipsize="end"
+                android:textColor="#FFFFFF" android:textSize="12sp" />
+            <Button android:id="@+id/btnRemovePhotoContext" style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content" android:layout_height="48dp" android:text="Quitar"
+                android:contentDescription="Quitar foto del chat y conservar el recuerdo" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <EditText android:id="@+id/inputChat" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:minHeight="52dp" android:maxLines="3"
+                android:hint="@string/salve_chat_hint" android:textColor="#F3F7F7" android:textColorHint="#A9BFC3"
+                android:background="@drawable/salve_input_background" android:padding="14dp"
+                android:inputType="textCapSentences|textMultiLine" android:imeOptions="actionSend|flagNoExtractUi" android:importantForAutofill="no" />
+            <Button android:id="@+id/btnEnviarMensaje" style="@style/Widget.Material3.Button"
+                android:layout_width="wrap_content" android:layout_height="56dp" android:layout_marginStart="8dp"
+                android:minWidth="64dp" android:paddingHorizontal="12dp" android:text="@string/salve_send" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/chatActions" android:layout_width="match_parent" android:layout_height="wrap_content">
+            <Button android:id="@+id/btnHablar" style="@style/SalveStageAction" android:layout_width="0dp"
+                android:layout_weight="1" android:layout_height="wrap_content" android:paddingHorizontal="8dp" android:text="@string/salve_voice" />
+            <Button android:id="@+id/btnAdjuntar" style="@style/SalveStageAction" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:paddingHorizontal="8dp" android:text="@string/salve_attach" />
         </LinearLayout>
     </LinearLayout>
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/downloadOverlayContainer"
-        android:name="salve.presentation.ui.DownloadOverlayFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-</RelativeLayout>
+    <LinearLayout android:id="@+id/optionsSheet" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_marginTop="96dp" android:orientation="vertical" android:padding="16dp"
+        android:background="@drawable/salve_sheet_background" android:elevation="8dp"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+        app:behavior_hideable="true" app:behavior_skipCollapsed="true" app:behavior_peekHeight="0dp">
+        <View android:layout_width="36dp" android:layout_height="4dp" android:layout_gravity="center_horizontal"
+            android:background="#6C8793" android:importantForAccessibility="no" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:text="@string/salve_options" android:textColor="#EAF4F2" android:textSize="22sp" android:paddingStart="8dp" />
+            <Button android:id="@+id/btnCloseOptions" style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="56dp" android:layout_height="56dp" android:minWidth="48dp" android:text="×" android:textSize="26sp"
+                android:textColor="#D4E7E7" android:padding="0dp" android:contentDescription="@string/salve_close_options" />
+        </LinearLayout>
+        <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <Button android:id="@+id/btnMenuChat" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Escribir a Salve" />
+                <Button android:id="@+id/btnMenuVoice" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/salve_voice" />
+                <Button android:id="@+id/btnEscuchar" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dictar un mensaje" />
+                <Button android:id="@+id/btnAvatar" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Vestuario y habitación" />
+                <Button android:id="@+id/btnDispositivos" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Mi móvil y dispositivos" />
+                <Button android:id="@+id/btnMostrarReflexion" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Reflexiones" />
+                <Button android:id="@+id/btnReflexiones" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Recuerdos y galería" />
+                <Button android:id="@+id/btnConfigurarIA" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Ajustes de IA y cámara" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/salve_bed_hint"
+                    android:padding="20dp" android:textColor="#ADC5C6" android:textSize="14sp" />
+                <TextView android:id="@+id/tvNivelConciencia" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:paddingHorizontal="20dp" android:paddingBottom="20dp" android:textColor="#8EB7B5" android:textSize="12sp" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/panelReflexion" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_marginTop="80dp" android:layout_gravity="bottom" android:orientation="vertical" android:padding="20dp"
+        android:background="@drawable/salve_sheet_background" android:elevation="10dp" android:visibility="gone">
+        <TextView android:id="@+id/tituloReflexion" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/titulo_reflexion" android:textColor="#ACDDD3" android:textSize="22sp" android:paddingBottom="16dp" />
+        <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <TextView android:id="@+id/textoReflexion" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="#EAF4F2" android:textSize="16sp" android:lineSpacingExtra="6dp" android:textIsSelectable="true" />
+        </ScrollView>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+            <Button android:id="@+id/btnCerrarReflexion" style="@style/SalveStageAction" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:paddingHorizontal="4dp" android:gravity="center" android:text="@string/cerrar" />
+            <Button android:id="@+id/btnResponderReflexion" style="@style/SalveStageAction" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:paddingHorizontal="4dp" android:gravity="center" android:text="@string/responder" />
+            <Button android:id="@+id/btnSiguienteReflexion" style="@style/SalveStageAction" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:paddingHorizontal="4dp" android:gravity="center" android:text="@string/siguiente" />
+        </LinearLayout>
+    </LinearLayout>
+    <androidx.fragment.app.FragmentContainerView android:id="@+id/downloadOverlayContainer"
+        android:name="salve.presentation.ui.DownloadOverlayFragment" android:layout_width="match_parent" android:layout_height="match_parent" />
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

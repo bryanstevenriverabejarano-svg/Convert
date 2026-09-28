@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 /** Only explicit commands change the device or avatar; discussion about them remains conversation. */
 public final class AssistantControlCommand {
-    public enum Type { DEVICES, FINANCES, ROOM, WALK, BED, SLEEP, WAKE, PAJAMAS, DAY,
+    public enum Type { DEVICES, FINANCES, ROOM, WALK, BED, HIDE_BED, SLEEP, WAKE, PAJAMAS, DAY,
         LIST_RECIPES, CANCEL_RECIPE, LEARN_RECIPE, RUN_RECIPE, DELETE_RECIPE }
     public final Type type;
     public final String argument;
@@ -26,7 +26,9 @@ public final class AssistantControlCommand {
             case "abre tu habitacion": case "abrir habitacion": case "cambia tu ropa":
             case "evoluciona visualmente": type = Type.ROOM; break;
             case "camina": case "camina por la pantalla": type = Type.WALK; break;
+            case "cama": case "muestra la cama": case "muestra tu cama":
             case "crea una cama": case "crea tu cama": type = Type.BED; break;
+            case "guarda la cama": case "oculta la cama": case "quita la cama": type = Type.HIDE_BED; break;
             case "acuestate": case "vete a dormir": type = Type.SLEEP; break;
             case "despierta": case "levantate": type = Type.WAKE; break;
             case "ponte el pijama": case "ponte pijama": type = Type.PAJAMAS; break;

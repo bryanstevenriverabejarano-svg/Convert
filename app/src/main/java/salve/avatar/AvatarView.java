@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.view.GestureDetector;
 import android.view.View;
 
 /** Shared room/overlay host for the approved illustrated character and its local motion rig. */
@@ -17,6 +18,8 @@ public final class AvatarView extends View {
     private final AvatarStore store;
     private final AvatarWardrobeStore wardrobe;
     private static final AvatarLocomotion locomotion = new AvatarLocomotion();
+    private final GestureDetector stageGestures;
+    private boolean immersive;
     private boolean overlay, animationEnabled = true, attached;
     private Runnable frameListener;
     private float phase;
@@ -41,10 +44,16 @@ public final class AvatarView extends View {
         store = AvatarStore.get(context);
         wardrobe = AvatarWardrobeStore.get(context);
         portrait = new IllustratedAvatarRenderer(context);
+        stageGestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+            @Override public boolean onDown(MotionEvent event) { return true; }
+            @Override public boolean onDoubleTap(MotionEvent event) { performClick(); return true; }
+            @Override public void onLongPress(MotionEvent event) { performLongClick(); }
+        });
         setFocusable(true);
         setClickable(true);
         updateDescription();
     }
+    public void setImmersiveMode(boolean value) { immersive = value; updateDescription(); invalidate(); }
     public void setOverlayMode(boolean value) { overlay = value; invalidate(); }
     public void setFrameListener(Runnable listener) { frameListener = listener; }
     public void setAnimationEnabled(boolean value) { animationEnabled = value; restartFrames(); }
@@ -72,11 +81,15 @@ public final class AvatarView extends View {
         AvatarState s = store.state();
         setContentDescription("Salve, " + (s.getPose() == AvatarState.Pose.SLEEPING ? "dormida en su cama"
                 : s.getPose() == AvatarState.Pose.WALKING ? "caminando" : "despierta")
-                + ", avatar ilustrado. "
+                + (immersive ? ". Doble toque para conversar; mantén pulsado para opciones. " : ", avatar ilustrado. ")
                 + (motion.snapshot().speaking ? "Hablando." : motion.snapshot().listening ? "Escuchando." : ""));
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
         if (overlay) return super.onTouchEvent(event);
+        if (immersive) {
+            stageGestures.onTouchEvent(event);
+            return true;
+        }
         if (event.getActionMasked() == MotionEvent.ACTION_UP) {
             // A host screen may use the character as the entry point to the room.
             if (hasOnClickListeners()) { performClick(); return true; }
@@ -95,6 +108,7 @@ public final class AvatarView extends View {
         AvatarState s = store.state();
         portrait.selectWardrobe(wardrobe.selected());
         AvatarMotion.Snapshot expression = motion.snapshot();
+        if (immersive && !overlay) { drawStage(canvas, s, expression); return; }
         float worldWidth = overlay ? 220f : 320f;
         float scale = Math.min(getWidth() / worldWidth, getHeight() / 280f);
         canvas.save();
@@ -124,6 +138,37 @@ public final class AvatarView extends View {
         }
         canvas.restore();
     }
+    private void drawStage(Canvas canvas, AvatarState state, AvatarMotion.Snapshot expression) {
+        AvatarStageLayout layout = AvatarStageLayout.fit(getWidth(), getHeight(), state.getX());
+        if (layout.height <= 0) return;
+        boolean sleeping = state.getPose() == AvatarState.Pose.SLEEPING;
+        if (state.hasBed()) {
+            canvas.save();
+            canvas.translate(layout.bedCenterX, layout.floor - 10 * layout.bedScale);
+            canvas.scale(layout.bedScale, layout.bedScale);
+            drawBed(canvas, 0, 0, false, state.getAccent());
+            if (sleeping) {
+                canvas.save(); canvas.translate(68, -31); canvas.rotate(-90);
+                drawPortrait(canvas, expression, 146, 0, true);
+                canvas.restore();
+                drawBed(canvas, 0, 0, true, state.getAccent());
+                text(canvas, "z", 48, -72 - (float) Math.sin(phase) * 3, 15, 0xFFA8DADD);
+                text(canvas, "z", 61, -90, 11, 0xFFA8DADD);
+            }
+            canvas.restore();
+        }
+        if (!sleeping) {
+            // A quiet contact shadow replaces the permanent room furniture.
+            float radius = layout.height * .14f;
+            oval(canvas, layout.centerX - radius, layout.floor - 6,
+                    layout.centerX + radius, layout.floor + 2, 0x28000000);
+            canvas.save();
+            canvas.translate(layout.centerX, layout.floor - locomotion.lift() * layout.height / 330f);
+            drawPortrait(canvas, expression, layout.height, locomotion.stride(), false);
+            canvas.restore();
+        }
+    }
+
     private void drawPortrait(Canvas canvas, AvatarMotion.Snapshot expression, float height, float stride, boolean sleeping) {
         canvas.save();
         canvas.translate(-height / 3f, -height);

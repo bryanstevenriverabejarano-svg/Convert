@@ -1,0 +1,36 @@
+<resources>
+    <style name="Theme.Salve.Stage" parent="Theme.Salve">
+        <item name="android:windowBackground">@drawable/salve_stage_background</item>
+        <item name="android:statusBarColor">#0B1424</item>
+        <item name="android:navigationBarColor">#101C2B</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorPrimary">#ACDDD3</item>
+        <item name="colorOnPrimary">#102C2A</item>
+    </style>
+    <style name="SalveStageAction" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">56dp</item>
+        <item name="android:textColor">#E5EFEE</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:gravity">start|center_vertical</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+    </style>
+    <string name="salve_stage_subtitle">Aquí contigo</string>
+    <string name="salve_stage_hint">Doble toque para conversar
+Mantén pulsado para ver las opciones</string>
+    <string name="salve_stage_caption">Toca dos veces a Salve para empezar</string>
+    <string name="salve_options">Opciones de Salve</string>
+    <string name="salve_close_chat">Cerrar conversación</string>
+    <string name="salve_close_options">Cerrar opciones</string>
+    <string name="salve_chat_title">Conversar</string>
+    <string name="salve_chat_empty">Estoy aquí. Puedes escribirme o hablar conmigo.
+
+Prueba «cama» para mostrarla o «guarda la cama» para despejar la pantalla.</string>
+    <string name="salve_chat_hint">Escribe a Salve…</string>
+    <string name="salve_attach">Documentos</string>
+    <string name="salve_voice">Conversar por voz</string>
+    <string name="salve_send">Enviar</string>
+    <string name="salve_bed_hint">Pídeme «cama», «acuéstate» o «guarda la cama».</string>
+</resources>
