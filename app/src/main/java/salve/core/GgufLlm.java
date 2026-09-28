@@ -23,12 +23,8 @@ public final class GgufLlm {
     }
 
     public static synchronized String generate(String prompt, BooleanSupplier cancelled) {
-        return generate(prompt, "Tu nombre es Salve. Responde en español. No confundas tu identidad con la persona que te habla.", cancelled);
-    }
-
-    public static synchronized String generate(String prompt, String system, BooleanSupplier cancelled) {
         if (model == 0) throw new IllegalStateException("GGUF no está inicializado");
-        byte[] result = infer(model, prompt.getBytes(StandardCharsets.UTF_8), system.getBytes(StandardCharsets.UTF_8), cancellation(cancelled));
+        byte[] result = infer(model, prompt.getBytes(StandardCharsets.UTF_8), cancellation(cancelled));
         return new String(result, StandardCharsets.UTF_8).trim();
     }
 
@@ -44,6 +40,6 @@ public final class GgufLlm {
         loadedPath = null;
     }
     private static native long load(byte[] path, BooleanSupplier cancelled);
-    private static native byte[] infer(long model, byte[] prompt, byte[] system, BooleanSupplier cancelled);
+    private static native byte[] infer(long model, byte[] prompt, BooleanSupplier cancelled);
     private static native void release(long model);
 }

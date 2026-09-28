@@ -198,11 +198,6 @@ public final class VerifiedModelFile {
         return target;
     }
 
-    /** Offline recovery never opens a socket and must verify the cached candidate before activation. */
-    public static boolean verifyExisting(File file, long size, String sha256, BooleanSupplier cancelled) throws IOException {
-        return file.isFile() && file.length() == size && sha256.equalsIgnoreCase(digest(file, cancelled));
-    }
-
     private static String digest(File file, BooleanSupplier cancelled) throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

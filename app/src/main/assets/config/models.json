@@ -1,16 +1,6 @@
 {
   "items": [
     {
-      "id": "Dolphin 3.0 Llama 3.1 8B",
-      "url": "https://huggingface.co/bartowski/Dolphin3.0-Llama3.1-8B-GGUF/resolve/fd2736a6e6f4e637b2242b06e267572495d88e2f/Dolphin3.0-Llama3.1-8B-Q4_K_M.gguf?download=true",
-      "filename": "Dolphin3.0-Llama3.1-8B-Q4_K_M-fd2736a.gguf",
-      "sizeBytes": 4920749472,
-      "sha256": "268390e07edd407ad93ea21a868b7ae995b5950e01cad0db9e1802ae5049d405",
-      "supportsVision": false,
-      "license": "Llama-3.1",
-      "modelCard": "https://huggingface.co/dphn/Dolphin3.0-Llama3.1-8B"
-    },
-    {
       "id": "Dolphin 3.0 Llama 3.2 3B",
       "url": "https://huggingface.co/bartowski/Dolphin3.0-Llama3.2-3B-GGUF/resolve/ac6b1ee98e3864ebd5998216f800a07d74b166b5/Dolphin3.0-Llama3.2-3B-Q4_K_M.gguf?download=true",
       "filename": "Dolphin3.0-Llama3.2-3B-Q4_K_M-ac6b1ee.gguf",

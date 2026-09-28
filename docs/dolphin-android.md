@@ -1,70 +1,19 @@
-# Dolphin 8B con respaldo por memoria
+# Dolphin principal en Android
 
-Salve prepara **Dolphin 3.0 Llama 3.1 8B Q4_K_M** como principal y mide la RAM real
-antes de cargarlo. El catálogo fija revisión, tamaño (4.920.749.472 bytes) y SHA-256.
-El respaldo **Dolphin 3.0 Llama 3.2 3B Q4_K_M** conserva el mismo archivo de la versión
-anterior (2.019.382.400 bytes). Si 8B funciona, se guarda también el archivo 3B para
-poder cambiar sin conexión, sin cargar ambos motores a la vez. Aproximadamente
-6,94 GB de almacenamiento para ambos, además de la app y los datos existentes.
-Gemma 4 E2B se descarga/activa solamente después de un fallo del 3B.
+Salve descarga primero **Dolphin 3.0 Llama 3.2 3B Q4_K_M** (2.019.382.400 bytes),
+verifica tamaño y SHA-256 y prueba una respuesta antes de guardar la nueva selección.
+La descarga es externa al APK, reanudable y por Wi-Fi sin límite de datos por defecto.
+En Ajustes de IA se puede autorizar datos móviles o reintentar Dolphin.
+Actualizar la app solicita Dolphin una vez aunque ya estuviera instalado Gemma.
+El modelo anterior sigue seleccionado hasta que la nueva activación tiene éxito.
 
-La actualización solicita la nueva preparación una vez, aunque ya exista el 3B o Gemma.
-Descargas externas al APK, reanudables y con verificación completa SHA-256. Wi-Fi sin
-límite de datos por defecto; datos móviles solo desde el botón correspondiente.
-La selección anterior se conserva hasta que una prueba real del candidato devuelve texto.
-Si falta RAM o falla la descarga, verificación, carga o inferencia: **8B → 3B → Gemma**,
-un intento por etapa. Pausar/cancelar, contexto excesivo y solicitudes de visión a
-Dolphin no cuentan como averías del modelo.
-
-## RAM y cambios automáticos
-
-Se consulta `ActivityManager.getMemoryInfo`: `availMem`, `totalMem`, `threshold` y
-`lowMemory`. No se usa la RAM comercial del teléfono ni el límite del heap Java.
-Presupuestos conservadores de admisión, pendientes de calibrar en el teléfono:
-
-| Candidato | Pesos | Margen de contexto/runtime | Reserva de Android |
-| --- | --- | --- | --- |
-| 8B | 4.920.749.472 bytes | 1.024 MiB | Máximo entre 768 MiB y `threshold` |
-| 3B | 2.019.382.400 bytes | 512 MiB | La misma reserva |
-| Gemma | 2.588.147.712 bytes | 512 MiB | La misma reserva |
-
-El motor anterior se libera **antes** de medir para una nueva carga. Si el 8B ya está
-cargado, se exige solo margen de contexto y reserva: no se cuentan los pesos dos veces.
-Durante carga/inferencia 8B, el callback nativo revisa presión como máximo una vez por
-segundo. Si Android indica memoria baja o se pierde la reserva, aborta de forma controlada,
-libera el modelo y prueba el respaldo. Durante evaluación, el contexto ya está asignado,
-por lo que tampoco se cuenta dos veces. Una medición desconocida no autoriza la carga.
-
-El cambio a un archivo ya guardado verifica su SHA-256 y funciona sin conexión. Si falta
-el respaldo, WorkManager lo prepara por Wi-Fi y el estado informa de la espera. Cuando
-hay un respaldo válido, se reintenta el texto del turno después del cambio; las herramientas
-solo reciben la respuesta final. Gemma no se intenta saltándose un 3B aún sin descargar.
-Una transferencia vieja no puede reemplazar un motor recuperado. Las solicitudes
-coalescidas durante la descarga del 3B se atienden al terminar la transferencia.
-
-El 3B permanece seleccionado tras bajar de tamaño para evitar oscilaciones. Para volver
-a probar el principal: **IA y cámara → Descargar o reanudar Dolphin 3.0 Llama 3.1 8B**;
-se reutiliza el archivo guardado y se vuelve a medir. No se promete que 12 GB de RAM
-comercial garanticen la carga. Si el sistema mata el proceso en vez de devolver una
-excepción, un marcador persistente de operación 8B interrumpida permite preparar 3B
-en el próximo arranque. También puede reflejar un cierre forzado; no se atribuye a OOM
-sin evidencia. No puede evitar un cierre abrupto del sistema ni cambiar modelos en un
-proceso que ya ha terminado.
-
-## Saber qué modelo está respondiendo
-
-La escena y el chat muestran el nombre y fase real: seleccionado, cargando, comprobando,
-activo o no disponible. «Activo» requiere respuesta real; guardar el archivo no basta.
-En **Estado** se muestra RAM, motivo del cambio y último proveedor de conversación.
-Preguntar «¿Qué modelo estás usando?» funciona por texto y voz continua y lee el estado
-de la aplicación directamente. Cada inferencia recibe la identidad actual del motor;
-llama.cpp la recibe en el mensaje de sistema. El resultado captura el proveedor para
-que una recarga posterior no cambie la atribución. Gemini se distingue como ruta remota;
-no se presenta un modelo local preparado como proveedor de una respuesta de Gemini.
-
-Fuentes técnicas: [Android MemoryInfo](https://developer.android.com/reference/android/app/ActivityManager.MemoryInfo),
-[modelo original 8B](https://huggingface.co/dphn/Dolphin3.0-Llama3.1-8B),
-[archivo 8B fijado](https://huggingface.co/bartowski/Dolphin3.0-Llama3.1-8B-GGUF/blob/fd2736a6e6f4e637b2242b06e267572495d88e2f/Dolphin3.0-Llama3.1-8B-Q4_K_M.gguf).
+Gemma 4 E2B se prepara solamente si falla la descarga, verificación, carga o inferencia
+de Dolphin. Un archivo Gemma ya descargado se verifica y reutiliza; no se borra.
+Hay un intento por modelo, sin bucles. Cancelar/pausar, un mensaje demasiado largo
+o pedir una foto a un modelo de texto no activan el respaldo. Un fallo durante el
+chat solicita el respaldo en WorkManager y muestra el estado al usuario; el turno
+fallido no se reproduce automáticamente. Una descarga nueva del respaldo espera
+Wi-Fi; un Gemma existente se puede verificar y activar sin conexión.
 
 ## Motor y alcance
 
@@ -110,23 +59,7 @@ Verifica previamente tamaño y SHA-256 con el catálogo. Esta prueba usa el mism
 adaptador JNI e incluye saludo, cálculo, cancelación, contexto excesivo y recuperación.
 No es una prueba de rendimiento en Samsung S24 Ultra ni una evaluación de ausencia de filtros.
 
-## Resultado del 8B en Linux
-
-El archivo 8B se descargó completo y coincidió con el tamaño y SHA-256 fijados. Dos
-pruebas del adaptador JNI completaron carga, generación, cancelación, límite de
-contexto, recuperación y liberación. Respondió «¡Hola Bryan, estoy a tu servicio!»
-en la primera y «Hola, Bryan.» en la segunda; calculó 391 en ambas. Al recibir un
-nombre antiguo (Gemma) en el mensaje, el sistema dinámico produjo la respuesta
-«Dolphin 3.0 Llama 3.1 8B.». Las pruebas completas tardaron 33,577 s y 40,689 s;
-**no son latencias ni medidas de RAM del S24 Ultra**. El contexto de 4096 tokens
-reservó 512 MiB de KV y 148 MiB de buffer de cómputo en este equipo. Evidencia:
-`evidence/dolphin-8b-jni-smoke.json`.
-
-Para incluir la comprobación del mensaje de sistema dinámico, añadir el nombre como
-segundo argumento a `DolphinJniSmoke`: `"Dolphin 3.0 Llama 3.1 8B"`. Las respuestas
-se conservan como muestras, sin reintentos para buscar un resultado favorable.
-
-## Resultado anterior del 3B en Linux
+## Resultado observado en Linux
 
 El archivo real coincidió con el SHA-256 del catálogo. El adaptador JNI pasó carga,
 generación de texto UTF-8, cancelación de carga/inferencia, rechazo por exceso de
@@ -145,10 +78,13 @@ El ejemplo oficial `simple-chat` de la misma revisión, sin modificar, también
 respondió «Hola, soy Bryan» al mismo saludo. La confusión se reproduce fuera del
 adaptador JNI de Salve.
 
-## Recuperación y concurrencia
+## Recuperación tras un fallo
 
-Los fallos se guardan por nivel. Un 8B recuperado invalida respaldos pendientes; un 3B
-recuperado invalida la petición de Gemma. Se comprueba la necesidad del respaldo dentro
-del mismo monitor que serializa carga e inferencia. La generación de selección evita
-que un fallo de descarga antiguo sobrescriba una activación posterior. Una activación
-cancelada o fallida restaura la selección anterior y no declara el candidato activo.
+**Probar modelo local** permite volver a comprobar Dolphin aunque haya un fallo
+guardado. El fallo solo se elimina tras una respuesta no vacía; una carga nativa
+correcta por sí sola no lo elimina. Si un respaldo anterior termina de descargarse
+después de esa recuperación, se descarta su activación y se mantiene Dolphin.
+
+Para el error de Windows `DirectoryLock / CannotActivateException`, consulta
+[recuperación de Android Studio](android-studio-start-failed.md). Un PR o APK no
+puede cerrar un proceso bloqueado en otro ordenador.

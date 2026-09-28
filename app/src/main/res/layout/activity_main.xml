@@ -11,9 +11,8 @@
             <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:text="SALVE" android:letterSpacing="0.22" android:textStyle="bold" android:textSize="18sp" android:textColor="#EAF4F2" />
-                <TextView android:id="@+id/activeModelStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:maxLines="2" android:ellipsize="end"
-                    android:text="Modelo: preparando" android:textSize="12sp" android:textColor="#ADC5C6" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/salve_stage_subtitle" android:textSize="12sp" android:textColor="#ADC5C6" />
             </LinearLayout>
             <Button android:id="@+id/btnStageOptions" style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="56dp" android:layout_height="56dp" android:minWidth="48dp"
@@ -65,9 +64,6 @@
                 android:text="×" android:textSize="26sp" android:textColor="#D4E7E7" android:padding="0dp"
                 android:contentDescription="@string/salve_close_chat" />
         </LinearLayout>
-        <TextView android:id="@+id/chatModelStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Modelo: preparando" android:textColor="#ADC5C6" android:textSize="12sp" android:paddingHorizontal="8dp"
-            android:maxLines="2" android:ellipsize="end" />
         <androidx.core.widget.NestedScrollView android:id="@+id/chatScroll" android:layout_width="match_parent"
             android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">

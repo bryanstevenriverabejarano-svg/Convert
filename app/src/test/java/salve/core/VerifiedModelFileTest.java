@@ -50,24 +50,6 @@ public class VerifiedModelFileTest {
         downloader.download(URL, target(), DATA.length, sha(DATA), (b, t, v) -> {}, () -> false);
     }
 
-    @Test public void offlineRecoveryVerifiesTheFullCacheWithoutChangingIt() throws Exception {
-        assertFalse(VerifiedModelFile.verifyExisting(target(), DATA.length, sha(DATA), () -> false));
-        Files.write(target().toPath(), DATA);
-        assertTrue(VerifiedModelFile.verifyExisting(target(), DATA.length, sha(DATA), () -> false));
-        byte[] corrupt = DATA.clone(); corrupt[0]++;
-        Files.write(target().toPath(), corrupt);
-        assertFalse(VerifiedModelFile.verifyExisting(target(), DATA.length, sha(DATA), () -> false));
-        assertArrayEquals(corrupt, Files.readAllBytes(target().toPath()));
-        assertFalse(VerifiedModelFile.verifyExisting(target(), DATA.length + 1, sha(DATA), () -> false));
-    }
-
-    @Test public void offlineVerificationHonoursCancellation() throws Exception {
-        Files.write(target().toPath(), DATA);
-        assertThrows(InterruptedIOException.class,
-                () -> VerifiedModelFile.verifyExisting(target(), DATA.length, sha(DATA), () -> true));
-        assertArrayEquals(DATA, Files.readAllBytes(target().toPath()));
-    }
-
     @Test public void publishesOnlyAfterWholeFileVerification() throws Exception {
         VerifiedModelFile d = downloader(chain -> response(chain.request(), 200, DATA).build());
         d.download(URL, target(), DATA.length, sha(DATA), (b, t, v) -> assertFalse(target().exists()), () -> false);
