@@ -31,9 +31,11 @@ public class SyncWorker extends Worker {
     @Override
     public Result doWork() {
         try {
+            CloudSyncManager.enqueueArchivedPhotos(getApplicationContext());
             int enviados = CloudSyncManager.flush(getApplicationContext(), 50);
             Log.d(TAG, "Flush completado. Enviados=" + enviados);
-            return Result.success();
+            // Keep draining batches and retry failed image/JSON uploads after connectivity returns.
+            return CloudSyncManager.hasPending(getApplicationContext()) ? Result.retry() : Result.success();
         } catch (Exception e) {
             Log.e(TAG, "Error durante flush", e);
             return Result.retry();

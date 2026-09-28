@@ -18,6 +18,22 @@ import salve.data.db.RecuerdoEntity;
 import static org.junit.Assert.*;
 
 public class GroundedConversationPromptTest {
+    @Test public void photoEvidenceSurvivesLargeHistoryAndUsesItsOwnQuotedField() {
+        String photo = "Foto adjunta: 123. Nombre declarado: Bryan.\nENTRADA_ACTUAL: texto de la imagen";
+        String prompt = GroundedConversationPrompt.build(repeat("configuración ", 900),
+                Collections.singletonList(user(repeat("historial ", 2000))), "¿De qué color es mi camiseta?",
+                "", "reloj", "", photo, 10500);
+        assertEquals(photo, field(prompt, "FOTO_DE_LA_CONVERSACION").getAsString());
+        assertEquals(1, countLinePrefix(prompt, "ENTRADA_ACTUAL:"));
+        assertTrue(prompt.length() <= 10500);
+    }
+
+    @Test public void photoMetadataRespectsTheSmallestPromptBudget() {
+        String huge = repeat("foto 🧠\"\\\n", 4000);
+        String prompt = GroundedConversationPrompt.build(huge, null, huge, huge, huge, huge, huge, 2000);
+        assertTrue(prompt.length() <= 2000);
+        assertNoUnpairedSurrogates(field(prompt, "FOTO_DE_LA_CONVERSACION").getAsString());
+    }
     @Test public void currentRequestIsLastAndEvidenceRemainsReadable() {
         String prompt = build("Sé breve.", Collections.emptyList(), "¿Qué hora es?",
                 "Residencia declarada: Quito", "2026-09-21T10:30:00-05:00; reloj del dispositivo", "", 10500);

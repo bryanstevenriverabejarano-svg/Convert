@@ -40,14 +40,22 @@ public final class GroundedConversationPrompt {
     public static String build(String system, List<ChatMessage> history, String currentInput,
                                String memoryContext, String runtimeContext, String actionContext,
                                int maxChars) {
+        return build(system, history, currentInput, memoryContext, runtimeContext, actionContext, "", maxChars);
+    }
+
+    public static String build(String system, List<ChatMessage> history, String currentInput,
+                               String memoryContext, String runtimeContext, String actionContext,
+                               String photoContext, int maxChars) {
         if (maxChars < 2000) throw new IllegalArgumentException("maxChars debe ser al menos 2000");
         String input = clean(currentInput).trim();
-        int remaining = maxChars - assemble("", "", "", "", "", "").length();
+        int remaining = maxChars - assemble("", "", "", "", "", "", "").length();
 
         String current = encodeBounded(input, Math.max(256, fraction(remaining, 2, 5)), INPUT_TRUNCATED);
         remaining -= current.length();
         String runtime = encodeBounded(clean(runtimeContext), Math.min(1600, remaining / 3), TRUNCATED);
         remaining -= runtime.length();
+        String photo = encodeBounded(clean(photoContext), Math.min(1800, remaining / 3), TRUNCATED);
+        remaining -= photo.length();
         String action = encodeBounded(clean(actionContext), Math.min(1000, remaining / 5), TRUNCATED);
         remaining -= action.length();
         String memory = encodeBounded(clean(memoryContext), Math.min(4800, fraction(remaining, 2, 3)), TRUNCATED);
@@ -55,12 +63,13 @@ public final class GroundedConversationPrompt {
         String configuration = completeSystemLines(clean(system).trim(), fraction(remaining, 3, 5));
         remaining -= configuration.length();
         String transcript = recentHistory(history, input, remaining);
-        return assemble(runtime, memory, action, configuration, transcript, current);
+        return assemble(runtime, memory, action, configuration, transcript, current, photo);
     }
 
     private static String assemble(String runtime, String memory, String action, String system,
-                                   String history, String current) {
+                                   String history, String current, String photo) {
         return RULES + RUNTIME + '"' + runtime + "\"\n"
+                + "FOTO_DE_LA_CONVERSACION: \"" + photo + "\"\n"
                 + MEMORY + '"' + memory + "\"\n"
                 + ACTION + '"' + action + "\"\n"
                 + SYSTEM + '"' + system + "\"\n"
@@ -166,4 +175,3 @@ public final class GroundedConversationPrompt {
         Encoding(String text, boolean complete) { this.text = text; this.complete = complete; }
     }
 }
-

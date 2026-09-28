@@ -47,12 +47,34 @@
         android:textSize="12sp"
         android:textStyle="italic" />
 
+    <LinearLayout
+        android:id="@+id/photoContextPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tvNivelConciencia"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#263238"
+        android:padding="4dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/photoContextPreview"
+            android:layout_width="56dp" android:layout_height="56dp"
+            android:scaleType="centerCrop" android:contentDescription="Ver foto e identificar persona" />
+        <TextView android:id="@+id/photoContextLabel"
+            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:padding="8dp" android:maxLines="3" android:ellipsize="end"
+            android:textColor="#FFFFFF" android:textSize="12sp" />
+        <Button android:id="@+id/btnRemovePhotoContext"
+            android:layout_width="wrap_content" android:layout_height="48dp"
+            android:text="Quitar" android:contentDescription="Quitar foto del chat y conservar el recuerdo" />
+    </LinearLayout>
+
     <!-- Campo de texto -->
     <EditText
         android:id="@+id/inputChat"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/tvNivelConciencia"
+        android:layout_below="@id/photoContextPanel"
         android:layout_marginTop="16dp"
         android:hint="@string/hint_chat"
         android:textColor="#FFFFFF"

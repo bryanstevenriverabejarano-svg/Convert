@@ -43,6 +43,8 @@ import salve.core.voice.VoiceProfileStore;
 import salve.core.voice.VoiceSelectionPolicy;
 import salve.core.conversation.AuthorReviewerCodeCoordinator;
 import salve.core.conversation.ConversationModelRouter;
+import salve.core.visual.VisualMemoryRecord;
+import salve.core.visual.VisualMemoryRepository;
 import salve.avatar.AvatarMotionController;
 import salve.avatar.AvatarMotionProtocol;
 import salve.presentation.ui.GaleriaVisualActivity;
@@ -238,6 +240,10 @@ public class MotorConversacional {
     }
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
     private final ConversationSession conversationSession = new ConversationSession();
+    private final VisualMemoryRepository visualMemories;
+    // Metadata only; a separate bitmap is opened and released for each inference.
+    private volatile VisualMemoryRecord activePhoto;
+    private volatile java.util.function.Consumer<VisualMemoryRecord> photoListener;
     private final salve.core.research.ResearchConversation researchConversation =
             new salve.core.research.ResearchConversation();
     private final DeviceClockContext deviceClock = new DeviceClockContext();
@@ -281,6 +287,7 @@ public class MotorConversacional {
 
     public MotorConversacional(Context context, MemoriaEmocional memoria, DiarioSecreto diario) {
         this.context  = context;
+        this.visualMemories = new VisualMemoryRepository(context);
         this.goalAutonomy = GoalAutonomyRuntime.get(context);
         this.autonomousTools = AutonomousToolRuntime.get(context);
         this.personalBudget = new salve.core.finance.PersonalBudgetService(new java.io.File(context.getNoBackupFilesDir(), "finance/personal-budget.json"));
@@ -515,7 +522,9 @@ public class MotorConversacional {
             return;
         }
         long turnStartedAtNanos = System.nanoTime();
-        boolean hasPriorContext = conversationSession.hasPriorContext();
+        VisualMemoryRecord recalled = visualMemories.store.recall(entrada);
+        if (recalled != null) setActivePhoto(recalled);
+        boolean hasPriorContext = conversationSession.hasPriorContext() || activePhoto != null;
         conversationSession.addUser(entrada);
         salve.core.research.ResearchConversation.Route researchRoute =
                 researchConversation.route(entrada, conversationSession.snapshot());
@@ -946,9 +955,7 @@ public class MotorConversacional {
         boolean truncated = false;
         boolean repetitionDetected = false;
 
-        ModelResult inference = ConversationModelRouter.generate(false, llm != null && llm.isLocalOnly(), false,
-                gemini.isAvailable() ? () -> generarRespuestaGemini(groundedPrompt) : null,
-                () -> generarRespuestaConversacionalLocal(groundedPrompt));
+        ModelResult inference = generateWithConversationPhoto(groundedPrompt);
         fallbackUsed = !inference.isSuccess();
         respuesta = inference.isSuccess() ? inference.getText()
                 : (resumenAccion == null ? "" : resumenAccion + "\n") + modelFailureMessage(inference);
@@ -1239,7 +1246,8 @@ public class MotorConversacional {
         int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
         String prompt = GroundedConversationPrompt.build(system, conversationSession.snapshot(), entrada,
                 evidence == null ? "" : evidence.getContext(), runtime,
-                accion == null ? researchConversation.context() : accion, budget);
+                accion == null ? researchConversation.context() : accion,
+                activePhoto == null ? "" : activePhoto.promptContext(), budget);
         Log.i(TAG, "conversation_context memory=" + (evidence == null ? "SKIPPED" : evidence.getStatus())
                 + " prompt_chars=" + prompt.length());
         return prompt;
@@ -1347,12 +1355,17 @@ public class MotorConversacional {
         return "No pude completar la respuesta con el modelo. " + result.getError();
     }
 
-    /** The caller transfers ownership of this photo; it is not retained in visual memory. */
+    /** The caller transfers ownership; a bounded private copy is retained as visual memory. */
     public void procesarImagen(String pregunta, Bitmap foto) {
         procesarImagen(pregunta, foto, llm != null && llm.isLocalOnly());
     }
 
     public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly) {
+        procesarImagen(pregunta, foto, localOnly, "", "", "");
+    }
+
+    public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly,
+                              String personName, String relationship, String position) {
         if (foto == null || foto.isRecycled()) { hablar("No recibí una foto válida."); return; }
         goalAutonomy.userActivity();
         String entrada = pregunta == null || pregunta.trim().isEmpty() ? "Describe esta foto." : pregunta.trim();
@@ -1364,21 +1377,28 @@ public class MotorConversacional {
                 goalAutonomy.beginUserTurn();
                 try {
                     if (closed) return;
-                    conversationSession.addUser(entrada + " [Foto adjunta solo a este turno]");
-                    String prompt = buildConversationPrompt(entrada + " [Foto adjunta solo a este turno]",
+                    VisualMemoryRecord saved = visualMemories.capture(foto, entrada, personName, relationship, position, localOnly);
+                    setActivePhoto(saved);
+                    String visualInput = entrada + " [Foto guardada y adjunta: " + saved.id + "]";
+                    conversationSession.addUser(visualInput);
+                    String prompt = buildConversationPrompt(visualInput,
                             "no evaluada", "CONSULTA_VISUAL: describe solo lo observable en la foto; "
                                     + "la memoria no demuestra lo que aparece en esta imagen.",
                             null, false, memoria.recuperarContextoConversacional(entrada));
-                    ModelResult result = ConversationModelRouter.generate(true, localOnly,
-                            llm != null && llm.supportsVision(),
-                            () -> gemini.generateResultSync(prompt, Collections.singletonList(foto)),
-                            () -> llm.generateImageResult(prompt, foto));
+                    ModelResult result = generateWithConversationPhoto(prompt);
                     String respuesta = result.isSuccess() ? result.getText() : modelFailureMessage(result);
                     AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(respuesta);
                     if (motion.text.isEmpty()) motion = AvatarMotionProtocol.parse(
                             "El modelo no devolvió una descripción utilizable. Prueba con otra pregunta sobre la imagen.");
                     if (!result.isSuccess() && session != null) AvatarMotionController.get().error(session, turn);
+                    if (result.isSuccess() && !AvatarMotionProtocol.parse(result.getText()).text.isEmpty()) {
+                        setActivePhoto(visualMemories.update(saved.withAnalysis(motion.text)));
+                    }
                     hablarPreparado(ResponseLimiter.limit(motion.text, VoiceResponsePolicy.maxResponseChars(false)), motion);
+                } catch (Exception failure) {
+                    hablar("No pude completar el guardado o análisis de la foto. "
+                            + "Revisa Fotos guardadas antes de volver a enviarla.");
+                    Log.w(TAG, "Fallo del archivo visual", failure);
                 } finally {
                     goalAutonomy.endUserTurn();
                     if (session != null) AvatarMotionController.get().endTurn(session, turn);
@@ -1390,6 +1410,68 @@ public class MotorConversacional {
         } catch (java.util.concurrent.RejectedExecutionException e) {
             foto.recycle();
         }
+    }
+
+    private ModelResult generateWithConversationPhoto(String prompt) {
+        VisualMemoryRecord photo = activePhoto;
+        boolean localOnly = (llm != null && llm.isLocalOnly()) || (photo != null && photo.localOnly);
+        if (photo == null) return ConversationModelRouter.generate(false, localOnly, false,
+                gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
+                () -> generarRespuestaConversacionalLocal(prompt));
+        Bitmap image = null;
+        try {
+            image = visualMemories.loadImage(photo);
+            final Bitmap pixels = image;
+            return ConversationModelRouter.generate(true, localOnly, llm != null && llm.supportsVision(),
+                    () -> gemini.generateResultSync(prompt, Collections.singletonList(pixels)),
+                    () -> llm.generateImageResult(prompt, pixels));
+        } catch (java.io.IOException missing) {
+            return ModelResult.failure(ModelResult.Status.ERROR,
+                    "Conservo el registro de esa foto, pero no puedo abrir sus píxeles. Selecciona otra o quítala del chat.", 0L);
+        } finally { if (image != null) image.recycle(); }
+    }
+
+    public void setPhotoListener(java.util.function.Consumer<VisualMemoryRecord> listener) { photoListener = listener; }
+
+    private void setActivePhoto(VisualMemoryRecord photo) {
+        if (closed) return;
+        activePhoto = photo;
+        java.util.function.Consumer<VisualMemoryRecord> listener = photoListener;
+        if (listener != null) listener.accept(photo);
+    }
+
+    public void quitarFotoDelChat() {
+        try { conversationExecutor.execute(() -> setActivePhoto(null)); }
+        catch (java.util.concurrent.RejectedExecutionException ignored) { }
+    }
+
+    public void seleccionarFotoGuardada(String id) {
+        try { conversationExecutor.execute(() -> {
+            if (closed) return;
+            try {
+                VisualMemoryRecord record = visualMemories.store.read(id);
+                if (record == null) { hablar("No encuentro esa foto guardada."); return; }
+                setActivePhoto(record);
+                conversationSession.addUser("He seleccionado la foto guardada " + record.id + ": " + record.question);
+                hablar("La foto seleccionada está en el contexto del chat. Puedes preguntarme sobre ella.");
+            } catch (Exception error) { hablar("No pude recuperar esa foto guardada."); }
+        }); } catch (java.util.concurrent.RejectedExecutionException ignored) { }
+    }
+
+    public void identificarFoto(String id, String name, String relation, String position) {
+        try { conversationExecutor.execute(() -> {
+            if (closed) return;
+            try {
+                VisualMemoryRecord record = visualMemories.store.read(id);
+                if (record == null) { hablar("No encuentro esa foto guardada."); return; }
+                VisualMemoryRecord updated = visualMemories.update(record.identify(name, relation, position));
+                if (activePhoto != null && activePhoto.id.equals(id)) setActivePhoto(updated);
+                conversationSession.addUser("Corrección de identidad declarada para la foto " + id + ": "
+                        + updated.personName + "; relación: " + updated.relationship + "; posición: " + updated.position);
+                hablar(name.trim().isEmpty() ? "He quitado la identidad de esa foto."
+                        : "He guardado tu identificación de esa persona y actualizado su relación con la foto.");
+            } catch (Exception error) { hablar("No pude guardar la identificación de esa foto."); }
+        }); } catch (java.util.concurrent.RejectedExecutionException ignored) { }
     }
 
     public synchronized void hablar(String texto) {
@@ -1599,6 +1681,8 @@ public class MotorConversacional {
 
     public synchronized void shutdown() {
         closed = true;
+        activePhoto = null;
+        photoListener = null;
         conversationForeground = false;
         liveVoiceChannel.cancel();
         activeUtteranceOwner = null;
@@ -1940,6 +2024,7 @@ public class MotorConversacional {
     private void limpiarContextoConversacional() {
         conversationSession.clear();
         researchConversation.clear();
+        setActivePhoto(null);
         Log.i(TAG, "Contexto conversacional de corto plazo reiniciado.");
     }
 
@@ -2030,4 +2115,3 @@ public class MotorConversacional {
                 });
     }
 }
-

@@ -89,6 +89,10 @@ public class MainActivity extends AppCompatActivity {
     private PCloudOAuth pCloudOAuth;
     private String visualQuestion;
     private boolean visualLocalOnly;
+    private salve.core.visual.VisualMemoryRecord photoInChat;
+    private android.widget.ImageView photoContextPreview;
+    private TextView photoContextLabel;
+    private View photoContextPanel;
     private final ActivityResultLauncher<String[]> localModelPicker = registerForActivityResult(
             new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri != null) importarModeloLocal(uri);
@@ -98,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
                 String question = visualQuestion;
                 visualQuestion = null;
                 if (photo != null && this.motorConversacional != null) {
-                    this.motorConversacional.procesarImagen(question, photo, visualLocalOnly);
+                    mostrarFotoParaEnviar(photo, question, visualLocalOnly);
                 } else {
                     if (photo != null) photo.recycle();
                     Toast.makeText(this, "No se capturó ninguna foto.", Toast.LENGTH_SHORT).show();
@@ -741,6 +745,9 @@ public class MainActivity extends AppCompatActivity {
 
         // ==== FIND VIEW BY ID ====
         inputChat             = findViewById(R.id.inputChat);
+        photoContextPanel     = findViewById(R.id.photoContextPanel);
+        photoContextPreview   = findViewById(R.id.photoContextPreview);
+        photoContextLabel     = findViewById(R.id.photoContextLabel);
         btnEnviarMensaje      = findViewById(R.id.btnEnviarMensaje);
         btnHablar             = findViewById(R.id.btnHablar);
         btnEscuchar           = findViewById(R.id.btnEscuchar);
@@ -764,6 +771,21 @@ public class MainActivity extends AppCompatActivity {
         reconocimientoFacial = new ReconocimientoFacial(this);
         motorConversacional  = new MotorConversacional(this, memoria, diario);
         motorConversacional.setAvatarSession(salve.avatar.AvatarMotionController.get().openSession(this));
+        motorConversacional.setPhotoListener(record -> runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            photoInChat = record;
+            photoContextPanel.setVisibility(record == null ? View.GONE : View.VISIBLE);
+            photoContextPreview.setImageDrawable(null);
+            if (record != null) {
+                photoContextLabel.setText("Foto en el chat" + (record.localOnly ? " · local" : "") + "\n"
+                        + (record.personName.isEmpty() ? "Persona sin identificar" : record.personName)
+                        + " · " + record.question);
+                photoContextPreview.setImageURI(Uri.fromFile(new salve.core.visual.VisualMemoryRepository(this).store.imageFile(record.id)));
+            }
+        }));
+        photoContextPreview.setOnClickListener(v -> { if (photoInChat != null) mostrarIdentidadFoto(photoInChat); });
+        photoContextLabel.setOnClickListener(v -> { if (photoInChat != null) mostrarIdentidadFoto(photoInChat); });
+        findViewById(R.id.btnRemovePhotoContext).setOnClickListener(v -> motorConversacional.quitarFotoDelChat());
 
         // Conectar la voz de Salve a la pantalla para que puedas leerla siempre
         motorConversacional.setListener(texto -> {
@@ -1509,7 +1531,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaGemma(); break;
                         case 1:
@@ -1537,6 +1559,7 @@ public class MainActivity extends AppCompatActivity {
                         case 10: startActivity(new Intent(this, BusinessFinanceActivity.class)); break;
                         case 11: mostrarRegistroModelos(); break;
                         case 12: mostrarPCloud(); break;
+                        case 13: mostrarFotosGuardadas(); break;
                         default: break;
                     }
                 })
@@ -1843,7 +1866,9 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle(visualLocalOnly ? "Analizar foto en el móvil" : "Analizar foto con Gemini")
                 .setMessage((visualLocalOnly ? "La foto se procesará con el modelo local. "
                         : "Se enviará la foto que tomes a Google para responder a tu pregunta. ")
-                        + "Escribe una pregunta en el chat antes de abrir la cámara, o recibirás una descripción.")
+                        + "Podrás escribir la pregunta junto a la foto. Se guardará como recuerdo y permanecerá "
+                        + "en el chat hasta que la quites o elijas otra. Si la sincronización está activa, "
+                        + "la foto y su análisis también se copiarán a pCloud.")
                 .setPositiveButton("Abrir cámara", (dialog, which) -> {
                     if (hasCameraPermission()) launchAnalysisCamera();
                     else photoPermissionLauncher.launch(Manifest.permission.CAMERA);
@@ -1855,6 +1880,109 @@ public class MainActivity extends AppCompatActivity {
         catch (android.content.ActivityNotFoundException | SecurityException e) {
             Toast.makeText(this, "No se pudo abrir una aplicación de cámara.", Toast.LENGTH_LONG).show();
         }
+    }
+
+    private LinearLayout photoForm() {
+        LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        form.setPadding(padding, padding, padding, padding); return form;
+    }
+
+    private EditText photoField(LinearLayout form, String hint, String value) {
+        EditText field = new EditText(this); field.setHint(hint); field.setText(value);
+        field.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        form.addView(field); return field;
+    }
+
+    private void mostrarFotoParaEnviar(Bitmap photo, String question, boolean localOnly) {
+        LinearLayout form = photoForm();
+        android.widget.ImageView preview = new android.widget.ImageView(this);
+        preview.setImageBitmap(photo); preview.setAdjustViewBounds(true);
+        preview.setMaxHeight((int) (180 * getResources().getDisplayMetrics().density));
+        preview.setContentDescription("Foto que enviarás con tu mensaje"); form.addView(preview);
+        EditText message = photoField(form, "Pregunta o contexto de la foto", question == null ? "" : question);
+        TextView info = new TextView(this);
+        info.setText("La foto y tu texto se enviarán juntos. Después podrás tocar la foto del chat para identificar "
+                + "a una persona o corregir su nombre. Quitarla del chat conserva el recuerdo.");
+        form.addView(info);
+        final boolean[] transferred = {false};
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this); scroll.addView(form);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Foto y mensaje").setView(scroll)
+                .setPositiveButton("Enviar", (d, which) -> {
+                    if (motorConversacional == null || isDestroyed()) return;
+                    transferred[0] = true;
+                    motorConversacional.procesarImagen(message.getText().toString(), photo, localOnly);
+                    if (inputChat.getText().toString().trim().equals(question == null ? "" : question)) inputChat.setText("");
+                }).setNegativeButton("Cancelar", null).create();
+        dialog.setOnDismissListener(d -> { preview.setImageDrawable(null); if (!transferred[0]) photo.recycle(); });
+        dialog.show();
+    }
+
+    private void mostrarFotosGuardadas() {
+        inferenceChecks.execute(() -> {
+            java.util.List<salve.core.visual.VisualMemoryRecord> photos = new salve.core.visual.VisualMemoryRepository(this).store.list();
+            String[] labels = new String[photos.size()];
+            for (int i = 0; i < photos.size(); i++) labels[i] = photos.get(i).label();
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                AlertDialog.Builder picker = new AlertDialog.Builder(this).setTitle("Elegir foto para el chat");
+                if (photos.isEmpty()) picker.setMessage("Todavía no hay fotos guardadas en este móvil.");
+                else picker.setItems(labels, (d, which) -> motorConversacional.seleccionarFotoGuardada(photos.get(which).id));
+                picker.setNeutralButton("Recuperar de pCloud", (d, which) -> restaurarFotosPCloud())
+                        .setNegativeButton("Cerrar", null).show();
+            });
+        });
+    }
+
+    private void restaurarFotosPCloud() {
+        if (!CloudSyncManager.isPCloudConfigured(this) || !CloudSyncManager.isEnabled(this)) {
+            Toast.makeText(this, "Conecta pCloud y activa la sincronización en IA y cámara → Nube pCloud.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        AlertDialog progress = new AlertDialog.Builder(this).setTitle("Recuperar fotos")
+                .setMessage("Buscando fotos en los últimos 1000 recuerdos sincronizados…")
+                .setPositiveButton("Cerrar", null).show();
+        inferenceChecks.execute(() -> {
+            salve.core.visual.VisualMemoryRepository archive = new salve.core.visual.VisualMemoryRepository(this);
+            int before = archive.store.list().size();
+            CloudSyncManager.restoreEvents(this, 1000);
+            int after = archive.store.list().size();
+            if (after > 0) salve.core.GrafoRecuerdos.generarVisual(getApplicationContext());
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                progress.dismiss();
+                new AlertDialog.Builder(this).setTitle("Fotos disponibles: " + after)
+                        .setMessage("Fotos añadidas: " + Math.max(0, after - before)
+                                + ". Si falta alguna, comprueba la conexión y que terminó de subirse desde el otro móvil.")
+                        .setPositiveButton("Ver fotos", (d, which) -> mostrarFotosGuardadas())
+                        .setNegativeButton("Cerrar", null).show();
+            });
+        });
+    }
+
+    private void mostrarIdentidadFoto(salve.core.visual.VisualMemoryRecord record) {
+        LinearLayout form = photoForm();
+        android.widget.ImageView preview = new android.widget.ImageView(this);
+        preview.setImageURI(Uri.fromFile(new salve.core.visual.VisualMemoryRepository(this).store.imageFile(record.id)));
+        preview.setAdjustViewBounds(true); preview.setMaxHeight((int) (180 * getResources().getDisplayMetrics().density));
+        preview.setContentDescription("Foto seleccionada para identificar a una persona"); form.addView(preview);
+        TextView info = new TextView(this);
+        info.setText("Identifica una persona de esta foto. Usa el mismo nombre completo para vincular sus fotos; "
+                + "distingue a personas que se llamen igual. Esta etiqueta es tu declaración, no reconocimiento facial."); form.addView(info);
+        EditText name = photoField(form, "Nombre confirmado (vacío: quitar identidad)", record.personName);
+        EditText relation = photoField(form, "Relación contigo: yo, mi hermano…", record.relationship);
+        EditText position = photoField(form, "Quién es en la foto: única persona, izquierda…", record.position);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this); scroll.addView(form);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Identificar persona").setView(scroll)
+                .setPositiveButton("Guardar", null).setNegativeButton("Cancelar", null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (!name.getText().toString().trim().isEmpty() && position.getText().toString().trim().isEmpty()) {
+                position.setError("Indica qué persona estás identificando"); return;
+            }
+            motorConversacional.identificarFoto(record.id, name.getText().toString(), relation.getText().toString(), position.getText().toString());
+            dialog.dismiss();
+        }));
+        dialog.show();
     }
 
     // ===================== NUBE: MÓDULO =========================

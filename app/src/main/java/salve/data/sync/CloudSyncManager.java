@@ -14,6 +14,9 @@ import java.util.List;
 import salve.data.db.MemoriaDatabase;
 import salve.data.db.SyncEventDao;
 import salve.data.db.SyncEventEntity;
+import salve.core.visual.VisualMemoryRecord;
+import salve.core.visual.VisualMemoryRepository;
+import salve.core.visual.VisualMemoryStore;
 
 /**
  * Offline-first synchronization coordinator.
@@ -81,6 +84,30 @@ public final class CloudSyncManager {
         }
     }
 
+    /** Stable payload plus a transactional deduplication check also covers photos captured offline. */
+    public static void enqueueVisual(Context ctx, VisualMemoryRecord record) {
+        if (!isEnabled(ctx)) return;
+        com.google.gson.JsonObject event = new com.google.gson.JsonObject();
+        event.addProperty("type", "visual_memory");
+        event.addProperty("time_ms", record.createdAt);
+        event.addProperty("content", record.memoryText());
+        event.add("visual_record", new com.google.gson.Gson().toJsonTree(record));
+        String payload = event.toString();
+        MemoriaDatabase database = MemoriaDatabase.getInstance(ctx);
+        database.runInTransaction(() -> {
+            SyncEventDao dao = database.syncEventDao();
+            if (dao.countExact(record.createdAt, payload) > 0) return;
+            SyncEventEntity entry = new SyncEventEntity();
+            entry.payload = payload; entry.createdAt = record.createdAt; entry.tries = 0;
+            dao.insert(entry);
+        });
+    }
+
+    public static void enqueueArchivedPhotos(Context ctx) {
+        if (!isEnabled(ctx)) return;
+        for (VisualMemoryRecord record : new VisualMemoryRepository(ctx).store.list()) enqueueVisual(ctx, record);
+    }
+
     /**
      * Sends pending events to pCloud. Success means pCloud accepted the file and its remote
      * checksum matched the local payload. The local journal entry is retained with tries=-1.
@@ -96,7 +123,7 @@ public final class CloudSyncManager {
             List<SyncEventEntity> batch = dao.getPending(maxBatch);
             for (SyncEventEntity e : batch) {
                 String path = ROOT + "/events/" + e.createdAt + "-" + e.id + ".json";
-                if (provider.uploadJson(path, e.payload)) {
+                if (uploadPhotoAttachment(ctx, provider, e.payload) && provider.uploadJson(path, e.payload)) {
                     dao.markSynced(e.id);
                     sent++;
                 } else {
@@ -108,6 +135,25 @@ public final class CloudSyncManager {
             Log.e(TAG, "flush error", ex);
         }
         return sent;
+    }
+
+    private static VisualMemoryRecord visualRecord(String payload) {
+        com.google.gson.JsonObject event = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
+        if (!event.has("type") || !"visual_memory".equals(event.get("type").getAsString())) return null;
+        return VisualMemoryStore.validated(new com.google.gson.Gson().fromJson(event.get("visual_record"), VisualMemoryRecord.class));
+    }
+
+    /** A visual event is acknowledged only after both its image and metadata are verified remotely. */
+    private static boolean uploadPhotoAttachment(Context context, PCloudProvider provider, String payload) {
+        try {
+            VisualMemoryRecord record = visualRecord(payload);
+            return record == null || provider.uploadFile(ROOT + "/images/" + record.id + ".jpg",
+                    new VisualMemoryRepository(context).store.imageFile(record.id));
+        } catch (Exception invalid) { Log.w(TAG, "Adjunto visual pendiente o inválido"); return false; }
+    }
+
+    public static boolean hasPending(Context context) {
+        return isEnabled(context) && !MemoriaDatabase.getInstance(context).syncEventDao().getPending(1).isEmpty();
     }
 
     public static void uploadGrafoBundle(Context ctx) {
@@ -136,13 +182,25 @@ public final class CloudSyncManager {
         if (!provider.isConfigured()) return 0;
         try {
             SyncEventDao dao = MemoriaDatabase.getInstance(ctx).syncEventDao();
-            List<String> files = provider.listFiles(ROOT + "/events");
+            List<String> files = new java.util.ArrayList<>(provider.listFiles(ROOT + "/events"));
+            files.removeIf(path -> !path.endsWith(".json") || timestampFromEventPath(path) <= 0);
+            files.sort(java.util.Comparator.comparingLong(CloudSyncManager::timestampFromEventPath).thenComparing(path -> path));
             int restored = 0;
             for (int i = Math.max(0, files.size() - maxEvents); i < files.size(); i++) {
                 String remote = files.get(i);
                 byte[] bytes = provider.download(remote);
                 if (bytes == null) continue;
                 String payload = new String(bytes, StandardCharsets.UTF_8);
+                try {
+                    VisualMemoryRecord photo = visualRecord(payload);
+                    if (photo != null) {
+                        VisualMemoryRepository archive = new VisualMemoryRepository(ctx);
+                        byte[] image = archive.store.imageFile(photo.id).isFile() ? null
+                                : provider.downloadBounded(ROOT + "/images/" + photo.id + ".jpg", VisualMemoryStore.MAX_IMAGE_BYTES);
+                        if (image == null && !archive.store.imageFile(photo.id).isFile()) continue;
+                        archive.restore(photo, image);
+                    }
+                } catch (Exception invalidPhoto) { Log.w(TAG, "No se pudo restaurar una foto"); continue; }
                 long createdAt = timestampFromEventPath(remote);
                 if (createdAt <= 0) {
                     try { createdAt = new JSONObject(payload).optLong("time_ms", 0L); }
