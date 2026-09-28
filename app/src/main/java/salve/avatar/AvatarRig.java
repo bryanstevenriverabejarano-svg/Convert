@@ -109,7 +109,8 @@ public final class AvatarRig {
                       float armL,float armR,float stride,float kneeL,float kneeR) {
             this.tilt=tilt;this.yaw=yaw;this.pitch=pitch;this.blink=blink;this.gazeX=gazeX;this.gazeY=gazeY;this.breath=breath;
             float la=armAngle(armL),ra=armAngle(armR),step=limit(stride,-1,1);
-            if(coreProfile){la*=.6f;ra*=.6f;step*=.5f;}
+            // A narrow arm/hair boundary needs a smaller rotation and wider falloff.
+            if(coreProfile){la*=.3f;ra*=.3f;step*=.5f;}
             // Inward rotation has less room: the flat arm shares pixels with the dress and hair.
             if(la<0)la*=.4f;if(ra>0)ra*=.4f;
             leftUpper=Transform.rotate(la,leftShoulder);rightUpper=Transform.rotate(ra,rightShoulder);
@@ -170,7 +171,7 @@ public final class AvatarRig {
         float distance=Math.min(segmentDistance(x,y,shoulder,elbow),segmentDistance(x,y,elbow,palm));
         if(coreProfile) {
             float side=left?smooth(420,350,x):smooth(590,660,x);
-            return smooth(115,40,distance)*side*smooth(290,365,y)*smooth(840,780,y);
+            return smooth(160,35,distance)*side*smooth(290,365,y)*smooth(840,780,y);
         }
         float side=left?smooth(375,295,x):smooth(555,635,x);
         return smooth(245,75,distance)*side*smooth(400,535,y)*smooth(1080,930,y);

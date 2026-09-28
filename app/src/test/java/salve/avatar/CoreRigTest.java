@@ -29,7 +29,7 @@ public final class CoreRigTest {
             for(float coordinate:v)assertTrue(Float.isFinite(coordinate));
             for(int i=0;i<triangles.length;i+=3){int a=triangles[i]*2,b=triangles[i+1]*2,c=triangles[i+2]*2;
                 float area=(v[b]-v[a])*(v[c+1]-v[a+1])-(v[b+1]-v[a+1])*(v[c]-v[a]);
-                assertTrue("Core mesh folded at "+i,area>0);
+                assertTrue("Core mesh folded at "+i+" head="+head+" arms="+arms+" step="+step+" blink="+blink+" area="+area,area>0);
             }
         }
     }
