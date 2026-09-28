@@ -24,17 +24,19 @@ public final class AvatarWardrobeRepository {
     private static final long MAX_BYTES = 32_768;
     private final File file;
     private List<AvatarDesignSpec> designs = new ArrayList<>();
-    private String selectedId = AvatarDesignSpec.ORIGINAL_ID;
+    private String selectedId = AvatarDesignSpec.KURO_ID;
     public AvatarWardrobeRepository(File file) throws IOException {
         this.file = file;
         if (file.exists()) read();
     }
     public List<AvatarDesignSpec> list() {
-        List<AvatarDesignSpec> result = new ArrayList<>(); result.add(AvatarDesignSpec.original()); result.addAll(designs);
+        List<AvatarDesignSpec> result = new ArrayList<>(); result.add(AvatarDesignSpec.kuro()); result.add(AvatarDesignSpec.shiro()); result.add(AvatarDesignSpec.original()); result.addAll(designs);
         return Collections.unmodifiableList(result);
     }
     public AvatarDesignSpec selected() { return find(selectedId); }
     public AvatarDesignSpec find(String id) {
+        if (AvatarDesignSpec.KURO_ID.equals(id)) return AvatarDesignSpec.kuro();
+        if (AvatarDesignSpec.SHIRO_ID.equals(id)) return AvatarDesignSpec.shiro();
         if (AvatarDesignSpec.ORIGINAL_ID.equals(id)) return AvatarDesignSpec.original();
         for (AvatarDesignSpec design : designs) if (design.id.equals(id)) return design;
         throw new IllegalArgumentException("No existe ese diseño guardado.");
@@ -54,13 +56,13 @@ public final class AvatarWardrobeRepository {
         AvatarDesignSpec next = find(id); persist(designs, id); return next;
     }
     public void delete(String id) throws IOException {
-        if (AvatarDesignSpec.ORIGINAL_ID.equals(id)) throw new IllegalArgumentException("El vestido original siempre se conserva.");
+        if (AvatarDesignSpec.isBundled(id)) throw new IllegalArgumentException("Los vestidos incluidos siempre se conservan.");
         find(id);
         List<AvatarDesignSpec> next = new ArrayList<>(designs); next.removeIf(d -> d.id.equals(id));
-        persist(next, selectedId.equals(id) ? AvatarDesignSpec.ORIGINAL_ID : selectedId);
+        persist(next, selectedId.equals(id) ? AvatarDesignSpec.KURO_ID : selectedId);
     }
     private void persist(List<AvatarDesignSpec> next, String selected) throws IOException {
-        Map<String, Object> root = new LinkedHashMap<>(); root.put("version", 1); root.put("selected", selected);
+        Map<String, Object> root = new LinkedHashMap<>(); root.put("version", 2); root.put("selected", selected);
         List<Map<String, Object>> rows = new ArrayList<>();
         for (AvatarDesignSpec design : next) {
             Map<String, Object> row = new LinkedHashMap<>(); row.put("id", design.id); row.put("name", design.name);
@@ -83,6 +85,7 @@ public final class AvatarWardrobeRepository {
         if (file.length() > MAX_BYTES) throw new IOException("El archivo del armario supera su límite.");
         List<AvatarDesignSpec> loaded = new ArrayList<>();
         String selected = null;
+        int version = 0;
         try (JsonReader reader = new JsonReader(new StringReader(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)))) {
             reader.setStrictness(Strictness.STRICT); reader.beginObject();
             java.util.Set<String> keys = new java.util.HashSet<>();
@@ -91,7 +94,9 @@ public final class AvatarWardrobeRepository {
                 if (!keys.add(key)) throw new IOException("Campo duplicado en el armario.");
                 switch (key) {
                     case "version":
-                        if (reader.peek() != JsonToken.NUMBER || reader.nextInt() != 1) throw new IOException("Versión de armario no compatible.");
+                        if (reader.peek() != JsonToken.NUMBER) throw new IOException("Versión no válida.");
+                        version = reader.nextInt();
+                        if (version != 1 && version != 2) throw new IOException("Versión de armario no compatible.");
                         break;
                     case "selected":
                         if (reader.peek() != JsonToken.STRING) throw new IOException("Selección de armario no válida.");
@@ -110,7 +115,7 @@ public final class AvatarWardrobeRepository {
                             if (row.size() != 5) throw new IOException("Campos de diseño no válidos.");
                             AvatarDesignSpec design = new AvatarDesignSpec(row.get("id"), row.get("name"), row.get("template"),
                                     AvatarDesignSpec.Palette.valueOf(row.get("color")), AvatarDesignSpec.Pattern.valueOf(row.get("pattern")));
-                            if (design.id.equals(AvatarDesignSpec.ORIGINAL_ID)) throw new IOException("El original no se sustituye.");
+                            if (AvatarDesignSpec.isBundled(design.id)) throw new IOException("El original no se sustituye.");
                             if (AvatarDesignSpec.normalizedName(design.name).equals(AvatarDesignSpec.normalizedName(AvatarDesignSpec.original().name)))
                                 throw new IOException("El nombre del diseño original se conserva.");
                             for (AvatarDesignSpec old : loaded)
@@ -125,6 +130,8 @@ public final class AvatarWardrobeRepository {
             reader.endObject();
             if (keys.size() != 3 || selected == null || reader.peek() != JsonToken.END_DOCUMENT) throw new IOException("Armario incompleto.");
             designs = loaded; selectedId = selected; find(selected);
+            // Migrate only the old default; explicit custom selections remain intact.
+            if (version == 1) selectedId = AvatarDesignSpec.ORIGINAL_ID.equals(selected) ? AvatarDesignSpec.KURO_ID : selected;
         } catch (IllegalArgumentException | IllegalStateException | NullPointerException invalid) {
             throw new IOException("El archivo del armario no es válido; se ha conservado para recuperarlo.", invalid);
         }

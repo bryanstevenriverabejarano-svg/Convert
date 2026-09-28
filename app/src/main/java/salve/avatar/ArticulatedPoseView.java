@@ -42,7 +42,7 @@ public final class ArticulatedPoseView extends View {
             List<Layer> loaded=new ArrayList<>();Bitmap original=null;
             try {
                 BitmapFactory.Options options=new BitmapFactory.Options();options.inScaled=false;
-                original=BitmapFactory.decodeResource(getResources(),R.drawable.salve_imagen,options);
+                original=BitmapFactory.decodeResource(getResources(),R.drawable.salve_original,options);
                 if(original==null)throw new IOException("Falta la imagen original");
                 for(ArticulatedRig.Part part:ArticulatedRig.Part.values()) {
                     Bitmap bitmap;

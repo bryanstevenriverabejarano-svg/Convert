@@ -22,9 +22,9 @@ public final class AvatarWardrobeStore {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final List<Runnable> listeners = new ArrayList<>();
-    private volatile List<AvatarDesignSpec> designs = Collections.singletonList(AvatarDesignSpec.original());
+    private volatile List<AvatarDesignSpec> designs = java.util.Arrays.asList(AvatarDesignSpec.kuro(), AvatarDesignSpec.shiro(), AvatarDesignSpec.original());
     private volatile List<AvatarDesignCatalog.Template> templates = Collections.singletonList(AvatarDesignCatalog.template("original_dress"));
-    private volatile AvatarDesignSpec selected = AvatarDesignSpec.original();
+    private volatile AvatarDesignSpec selected = AvatarDesignSpec.kuro();
     private volatile String lastError = "";
     private volatile boolean ready;
     private AvatarWardrobeRepository repository;
@@ -142,10 +142,10 @@ public final class AvatarWardrobeStore {
     }
     private void publish(String error) {
         List<AvatarDesignSpec> saved = repository == null ? designs : repository.list();
-        AvatarDesignSpec choice = repository == null ? AvatarDesignSpec.original() : repository.selected();
+        AvatarDesignSpec choice = repository == null ? AvatarDesignSpec.kuro() : repository.selected();
         String issue = error;
         try { ensureAvailable(choice.template); }
-        catch (IllegalArgumentException missing) { choice = AvatarDesignSpec.original(); issue = "La plantilla seleccionada no está disponible; muestro el vestido original."; }
+        catch (IllegalArgumentException missing) { choice = AvatarDesignSpec.kuro(); issue = "La plantilla seleccionada no está disponible; muestro Kuro."; }
         AvatarDesignSpec current = choice; String message = issue;
         main.post(() -> {
             designs = saved; selected = current; lastError = message;
