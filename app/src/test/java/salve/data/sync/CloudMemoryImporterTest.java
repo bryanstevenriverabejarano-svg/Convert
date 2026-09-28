@@ -88,6 +88,20 @@ public class CloudMemoryImporterTest {
         assertTrue(result.getDirectAnswer().contains("pCloud pendiente"));
     }
 
+    @Test public void malformedJournalEntryCannotDeleteAnExistingLegacyRecord() {
+        Store store = new Store();
+        store.importer.ingest(event("memoria_manual", "Recuerdo intacto", 1001), 1001);
+        String bad = "{\"type\":\"memory\",\"content\":\"Recuerdo intacto\",\"time_ms\":1000,\"tags\":{}}";
+        try { store.importer.ingest(bad, 1000); fail("Invalid tags accepted"); }
+        catch (IllegalArgumentException expected) { }
+        assertEquals(1, store.rows.size());
+        assertEquals("Recuerdo intacto", store.rows.get(0).frase);
+        try { store.importer.ingest("[]", 1000); fail("Invalid root accepted"); }
+        catch (IllegalArgumentException expected) { }
+        try { store.importer.ingest("{\"type\":\"memory\",\"time_ms\":{}}", 1000); fail("Invalid date accepted"); }
+        catch (IllegalArgumentException expected) { }
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void invalidDateDoesNotBecomeTheEarliestMemory() {
         new Store().importer.ingest(event("memory", "Sin fecha", -1), 2000);

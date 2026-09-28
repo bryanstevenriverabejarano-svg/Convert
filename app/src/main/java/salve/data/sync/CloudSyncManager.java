@@ -138,8 +138,12 @@ public final class CloudSyncManager {
     }
 
     private static VisualMemoryRecord visualRecord(String payload) {
-        com.google.gson.JsonObject event = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
-        if (!event.has("type") || !"visual_memory".equals(event.get("type").getAsString())) return null;
+        com.google.gson.JsonElement root = com.google.gson.JsonParser.parseString(payload);
+        if (!root.isJsonObject()) throw new IllegalArgumentException("Evento inválido");
+        com.google.gson.JsonObject event = root.getAsJsonObject();
+        if (!event.has("type")) return null;
+        if (!event.get("type").isJsonPrimitive()) throw new IllegalArgumentException("Tipo de evento inválido");
+        if (!"visual_memory".equals(event.get("type").getAsString())) return null;
         return VisualMemoryStore.validated(new com.google.gson.Gson().fromJson(event.get("visual_record"), VisualMemoryRecord.class));
     }
 

@@ -17,9 +17,11 @@ public final class CloudMemoryImporter {
     public boolean ingest(String payload, long fallbackTime) { return ingest(payload, fallbackTime, true); }
 
     public boolean ingest(String payload, long fallbackTime, boolean fromCloud) {
-        JsonObject event = JsonParser.parseString(payload).getAsJsonObject();
+        JsonElement root = JsonParser.parseString(payload);
+        if (!root.isJsonObject()) throw new IllegalArgumentException("Evento inválido");
+        JsonObject event = root.getAsJsonObject();
         String type = string(event, "type", "");
-        long time = event.has("time_ms") ? event.get("time_ms").getAsLong() : fallbackTime;
+        long time = number(event, "time_ms", fallbackTime);
         if (time <= 0 || time > System.currentTimeMillis() + 86400000L)
             throw new IllegalArgumentException("Fecha del recuerdo inválida");
         String text = string(event, "content", "").trim();
@@ -33,8 +35,6 @@ public final class CloudMemoryImporter {
         if (!user && !memory && !type.equals("profile")) return false;
         if (text.isEmpty() || text.length() > 64000) throw new IllegalArgumentException("Texto del recuerdo inválido");
         boolean legacy = type.equals("memoria_manual") || type.equals("memoria_auto");
-        if (legacy && memories.canonicalNear(time, text) > 0) return false;
-        if (type.equals("memory")) memories.deleteLegacyCopies(time, text);
         List<String> tags = tags(event);
         if (type.equals("profile")) requireCategory(category);
         else {
@@ -47,7 +47,12 @@ public final class CloudMemoryImporter {
         RecuerdoEntity record = new RecuerdoEntity();
         record.frase = text; record.timestamp = time; record.binario = "";
         record.emocion = string(event, "emotion", "neutral");
-        record.intensidad = event.has("intensity") ? Math.max(0, Math.min(10, event.get("intensity").getAsInt())) : 5;
+        record.intensidad = (int) Math.max(0, Math.min(10, number(event, "intensity", 5)));
+        // Validate every data field before cleanup, so malformed legacy input cannot
+        // partially mutate a journal-repair transaction that skips invalid entries.
+        if (!category.isEmpty()) requireCategory(category);
+        if (legacy && memories.canonicalNear(time, text) > 0) return false;
+        if (type.equals("memory")) memories.deleteLegacyCopies(time, text);
         tags.add(fromCloud ? "pcloud" : "diario_local"); tags.add(type);
         if (!category.isEmpty()) {
             requireCategory(category);
@@ -84,17 +89,27 @@ public final class CloudMemoryImporter {
     }
     private static List<String> tags(JsonObject event) {
         List<String> result = new ArrayList<>();
-        if (!event.has("tags")) return result;
+        if (!event.has("tags") || event.get("tags").isJsonNull()) return result;
         JsonElement raw = event.get("tags");
         if (raw.isJsonPrimitive()) raw = JsonParser.parseString(raw.getAsString());
+        if (!raw.isJsonArray()) throw new IllegalArgumentException("Etiquetas inválidas");
         for (JsonElement item : raw.getAsJsonArray()) {
+            if (!item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString())
+                throw new IllegalArgumentException("Etiqueta inválida");
             String tag = item.getAsString();
             if (tag.length() <= 120 && result.size() < 50) result.add(tag);
         }
         return result;
     }
     private static String string(JsonObject event, String key, String fallback) {
-        return event.has(key) && !event.get(key).isJsonNull() ? event.get(key).getAsString() : fallback;
+        if (!event.has(key) || event.get(key).isJsonNull()) return fallback;
+        if (!event.get(key).isJsonPrimitive()) throw new IllegalArgumentException("Campo de texto inválido");
+        return event.get(key).getAsString();
+    }
+    private static long number(JsonObject event, String key, long fallback) {
+        if (!event.has(key)) return fallback;
+        try { return event.get(key).getAsBigDecimal().longValueExact(); }
+        catch (RuntimeException invalid) { throw new IllegalArgumentException("Campo numérico inválido", invalid); }
     }
     private static void requireCategory(String category) {
         if (!category.matches("[a-z][a-z0-9_]{0,63}")) throw new IllegalArgumentException("Categoría inválida");
