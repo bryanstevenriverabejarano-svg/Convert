@@ -1,0 +1,1 @@
+Research kernel checks passed: 638 assertions (synthetic invariants, not an LLM benchmark).

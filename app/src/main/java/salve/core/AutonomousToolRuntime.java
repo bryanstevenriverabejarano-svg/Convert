@@ -1,14 +1,11 @@
 package salve.core;
 
 import android.content.Context;
-
 import com.google.gson.JsonObject;
-
 import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
-
 import salve.core.autonomy.AutonomousToolCommand;
 import salve.core.autonomy.AutonomousToolLab;
 import salve.core.autonomy.AutonomousToolReply;
@@ -25,13 +22,11 @@ public final class AutonomousToolRuntime {
     private AutonomousToolRuntime(Context context) {
         this(new File(context.getApplicationContext().getNoBackupFilesDir(), "autonomy/tools.json"));
     }
-
     /** Test seam using the same real file store and laboratory, without a mocked Android service. */
     AutonomousToolRuntime(File stateFile) {
         if (stateFile == null) throw new IllegalArgumentException("Archivo ausente.");
         this.stateFile = stateFile;
     }
-
     public static AutonomousToolRuntime get(Context context) {
         if (instance == null) {
             synchronized (AutonomousToolRuntime.class) {
@@ -40,14 +35,25 @@ public final class AutonomousToolRuntime {
         }
         return instance;
     }
-
-    public static boolean handles(String input) { return AutonomousToolCommand.parse(input) != null; }
-
+    public static boolean handles(String input) {
+        return learningCommand(input) != 0 || AutonomousToolCommand.parse(input) != null;
+    }
+    /** Exact commands from the user channel, not inferred from quoted documents or memory. */
+    private static int learningCommand(String input) {
+        if (input == null || input.length() > 160) return 0;
+        String text = java.text.Normalizer.normalize(input.toLowerCase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replaceAll("\\s+", " ").trim();
+        switch (text) {
+            case "estado aprendizaje experimental": return 1;
+            case "activa aprendizaje experimental": return 2;
+            case "desactiva aprendizaje experimental": return 3;
+            default: return 0;
+        }
+    }
     public static boolean isPauseCommand(String input) {
         AutonomousToolCommand command = AutonomousToolCommand.parse(input);
         return command != null && command.action == AutonomousToolCommand.Action.PAUSE;
     }
-
     /** Never queues behind a solve or touches disk; an old solve stays cancelled after resume. */
     public void pause() {
         paused.set(true);
@@ -55,8 +61,17 @@ public final class AutonomousToolRuntime {
         AutonomousToolLab current = laboratory;
         if (current != null) current.pause();
     }
-
     public String respond(String input, BooleanSupplier stopped) {
+        int learning = learningCommand(input);
+        if (learning != 0) {
+            if (Thread.currentThread().isInterrupted() || (stopped != null && stopped.getAsBoolean()))
+                return "Solicitud cancelada; no cambié la configuración experimental.";
+            try {
+                return learning == 1 ? lab().learningStatus() : lab().setExperimentalLearning(learning == 2);
+            } catch (Exception unavailable) {
+                return "No pude leer o guardar el aprendizaje experimental. No lo he dado por activado ni he sustituido el registro.";
+            }
+        }
         AutonomousToolCommand command = AutonomousToolCommand.parse(input);
         if (command == null) return null;
         if (command.action == AutonomousToolCommand.Action.PAUSE) {
@@ -71,16 +86,13 @@ public final class AutonomousToolRuntime {
         }
         try {
             switch (command.action) {
-                case CATALOG:
-                    return salve.core.autonomy.ToolRegistry.summary();
-                case STATUS:
-                    return lab().describe() + "\n" + help();
+                case CATALOG: return salve.core.autonomy.ToolRegistry.summary();
+                case STATUS: return lab().describe() + "\n" + help();
                 case ROLLBACK:
                     if (!AutonomousToolCommand.isFamily(command.payload))
                         return "Indica una familia: revierte herramienta route, knapsack, schedule o dependencies.";
                     return lab().rollback(command.payload);
-                case SOLVE:
-                    return solve(AutonomousToolCommand.parseObject(command.payload), stopped);
+                case SOLVE: return solve(AutonomousToolCommand.parseObject(command.payload), stopped);
                 default: return help();
             }
         } catch (IllegalArgumentException invalid) {
@@ -89,7 +101,6 @@ public final class AutonomousToolRuntime {
             return "El estado del laboratorio no está disponible. No lo he sustituido ni he dado por resuelto el reto.";
         }
     }
-
     /** Called exclusively on a model-generated tool reply, never on user text or retrieved memories. */
     public String respondToModel(String reply, BooleanSupplier stopped) {
         try {
@@ -111,7 +122,6 @@ public final class AutonomousToolRuntime {
             return "No pude completar el reto del modelo ni verificar su resultado.";
         }
     }
-
     private String solve(JsonObject challenge, BooleanSupplier stopped) throws Exception {
         long epoch = cancellationEpoch.get();
         if (paused.get()) return "El laboratorio está pausado. Di reanuda el laboratorio para aceptar nuevos retos.";
@@ -119,7 +129,6 @@ public final class AutonomousToolRuntime {
                 || Thread.currentThread().isInterrupted() || (stopped != null && stopped.getAsBoolean()));
         return AutonomousToolReply.summarize(report);
     }
-
     private AutonomousToolLab lab() throws Exception {
         if (laboratory == null) {
             synchronized (this) {
@@ -132,24 +141,17 @@ public final class AutonomousToolRuntime {
         }
         return laboratory;
     }
-
     /** Relevant verified program metadata only; never challenge data or autobiographical memory. */
     public String proceduralContextFor(String input) {
         String family = AutonomousToolCommand.offeredFamilyFor(input);
         if (family.isEmpty()) return "";
-        try {
-            return lab().proceduralContext(family);
-        } catch (Exception unavailable) {
-            // Absent context makes no claim that the journal is empty or that a tool was learned.
-            return "";
-        }
+        try { return lab().proceduralContext(family); }
+        catch (Exception unavailable) { return ""; }
     }
-
     public static String instructionFor(String input) {
         String family = AutonomousToolCommand.offeredFamilyFor(input);
         if (!salve.core.autonomy.ToolRegistry.families().contains(family)) return "";
         String schema = salve.core.autonomy.ToolRegistry.inputTemplate(family);
-        // One complete bounded instruction; prompt budgeting cannot leave a half contract behind.
         return "CÁLCULO LOCAL: sólo si todos los datos están explícitos, responde un JSON "
                 + "{\"tool\":\"SOLVE_CHALLENGE\",\"challenge\":{\"schema\":1,\"id\":\"consulta\",\"family\":\""
                 + family + "\",\"input\":" + schema + "}}. "
@@ -158,9 +160,9 @@ public final class AutonomousToolRuntime {
                 + "Es cálculo puro sin confirmación externa, red ni código libre. "
                 + "El verificador comprueba el cálculo, no tu interpretación.\n";
     }
-
     private static String help() {
         return "Prueba resuelve reto: {\"schema\":1,\"id\":\"consulta\",\"family\":\"dependencies\",\"input\":{\"nodes\":3,\"edges\":[[0,1],[1,2]]}}. "
-                + "También puedes pausar, reanudar o revertir una herramienta. Se admiten cuatro familias acotadas; el laboratorio no cambia el código de la aplicación.";
+                + "También puedes pausar, reanudar o revertir una herramienta. Se admiten cuatro familias acotadas; el laboratorio no cambia el código de la aplicación. "
+                + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental.";
     }
 }
