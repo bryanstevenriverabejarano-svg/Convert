@@ -17,6 +17,16 @@ public class AvatarStageLayoutTest {
             assertTrue(layout.floor - 116 * layout.bedScale >= 0);
         }
     }
+    @Test public void sleepingSceneStaysVisibleAndMovesAwayFromBottomOfTallPhones() {
+        for (float[] size : new float[][]{{280, 100}, {360, 620}, {412, 900}, {760, 220}}) {
+            AvatarStageLayout layout = AvatarStageLayout.fit(size[0], size[1], .7f);
+            float bedFloor = layout.bedFloor(size[1], true);
+            assertTrue(bedFloor - 100 * layout.bedScale >= 0);
+            assertTrue(bedFloor + 8 * layout.bedScale <= size[1]);
+        }
+        AvatarStageLayout tall = AvatarStageLayout.fit(412, 900, .7f);
+        assertTrue(tall.bedFloor(900, true) < tall.floor - 150);
+    }
     @Test public void phonePortraitGivesCharacterMostOfAvailableHeight() {
         AvatarStageLayout layout = AvatarStageLayout.fit(360, 560, .3f);
         assertTrue(layout.height > 480);

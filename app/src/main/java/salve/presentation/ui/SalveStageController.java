@@ -107,6 +107,19 @@ final class SalveStageController {
         return behavior;
     }
 
+    boolean hasOpenPanel() { return !active.isEmpty(); }
+
+    void showVoiceDetails() {
+        showChat(false);
+        scroll.post(() -> scroll.smoothScrollTo(0, 0));
+    }
+
+    void setVoiceDetails(CharSequence text) {
+        TextView details = activity.findViewById(R.id.voiceDetails);
+        details.setText(text);
+        details.setVisibility(View.VISIBLE);
+    }
+
     void showChat(boolean keyboard) {
         closePanels(); active = "chat";
         chatBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
@@ -184,7 +197,7 @@ final class SalveStageController {
         transcript.setText(text);
     }
 
-    private void scrollToEnd() { scroll.post(() -> scroll.smoothScrollTo(0, transcript.getHeight())); }
+    private void scrollToEnd() { scroll.post(() -> scroll.smoothScrollTo(0, scroll.getChildAt(0).getHeight())); }
 
     void save(Bundle state) {
         state.putStringArrayList("stage_messages", new ArrayList<>(messages));

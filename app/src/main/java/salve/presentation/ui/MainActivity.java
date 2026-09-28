@@ -133,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
     
     // ===== CEREBRO Y OÍDOS =====
     private android.speech.SpeechRecognizer speechRecognizer;
-    private LiveVoiceDialog liveVoiceDialog;
+    private LiveVoiceSession liveVoiceSession;
     private boolean pendingLiveVoicePermission;
     private boolean pendingLiveVoiceStart;
     private boolean activityResumed;
@@ -670,16 +670,18 @@ public class MainActivity extends AppCompatActivity {
         }
         if (isFinishing() || isDestroyed()) return;
         if (!activityResumed) { pendingLiveVoiceStart = true; return; }
-        if (liveVoiceDialog != null && liveVoiceDialog.isShowing()) return;
+        if (liveVoiceSession != null && liveVoiceSession.isShowing()) return;
         finalizarEscucha();
         motorConversacional.cancelarTurnoVoz();
-        liveVoiceDialog = new LiveVoiceDialog(this, motorConversacional);
-        liveVoiceDialog.show();
+        liveVoiceSession = new LiveVoiceSession(this, motorConversacional, stageController);
+        liveVoiceSession.show();
     }
 
     private void procesarMensajeUsuario(String mensaje, boolean porVoz) {
         if (mensaje == null || mensaje.trim().isEmpty()) return;
         String limpio = mensaje.trim();
+        // A typed/dictated turn takes ownership from the continuous microphone session.
+        if (liveVoiceSession != null) { liveVoiceSession.dismiss(); liveVoiceSession = null; }
         stageController.appendMessage(false, limpio);
         salve.core.tools.AssistantControlCommand sceneCommand = salve.core.tools.AssistantControlCommand.parse(limpio);
         if (sceneCommand != null) {
@@ -856,6 +858,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnEscuchar.setOnClickListener(v -> {
             stageController.closePanels();
+            if (liveVoiceSession != null) { liveVoiceSession.dismiss(); liveVoiceSession = null; }
             if (!hasAudioPermission()) {
                 pendingLiveVoicePermission = false;
                 audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
@@ -1512,9 +1515,9 @@ public class MainActivity extends AppCompatActivity {
         activityResumed = false;
         pendingLiveVoiceStart = false;
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);
-        if (liveVoiceDialog != null) {
-            liveVoiceDialog.dismiss();
-            liveVoiceDialog = null;
+        if (liveVoiceSession != null) {
+            liveVoiceSession.dismiss();
+            liveVoiceSession = null;
         }
         finalizarEscucha();
         if (motorConversacional != null) {
@@ -1527,7 +1530,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (pCloudOAuth != null) pCloudOAuth.cancel();
-        if (liveVoiceDialog != null) { liveVoiceDialog.dismiss(); liveVoiceDialog = null; }
+        if (liveVoiceSession != null) { liveVoiceSession.dismiss(); liveVoiceSession = null; }
         inferenceChecks.shutdownNow();
         // stopService(new Intent(this, CamaraService.class));
         if (motorConversacional != null) motorConversacional.shutdown();

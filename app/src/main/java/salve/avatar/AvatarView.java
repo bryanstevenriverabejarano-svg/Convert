@@ -14,6 +14,7 @@ import android.view.View;
 public final class AvatarView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final IllustratedAvatarRenderer portrait;
+    private final IllustratedBedRenderer bed;
     private final AvatarMotionController motion = AvatarMotionController.get();
     private final AvatarStore store;
     private final AvatarWardrobeStore wardrobe;
@@ -44,6 +45,7 @@ public final class AvatarView extends View {
         store = AvatarStore.get(context);
         wardrobe = AvatarWardrobeStore.get(context);
         portrait = new IllustratedAvatarRenderer(context);
+        bed = new IllustratedBedRenderer(context);
         stageGestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent event) { return true; }
             @Override public boolean onDoubleTap(MotionEvent event) { performClick(); return true; }
@@ -116,15 +118,15 @@ public final class AvatarView extends View {
         canvas.scale(scale, scale);
         if (!overlay) drawRoom(canvas);
         float floor = 252f;
-        float bedX = overlay ? 110f : 78f + AvatarState.BED_X * 164f;
-        if (s.hasBed()) drawBed(canvas, bedX, floor, false, s.getAccent());
+        float bedX = overlay ? 110f : 206f;
+        if (s.hasBed()) bed.draw(canvas, bedX, floor, false);
         if (s.getPose() == AvatarState.Pose.SLEEPING) {
             canvas.save();
-            canvas.translate(bedX + 68f, floor - 31f);
+            canvas.translate(bedX + 90f, floor - 41f);
             canvas.rotate(-90f);
-            drawPortrait(canvas, expression, 146f, 0, true);
+            drawPortrait(canvas, expression, 171f, 0, true);
             canvas.restore();
-            drawBed(canvas, bedX, floor, true, s.getAccent());
+            bed.draw(canvas, bedX, floor, true);
             text(canvas, "z", bedX + 48, floor - 72 - (float) Math.sin(phase) * 3, 15, 0xFFA8DADD);
             text(canvas, "z", bedX + 61, floor - 90, 11, 0xFFA8DADD);
         } else {
@@ -144,14 +146,14 @@ public final class AvatarView extends View {
         boolean sleeping = state.getPose() == AvatarState.Pose.SLEEPING;
         if (state.hasBed()) {
             canvas.save();
-            canvas.translate(layout.bedCenterX, layout.floor - 10 * layout.bedScale);
+            canvas.translate(layout.bedCenterX, layout.bedFloor(getHeight(), sleeping));
             canvas.scale(layout.bedScale, layout.bedScale);
-            drawBed(canvas, 0, 0, false, state.getAccent());
+            bed.draw(canvas, 0, 0, false);
             if (sleeping) {
-                canvas.save(); canvas.translate(68, -31); canvas.rotate(-90);
-                drawPortrait(canvas, expression, 146, 0, true);
+                canvas.save(); canvas.translate(90, -41); canvas.rotate(-90);
+                drawPortrait(canvas, expression, 171, 0, true);
                 canvas.restore();
-                drawBed(canvas, 0, 0, true, state.getAccent());
+                bed.draw(canvas, 0, 0, true);
                 text(canvas, "z", 48, -72 - (float) Math.sin(phase) * 3, 15, 0xFFA8DADD);
                 text(canvas, "z", 61, -90, 11, 0xFFA8DADD);
             }
@@ -192,22 +194,6 @@ public final class AvatarView extends View {
         oval(c, 250, 75, 274, 92, 0xFF67A394);
         oval(c, 272, 63, 294, 81, 0xFF88BBA1);
     }
-    private void drawBed(Canvas c, float x, float y, boolean blanket, int accent) {
-        if (blanket) {
-            rounded(c, x - 21, y - 47, x + 75, y - 12, 9, accent);
-            rounded(c, x - 21, y - 47, x + 75, y - 36, 6, lighten(accent));
-            line(c, x + 6, y - 32, x + 61, y - 32, 2, 0x558FFFFF);
-            return;
-        }
-        rounded(c, x - 85, y - 53, x - 76, y + 4, 4, 0xFF57726B);
-        rounded(c, x - 78, y - 27, x + 82, y - 5, 6, 0xFF7A9386);
-        rounded(c, x - 72, y - 37, x + 77, y - 18, 8, 0xFFE5E2D9);
-        rounded(c, x - 68, y - 47, x - 26, y - 30, 7, Color.WHITE);
-        rounded(c, x + 71, y - 31, x + 80, y + 5, 4, 0xFF57726B);
-        line(c, x - 68, y - 5, x - 68, y + 8, 5, 0xFF57726B);
-        if (store.state().getPose() != AvatarState.Pose.SLEEPING)
-            rounded(c, x - 14, y - 38, x + 70, y - 16, 5, accent);
-    }
     private void color(int color) { paint.setColor(color); paint.setStyle(Paint.Style.FILL); }
     private void rounded(Canvas c,float l,float t,float r,float b,float radius,int color) { color(color); c.drawRoundRect(l,t,r,b,radius,radius,paint); }
     private void oval(Canvas c,float l,float t,float r,float b,int color) { color(color); c.drawOval(l,t,r,b,paint); }
@@ -216,5 +202,4 @@ public final class AvatarView extends View {
         color(color); paint.setStrokeWidth(width); paint.setStrokeCap(Paint.Cap.ROUND); c.drawLine(x,y,xx,yy,paint);
     }
     private void text(Canvas c,String value,float x,float y,float size,int color) { color(color); paint.setTextSize(size); c.drawText(value,x,y,paint); }
-    private int lighten(int color) { return Color.rgb((Color.red(color)+255)/2,(Color.green(color)+255)/2,(Color.blue(color)+255)/2); }
 }

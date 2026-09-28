@@ -26,7 +26,22 @@
             android:text="@string/salve_stage_caption" android:textSize="15sp" android:textColor="#EAF4F2"
             android:maxLines="2" android:ellipsize="end" android:clickable="true" android:focusable="true"
             android:background="?attr/selectableItemBackground" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        <LinearLayout android:id="@+id/voiceStageControls" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingHorizontal="20dp" android:paddingBottom="8dp" android:visibility="gone">
+            <TextView android:id="@+id/voiceStageStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="48dp" android:gravity="center" android:maxLines="2" android:ellipsize="end"
+                android:textColor="#ACDDD3" android:textSize="14sp" android:clickable="true" android:focusable="true"
+                android:background="?attr/selectableItemBackground" android:accessibilityLiveRegion="polite" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+                <Button android:id="@+id/btnVoiceInterrupt" style="@style/SalveStageAction" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center"
+                    android:text="Interrumpir" android:contentDescription="Interrumpir a Salve y hablar" />
+                <Button android:id="@+id/btnVoiceEnd" style="@style/SalveStageAction" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center"
+                    android:text="Terminar" android:contentDescription="Terminar la conversación de voz y cerrar el micrófono" />
+            </LinearLayout>
+        </LinearLayout>
+        <TextView android:id="@+id/salveGestureHint" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:text="@string/salve_stage_hint" android:gravity="center" android:textColor="#A9BFC3"
             android:textSize="12sp" android:lineSpacingExtra="3dp" android:paddingBottom="18dp" android:paddingHorizontal="16dp" />
     </LinearLayout>
@@ -51,9 +66,14 @@
         </LinearLayout>
         <androidx.core.widget.NestedScrollView android:id="@+id/chatScroll" android:layout_width="match_parent"
             android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:id="@+id/voiceDetails" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="#ACDDD3" android:textSize="14sp" android:padding="12dp" android:visibility="gone"
+                android:textIsSelectable="true" />
             <TextView android:id="@+id/chatTranscript" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="@string/salve_chat_empty" android:textColor="#DDE9EA" android:textSize="16sp"
                 android:lineSpacingExtra="6dp" android:padding="12dp" android:textIsSelectable="true" />
+            </LinearLayout>
         </androidx.core.widget.NestedScrollView>
         <LinearLayout android:id="@+id/photoContextPanel" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical" android:padding="4dp" android:visibility="gone">
