@@ -52,6 +52,7 @@ public class SalveLLM {
     private static final String KEY_MODEL_PATH = "llm_model_path";
     private static final String KEY_VISION_PATH = "llm_vision_model_path";
     private static final String KEY_LOCAL_ONLY = "local_inference_only";
+    private static final String LARGE_BUSY_KEY = "dolphin_8b_native_in_progress";
 
     // Nombre del config de MLC dentro de la carpeta del modelo
     private static final String MODEL_CONFIG_FILENAME = "mlc-chat-config.json";
@@ -65,6 +66,8 @@ public class SalveLLM {
     private volatile boolean isGguf = false;
     private boolean activationInProgress;
     private boolean fallbackRequested;
+    private volatile long selectionVersion;
+    private volatile String runtimeStatus = "Local: sin modelo cargado";
     private java.util.function.BooleanSupplier installationCancelled = () -> false;
     private volatile boolean visionModel = false;
     private volatile boolean engineInitialized = false;
@@ -75,11 +78,19 @@ public class SalveLLM {
 
     private SalveLLM(Context context) {
         this.appContext = context.getApplicationContext();
+        SharedPreferences startupPrefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        if (startupPrefs.getBoolean(LARGE_BUSY_KEY, false)) {
+            startupPrefs.edit().remove(LARGE_BUSY_KEY).apply();
+            recordModelFailure(LocalModelPolicy.PRIMARY, "La ejecución anterior del 8B se interrumpió. Se usará el 3B hasta reintentar el principal.");
+            try { salve.work.ModelDownloadWorker.enqueueFallback(appContext); }
+            catch (Exception e) { Log.w(TAG, "Respaldo pendiente tras interrupción", e); }
+        }
         // Validate the selected files. Native loading runs with the first worker request.
         try {
             reloadModelInfoFromPrefs();
             // Native initialization is deferred to the inference worker, not Activity.onCreate.
             modelAvailable = true;
+            publishStatus("seleccionado, pendiente de cargar");
         } catch (Exception e) {
             Log.e(TAG,
                     "No se pudo inicializar el LLM local en el arranque. " +
@@ -258,8 +269,18 @@ public class SalveLLM {
             throw new IllegalStateException("initEngineIfNeeded sin modelo válido.");
         }
 
+        DeviceModelMemory.require(appContext, modelPath, false);
+        publishStatus("cargando");
         if (isGguf) {
-            GgufLlm.init(modelPath, installationCancelled);
+            boolean large = LocalModelPolicy.isLarge(modelPath);
+            DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
+            markLargeOperation(large);
+            try { GgufLlm.init(modelPath, large ? watch : installationCancelled); }
+            catch (java.util.concurrent.CancellationException e) {
+                if (large && watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
+                    throw new ModelMemoryPolicy.PressureException("Memoria baja durante la carga del 8B");
+                throw e;
+            } finally { if (large) markLargeOperation(false); }
             engineInitialized = GgufLlm.isInitialized();
         } else if (isLiteRT) {
             Log.d(TAG, "Inicializando LiteRTLlm con modelPath=" + modelPath);
@@ -276,6 +297,7 @@ public class SalveLLM {
         }
 
         if (!engineInitialized) throw new IllegalStateException("El runtime no confirmó la carga del modelo");
+        publishStatus("cargado, pendiente de comprobar respuesta");
         Log.d(TAG, "initEngineIfNeeded OK");
     }
 
@@ -299,20 +321,36 @@ public class SalveLLM {
         long start = System.nanoTime();
         if (Thread.currentThread().isInterrupted()) return ModelResult.failure(
                 ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
-        if (!modelAvailable) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
-                "No hay un modelo local configurado y válido", 0L);
         if (prompt == null || prompt.trim().isEmpty()) return ModelResult.failure(
                 ModelResult.Status.ERROR, "Prompt vacío", 0L);
-        if (!activationInProgress && LocalModelPolicy.isDolphin(modelPath)
-                && appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).contains(LocalModelPolicy.FAILURE_KEY)) {
+        if (!activationInProgress && (LocalModelPolicy.isDolphin(modelPath) || !modelAvailable)
+                && getPendingFallbackFrom() != null) {
+            if (tryCachedFallback()) return generateResult(prompt, role);
+            try { salve.work.ModelDownloadWorker.enqueueFallback(appContext); } catch (Exception ignored) { }
             return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
-                    "Dolphin falló y se solicitó Gemma como respaldo. Consulta la descarga o reintenta Dolphin en Ajustes de IA.", 0L);
+                    "Preparando el respaldo local. " + getStatusDescription(), 0L);
         }
+        if (!modelAvailable) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
+                "No hay un modelo local configurado y válido", 0L);
         try {
+            if (LocalModelPolicy.isLarge(modelPath) && engineInitialized)
+                DeviceModelMemory.require(appContext, modelPath, true);
             initEngineIfNeeded();
             String decorated = decoratePrompt(prompt, role);
-            String text = isGguf ? GgufLlm.generate(decorated, installationCancelled)
-                    : isLiteRT ? LiteRTLlm.generate(decorated) : BasicLocalLlm.chatSinglePrompt(decorated);
+            String identity = ModelRuntimeInfo.context(modelPath);
+            String text;
+            if (isGguf) {
+                boolean large = LocalModelPolicy.isLarge(modelPath);
+                DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
+                markLargeOperation(large);
+                try { text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
+                        large ? watch : installationCancelled); }
+                catch (java.util.concurrent.CancellationException e) {
+                    if (large && watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
+                        throw new ModelMemoryPolicy.PressureException("Memoria baja durante la respuesta del 8B");
+                    throw e;
+                } finally { if (large) markLargeOperation(false); }
+            } else text = isLiteRT ? LiteRTLlm.generate(identity + decorated) : BasicLocalLlm.chatSinglePrompt(identity + decorated);
             long latency = (System.nanoTime() - start) / 1_000_000L;
             if (text == null || text.trim().isEmpty()) {
                 throw new IllegalStateException("El modelo local no devolvió texto");
@@ -320,51 +358,110 @@ public class SalveLLM {
             recordInference(ModelCatalog.Capability.TEXT, true);
             lastErrorMessage = null;
             Log.i(TAG, "provider=local runtime=" + (isGguf ? "llama.cpp CPU" : isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
-            return ModelResult.success(text, latency);
+            publishStatus(activationInProgress ? "comprobando activación" : "activo");
+            return ModelResult.success(text, latency).withProvider(ModelRuntimeInfo.name(modelPath));
         } catch (java.util.concurrent.CancellationException e) {
             return ModelResult.failure(ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
         } catch (IllegalArgumentException e) {
             // Invalid/oversized input is not a broken model and must not download a fallback.
             return ModelResult.failure(ModelResult.Status.ERROR, e.getMessage(), 0L);
-        } catch (Exception | LinkageError e) {
+        } catch (Exception | LinkageError | OutOfMemoryError e) {
             recordInference(ModelCatalog.Capability.TEXT, false);
             lastErrorMessage = e.getMessage();
             Log.e(TAG, "Falló la inferencia local", e);
             boolean fallback = !activationInProgress && !Thread.currentThread().isInterrupted()
                     && requestDolphinFallback(e);
+            if (fallback && tryCachedFallback()) return generateResult(prompt, role);
+            publishStatus("no disponible; consulta el respaldo");
             return ModelResult.failure(Thread.currentThread().isInterrupted()
                     ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR,
-                    fallback ? "Dolphin falló. Se ha solicitado Gemma como respaldo; consulta el progreso de descarga."
+                    activationInProgress && e.getMessage() != null ? e.getMessage() : fallback ? "Preparando el siguiente modelo local (8B → 3B → Gemma). Consulta el progreso de descarga."
                             : "El modelo local no pudo completar la inferencia. Revisa su formato y el runtime.",
                     (System.nanoTime() - start) / 1_000_000L);
         }
     }
 
+    private void markLargeOperation(boolean busy) {
+        // A process killed by Android cannot run catch/finally. On the next launch avoid an 8B crash loop.
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(LARGE_BUSY_KEY, busy).commit();
+    }
+
+    public long getSelectionVersion() { return selectionVersion; }
+    public synchronized void recordFailureIfUnchanged(String id, String reason, long expectedVersion) {
+        if (selectionVersion != expectedVersion) throw new LocalModelPolicy.SupersededFallbackException();
+        recordModelFailure(id, reason);
+    }
+
+    public synchronized void recordModelFailure(String id, String reason) {
+        if (LocalModelPolicy.next(id) == null) return;
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(LocalModelPolicy.failureKey(id), reason)
+                .putString(LocalModelPolicy.PENDING_KEY, id)
+                .putString(LocalModelPolicy.REASON_KEY, reason).commit();
+    }
+
+    public String getPendingFallbackFrom() {
+        SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String pending = prefs.getString(LocalModelPolicy.PENDING_KEY, null);
+        if (pending != null) return pending;
+        // Migration of an unfinished 3B → Gemma request from older releases.
+        return LocalModelPolicy.LIGHT.equals(LocalModelPolicy.idForPath(modelPath))
+                && prefs.contains(LocalModelPolicy.FAILURE_KEY) ? LocalModelPolicy.LIGHT : null;
+    }
+
     private boolean requestDolphinFallback(Throwable failure) {
         if (!LocalModelPolicy.isDolphin(modelPath) || fallbackRequested) return false;
         fallbackRequested = true;
-        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-                .putString(LocalModelPolicy.FAILURE_KEY, (failure.getMessage() == null || failure.getMessage().trim().isEmpty()) ? "Falló Dolphin" : failure.getMessage()).apply();
+        String id = LocalModelPolicy.idForPath(modelPath);
+        recordModelFailure(id, failure.getMessage() == null ? "Falló " + id : failure.getMessage());
         GgufLlm.reset();
         engineInitialized = false;
-        try {
-            salve.work.ModelDownloadWorker.enqueueFallback(appContext);
-            return true;
-        } catch (Exception e) {
-            Log.e(TAG, "No se pudo programar el respaldo", e);
-            lastErrorMessage = "No se pudo programar Gemma. Reintenta la descarga en Ajustes de IA.";
-            return false;
-        }
+        clearModelSnapshot();
+        publishStatus("liberado; preparando " + LocalModelPolicy.next(id));
+        try { salve.work.ModelDownloadWorker.enqueueFallback(appContext); }
+        catch (Exception e) { Log.e(TAG, "No se pudo programar el respaldo", e); }
+        return true; // cached recovery remains possible even if scheduling fails
     }
 
-    public String getStatusDescription() {
-        if (!modelAvailable) return "Local: sin modelo válido configurado";
-        if (lastErrorMessage != null) return "Local: falló la última carga o inferencia";
-        String path = modelPath;
-        String name = path == null ? "modelo local" : new File(path).getName();
-        return engineInitialized ? "Local: " + name + " · " + (isGguf ? "llama.cpp CPU" : isLiteRT ? LiteRTLlm.getBackendName() : "MLC")
-                : "Local: " + name + ", pendiente de probar";
+    /** Runs only on inference/worker threads, under this instance's monitor. Never downloads here. */
+    private boolean tryCachedFallback() {
+        try {
+            ModelCatalog catalog = ModelCatalog.read(appContext.getAssets().open("config/models.json"));
+            for (int attempts = 0; attempts < 2; attempts++) {
+                String candidate = LocalModelPolicy.next(getPendingFallbackFrom());
+                if (candidate == null) return false;
+                ModelCatalog.Entry entry = catalog.findById(candidate);
+                if (entry == null) return false;
+                File cached = new File(ModelStore.dir(appContext), entry.filename);
+                if (!cached.isFile()) return false; // the worker resumes/downloads it; do not bypass 3B
+                try {
+                    if (!VerifiedModelFile.verifyExisting(cached, entry.sizeBytes, entry.sha256,
+                            () -> Thread.currentThread().isInterrupted()))
+                        throw new IllegalStateException("Archivo de respaldo inválido: " + candidate);
+                    ModelResult probe = activateFallbackModel(cached.getAbsolutePath(), entry.supportsVision,
+                            () -> Thread.currentThread().isInterrupted());
+                    if (probe.isSuccess()) return true;
+                    if (probe.getStatus() == ModelResult.Status.CANCELLED) return false;
+                    throw new IllegalStateException(probe.getError());
+                } catch (LocalModelPolicy.SupersededFallbackException stale) { return false; }
+                catch (Exception | LinkageError failure) {
+                    if (Thread.currentThread().isInterrupted()) return false;
+                    recordModelFailure(candidate, failure.getMessage() == null ? "Falló " + candidate : failure.getMessage());
+                    if (LocalModelPolicy.FALLBACK.equals(candidate)) return false;
+                }
+            }
+        } catch (Exception failure) { Log.w(TAG, "No se pudo preparar el respaldo guardado", failure); }
+        return false;
     }
+
+    private void publishStatus(String phase) { runtimeStatus = ModelRuntimeInfo.name(modelPath) + " · " + phase; }
+    public String getStatusDescription() {
+        String reason = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(LocalModelPolicy.REASON_KEY, "");
+        return runtimeStatus + (reason.isEmpty() ? "" : ". Motivo: " + reason);
+    }
+    public String getCompactStatus() { return runtimeStatus; }
+    public String getMemoryDescription() { return DeviceModelMemory.describe(DeviceModelMemory.read(appContext)); }
 
     public boolean isLocalOnly() {
         return appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_LOCAL_ONLY, false);
@@ -392,12 +489,9 @@ public class SalveLLM {
 
     /** Recheck under the same monitor as reload/generation, even if a fallback download began earlier. */
     public synchronized ModelResult activateFallbackModel(String path, boolean supportsVision,
-            java.util.function.BooleanSupplier cancelled, String expectedFailure) {
-        String currentFailure = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getString(LocalModelPolicy.FAILURE_KEY, null);
-        if (!LocalModelPolicy.fallbackStillNeeded(expectedFailure, currentFailure)) {
+            java.util.function.BooleanSupplier cancelled) {
+        if (!LocalModelPolicy.fallbackAllowed(LocalModelPolicy.idForPath(path), getPendingFallbackFrom()))
             throw new LocalModelPolicy.SupersededFallbackException();
-        }
         return activateDownloadedModel(path, supportsVision, cancelled);
     }
 
@@ -408,6 +502,9 @@ public class SalveLLM {
         String previousPath = prefs.getString(KEY_MODEL_PATH, null);
         String previousVisionPath = prefs.getString(KEY_VISION_PATH, null);
         String previousFailure = prefs.getString(LocalModelPolicy.FAILURE_KEY, null);
+        String previousLargeFailure = prefs.getString(LocalModelPolicy.LARGE_FAILURE_KEY, null);
+        String previousPending = prefs.getString(LocalModelPolicy.PENDING_KEY, null);
+        String previousReason = prefs.getString(LocalModelPolicy.REASON_KEY, null);
         boolean hadLocalOnlyPreference = prefs.contains(KEY_LOCAL_ONLY);
         boolean previousLocalOnly = prefs.getBoolean(KEY_LOCAL_ONLY, false);
         boolean preferenceWriteAttempted = false;
@@ -434,21 +531,26 @@ public class SalveLLM {
                 SharedPreferences.Editor selection = prefs.edit()
                         .putString(KEY_MODEL_PATH, path).putString(KEY_VISION_PATH, supportsVision ? path : null)
                         .putBoolean(KEY_LOCAL_ONLY, true);
+                selection.remove(LocalModelPolicy.PENDING_KEY);
                 if (LocalModelPolicy.isDolphin(path)) selection.remove(LocalModelPolicy.FAILURE_KEY);
+                if (LocalModelPolicy.isLarge(path)) selection.remove(LocalModelPolicy.LARGE_FAILURE_KEY).remove(LocalModelPolicy.REASON_KEY);
                 boolean saved = selection.commit();
                 if (saved) {
                     fallbackRequested = false;
+                    selectionVersion++;
+                    publishStatus("activo");
                     return result;
                 }
                 result = ModelResult.failure(ModelResult.Status.ERROR, "No se pudo guardar el modelo seleccionado", 0L);
             } else if (result.isSuccess()) {
                 result = ModelResult.failure(ModelResult.Status.CANCELLED, "Instalación pausada", 0L);
             }
-        } catch (Exception | LinkageError e) {
+        } catch (Exception | LinkageError | OutOfMemoryError e) {
             activationInProgress = false;
             installationCancelled = () -> false;
             result = ModelResult.failure(cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()
-                    ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR, "No se pudo activar el modelo descargado", 0L);
+                    ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR,
+                    e.getMessage() == null ? "No se pudo activar el modelo descargado" : e.getMessage(), 0L);
             Log.e(TAG, "Fallo activando el modelo", e);
         }
         if (preferenceWriteAttempted) {
@@ -457,7 +559,10 @@ public class SalveLLM {
                 SharedPreferences.Editor restore = prefs.edit()
                         .putString(KEY_MODEL_PATH, previousPath)
                         .putString(KEY_VISION_PATH, previousVisionPath)
-                        .putString(LocalModelPolicy.FAILURE_KEY, previousFailure);
+                        .putString(LocalModelPolicy.FAILURE_KEY, previousFailure)
+                        .putString(LocalModelPolicy.LARGE_FAILURE_KEY, previousLargeFailure)
+                        .putString(LocalModelPolicy.PENDING_KEY, previousPending)
+                        .putString(LocalModelPolicy.REASON_KEY, previousReason);
                 if (hadLocalOnlyPreference) restore.putBoolean(KEY_LOCAL_ONLY, previousLocalOnly);
                 else restore.remove(KEY_LOCAL_ONLY);
                 if (!restore.commit()) Log.w(TAG, "Selección anterior restaurada en memoria; no se pudo persistir");
@@ -473,6 +578,7 @@ public class SalveLLM {
         try { reloadModelInfo(previousPath, previousVisionPath); modelAvailable = true; }
         catch (Exception e) { modelPath = null; visionModel = false; }
         lastErrorMessage = result.getError();
+        publishStatus(modelAvailable ? "seleccionado, pendiente de cargar" : "no disponible");
         return result;
     }
 
@@ -486,10 +592,12 @@ public class SalveLLM {
             initEngineIfNeeded(true);
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
             if (!image.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) throw new java.io.IOException("No se pudo leer la foto");
-            String text = LiteRTLlm.generateImage(prompt, bytes.toByteArray());
-            ModelResult result = ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L);
+            String text = LiteRTLlm.generateImage(ModelRuntimeInfo.context(modelPath) + prompt, bytes.toByteArray());
+            ModelResult result = ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L)
+                    .withProvider(ModelRuntimeInfo.name(modelPath));
             recordInference(ModelCatalog.Capability.VISION, result.isSuccess());
             lastErrorMessage = null;
+            publishStatus("activo");
             return result;
         } catch (Exception | LinkageError e) {
             recordInference(ModelCatalog.Capability.VISION, false);
@@ -573,6 +681,7 @@ public class SalveLLM {
     public synchronized void forceReloadModel() {
         engineInitialized = false;
         modelAvailable = false;
+        fallbackRequested = false;
         clearModelSnapshot();
 
         // Resetear motores para que puedan reinicializarse con un nuevo modelo.
@@ -598,7 +707,7 @@ public class SalveLLM {
                     probe = LocalModelPolicy.confirmRecovery(
                             () -> generateResult("Responde con un saludo breve en español.", Role.CONVERSACIONAL),
                             () -> appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-                                    .remove(LocalModelPolicy.FAILURE_KEY).apply());
+                                    .remove(LocalModelPolicy.FAILURE_KEY).remove(LocalModelPolicy.PENDING_KEY).apply());
                 } finally {
                     activationInProgress = false;
                 }
@@ -607,11 +716,16 @@ public class SalveLLM {
                 if (!probe.isSuccess()) throw new IllegalStateException(probe.getError());
             }
             lastErrorMessage = null;
+            selectionVersion++;
+            publishStatus(modelSnapshot.verifiedCapabilities.contains(ModelCatalog.Capability.TEXT)
+                    ? "activo" : "cargado, pendiente de comprobar respuesta");
             Log.i(TAG, "forceReloadModel OK — modelo cargado: " + modelPath);
-        } catch (Exception | LinkageError e) {
+        } catch (Exception | LinkageError | OutOfMemoryError e) {
             Log.e(TAG, "Error al recargar modelo en forceReloadModel()", e);
             if (!Thread.currentThread().isInterrupted() && !(e instanceof java.util.concurrent.CancellationException)) requestDolphinFallback(e);
-            modelPath = null;
+            if (!Thread.currentThread().isInterrupted() && !(e instanceof java.util.concurrent.CancellationException)
+                    && tryCachedFallback()) return;
+            publishStatus("no disponible; respaldo pendiente");
             modelLib = null;
             isLiteRT = false;
             engineInitialized = false;

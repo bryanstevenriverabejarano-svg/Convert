@@ -69,6 +69,7 @@ public class MotorConversacional {
     private final IntentRecognizer intentRecognizer;
     private final ModuloInterpretacionSemantica moduloInterpretacion;
     private final SalveLLM llm;
+    private volatile String lastConversationProvider;
     private final GeminiService gemini;
     private final ConsciousnessState conciencia;
     private final IdentidadNucleo identidad;
@@ -519,6 +520,10 @@ public class MotorConversacional {
             String response = personalBudget.respond(entrada);
             AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(response);
             deliverResponse(motion.text, motion, false, true, true);
+            return;
+        }
+        if (ModelRuntimeInfo.isStatusQuestion(entrada)) {
+            hablar(getModelStatusDescription());
             return;
         }
         long turnStartedAtNanos = System.nanoTime();
@@ -1259,16 +1264,39 @@ public class MotorConversacional {
 
     private ModelResult generarRespuestaGemini(String prompt) {
         // Images are sent only by the explicit photo action, never from an ambient buffer.
-        ModelResult result = gemini.generateResultSync(prompt, null);
+        String provider = "Gemini " + gemini.getModelName();
+        ModelResult result = gemini.generateResultSync("MOTOR ACTUAL: " + provider
+                + " en la nube. Tu identidad es Salve; este dato sustituye modelos mencionados en el historial.\n" + prompt, null)
+                .withProvider(provider);
         if (!result.isSuccess()) Log.w(TAG, "Gemini no respondió: " + result.getStatus());
-        return result;
+        return rememberProvider(result);
     }
 
     private ModelResult generarRespuestaConversacionalLocal(String prompt) {
         if (llm == null) return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Sin modelo local", 0L);
         ModelResult result = llm.generateResult(prompt, SalveLLM.Role.CONVERSACIONAL);
         if (!result.isSuccess()) Log.w(TAG, "Modelo local no respondió: " + result.getStatus());
+        return rememberProvider(result);
+    }
+
+    private ModelResult rememberProvider(ModelResult result) {
+        if (result.isSuccess() && result.getProvider() != null) lastConversationProvider = result.getProvider();
         return result;
+    }
+
+    public String getModelStatusDescription() {
+        String routing = llm != null && llm.isLocalOnly() ? "Conversación local. "
+                : "Ruta de conversación: Gemini " + gemini.getModelName()
+                    + (gemini.isAvailable() ? ", con respaldo local. " : " sin configurar; se intentará el modelo local. ");
+        return routing + (llm == null ? "Sin motor local." : llm.getStatusDescription() + ". " + llm.getMemoryDescription())
+                + (lastConversationProvider == null ? ". Aún no hay una respuesta de conversación comprobada en esta sesión."
+                    : ". Última respuesta de conversación: " + lastConversationProvider + ".");
+    }
+
+    public String getCompactModelStatus() {
+        if (llm != null && llm.isLocalOnly()) return llm.getCompactStatus();
+        return "Ruta: Gemini " + gemini.getModelName() + (lastConversationProvider == null
+                ? " · sin respuesta comprobada" : " · última: " + lastConversationProvider);
     }
 
     private String buildSystemPrompt(String emocion, String contexto, boolean porVoz) {
@@ -1426,9 +1454,10 @@ public class MotorConversacional {
         try {
             image = visualMemories.loadImage(photo);
             final Bitmap pixels = image;
-            return ConversationModelRouter.generate(true, localOnly, llm != null && llm.supportsVision(),
-                    () -> gemini.generateResultSync(prompt, Collections.singletonList(pixels)),
-                    () -> llm.generateImageResult(prompt, pixels));
+            return rememberProvider(ConversationModelRouter.generate(true, localOnly, llm != null && llm.supportsVision(),
+                    () -> gemini.generateResultSync("MOTOR ACTUAL: Gemini " + gemini.getModelName() + " en la nube.\n" + prompt,
+                            Collections.singletonList(pixels)).withProvider("Gemini " + gemini.getModelName()),
+                    () -> llm.generateImageResult(prompt, pixels)));
         } catch (java.io.IOException missing) {
             return ModelResult.failure(ModelResult.Status.ERROR,
                     "Conservo el registro de esa foto, pero no puedo abrir sus píxeles. Selecciona otra o quítala del chat.", 0L);

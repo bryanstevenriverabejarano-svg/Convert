@@ -149,6 +149,18 @@ public class MainActivity extends AppCompatActivity {
 
     // ===== DESCARGA DE MODELOS =====
     private ModelDownloadViewModel modelDownloadViewModel;
+    private final android.os.Handler modelStatusHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable refreshModelStatus = new Runnable() {
+        @Override public void run() {
+            if (!activityResumed || isFinishing() || isDestroyed()) return;
+            String status = motorConversacional == null ? "Modelo: preparando" : motorConversacional.getCompactModelStatus();
+            TextView stageStatus = findViewById(R.id.activeModelStatus);
+            TextView chatStatus = findViewById(R.id.chatModelStatus);
+            if (stageStatus != null) stageStatus.setText(status);
+            if (chatStatus != null) chatStatus.setText(status);
+            modelStatusHandler.postDelayed(this, 2000);
+        }
+    };
     private ActivityResultLauncher<String> audioPermissionLauncher;
 
     // ===== VERIFICACIÓN DE MODELOS LLM (por carpetas) =====
@@ -961,7 +973,7 @@ public class MainActivity extends AppCompatActivity {
         handleShareIntent(getIntent());
 
         // Preserve existing model paths. New downloads/imports use app-private storage.
-        if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("dolphin_download_requested", false)) {
+        if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, false)) {
             iniciarDescargaModelos();
         }
     }
@@ -978,6 +990,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         activityResumed = true;
+        modelStatusHandler.removeCallbacks(refreshModelStatus);
+        modelStatusHandler.post(refreshModelStatus);
         if (motorConversacional != null) motorConversacional.setConversationForeground(true);
         if (pendingLiveVoiceStart) {
             pendingLiveVoiceStart = false;
@@ -1053,18 +1067,9 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
-        // === Diagnóstico LLM ===
-        boolean preguntaModelo =
-                q.contains("que modelo usas") || q.contains("qué modelo usas") ||
-                        q.contains("modelo activo") || q.contains("estado modelos") ||
-                        q.contains("estas usando llm") || q.contains("estás usando llm");
-
-        if (preguntaModelo) {
-            GeminiService gemini = GeminiService.getInstance(this);
-            String resp = SalveLLM.getInstance(this).getStatusDescription() + ". "
-                    + (gemini.isAvailable() ? "Gemini configurado: " + gemini.getModelName() + ". " : "Gemini no está configurado. ")
-                    + "Abre IA y cámara y ejecuta una prueba para comprobar qué motor devuelve una respuesta.";
-            motorConversacional.hablar(sanitizeForSpeech(resp));
+        // Model questions share the same deterministic path in text and continuous voice.
+        if (salve.core.ModelRuntimeInfo.isStatusQuestion(q)) {
+            motorConversacional.hablar(motorConversacional.getModelStatusDescription());
             return true;
         }
 
@@ -1513,6 +1518,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         activityResumed = false;
+        modelStatusHandler.removeCallbacks(refreshModelStatus);
         pendingLiveVoiceStart = false;
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);
         if (liveVoiceSession != null) {
@@ -1582,10 +1588,7 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNeutralButton("Estado", (dialog, which) -> new AlertDialog.Builder(this)
                         .setTitle("Estado de los motores")
-                        .setMessage((SalveLLM.getInstance(this).isLocalOnly() ? "Chat y fotos: local\n" : "Chat y fotos: Gemini\n")
-                                + SalveLLM.getInstance(this).getStatusDescription() + "\n"
-                                + (GeminiService.getInstance(this).isAvailable() ? "Gemini: clave configurada" : "Gemini: sin clave API")
-                                + "\n" + motorConversacional.getVoiceStatus())
+                        .setMessage(motorConversacional.getModelStatusDescription() + "\n" + motorConversacional.getVoiceStatus())
                         .setPositiveButton("Cerrar", null).show())
                 .setNegativeButton("Cerrar", null).show();
     }
@@ -1727,10 +1730,12 @@ public class MainActivity extends AppCompatActivity {
                         + "El modelo se guarda aparte de la aplicación. Podrás pausarlo y reanudarlo; "
                         + "se activará después de verificar el archivo y probar una respuesta. "
                         + (entry.supportsVision ? "El catálogo declara soporte de fotos; su ejecución se comprueba al analizar una imagen."
-                                : "Dolphin procesa texto en el móvil. Gemma solo se preparará si falla Dolphin; si ya está descargado, se reutilizará."))
+                                : "Se guardan Dolphin 8B (4,92 GB) y el respaldo 3B (2,02 GB): unos 6,94 GB en total. "
+                                + "Salve mide la RAM antes de cargar y pasa al 3B si hace falta. Gemma solo se prepara si tampoco funciona el 3B. "
+                                + "Ambos Dolphin procesan texto. Los archivos existentes se verifican y reutilizan."))
                 .setPositiveButton("Descargar por Wi-Fi", (d, which) -> iniciarDescargaModelos())
                 .setNeutralButton("Usar datos móviles", (d, which) -> {
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("dolphin_download_requested", true).apply();
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, true).apply();
                     modelDownloadViewModel.startDownload(true);
                 })
                 .setNegativeButton("Cerrar", null).show();
@@ -2104,7 +2109,7 @@ public class MainActivity extends AppCompatActivity {
 
     /** ▶️ Descarga automática de modelos usando precheck + descarga asíncrona + consola visual */
     private void iniciarDescargaModelos() {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("dolphin_download_requested", true).apply();
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, true).apply();
         // WorkManager waits for an unmetered network and retains .part files if the network is lost.
         modelDownloadViewModel.startDownload();
     }
