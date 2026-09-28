@@ -13,10 +13,12 @@ public final class AvatarRig {
     public final float[] leftShoulder, rightShoulder, leftElbow, rightElbow, leftPalm, rightPalm;
     public final float[] leftHip, rightHip, leftKnee, rightKnee;
     private final float[] rest, weights;
+    private final boolean coreProfile;
 
     public AvatarRig(Reader reader) {
         JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
         if (root.get("version").getAsInt() != 2) throw new IllegalArgumentException("Unknown avatar rig");
+        coreProfile = root.has("profile") && "core".equals(root.get("profile").getAsString());
         width = root.get("width").getAsInt(); height = root.get("height").getAsInt();
         columns = root.get("meshColumns").getAsInt(); rows = root.get("meshRows").getAsInt();
         if (width != 1024 || height != 1536 || columns < 8 || columns > 80 || rows < 8 || rows > 120)
@@ -59,15 +61,15 @@ public final class AvatarRig {
         for (int eye = 0; eye < 2; eye++) {
             float[] center = eye == 0 ? leftEye : rightEye;
             float dx = x - center[0], dy = y - center[1];
-            if (Math.abs(dx) > 60 || Math.abs(dy) > 75) continue;
-            float edge = smooth(52, 32, Math.abs(dx));
+            if (Math.abs(dx) > (coreProfile?35:60) || Math.abs(dy) > (coreProfile?45:75)) continue;
+            float edge = coreProfile?smooth(30,20,Math.abs(dx)):smooth(52,32,Math.abs(dx));
             // Compress the existing eye texture into its lash line; keep the supplied face artwork.
-            py -= dy * closed * .96f * edge * (float)Math.exp(-Math.pow(dy / 43f, 4));
+            py -= dy * closed * .96f * edge * (float)Math.exp(-Math.pow(dy / (coreProfile?22f:43f), 4));
             float iris = (float)Math.exp(-Math.pow(dx / 22f, 4) - Math.pow(dy / 29f, 4));
             px += limit(gazeX, -1, 1) * 3f * iris * (1 - closed);
             py += limit(gazeY, -1, 1) * 2.2f * iris * (1 - closed);
         }
-        float head = smooth(490, 325, y);
+        float head = coreProfile ? smooth(300, 205, y) : smooth(490, 325, y);
         float angle = (float)Math.toRadians(limit(tilt, -7, 7) * head);
         if (angle != 0) {
             float dx = px - headPivot[0], dy = py - headPivot[1];
@@ -77,7 +79,7 @@ public final class AvatarRig {
         px += limit(yaw, -14, 14) * .55f * head;
         py += limit(pitch, -10, 10) * .7f * head;
         // One continuous mesh avoids seams at the neck and behind the front locks.
-        float chest = smooth(920, 420, y) * smooth(220, 440, y);
+        float chest = coreProfile ? smooth(700, 350, y) * smooth(220, 340, y) : smooth(920, 420, y) * smooth(220, 440, y);
         float breathing = (limit(breath, 0, 1) - .5f) * 2f;
         py -= breathing * 2f * chest;
         float hair = smooth(350, 510, y) * smooth(870, 710, y) * limit(Math.abs(x - 480) / 350f, 0, 1);
@@ -107,6 +109,7 @@ public final class AvatarRig {
                       float armL,float armR,float stride,float kneeL,float kneeR) {
             this.tilt=tilt;this.yaw=yaw;this.pitch=pitch;this.blink=blink;this.gazeX=gazeX;this.gazeY=gazeY;this.breath=breath;
             float la=armAngle(armL),ra=armAngle(armR),step=limit(stride,-1,1);
+            if(coreProfile){la*=.6f;ra*=.6f;step*=.5f;}
             // Inward rotation has less room: the flat arm shares pixels with the dress and hair.
             if(la<0)la*=.4f;if(ra>0)ra*=.4f;
             leftUpper=Transform.rotate(la,leftShoulder);rightUpper=Transform.rotate(ra,rightShoulder);
@@ -156,13 +159,19 @@ public final class AvatarRig {
     }
     private void skinWeights(float x,float y,float[] output,int at) {
         output[at]=armWeight(x,y,true);output[at+1]=armWeight(x,y,false);
-        float legs=smooth(995,1125,y),side=smooth(570,400,x);
+        float legs=coreProfile?smooth(650,760,y):smooth(995,1125,y);
+        float side=coreProfile?smooth(600,410,x):smooth(570,400,x);
         output[at+2]=legs*side;output[at+3]=legs*(1-side);
-        output[at+4]=smooth(590,750,y);output[at+5]=smooth(1145,1290,y);
+        output[at+4]=coreProfile?smooth(470,560,y):smooth(590,750,y);
+        output[at+5]=coreProfile?smooth(950,1050,y):smooth(1145,1290,y);
     }
     private float armWeight(float x,float y,boolean left) {
         float[] shoulder=left?leftShoulder:rightShoulder,elbow=left?leftElbow:rightElbow,palm=left?leftPalm:rightPalm;
         float distance=Math.min(segmentDistance(x,y,shoulder,elbow),segmentDistance(x,y,elbow,palm));
+        if(coreProfile) {
+            float side=left?smooth(420,350,x):smooth(590,660,x);
+            return smooth(115,40,distance)*side*smooth(290,365,y)*smooth(840,780,y);
+        }
         float side=left?smooth(375,295,x):smooth(555,635,x);
         return smooth(245,75,distance)*side*smooth(400,535,y)*smooth(1080,930,y);
     }

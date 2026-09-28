@@ -16,7 +16,7 @@ public final class AvatarDesignTool {
     public AvatarDesignTool(Context context) { store = AvatarWardrobeStore.get(context); }
     public static String instruction() {
         return "\nVESTUARIO LOCAL: puedes crear diseños combinando plantillas ilustradas existentes; no generas PNG libres. "
-                + "Plantillas: kuro, shiro, original_dress, pajamas, explorer. Colores: ORIGINAL,TURQUOISE,LAVENDER,ROSE,BLUE,AMBER. "
+                + "Plantillas: core, kuro, shiro, original_dress, pajamas, explorer. Colores: ORIGINAL,TURQUOISE,LAVENDER,ROSE,BLUE,AMBER. "
                 + "Patrones: NONE,STARS,STRIPES. Usa un único JSON sin sufijos ni texto exterior. "
                 + "Crear: {\"tool\":\"AVATAR_CREATE\",\"name\":\"Noche lavanda\",\"template\":\"pajamas\",\"color\":\"LAVENDER\",\"pattern\":\"STARS\",\"wear\":true}. "
                 + "Listar: {\"tool\":\"AVATAR_LIST\"}. Vestir: {\"tool\":\"AVATAR_WEAR\",\"name\":\"Noche lavanda\"}. "
