@@ -723,7 +723,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (salve.core.goals.GoalAutonomy.handles(limpio) || MotorConversacional.isSensorInput(limpio)
                 || salve.core.AutonomousToolRuntime.handles(limpio)
-                || salve.core.tasks.TaskCommand.parse(limpio) != null) {
+                || salve.core.tasks.TaskCommand.parse(limpio) != null || salve.core.agent.AgentCommand.parse(limpio) != null) {
             // Goals, sensors and explicit laboratory challenges stay in their local flows.
             motorConversacional.procesarEntrada(limpio, porVoz);
             inputChat.setText("");
@@ -1008,6 +1008,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        salve.core.tasks.ResearchTaskRuntime.CONTROLS.execute(() -> {
+            try { salve.core.agent.AgentRuntime.get(getApplicationContext()).signal("APP_OPEN"); }
+            catch (RuntimeException unavailable) { android.util.Log.w("Salve/Agent", "Planes no disponibles; se conservan sus datos."); }
+        });
         activityResumed = true;
         modelStatusHandler.removeCallbacks(refreshModelStatus);
         modelStatusHandler.post(refreshModelStatus);

@@ -117,3 +117,21 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
+
+  agent-sandbox:
+    name: Agent tools in real isolated containers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out the tested revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the disposable Python and Chromium image
+        run: |
+          docker build --iidfile /tmp/salve-agent-image scripts/agent_sandbox
+          echo "SALVE_AGENT_IMAGE=$(cat /tmp/salve-agent-image)" >> "$GITHUB_ENV"
+      - name: Exercise authentication, public reads and actual sandbox isolation
+        env:
+          SALVE_RUN_AGENT_DOCKER: '1'
+        run: python3 -m unittest discover -s scripts -p test_agent_bridge.py -v

@@ -12,6 +12,7 @@ public final class MemoryProvenance {
     public static boolean hasTag(RecuerdoEntity record, String tag) { return tags(record).contains(tag); }
     public static String kind(RecuerdoEntity record) {
         Set<String> tags = tags(record);
+        if (tags.contains("sintesis_agente")) return "sintesis_agente";
         if (tags.contains("investigacion_publica") || tags.contains("fuentes_externas")) return "investigacion_publica";
         if (tags.contains("manifiesto") || tags.contains("identidad_creativa")) return "configuracion_sistema";
         if (tags.contains("hecho_usuario") || tags.contains("user_message") || tags.contains("voice_message"))
@@ -20,7 +21,7 @@ public final class MemoryProvenance {
     }
     public static boolean isPersonalCandidate(RecuerdoEntity record) {
         String kind = kind(record);
-        return !kind.equals("investigacion_publica") && !kind.equals("configuracion_sistema");
+        return !kind.equals("investigacion_publica") && !kind.equals("configuracion_sistema") && !kind.equals("sintesis_agente");
     }
     public static String storage(RecuerdoEntity record) {
         return hasTag(record, "pcloud") ? "pcloud_restaurado" : "registro_persistido";

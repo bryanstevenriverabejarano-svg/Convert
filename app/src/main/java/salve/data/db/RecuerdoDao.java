@@ -59,14 +59,14 @@ public interface RecuerdoDao {
     @Query("SELECT * FROM recuerdos WHERE etiquetas LIKE '%profile:%' ORDER BY timestamp ASC")
     List<RecuerdoEntity> perfiles();
 
-    @Query("SELECT * FROM recuerdos WHERE (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0 AND instr(etiquetas, '\"investigacion_publica\"') = 0 AND instr(etiquetas, '\"fuentes_externas\"') = 0)) ORDER BY timestamp ASC, id ASC LIMIT 1")
+    @Query("SELECT * FROM recuerdos WHERE (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0 AND instr(etiquetas, '\"investigacion_publica\"') = 0 AND instr(etiquetas, '\"fuentes_externas\"') = 0 AND instr(etiquetas, '\"sintesis_agente\"') = 0)) ORDER BY timestamp ASC, id ASC LIMIT 1")
     RecuerdoEntity primerRecuerdoCompartido();
 
-    @Query("SELECT * FROM recuerdos WHERE (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0 AND instr(etiquetas, '\"investigacion_publica\"') = 0 AND instr(etiquetas, '\"fuentes_externas\"') = 0)) ORDER BY timestamp DESC, id DESC LIMIT 1")
+    @Query("SELECT * FROM recuerdos WHERE (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0 AND instr(etiquetas, '\"investigacion_publica\"') = 0 AND instr(etiquetas, '\"fuentes_externas\"') = 0 AND instr(etiquetas, '\"sintesis_agente\"') = 0)) ORDER BY timestamp DESC, id DESC LIMIT 1")
     RecuerdoEntity ultimoRecuerdoCompartido();
 
     /** Expressions are built from quoted tokens; Room binds them as data. */
-    @Query("SELECT recuerdos.* FROM recuerdos JOIN recuerdos_fts ON recuerdos.id = recuerdos_fts.rowid WHERE recuerdos_fts MATCH :expression AND (:personal = 0 OR (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0 AND instr(etiquetas, '\"investigacion_publica\"') = 0 AND instr(etiquetas, '\"fuentes_externas\"') = 0))) ORDER BY timestamp DESC, id DESC LIMIT :limite")
+    @Query("SELECT recuerdos.* FROM recuerdos JOIN recuerdos_fts ON recuerdos.id = recuerdos_fts.rowid WHERE recuerdos_fts MATCH :expression AND (:personal = 0 OR (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0 AND instr(etiquetas, '\"investigacion_publica\"') = 0 AND instr(etiquetas, '\"fuentes_externas\"') = 0 AND instr(etiquetas, '\"sintesis_agente\"') = 0))) ORDER BY timestamp DESC, id DESC LIMIT :limite")
     List<RecuerdoEntity> buscarIndice(String expression, boolean personal, int limite);
 
     @Transaction

@@ -75,7 +75,7 @@ public final class NetworkResourcePolicy {
         }
     }
 
-    static boolean isPublicAddress(byte[] bytes) {
+    public static boolean isPublicAddress(byte[] bytes) {
         if (bytes.length == 16) {
             boolean mapped = true;
             for (int i = 0; i < 10; i++) mapped &= bytes[i] == 0;

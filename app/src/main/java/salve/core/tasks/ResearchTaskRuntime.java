@@ -68,7 +68,7 @@ public final class ResearchTaskRuntime {
                         .append(" · ").append(task.question.substring(0, Math.min(100, task.question.length()))).append('\n');
                 return list.append("Di ‘resultado tarea ID’, ‘cancela tarea ID’ o ‘reanuda tarea ID’.").toString();
             case PAUSE_ALL: pause(true); return "Tareas pausadas; se conservan sus resultados y puntos de recuperación.";
-            case RESUME_ALL: pause(false); return "Tareas reanudadas; continuarán cuando Android permita ejecutarlas.";
+            case RESUME_ALL: pause(false); salve.core.agent.AgentRuntime.get(app).pause(false); return "Tareas reanudadas; continuarán cuando Android permita ejecutarlas.";
             default:
                 ResearchTask task = resolve(command.argument);
                 if (task == null) return "No encuentro una tarea única con ese identificador. Consulta ‘mis tareas’.";
