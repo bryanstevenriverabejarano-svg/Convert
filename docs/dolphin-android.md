@@ -77,3 +77,14 @@ respuesta no vacía de respuesta correcta y no reintenta buscando una muestra v�
 El ejemplo oficial `simple-chat` de la misma revisión, sin modificar, también
 respondió «Hola, soy Bryan» al mismo saludo. La confusión se reproduce fuera del
 adaptador JNI de Salve.
+
+## Recuperación tras un fallo
+
+**Probar modelo local** permite volver a comprobar Dolphin aunque haya un fallo
+guardado. El fallo solo se elimina tras una respuesta no vacía; una carga nativa
+correcta por sí sola no lo elimina. Si un respaldo anterior termina de descargarse
+después de esa recuperación, se descarta su activación y se mantiene Dolphin.
+
+Para el error de Windows `DirectoryLock / CannotActivateException`, consulta
+[recuperación de Android Studio](android-studio-start-failed.md). Un PR o APK no
+puede cerrar un proceso bloqueado en otro ordenador.

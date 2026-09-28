@@ -19,8 +19,14 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
         val jobContext = currentCoroutineContext()
         val prefs = context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE)
         try {
+            if (fallbackOnly && prefs.getString(LocalModelPolicy.FAILURE_KEY, null).isNullOrBlank())
+                throw LocalModelPolicy.SupersededFallbackException()
             val prepared = LocalModelPolicy.prepare(fallbackOnly, prefs.getString(LocalModelPolicy.FAILURE_KEY, null),
                 attempt = { id ->
+                    val fallbackFailure = if (id == LocalModelPolicy.FALLBACK)
+                        prefs.getString(LocalModelPolicy.FAILURE_KEY, null) else null
+                    if (id == LocalModelPolicy.FALLBACK && fallbackFailure.isNullOrBlank())
+                        throw LocalModelPolicy.SupersededFallbackException()
                     var ready: ModelDownloadEvent.Prepared? = null
                     downloader.downloadSelected(context, jsonBytes.inputStream(), id).collect { event ->
                         when (event) {
@@ -32,7 +38,10 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
                             is ModelDownloader.DownloadEvent.Completed -> {
                                 emit(ModelDownloadEvent.Status("Cargando ${event.id} y comprobando una respuesta real…", 99))
                                 val result = runInterruptible(Dispatchers.IO) {
-                                    SalveLLM.getInstance(context).activateDownloadedModel(event.file.absolutePath,
+                                    val engine = SalveLLM.getInstance(context)
+                                    if (id == LocalModelPolicy.FALLBACK) engine.activateFallbackModel(
+                                        event.file.absolutePath, event.supportsVision, { !jobContext.isActive }, fallbackFailure)
+                                    else engine.activateDownloadedModel(event.file.absolutePath,
                                         event.supportsVision, { !jobContext.isActive })
                                 }
                                 jobContext.ensureActive()
@@ -50,6 +59,9 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
                     emit(ModelDownloadEvent.Status("Dolphin falló. Preparando Gemma como respaldo; se reutilizará si ya está descargado.", 0))
                 })
             emit(prepared)
+        } catch (superseded: LocalModelPolicy.SupersededFallbackException) {
+            jobContext.ensureActive()
+            emit(ModelDownloadEvent.Skipped(superseded.message ?: "Respaldo antiguo descartado"))
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
@@ -63,5 +75,6 @@ sealed class ModelDownloadEvent {
     data class Status(val message: String, val percent: Int) : ModelDownloadEvent()
     data class Prepared(val file: File, val latencyMillis: Long, val modelName: String,
                         val supportsVision: Boolean) : ModelDownloadEvent()
+    data class Skipped(val message: String) : ModelDownloadEvent()
     data class Error(val error: Exception) : ModelDownloadEvent()
 }

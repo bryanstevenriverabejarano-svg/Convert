@@ -41,6 +41,10 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
                         ready = "${event.modelName} activo. Prueba de texto: ${event.latencyMillis} ms. Chat en modo local." +
                             if (event.supportsVision) " Visión declarada por el catálogo; pendiente de probar con una foto." else ""
                     }
+                    is ModelDownloadEvent.Skipped -> {
+                        failure = null
+                        ready = event.message
+                    }
                     is ModelDownloadEvent.Error -> {
                         failure = event.error.message ?: "No se pudo preparar el modelo"
                         android.util.Log.e("ModelDownloadWorker", "Preparación fallida", event.error)
