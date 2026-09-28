@@ -89,6 +89,12 @@ public class SalveLLM {
             engineInitialized = false;
             modelAvailable = false;
             lastErrorMessage = e.getMessage();
+            SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            String selected = prefs.getString(KEY_MODEL_PATH, null);
+            if (LocalModelPolicy.isDolphin(selected) && !prefs.contains(LocalModelPolicy.FAILURE_KEY)) {
+                modelPath = selected;
+                requestDolphinFallback(e);
+            }
         }
     }
 
@@ -338,7 +344,7 @@ public class SalveLLM {
         if (!LocalModelPolicy.isDolphin(modelPath) || fallbackRequested) return false;
         fallbackRequested = true;
         appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-                .putString(LocalModelPolicy.FAILURE_KEY, failure.getMessage() == null ? "Falló Dolphin" : failure.getMessage()).apply();
+                .putString(LocalModelPolicy.FAILURE_KEY, (failure.getMessage() == null || failure.getMessage().trim().isEmpty()) ? "Falló Dolphin" : failure.getMessage()).apply();
         GgufLlm.reset();
         engineInitialized = false;
         try {
@@ -390,6 +396,7 @@ public class SalveLLM {
         SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String previousPath = prefs.getString(KEY_MODEL_PATH, null);
         String previousVisionPath = prefs.getString(KEY_VISION_PATH, null);
+        String previousFailure = prefs.getString(LocalModelPolicy.FAILURE_KEY, null);
         boolean hadLocalOnlyPreference = prefs.contains(KEY_LOCAL_ONLY);
         boolean previousLocalOnly = prefs.getBoolean(KEY_LOCAL_ONLY, false);
         boolean preferenceWriteAttempted = false;
@@ -413,12 +420,13 @@ public class SalveLLM {
             }
             if (result.isSuccess() && !cancelled.getAsBoolean() && !Thread.currentThread().isInterrupted()) {
                 preferenceWriteAttempted = true;
-                boolean saved = prefs.edit()
+                SharedPreferences.Editor selection = prefs.edit()
                         .putString(KEY_MODEL_PATH, path).putString(KEY_VISION_PATH, supportsVision ? path : null)
-                        .putBoolean(KEY_LOCAL_ONLY, true).commit();
+                        .putBoolean(KEY_LOCAL_ONLY, true);
+                if (LocalModelPolicy.isDolphin(path)) selection.remove(LocalModelPolicy.FAILURE_KEY);
+                boolean saved = selection.commit();
                 if (saved) {
                     fallbackRequested = false;
-                    if (LocalModelPolicy.isDolphin(path)) prefs.edit().remove(LocalModelPolicy.FAILURE_KEY).apply();
                     return result;
                 }
                 result = ModelResult.failure(ModelResult.Status.ERROR, "No se pudo guardar el modelo seleccionado", 0L);
@@ -437,7 +445,8 @@ public class SalveLLM {
             try {
                 SharedPreferences.Editor restore = prefs.edit()
                         .putString(KEY_MODEL_PATH, previousPath)
-                        .putString(KEY_VISION_PATH, previousVisionPath);
+                        .putString(KEY_VISION_PATH, previousVisionPath)
+                        .putString(LocalModelPolicy.FAILURE_KEY, previousFailure);
                 if (hadLocalOnlyPreference) restore.putBoolean(KEY_LOCAL_ONLY, previousLocalOnly);
                 else restore.remove(KEY_LOCAL_ONLY);
                 if (!restore.commit()) Log.w(TAG, "Selección anterior restaurada en memoria; no se pudo persistir");
@@ -572,6 +581,7 @@ public class SalveLLM {
             Log.i(TAG, "forceReloadModel OK — modelo cargado: " + modelPath);
         } catch (Exception | LinkageError e) {
             Log.e(TAG, "Error al recargar modelo en forceReloadModel()", e);
+            if (!Thread.currentThread().isInterrupted()) requestDolphinFallback(e);
             modelPath = null;
             modelLib = null;
             isLiteRT = false;

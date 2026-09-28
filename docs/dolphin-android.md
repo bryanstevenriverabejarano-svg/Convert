@@ -58,3 +58,22 @@ java -Djava.library.path=/tmp/salve-dolphin-native -cp /tmp/salve-dolphin-classe
 Verifica previamente tamaño y SHA-256 con el catálogo. Esta prueba usa el mismo
 adaptador JNI e incluye saludo, cálculo, cancelación, contexto excesivo y recuperación.
 No es una prueba de rendimiento en Samsung S24 Ultra ni una evaluación de ausencia de filtros.
+
+## Resultado observado en Linux
+
+El archivo real coincidió con el SHA-256 del catálogo. El adaptador JNI pasó carga,
+generación de texto UTF-8, cancelación de carga/inferencia, rechazo por exceso de
+contexto, recuperación y liberación del modelo. La ejecución completa inicial tardó 7,386 s
+en el equipo de desarrollo; no representa latencia en Android.
+
+La primera comprobación semántica falló: respondió «Hola, soy Bryan» al pedir un
+saludo al usuario y confundió 17 × 23 con 17 / 23. La segunda ejecución devolvió 391
+para el cálculo, pero mantuvo el saludo ambiguo. Una tercera ejecución con una instrucción de identidad más explícita mantuvo el
+saludo ambiguo y calculó 171. Se conservan todos los resultados en
+`evidence/dolphin-jni-smoke.json`: son limitaciones observadas del modelo pequeño,
+no pruebas de calidad conversacional. La comprobación de infraestructura distingue
+respuesta no vacía de respuesta correcta y no reintenta buscando una muestra válida.
+
+El ejemplo oficial `simple-chat` de la misma revisión, sin modificar, también
+respondió «Hola, soy Bryan» al mismo saludo. La confusión se reproduce fuera del
+adaptador JNI de Salve.
