@@ -47,6 +47,21 @@ public interface RecuerdoDao {
     @Query("DELETE FROM recuerdos WHERE instr(etiquetas, '\"' || :etiqueta || '\"') > 0")
     int eliminarPorEtiqueta(String etiqueta);
 
+    @Query("SELECT COUNT(*) FROM recuerdos WHERE timestamp = :time AND frase = :text")
+    int countExact(long time, String text);
+
+    @Query("SELECT COUNT(*) FROM recuerdos WHERE frase = :text AND timestamp BETWEEN :time - 5000 AND :time + 5000 AND (etiquetas IS NULL OR (instr(etiquetas, '\"memoria_manual\"') = 0 AND instr(etiquetas, '\"memoria_auto\"') = 0))")
+    int canonicalNear(long time, String text);
+
+    @Query("DELETE FROM recuerdos WHERE frase = :text AND timestamp BETWEEN :time - 5000 AND :time + 5000 AND (instr(etiquetas, '\"memoria_manual\"') > 0 OR instr(etiquetas, '\"memoria_auto\"') > 0) AND (instr(etiquetas, '\"pcloud\"') > 0 OR instr(etiquetas, '\"diario_local\"') > 0)")
+    int deleteLegacyCopies(long time, String text);
+
+    @Query("SELECT * FROM recuerdos WHERE etiquetas LIKE '%profile:%' ORDER BY timestamp ASC")
+    List<RecuerdoEntity> perfiles();
+
+    @Query("SELECT * FROM recuerdos WHERE (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0)) ORDER BY timestamp ASC, id ASC LIMIT 1")
+    RecuerdoEntity primerRecuerdoCompartido();
+
     @Transaction
     default void reemplazarPorEtiqueta(String etiqueta, RecuerdoEntity recuerdo) {
         eliminarPorEtiqueta(etiqueta);

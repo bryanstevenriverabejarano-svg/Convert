@@ -61,6 +61,30 @@ class MemoryQuerySqlTest(unittest.TestCase):
                         {"etiqueta": "profile:preference_cafe"})
         self.assertEqual([2, 3], [row[0] for row in self.db.execute("SELECT id FROM recuerdos ORDER BY id")])
 
+    def test_shared_chronology_excludes_configuration_and_preserves_old_date(self):
+        self.records((1, "Manifiesto", '["manifiesto"]', 1000),
+                     (2, "Primera conversación", '["pcloud","user_message"]', 2000),
+                     (3, "Actual", '[]', 3000))
+        row = self.db.execute(query("RecuerdoDao", "primerRecuerdoCompartido")).fetchone()
+        self.assertEqual((2, "Primera conversación"), row[:2])
+
+    def test_room_4_to_5_migration_preserves_memory_and_revision_state(self):
+        self.records((7, "Mi nombre es Bryan", '["profile:name"]', 1234))
+        source = (DAO_ROOT / "MemoriaDatabase.java").read_text(encoding="utf-8")
+        sql = re.search(r'db.execSQL\("([^"\\]+)"\)', source).group(1)
+        self.db.execute(sql)
+        self.db.execute("INSERT INTO memory_sync_state VALUES ('profile:name', 2000, 1)")
+        row = self.db.execute(query("MemorySyncStateDao", "get"), {"key": "profile:name"}).fetchone()
+        self.assertEqual(("profile:name", 2000, 1), row)
+        self.assertEqual(7, self.db.execute(query("RecuerdoDao", "primerRecuerdo")).fetchone()[0])
+
+    def test_legacy_copy_cleanup_preserves_unrelated_or_distant_records(self):
+        self.records((1, "Dato", '["pcloud","memoria_manual"]', 1001),
+                     (2, "Dato", '["hecho_usuario"]', 1000),
+                     (3, "Dato", '["pcloud","memoria_manual"]', 10000))
+        self.db.execute(query("RecuerdoDao", "deleteLegacyCopies"), {"time": 1000, "text": "Dato"})
+        self.assertEqual([2, 3], [row[0] for row in self.db.execute("SELECT id FROM recuerdos ORDER BY id")])
+
     def test_graph_search_reads_label_summary_tags_and_applies_limit(self):
         self.db.executemany("INSERT INTO knowledge_nodes VALUES (?, ?, ?, ?, ?, ?)", [
             (1, "telescopio", "", "[]", 2, 1000),

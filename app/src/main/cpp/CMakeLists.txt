@@ -13,6 +13,11 @@ set(LLAMA_CURL OFF CACHE BOOL "" FORCE)
 add_subdirectory(../../../../third_party/llama.cpp llama)
 add_library(salve_llama SHARED salve_llama.cpp)
 target_link_libraries(salve_llama PRIVATE llama)
+if(ANDROID)
+    # NDK r27 needs both flags for LOAD and GNU_RELRO on 16 KB devices.
+    target_link_options(salve_llama PRIVATE
+        "-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
+endif()
 # The same JNI adapter can be smoke-tested with a desktop JVM and real weights.
 if(NOT ANDROID)
     find_package(JNI REQUIRED COMPONENTS JVM)
