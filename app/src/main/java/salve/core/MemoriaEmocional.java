@@ -644,7 +644,7 @@ public class MemoriaEmocional {
         zonaReservada.registrarIntensidad((int) Math.round(score * 10));
 
         // ===== NUBE: recuerdo guardado por score =====
-        CloudLogger.log("memoria_auto", texto, (int)Math.round(score * 10));
+        // insertarRecuerdoDB queues the complete record once, including its original tags/date.
     }
 
     // ============================================================
@@ -686,7 +686,7 @@ public class MemoriaEmocional {
         }
 
         // ===== NUBE: recuerdo guardado manualmente =====
-        CloudLogger.log("memoria_manual", texto, intensidad);
+        // insertarRecuerdoDB queues the complete record once, including its original tags/date.
     }
 
     /**
@@ -1379,8 +1379,10 @@ public class MemoriaEmocional {
         memoryWriteExecutor.execute(() -> {
             try {
                 RecuerdoEntity entity = crearRecuerdoEntity(r);
-                recuerdoDao.insertRecuerdo(entity);
-                CloudSyncManager.enqueueMemory(context, entity);
+                database.runInTransaction(() -> {
+                    recuerdoDao.insertRecuerdo(entity);
+                    CloudSyncManager.enqueueMemory(context, entity);
+                });
             } catch (Exception ex) {
                 Log.e("Salve", "Error insertando recuerdo", ex);
                 throw new IllegalStateException("Falló la escritura del recuerdo", ex);

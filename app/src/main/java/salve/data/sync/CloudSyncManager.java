@@ -198,8 +198,9 @@ public final class CloudSyncManager {
 
     public static final class RestoreBatch {
         public final int restored;
-        public final boolean retry;
-        RestoreBatch(int restored, boolean retry) { this.restored = restored; this.retry = retry; }
+        public final boolean retry, more;
+        RestoreBatch(int restored, boolean retry) { this(restored, retry, false); }
+        RestoreBatch(int restored, boolean retry, boolean more) { this.restored = restored; this.retry = retry; this.more = more; }
     }
 
     /** Restartable batches, oldest first. Import receipts avoid downloading the same journal again. */
@@ -207,6 +208,7 @@ public final class CloudSyncManager {
         if (!isEnabled(ctx) || !isPCloudConfigured(ctx) || maxEvents <= 0) return new RestoreBatch(0, false);
         synchronized (RESTORE_LOCK) {
             int restored = 0, scanned = 0, pending = 0, errors = 0, invalid = 0, verified = 0;
+            long deadline = android.os.SystemClock.elapsedRealtime() + 90000L;
             restoreStatus(ctx, "Recuperando recuerdos de pCloud…", false);
             try {
                 PCloudProvider provider = new PCloudProvider(ctx);
@@ -218,7 +220,7 @@ public final class CloudSyncManager {
                 for (String remote : files) {
                     MemorySyncStateEntity receipt = db.memorySyncStateDao().get("remote:" + remote);
                     if (receipt != null) { if (receipt.deleted) invalid++; else verified++; continue; }
-                    if (scanned >= maxEvents || Thread.currentThread().isInterrupted() || !isEnabled(ctx)) { pending++; continue; }
+                    if (scanned >= maxEvents || android.os.SystemClock.elapsedRealtime() >= deadline || Thread.currentThread().isInterrupted() || !isEnabled(ctx)) { pending++; continue; }
                     scanned++;
                     byte[] bytes = provider.downloadBounded(remote, 256 * 1024);
                     if (bytes == null) { errors++; continue; }
@@ -253,7 +255,7 @@ public final class CloudSyncManager {
                 restoreStatus(ctx, "pCloud: " + verified + " de " + files.size() + " eventos recuperados. "
                         + (complete ? "Historial de eventos disponible hasta la última sincronización."
                         : pending + " pendientes; " + errors + " sin descargar; " + invalid + " no legibles. La historia puede estar incompleta."), complete);
-                return new RestoreBatch(restored, pending > 0 || errors > 0);
+                return new RestoreBatch(restored, errors > 0, pending > 0);
             } catch (Exception failure) {
                 restoreStatus(ctx, "No pude recuperar pCloud. Revisa la conexión y la cuenta; los recuerdos locales se conservan.", false);
                 return new RestoreBatch(restored, true);
@@ -273,7 +275,7 @@ public final class CloudSyncManager {
                 if (page.isEmpty()) return;
                 for (SyncEventEntity event : page) {
                     db.runInTransaction(() -> {
-                        try { importer.ingest(event.payload, event.createdAt); }
+                        try { importer.ingest(event.payload, event.createdAt, false); }
                         catch (com.google.gson.JsonParseException | IllegalArgumentException invalidData) {
                             Log.w(TAG, "Evento antiguo no legible; se conserva el original");
                         }
@@ -312,7 +314,8 @@ public final class CloudSyncManager {
             event.payload = payload; event.createdAt = time; event.tries = 0;
             db.syncEventDao().insert(event);
         });
-        SyncWorker.enqueueWhenOnline(ctx);
+        try { SyncWorker.enqueueWhenOnline(ctx); }
+        catch (RuntimeException unavailable) { Log.w(TAG, "Evento conservado; sincronización pendiente de programar"); }
     }
 
     public static void enqueueExistingProfiles(Context ctx) {
@@ -321,6 +324,8 @@ public final class CloudSyncManager {
             // Remote records already exist in pCloud; no upload loop.
             if (profile.etiquetas == null || !profile.etiquetas.contains("\"pcloud\"")) enqueueMemory(ctx, profile);
         }
+        for (MemorySyncStateEntity deletion : MemoriaDatabase.getInstance(ctx).memorySyncStateDao().deletedProfiles())
+            enqueueProfileDeletion(ctx, deletion.key.substring("profile:".length()), deletion.updatedAt);
     }
 
     /** Restore graph/index/viewer plus event journal from pCloud. */

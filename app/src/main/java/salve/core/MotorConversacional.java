@@ -1381,7 +1381,9 @@ public class MotorConversacional {
 
     private String modelFailureMessage(ModelResult result) {
         if (result.getStatus() == ModelResult.Status.UNAVAILABLE) {
-            return "No tengo un modelo de lenguaje disponible para responder. Abre IA y cámara para configurar y probar uno.";
+            return (result.getError() == null || result.getError().isEmpty()
+                    ? "No tengo un modelo de lenguaje disponible para responder." : result.getError())
+                    + " Abre IA y cámara → Estado para comprobar el modelo y el respaldo.";
         }
         if (result.getStatus() == ModelResult.Status.CANCELLED) return "La consulta se ha cancelado.";
         return "No pude completar la respuesta con el modelo. " + result.getError();

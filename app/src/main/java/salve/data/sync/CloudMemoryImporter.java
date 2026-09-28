@@ -14,7 +14,9 @@ public final class CloudMemoryImporter {
         this.memories = memories; this.states = states;
     }
 
-    public boolean ingest(String payload, long fallbackTime) {
+    public boolean ingest(String payload, long fallbackTime) { return ingest(payload, fallbackTime, true); }
+
+    public boolean ingest(String payload, long fallbackTime, boolean fromCloud) {
         JsonObject event = JsonParser.parseString(payload).getAsJsonObject();
         String type = string(event, "type", "");
         long time = event.has("time_ms") ? event.get("time_ms").getAsLong() : fallbackTime;
@@ -30,6 +32,9 @@ public final class CloudMemoryImporter {
         boolean memory = type.equals("memory") || type.equals("memoria_manual") || type.equals("memoria_auto");
         if (!user && !memory && !type.equals("profile")) return false;
         if (text.isEmpty() || text.length() > 64000) throw new IllegalArgumentException("Texto del recuerdo inválido");
+        boolean legacy = type.equals("memoria_manual") || type.equals("memoria_auto");
+        if (legacy && memories.canonicalNear(time, text) > 0) return false;
+        if (type.equals("memory")) memories.deleteLegacyCopies(time, text);
         List<String> tags = tags(event);
         if (type.equals("profile")) requireCategory(category);
         else {
@@ -43,7 +48,7 @@ public final class CloudMemoryImporter {
         record.frase = text; record.timestamp = time; record.binario = "";
         record.emocion = string(event, "emotion", "neutral");
         record.intensidad = event.has("intensity") ? Math.max(0, Math.min(10, event.get("intensity").getAsInt())) : 5;
-        tags.add("pcloud"); tags.add(type);
+        tags.add(fromCloud ? "pcloud" : "diario_local"); tags.add(type);
         if (!category.isEmpty()) {
             requireCategory(category);
             tags.add("profile:" + category); tags.add("hecho_usuario");

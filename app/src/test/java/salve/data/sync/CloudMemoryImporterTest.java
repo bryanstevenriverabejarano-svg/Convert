@@ -61,6 +61,23 @@ public class CloudMemoryImporterTest {
         assertNull(store.profile("profile:name"));
     }
 
+    @Test public void legacyDuplicateCannotTurnConfigurationIntoASharedMemory() {
+        Store store = new Store();
+        store.importer.ingest(event("memoria_manual", "Manifiesto instalado", 1001), 1001);
+        String full = "{\"type\":\"memory\",\"content\":\"Manifiesto instalado\",\"time_ms\":1000,\"tags\":[\"manifiesto\"]}";
+        store.importer.ingest(full, 1000);
+        assertEquals(1, store.rows.size());
+        assertTrue(store.rows.get(0).etiquetas.contains("manifiesto"));
+        assertFalse(store.importer.ingest(event("memoria_manual", "Manifiesto instalado", 1001), 1001));
+    }
+
+    @Test public void localJournalRepairDoesNotClaimARemoteDownload() {
+        Store store = new Store();
+        store.importer.ingest(event("memory", "Un dato local", 1000), 1000, false);
+        assertFalse(store.rows.get(0).etiquetas.contains("pcloud"));
+        assertTrue(store.rows.get(0).etiquetas.contains("diario_local"));
+    }
+
     @Test public void partialRestoreDoesNotClaimThatLocalRowIsFirstEverMemory() {
         Store store = new Store();
         store.importer.ingest(event("user_message", "Registro actual", 5000), 5000);
@@ -97,6 +114,13 @@ public class CloudMemoryImporterTest {
                             RecuerdoEntity row = (RecuerdoEntity) args[0]; row.id = nextId++; rows.add(row); return null;
                         }
                         case "countExact": return (int) rows.stream().filter(r -> r.timestamp == (Long) args[0] && r.frase.equals(args[1])).count();
+                        case "canonicalNear": return (int) rows.stream().filter(r -> Math.abs(r.timestamp - (Long) args[0]) <= 5000 && r.frase.equals(args[1])
+                                && !r.etiquetas.contains("memoria_manual") && !r.etiquetas.contains("memoria_auto")).count();
+                        case "deleteLegacyCopies": {
+                            int before = rows.size(); rows.removeIf(r -> Math.abs(r.timestamp - (Long) args[0]) <= 5000 && r.frase.equals(args[1])
+                                    && (r.etiquetas.contains("memoria_manual") || r.etiquetas.contains("memoria_auto")));
+                            return before - rows.size();
+                        }
                         case "ultimoPorEtiqueta": return profile((String) args[0]);
                         case "eliminarPorEtiqueta": {
                             int before = rows.size(); rows.removeIf(r -> r.etiquetas.contains("\"" + args[0] + "\"")); return before - rows.size();

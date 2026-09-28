@@ -37,12 +37,23 @@ public class SyncWorker extends Worker {
             int enviados = CloudSyncManager.flush(getApplicationContext(), 50);
             Log.d(TAG, "Flush completado. Enviados=" + enviados);
             CloudSyncManager.RestoreBatch restored = CloudSyncManager.restoreMemoryBatch(getApplicationContext(), 200);
-            // Keep draining batches and retry failed image/JSON uploads after connectivity returns.
-            return (restored.retry || CloudSyncManager.hasPending(getApplicationContext())) ? Result.retry() : Result.success();
+            boolean outboxPending = CloudSyncManager.hasPending(getApplicationContext());
+            // Backoff is for network failures. Successful history pages continue immediately,
+            // otherwise thousands of old memories would take days as retry delays grow.
+            if (restored.retry || (outboxPending && enviados == 0)) return Result.retry();
+            if (restored.more || outboxPending) enqueueNextBatch(getApplicationContext());
+            return Result.success();
         } catch (Exception e) {
             Log.e(TAG, "Error durante flush", e);
             return Result.retry();
         }
+    }
+
+    private static void enqueueNextBatch(Context context) {
+        if (!CloudSyncManager.isEnabled(context)) return;
+        Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
+        WorkManager.getInstance(context).enqueueUniqueWork(UNIQUE_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE,
+                new OneTimeWorkRequest.Builder(SyncWorker.class).setConstraints(constraints).build());
     }
 
     /**

@@ -16,15 +16,30 @@ def elf_errors(data):
     size, count = struct.unpack_from('<HH', data, 54)
     if size < 56 or count == 0 or offset + size * count > len(data):
         return ['invalid ELF program headers']
-    errors, loads = [], 0
+    errors, loads, writable, relro = [], 0, [], []
     for i in range(count):
         kind, flags, off, addr, _, file_size, mem_size, align = struct.unpack_from('<IIQQQQQQ', data, offset + size * i)
         if kind == 1:
             loads += 1
             if align < PAGE or align & (align - 1) or (off - addr) % PAGE:
                 errors.append(f'LOAD {i}: align={align}, offset={off}, address={addr}')
-        if kind == 0x6474E552 and (addr + mem_size) % PAGE:
-            errors.append(f'GNU_RELRO {i}: end address is not 16 KB aligned')
+            if flags & 2:
+                writable.append((addr, addr + mem_size))
+        if kind == 0x6474E552:
+            relro.append((addr, addr + mem_size))
+    # Bionic rounds RELRO outward to page boundaries. A non-aligned end alone is
+    # not a conflict: modern LLD can leave unmapped padding before the next LOAD.
+    # Reject actual writable bytes in the rounded margins, including the prefix.
+    # Source: AOSP linker_phdr.cpp, _phdr_table_set_gnu_relro_prot.
+    for start, end in relro:
+        for low, high in ((start // PAGE * PAGE, start), (end, (end + PAGE - 1) // PAGE * PAGE)):
+            for rw_start, rw_end in writable:
+                fragments = [(max(low, rw_start), min(high, rw_end))]
+                for ro_start, ro_end in relro:
+                    fragments = [(a, b) for a, b in fragments if a < b
+                                 for a, b in ((a, min(b, ro_start)), (max(a, ro_end), b)) if a < b]
+                if any(a < b for a, b in fragments):
+                    errors.append(f'GNU_RELRO: 16 KB protection overlaps writable data near {hex(low)}')
     if not loads:
         errors.append('missing LOAD segments')
     return errors
