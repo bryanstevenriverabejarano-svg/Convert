@@ -9,6 +9,12 @@ public final class AvatarStageLayout {
         this.bedScale = bedScale; this.bedCenterX = bedCenterX;
     }
 
+    /** Lift the sleeping scene toward the center instead of leaving it at the bottom of a tall phone. */
+    public float bedFloor(float availableHeight, boolean sleeping) {
+        float base = sleeping ? availableHeight * .55f + 40 * bedScale : floor - 10 * bedScale;
+        return Math.max(100 * bedScale, Math.min(availableHeight - 8 * bedScale, base));
+    }
+
     public static AvatarStageLayout fit(float width, float availableHeight, float position) {
         width = Math.max(0, width); availableHeight = Math.max(0, availableHeight);
         float height = Math.min(availableHeight * .94f, width * 1.38f);

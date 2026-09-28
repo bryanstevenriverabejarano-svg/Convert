@@ -1,12 +1,13 @@
 package salve.presentation.ui;
 
 import android.Manifest;
-import android.app.Activity;
-import android.app.Dialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.OnBackPressedCallback;
+import android.view.View;
+import com.salve.app.R;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Typeface;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -19,12 +20,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.Log;
-import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -34,8 +30,17 @@ import salve.core.voice.VoiceConversationLoop;
 import salve.core.voice.VoiceTurnMetrics;
 
 /** Foreground, automatic voice turns. The microphone stays closed during synthesis. */
-public final class LiveVoiceDialog extends Dialog implements MotorConversacional.VoiceConversationListener {
-    private final Activity activity;
+public final class LiveVoiceSession implements MotorConversacional.VoiceConversationListener {
+    private final AppCompatActivity activity;
+    private final SalveStageController stage;
+    private final View controls;
+    private final TextView caption;
+    private String backend = "";
+    private final OnBackPressedCallback back = new OnBackPressedCallback(true) {
+        @Override public void handleOnBackPressed() {
+            if (stage.hasOpenPanel()) stage.closePanels(); else dismiss();
+        }
+    };
     private final MotorConversacional motor;
     private final VoiceConversationLoop loop = new VoiceConversationLoop();
     private final VoiceTurnMetrics metrics = new VoiceTurnMetrics();
@@ -57,44 +62,26 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
     private boolean dismissed;
     private boolean resourcesReleased;
     private TextView status;
-    private TextView backend;
-    private TextView transcript;
-    private TextView reply;
     private Button interrupt;
     private String recognitionErrorText;
     private long displayedReplyToken = -1L;
 
-    public LiveVoiceDialog(Activity activity, MotorConversacional motor) {
-        super(activity);
+    public LiveVoiceSession(AppCompatActivity activity, MotorConversacional motor, SalveStageController stage) {
         this.activity = activity;
         this.motor = motor;
+        this.stage = stage;
         this.audioManager = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
-        setCanceledOnTouchOutside(false);
-    }
-
-    @Override protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setTitle("Conversar con Salve");
-        LinearLayout content = new LinearLayout(activity);
-        content.setOrientation(LinearLayout.VERTICAL);
-        int padding = dp(20);
-        content.setPadding(padding, padding, padding, padding);
-
-        status = label("Preparando la voz…", 20);
-        status.setTypeface(null, Typeface.BOLD);
-        content.addView(status);
-        content.addView(label("Te escucho cuando termino de hablar. Para adelantar tu turno, toca Interrumpir. "
-                + "La sesión termina al salir o a los 10 minutos.", 14));
-        backend = label(motor.getVoiceStatus(), 13);
-        content.addView(backend);
-        transcript = label("Tú: …", 17);
-        reply = label("Salve: …", 17);
-        content.addView(transcript);
-        content.addView(reply);
-
-        interrupt = new Button(activity);
-        interrupt.setText("Interrumpir y hablar");
+        controls = activity.findViewById(R.id.voiceStageControls);
+        caption = activity.findViewById(R.id.salveCaption);
+        status = activity.findViewById(R.id.voiceStageStatus);
+        interrupt = activity.findViewById(R.id.btnVoiceInterrupt);
+        status.setOnClickListener(view -> stage.showVoiceDetails());
         interrupt.setOnClickListener(view -> {
+            if (!loop.isActive()) {
+                dismiss();
+                activity.findViewById(R.id.btnHablar).performClick();
+                return;
+            }
             long timestamp = now();
             VoiceConversationLoop.Step step = loop.interrupt(timestamp);
             if (step.action != VoiceConversationLoop.Action.NONE) {
@@ -106,25 +93,22 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
             }
             apply(step);
         });
-        content.addView(interrupt);
-        Button exit = new Button(activity);
-        exit.setText("Salir del modo voz");
-        exit.setOnClickListener(view -> {
-            apply(loop.stop(VoiceConversationLoop.StopReason.USER));
-            dismiss();
+        activity.findViewById(R.id.btnVoiceEnd).setOnClickListener(view -> {
+            apply(loop.stop(VoiceConversationLoop.StopReason.USER)); dismiss();
         });
-        content.addView(exit);
-        ScrollView scroll = new ScrollView(activity);
-        scroll.addView(content);
-        setContentView(scroll);
     }
 
-    @Override protected void onStart() {
-        super.onStart();
-        Window window = getWindow();
-        if (window != null) window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    public boolean isShowing() { return started && !dismissed; }
+
+    public void show() {
         if (started || dismissed) return;
         started = true;
+        stage.closePanels();
+        controls.setVisibility(View.VISIBLE);
+        activity.findViewById(R.id.salveGestureHint).setVisibility(View.GONE);
+        activity.getOnBackPressedDispatcher().addCallback(activity, back);
+        status.setText("Preparando la voz…");
+        backend = motor.getVoiceStatus();
         VoiceConversationLoop.Step first = loop.start(now());
         if (activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             apply(loop.stop(VoiceConversationLoop.StopReason.MICROPHONE_PERMISSION));
@@ -133,27 +117,22 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
         } else if (!requestAudioFocus()) {
             apply(loop.stop(VoiceConversationLoop.StopReason.AUDIO_FOCUS));
         } else {
-            if (window != null) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            controls.setKeepScreenOn(true);
+            // Conversation brings her out of the sleeping pose so speech gestures stay visible.
+            salve.avatar.AvatarStore.get(activity).change(salve.avatar.AvatarState::wake);
             apply(first);
         }
     }
 
-    @Override public void dismiss() {
+    /** Called by End, Back, onPause and onDestroy. Never leaves a hidden microphone session. */
+    public void dismiss() {
+        if (dismissed) return;
         apply(loop.stop(VoiceConversationLoop.StopReason.LIFECYCLE));
         dismissed = true;
         releaseResources();
-        super.dismiss();
-    }
-
-    @Override public void cancel() {
-        apply(loop.stop(VoiceConversationLoop.StopReason.USER));
-        super.cancel();
-    }
-
-    @Override protected void onStop() {
-        apply(loop.stop(VoiceConversationLoop.StopReason.LIFECYCLE));
-        releaseResources();
-        super.onStop();
+        controls.setVisibility(View.GONE);
+        activity.findViewById(R.id.salveGestureHint).setVisibility(View.VISIBLE);
+        back.remove();
     }
 
     private void apply(VoiceConversationLoop.Step step) {
@@ -165,8 +144,9 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
             case SUBMIT:
                 destroyRecognizer();
                 metrics.submitted(step.token, now());
-                transcript.setText("Tú: " + step.text);
-                reply.setText("Salve: preparando respuesta…");
+                stage.closePanels();
+                stage.appendMessage(false, step.text);
+                caption.setText("Tú: " + step.text);
                 try {
                     motor.procesarEntradaVoz(step.text, step.token, this);
                 } catch (RuntimeException unavailable) {
@@ -214,9 +194,9 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
                     ? SpeechRecognizer.createOnDeviceSpeechRecognizer(activity)
                     : SpeechRecognizer.createSpeechRecognizer(activity);
             recognizer = capture;
-            backend.setText((onDevice ? "Reconocimiento: servicio local de Android. "
+            backend = (onDevice ? "Reconocimiento: servicio local de Android. "
                     : "Reconocimiento: servicio de Android; puede enviar audio por Internet. ")
-                    + "\n" + motor.getVoiceStatus());
+                    + "\n" + motor.getVoiceStatus();
             motor.setListening(true);
             capture.setRecognitionListener(new RecognitionListener() {
                 private boolean current() {
@@ -257,7 +237,7 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
                 @Override public void onPartialResults(Bundle partialResults) {
                     if (!current() || partialResults == null) return;
                     ArrayList<String> partials = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if (partials != null && !partials.isEmpty()) transcript.setText("Tú: " + partials.get(0));
+                    if (partials != null && !partials.isEmpty()) caption.setText("Tú: " + partials.get(0));
                 }
                 @Override public void onEvent(int eventType, Bundle params) { }
             });
@@ -352,8 +332,7 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
 
     private void releaseResources() {
         handler.removeCallbacks(watchdog);
-        Window window = getWindow();
-        if (window != null) window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        controls.setKeepScreenOn(false);
         destroyRecognizer();
         if (!resourcesReleased) {
             resourcesReleased = true;
@@ -374,7 +353,9 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
 
     private void renderState() {
         if (status == null) return;
-        interrupt.setEnabled(loop.isActive() && loop.state() != VoiceConversationLoop.State.LISTENING);
+        interrupt.setText(loop.isActive() ? "Interrumpir" : "Reintentar");
+        interrupt.setContentDescription(loop.isActive() ? "Interrumpir a Salve y hablar" : "Reintentar la conversación de voz");
+        interrupt.setEnabled(loop.state() != VoiceConversationLoop.State.LISTENING);
         switch (loop.state()) {
             case LISTENING:
                 switch (metrics.captureStage()) {
@@ -398,6 +379,10 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
                 break;
             default: break;
         }
+        stage.setVoiceDetails(status.getText() + "\n\n" + backend
+                + "\n\nEl micrófono se cierra mientras Salve habla. Puedes interrumpirla para tomar tu turno."
+                + " La sesión termina al salir de la aplicación o a los 10 minutos.");
+        status.setContentDescription(status.getText() + ". Toca para ver los detalles de voz.");
     }
 
     private static String stopMessage(VoiceConversationLoop.StopReason reason) {
@@ -423,7 +408,9 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
         long timestamp = now();
         // A very short utterance can finish before its reply callback; still show its text once.
         metrics.replied(token, timestamp);
-        reply.setText("Salve: " + (text == null ? "" : text));
+        // The engine already publishes the final reply to the shared chat listener.
+        // Keep the on-stage subtitle current without adding a duplicate chat message.
+        if (text != null && !text.isEmpty()) caption.setText(text);
         apply(loop.replied(token, audioQueued, timestamp));
     }
 
@@ -450,14 +437,5 @@ public final class LiveVoiceDialog extends Dialog implements MotorConversacional
         if (line != null) Log.i("Salve/Voice", line);
     }
 
-    private TextView label(String text, int size) {
-        TextView view = new TextView(activity);
-        view.setText(text);
-        view.setTextSize(size);
-        view.setPadding(0, dp(6), 0, dp(10));
-        return view;
-    }
-
-    private int dp(int value) { return Math.round(value * activity.getResources().getDisplayMetrics().density); }
     private static long now() { return SystemClock.elapsedRealtime(); }
 }
