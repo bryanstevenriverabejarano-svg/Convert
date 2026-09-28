@@ -51,6 +51,13 @@ public final class RoomResearchTaskStore implements ResearchTaskEngine.Store {
         return tasks;
     }
     public boolean paused() { return dao.paused() != 0; }
+    public void initializeControl(boolean existingAutonomyPaused) {
+        db.runInTransaction(() -> {
+            if (dao.controlState() != null) return;
+            AgentControlEntity control = new AgentControlEntity(); control.paused = existingAutonomyPaused;
+            dao.control(control);
+        });
+    }
     public void pause(boolean pause, long now) {
         db.runInTransaction(() -> {
             AgentControlEntity control = new AgentControlEntity(); control.paused = pause;

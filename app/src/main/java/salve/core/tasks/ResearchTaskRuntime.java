@@ -26,6 +26,7 @@ public final class ResearchTaskRuntime {
     private ResearchTaskRuntime(Context context) {
         app = context.getApplicationContext();
         store = new RoomResearchTaskStore(MemoriaDatabase.getInstance(app), () -> CloudSyncManager.isEnabled(app));
+        store.initializeControl(GoalAutonomyRuntime.get(app).isPaused());
     }
     public static ResearchTaskRuntime get(Context context) {
         if (instance == null) synchronized (ResearchTaskRuntime.class) {
@@ -80,7 +81,8 @@ public final class ResearchTaskRuntime {
                             : "La tarea ya está pendiente o terminada; consulta su resultado.";
                 }
                 String header = "Tarea " + shortId(task) + " · " + state(task) + " · intentos: " + task.attempts;
-                if (task.receipt == null) return header + (task.error == null ? "" : "\n" + task.error);
+                if (task.error != null) header += "\n" + task.error;
+                if (task.receipt == null) return header;
                 ResearchReceipt receipt = ResearchReceipt.decode(task.receipt);
                 return header + "\n" + receipt.answer + "\nInferencias: "
                         + (receipt.providers.isEmpty() ? "sin inferencia; sólo lectura de fuentes" : String.join("; ", receipt.providers));

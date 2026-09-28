@@ -134,4 +134,8 @@ public class RoomResearchTaskStoreTest {
         assertThrows(IllegalArgumentException.class, this::create);
         assertThrows(IllegalArgumentException.class, () -> store.create("x".repeat(2049), now));
     }
+    @Test public void initialPauseIsInheritedButDoesNotOverwriteLaterUserChoice() {
+        store.initializeControl(true); assertTrue(store.paused());
+        store.pause(false, now); store.initializeControl(true); assertFalse(store.paused());
+    }
 }

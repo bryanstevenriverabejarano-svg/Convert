@@ -30,6 +30,7 @@ Los errores pueden llevar a una nueva espera o a `FAILED`; el usuario puede canc
 
 - Hasta 20 tareas pendientes y tres intentos automáticos de investigación por tarea; cada intento conserva los límites del coordinador (tres búsquedas y cuatro llamadas al modelo).
 - Una concesión de ejecución de 15 minutos identifica al propietario. Otro proceso puede recuperarla al expirar. Una pausa o cancelación retira el propietario inmediatamente en la transacción de Room.
+- Al crear el control de tareas por primera vez se conserva una pausa de autonomía ya guardada en la instalación. Los cambios posteriores se conservan en Room y no se sobrescriben al abrir Salve.
 - Las lecturas públicas pueden repetirse después de una caída anterior al checkpoint. No se prometen efectos externos «exactamente una vez».
 - Tras el checkpoint `STAGED`, se reutiliza el recibo y no se repite la investigación. La finalización, el recuerdo y el evento de salida pCloud se confirman en **una transacción**. Si falla la escritura, todo se revierte.
 - La programación inicial puede fallar después de guardar la tarea. Se informa y el arranque siguiente vuelve a programarla. WorkManager recupera trabajos ya encolados tras reinicios; una detención forzada por Android puede requerir abrir la aplicación.
@@ -48,6 +49,8 @@ No se crean perfiles personales desde resultados web. Si pCloud está habilitado
 La base pasa a versión 6. Las rutas comprobables son `4 → 5 → 6` y `5 → 6`. La versión 4 está en el commit inicial `b479065`; los tipos/campos de sus siete entidades se conservan. Se elimina `fallbackToDestructiveMigration`, también para evitar borrados ante futuras rutas olvidadas o downgrades. Una versión desconocida falla al abrir sin reconstruir la base: requiere una migración basada en su esquema real, no borrar datos de la app.
 
 Se activa la exportación de esquemas Room. El fixture de pruebas `memory-v4.sql` documenta el esquema histórico; las pruebas abren el archivo antiguo con el builder de producción y ejecutan la validación real de Room. El marcador v3 en una prueba es deliberadamente una versión no admitida, no una reconstrucción inventada de un esquema histórico.
+
+`app/schemas/salve.data.db.MemoriaDatabase/6.json` es el esquema generado por el compilador de Room en CI, conservado en control de versiones.
 
 ## Evaluación
 

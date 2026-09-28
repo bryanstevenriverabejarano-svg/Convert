@@ -28,6 +28,8 @@ public class TaskCommandTest {
     }
     @Test public void globalPauseIncludesTasksAndHasExactScope() {
         assertEquals(Boolean.TRUE, TaskCommand.globalAutonomyPause("pausa tu autonomía"));
+        assertEquals(Boolean.TRUE, TaskCommand.globalAutonomyPause("  PAUSA   tu   autonomía  "));
+        assertEquals(TaskCommand.Action.PAUSE_ALL, TaskCommand.parse("pausa  tus  tareas").action);
         assertEquals(Boolean.FALSE, TaskCommand.globalAutonomyPause("reanuda tu autonomía"));
         assertNull(TaskCommand.globalAutonomyPause("¿qué hace pausa tu autonomía?"));
     }

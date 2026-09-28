@@ -10,6 +10,7 @@ import java.util.List;
 public interface ResearchTaskDao {
     @Insert void insert(ResearchTaskEntity task);
     @Insert(onConflict = OnConflictStrategy.REPLACE) void control(AgentControlEntity control);
+    @Query("SELECT * FROM agent_control WHERE id = 1") AgentControlEntity controlState();
     @Query("SELECT COUNT(*) FROM agent_control WHERE id = 1 AND paused = 1") int paused();
     @Query("SELECT * FROM agent_research_tasks WHERE id = :id") ResearchTaskEntity get(String id);
     @Query("SELECT * FROM agent_research_tasks ORDER BY createdAt DESC, id DESC LIMIT :limit") List<ResearchTaskEntity> recent(int limit);
@@ -26,7 +27,7 @@ public interface ResearchTaskDao {
     int complete(String id, String owner, String status, long now);
     @Query("UPDATE agent_research_tasks SET status = :status, owner = '', leaseUntil = 0, nextAttemptAt = :next, updatedAt = :now, error = :error WHERE id = :id AND owner = :owner AND status IN ('RUNNING','STAGED')")
     int release(String id, String owner, String status, String error, long now, long next);
-    @Query("UPDATE agent_research_tasks SET status = 'CANCELLED', owner = '', leaseUntil = 0, updatedAt = :now WHERE id = :id AND status IN ('QUEUED','RUNNING','STAGED','FAILED')")
+    @Query("UPDATE agent_research_tasks SET status = 'CANCELLED', owner = '', leaseUntil = 0, error = NULL, updatedAt = :now WHERE id = :id AND status IN ('QUEUED','RUNNING','STAGED','FAILED')")
     int cancel(String id, long now);
     @Query("UPDATE agent_research_tasks SET status = 'QUEUED', owner = '', leaseUntil = 0, attempts = 0, nextAttemptAt = 0, error = NULL, updatedAt = :now WHERE id = :id AND status IN ('FAILED','CANCELLED')")
     int resume(String id, long now);

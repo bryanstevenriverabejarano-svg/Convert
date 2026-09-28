@@ -22,6 +22,7 @@ public final class TaskCommand {
         String lower = plain.toLowerCase(Locale.ROOT);
         Matcher create = CREATE.matcher(lower);
         if (create.matches()) return new TaskCommand(Action.CREATE, original.substring(create.start(1)).trim());
+        lower = lower.replaceAll("\\s+", " ");
         if (lower.equals("mis tareas") || lower.equals("estado de tareas") || lower.equals("estado tareas"))
             return new TaskCommand(Action.LIST, "");
         if (lower.equals("pausa tus tareas") || lower.equals("pausa tareas")) return new TaskCommand(Action.PAUSE_ALL, "");
@@ -37,7 +38,7 @@ public final class TaskCommand {
     }
     public static Boolean globalAutonomyPause(String input) {
         String normalized = Normalizer.normalize(input == null ? "" : input.trim(), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "").toLowerCase(Locale.ROOT);
+                .replaceAll("\\p{M}+", "").toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
         return normalized.equals("pausa tu autonomia") ? Boolean.TRUE
                 : normalized.equals("reanuda tu autonomia") ? Boolean.FALSE : null;
     }
