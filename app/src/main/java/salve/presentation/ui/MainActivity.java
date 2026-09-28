@@ -961,7 +961,7 @@ public class MainActivity extends AppCompatActivity {
         handleShareIntent(getIntent());
 
         // Preserve existing model paths. New downloads/imports use app-private storage.
-        if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("gemma_download_requested", false)) {
+        if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("dolphin_download_requested", false)) {
             iniciarDescargaModelos();
         }
     }
@@ -1550,10 +1550,10 @@ public class MainActivity extends AppCompatActivity {
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
                         "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas"}, (dialog, which) -> {
                     switch (which) {
-                        case 0: mostrarDescargaGemma(); break;
+                        case 0: mostrarDescargaModeloPrincipal(); break;
                         case 1:
                             String selected = getPreferredModelPath(this);
-                            if (selected == null || !new File(selected).exists()) mostrarDescargaGemma();
+                            if (selected == null || !new File(selected).exists()) mostrarDescargaModeloPrincipal();
                             else {
                                 SalveLLM.getInstance(this).setLocalOnly(true);
                                 Toast.makeText(this, "Modo local activado.", Toast.LENGTH_SHORT).show();
@@ -1712,7 +1712,7 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void mostrarDescargaGemma() {
+    private void mostrarDescargaModeloPrincipal() {
         final ModelCatalog.Entry entry;
         try {
             entry = loadModelCatalog().selectDownload(java.util.EnumSet.of(ModelCatalog.Capability.TEXT), null);
@@ -1727,10 +1727,10 @@ public class MainActivity extends AppCompatActivity {
                         + "El modelo se guarda aparte de la aplicación. Podrás pausarlo y reanudarlo; "
                         + "se activará después de verificar el archivo y probar una respuesta. "
                         + (entry.supportsVision ? "El catálogo declara soporte de fotos; su ejecución se comprueba al analizar una imagen."
-                                : "El chat podrá procesarse en el móvil."))
+                                : "Dolphin procesa texto en el móvil. Gemma solo se preparará si falla Dolphin; si ya está descargado, se reutilizará."))
                 .setPositiveButton("Descargar por Wi-Fi", (d, which) -> iniciarDescargaModelos())
                 .setNeutralButton("Usar datos móviles", (d, which) -> {
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("gemma_download_requested", true).apply();
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("dolphin_download_requested", true).apply();
                     modelDownloadViewModel.startDownload(true);
                 })
                 .setNegativeButton("Cerrar", null).show();
@@ -1819,7 +1819,8 @@ public class MainActivity extends AppCompatActivity {
                 String extension;
                 if (name.endsWith(".task")) extension = ".task";
                 else if (name.endsWith(".litertlm")) extension = ".litertlm";
-                else throw new IllegalArgumentException("Selecciona un modelo LiteRT-LM .litertlm o MediaPipe .task. GGUF no tiene ejecutor en esta app.");
+                else if (name.endsWith(".gguf")) extension = ".gguf";
+                else throw new IllegalArgumentException("Selecciona un modelo .gguf, .litertlm o .task.");
                 imported = File.createTempFile("imported-", extension, getModelsRoot());
                 try (InputStream source = getContentResolver().openInputStream(uri);
                      FileOutputStream target = new FileOutputStream(imported)) {
@@ -1875,7 +1876,7 @@ public class MainActivity extends AppCompatActivity {
         SalveLLM local = SalveLLM.getInstance(this);
         visualLocalOnly = local.isLocalOnly();
         if (visualLocalOnly && !local.supportsVision()) {
-            Toast.makeText(this, "Descarga y activa Gemma 4 para analizar fotos en el móvil.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Dolphin solo procesa texto. El modelo local activo no permite analizar fotos.", Toast.LENGTH_LONG).show();
             return;
         }
         if (!visualLocalOnly && !GeminiService.getInstance(this).isAvailable()) { configurarGemini(); return; }
@@ -2103,7 +2104,7 @@ public class MainActivity extends AppCompatActivity {
 
     /** ▶️ Descarga automática de modelos usando precheck + descarga asíncrona + consola visual */
     private void iniciarDescargaModelos() {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("gemma_download_requested", true).apply();
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("dolphin_download_requested", true).apply();
         // WorkManager waits for an unmetered network and retains .part files if the network is lost.
         modelDownloadViewModel.startDownload();
     }

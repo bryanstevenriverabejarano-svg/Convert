@@ -19,10 +19,40 @@ public class ModelCatalogTest {
     private static final Set<ModelCatalog.Capability> TEXT = EnumSet.of(ModelCatalog.Capability.TEXT);
     private static final Set<ModelCatalog.Capability> VISION = EnumSet.of(ModelCatalog.Capability.VISION);
 
-    private JsonObject bundled() throws Exception {
+    private JsonObject fullCatalog() throws Exception {
         File file = new File("src/main/assets/config/models.json");
         if (!file.isFile()) file = new File("app/src/main/assets/config/models.json");
         return JsonParser.parseString(new String(Files.readAllBytes(file.toPath()), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+    }
+
+    private JsonObject bundled() throws Exception {
+        JsonObject root = fullCatalog();
+        JsonArray gemmaOnly = new JsonArray();
+        gemmaOnly.add(root.getAsJsonArray("items").get(1).deepCopy());
+        root.add("items", gemmaOnly);
+        return root;
+    }
+
+    @Test public void dolphinIsPrimaryAndGemmaIsTheOnlyVisionFallback() throws Exception {
+        ModelCatalog catalog = read(fullCatalog());
+        ModelCatalog.Entry dolphin = catalog.selectDownload(TEXT, null);
+        assertEquals(LocalModelPolicy.PRIMARY, dolphin.id);
+        assertEquals(2019382400L, dolphin.sizeBytes);
+        assertEquals("5d6d02eeefa1ab5dbf23f97afdf5c2c95ad3d946dc3b6e9ab72e6c1637d54177", dolphin.sha256);
+        assertEquals("ac6b1ee98e3864ebd5998216f800a07d74b166b5", dolphin.revision);
+        assertFalse(dolphin.supportsVision);
+        assertEquals(LocalModelPolicy.FALLBACK, catalog.selectDownload(TEXT, LocalModelPolicy.FALLBACK).id);
+        assertNull(catalog.selectDownload(VISION, dolphin.id));
+        assertEquals(2, catalog.getEntries().size());
+    }
+
+    @Test public void rejectsGgufVisionAndMismatchedArtifactFormat() throws Exception {
+        JsonObject root = fullCatalog();
+        first(root).addProperty("supportsVision", true);
+        assertThrows(IllegalArgumentException.class, () -> read(root));
+        first(root).addProperty("supportsVision", false);
+        first(root).addProperty("filename", "incorrect.litertlm");
+        assertThrows(IllegalArgumentException.class, () -> read(root));
     }
 
     private ModelCatalog read(String json) {

@@ -62,6 +62,10 @@ public class SalveLLM {
     private volatile String modelPath;   // ruta absoluta a la carpeta o archivo del modelo
     private String modelLib;    // nombre de la librería del modelo (solo MLC)
     private volatile boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
+    private volatile boolean isGguf = false;
+    private boolean activationInProgress;
+    private boolean fallbackRequested;
+    private java.util.function.BooleanSupplier installationCancelled = () -> false;
     private volatile boolean visionModel = false;
     private volatile boolean engineInitialized = false;
     private volatile boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
@@ -110,6 +114,7 @@ public class SalveLLM {
 
     private void reloadModelInfo(String path, String visionPath) throws Exception {
         visionModel = path != null && path.equals(visionPath);
+        isGguf = false;
 
         if (path == null || path.trim().isEmpty()) {
             throw new IllegalStateException(
@@ -134,8 +139,15 @@ public class SalveLLM {
                 this.modelLib = null;
                 Log.d(TAG, "Modelo LiteRT detectado: " + this.modelPath);
                 return;
+            } else if (name.endsWith(".gguf")) {
+                this.modelPath = fileOrDir.getAbsolutePath();
+                this.isLiteRT = false;
+                this.isGguf = true;
+                this.visionModel = false;
+                this.modelLib = null;
+                return;
             } else {
-                throw new IllegalStateException("El archivo seleccionado no es un modelo soportado (.litertlm o .task)");
+                throw new IllegalStateException("El archivo seleccionado no es un modelo soportado (.gguf, .litertlm o .task)");
             }
         }
 
@@ -240,7 +252,10 @@ public class SalveLLM {
             throw new IllegalStateException("initEngineIfNeeded sin modelo válido.");
         }
 
-        if (isLiteRT) {
+        if (isGguf) {
+            GgufLlm.init(modelPath, installationCancelled);
+            engineInitialized = GgufLlm.isInitialized();
+        } else if (isLiteRT) {
             Log.d(TAG, "Inicializando LiteRTLlm con modelPath=" + modelPath);
             LiteRTLlm.init(appContext, modelPath, withVision);
             engineInitialized = LiteRTLlm.isInitialized();
@@ -282,27 +297,57 @@ public class SalveLLM {
                 "No hay un modelo local configurado y válido", 0L);
         if (prompt == null || prompt.trim().isEmpty()) return ModelResult.failure(
                 ModelResult.Status.ERROR, "Prompt vacío", 0L);
+        if (!activationInProgress && LocalModelPolicy.isDolphin(modelPath)
+                && appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).contains(LocalModelPolicy.FAILURE_KEY)) {
+            return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
+                    "Dolphin falló y se solicitó Gemma como respaldo. Consulta la descarga o reintenta Dolphin en Ajustes de IA.", 0L);
+        }
         try {
             initEngineIfNeeded();
             String decorated = decoratePrompt(prompt, role);
-            String text = isLiteRT ? LiteRTLlm.generate(decorated) : BasicLocalLlm.chatSinglePrompt(decorated);
+            String text = isGguf ? GgufLlm.generate(decorated, installationCancelled)
+                    : isLiteRT ? LiteRTLlm.generate(decorated) : BasicLocalLlm.chatSinglePrompt(decorated);
             long latency = (System.nanoTime() - start) / 1_000_000L;
             if (text == null || text.trim().isEmpty()) {
-                recordInference(ModelCatalog.Capability.TEXT, false);
-                return ModelResult.failure(ModelResult.Status.ERROR, "El modelo local no devolvió texto", latency);
+                throw new IllegalStateException("El modelo local no devolvió texto");
             }
             recordInference(ModelCatalog.Capability.TEXT, true);
             lastErrorMessage = null;
-            Log.i(TAG, "provider=local runtime=" + (isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
+            Log.i(TAG, "provider=local runtime=" + (isGguf ? "llama.cpp CPU" : isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
             return ModelResult.success(text, latency);
+        } catch (java.util.concurrent.CancellationException e) {
+            return ModelResult.failure(ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
+        } catch (IllegalArgumentException e) {
+            // Invalid/oversized input is not a broken model and must not download a fallback.
+            return ModelResult.failure(ModelResult.Status.ERROR, e.getMessage(), 0L);
         } catch (Exception | LinkageError e) {
             recordInference(ModelCatalog.Capability.TEXT, false);
             lastErrorMessage = e.getMessage();
             Log.e(TAG, "Falló la inferencia local", e);
+            boolean fallback = !activationInProgress && !Thread.currentThread().isInterrupted()
+                    && requestDolphinFallback(e);
             return ModelResult.failure(Thread.currentThread().isInterrupted()
                     ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR,
-                    "El modelo local no pudo completar la inferencia. Revisa su formato y el runtime.",
+                    fallback ? "Dolphin falló. Se ha solicitado Gemma como respaldo; consulta el progreso de descarga."
+                            : "El modelo local no pudo completar la inferencia. Revisa su formato y el runtime.",
                     (System.nanoTime() - start) / 1_000_000L);
+        }
+    }
+
+    private boolean requestDolphinFallback(Throwable failure) {
+        if (!LocalModelPolicy.isDolphin(modelPath) || fallbackRequested) return false;
+        fallbackRequested = true;
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(LocalModelPolicy.FAILURE_KEY, failure.getMessage() == null ? "Falló Dolphin" : failure.getMessage()).apply();
+        GgufLlm.reset();
+        engineInitialized = false;
+        try {
+            salve.work.ModelDownloadWorker.enqueueFallback(appContext);
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "No se pudo programar el respaldo", e);
+            lastErrorMessage = "No se pudo programar Gemma. Reintenta la descarga en Ajustes de IA.";
+            return false;
         }
     }
 
@@ -311,7 +356,7 @@ public class SalveLLM {
         if (lastErrorMessage != null) return "Local: falló la última carga o inferencia";
         String path = modelPath;
         String name = path == null ? "modelo local" : new File(path).getName();
-        return engineInitialized ? "Local: " + name + " · " + (isLiteRT ? LiteRTLlm.getBackendName() : "MLC")
+        return engineInitialized ? "Local: " + name + " · " + (isGguf ? "llama.cpp CPU" : isLiteRT ? LiteRTLlm.getBackendName() : "MLC")
                 : "Local: " + name + ", pendiente de probar";
     }
 
@@ -354,25 +399,37 @@ public class SalveLLM {
             clearModelSnapshot();
             BasicLocalLlm.reset();
             LiteRTLlm.reset();
-            modelPath = path;
-            modelLib = null;
-            isLiteRT = true;
-            visionModel = supportsVision;
+            GgufLlm.reset();
+            reloadModelInfo(path, supportsVision ? path : null);
+            activationInProgress = true;
+            installationCancelled = cancelled;
             modelAvailable = true;
             engineInitialized = false;
-            result = generateResult("Responde únicamente con un saludo breve en español.", Role.CONVERSACIONAL);
+            try {
+                result = generateResult("Responde únicamente con un saludo breve en español.", Role.CONVERSACIONAL);
+            } finally {
+                activationInProgress = false;
+                installationCancelled = () -> false;
+            }
             if (result.isSuccess() && !cancelled.getAsBoolean() && !Thread.currentThread().isInterrupted()) {
                 preferenceWriteAttempted = true;
                 boolean saved = prefs.edit()
                         .putString(KEY_MODEL_PATH, path).putString(KEY_VISION_PATH, supportsVision ? path : null)
                         .putBoolean(KEY_LOCAL_ONLY, true).commit();
-                if (saved) return result;
+                if (saved) {
+                    fallbackRequested = false;
+                    if (LocalModelPolicy.isDolphin(path)) prefs.edit().remove(LocalModelPolicy.FAILURE_KEY).apply();
+                    return result;
+                }
                 result = ModelResult.failure(ModelResult.Status.ERROR, "No se pudo guardar el modelo seleccionado", 0L);
             } else if (result.isSuccess()) {
                 result = ModelResult.failure(ModelResult.Status.CANCELLED, "Instalación pausada", 0L);
             }
         } catch (Exception | LinkageError e) {
-            result = ModelResult.failure(ModelResult.Status.ERROR, "No se pudo activar el modelo descargado", 0L);
+            activationInProgress = false;
+            installationCancelled = () -> false;
+            result = ModelResult.failure(cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()
+                    ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR, "No se pudo activar el modelo descargado", 0L);
             Log.e(TAG, "Fallo activando el modelo", e);
         }
         if (preferenceWriteAttempted) {
@@ -388,7 +445,7 @@ public class SalveLLM {
                 Log.e(TAG, "No se pudo restaurar la configuración guardada del modelo", e);
             }
         }
-        try { LiteRTLlm.reset(); } catch (Exception | LinkageError e) { Log.w(TAG, "Fallo liberando el candidato", e); }
+        try { LiteRTLlm.reset(); GgufLlm.reset(); } catch (Exception | LinkageError e) { Log.w(TAG, "Fallo liberando el candidato", e); }
         engineInitialized = false;
         modelAvailable = false;
         clearModelSnapshot();
@@ -427,6 +484,7 @@ public class SalveLLM {
     /** Conservative character budget; the runtime tokenizer remains authoritative. */
     public int getConversationPromptBudgetChars() {
         String path = modelPath;
+        if (isGguf) return 7000;
         return isLiteRT && path != null && path.toLowerCase(java.util.Locale.ROOT).endsWith(".task")
                 ? 3200 : 10500;
     }
@@ -501,6 +559,7 @@ public class SalveLLM {
         try {
             BasicLocalLlm.reset();
             LiteRTLlm.reset();
+            GgufLlm.reset();
         } catch (Exception e) {
             Log.w(TAG, "Error reseteando motores LLM (no fatal)", e);
         }

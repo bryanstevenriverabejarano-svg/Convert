@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 public final class ModelCatalog {
     public enum Capability { TEXT, VISION }
     private static final Pattern PINNED_URL = Pattern.compile(
-            "https://huggingface\\.co/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/resolve/([a-f0-9]{40})/[A-Za-z0-9_.-]+\\.litertlm(?:\\?download=true)?");
+            "https://huggingface\\.co/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/resolve/([a-f0-9]{40})/[A-Za-z0-9_.-]+\\.(?:litertlm|gguf)(?:\\?download=true)?");
     private final List<Entry> entries;
 
     private ModelCatalog(List<Entry> entries) { this.entries = Collections.unmodifiableList(entries); }
@@ -156,13 +156,15 @@ public final class ModelCatalog {
             String displayName = string(item, "name", false);
             name = displayName == null ? id : displayName;
             filename = string(item, "filename", true);
-            if (!filename.matches("[A-Za-z0-9_-][A-Za-z0-9._-]{0,140}\\.litertlm")) throw invalid("Nombre o formato de modelo inválido");
+            if (!filename.matches("[A-Za-z0-9_-][A-Za-z0-9._-]{0,140}\\.(?:litertlm|gguf)")) throw invalid("Nombre o formato de modelo inválido");
             url = string(item, "url", true);
             Matcher pinned = PINNED_URL.matcher(url);
             if (!NetworkResourcePolicy.validateModelUrl(url).allowed || !pinned.matches()) {
-                throw invalid("El enlace debe fijar una revisión de Hugging Face y un archivo LiteRT-LM");
+                throw invalid("El enlace debe fijar una revisión de Hugging Face y un archivo LiteRT-LM o GGUF");
             }
             revision = pinned.group(1);
+            if (!url.substring(0, url.indexOf('?') < 0 ? url.length() : url.indexOf('?')).endsWith(filename.endsWith(".gguf") ? ".gguf" : ".litertlm"))
+                throw invalid("El formato del archivo y del enlace no coincide");
             Long size = integer(item, "sizeBytes", true, false);
             if (size > 16L * 1024 * 1024 * 1024) throw invalid("Tamaño de modelo inválido");
             sizeBytes = size;
@@ -173,6 +175,7 @@ public final class ModelCatalog {
                 throw invalid("supportsVision debe ser booleano");
             }
             supportsVision = vision != null && vision.getAsBoolean();
+            if (supportsVision && filename.endsWith(".gguf")) throw invalid("El motor GGUF instalado solo admite texto");
             declaredCapabilities = Collections.unmodifiableSet(supportsVision
                     ? EnumSet.of(Capability.TEXT, Capability.VISION) : EnumSet.of(Capability.TEXT));
             version = string(item, "version", false); provider = string(item, "provider", false);
