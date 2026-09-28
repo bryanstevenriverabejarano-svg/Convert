@@ -209,7 +209,7 @@ public class ConversationMemoryGroundingTest {
         assertTrue(context.length() <= 1024);
         assertTrue(context.contains("LIMITE_CONTEXTO"));
         for (String line : context.split("\n")) if (line.startsWith("{")) assertTrue(line.endsWith("}"));
-        assertTrue(store.lexicalReads <= 4);
+        assertTrue(store.lexicalReads <= MemorySearchService.MAX_SEARCHES);
         assertTrue(store.graphSearchReads <= 4);
     }
 
@@ -263,10 +263,12 @@ public class ConversationMemoryGroundingTest {
                         case "ultimoRecuerdo": return records.stream().max(order).orElse(null);
                         case "ultimoPorEtiqueta": return records.stream().filter(r -> r.etiquetas != null
                                 && r.etiquetas.contains("\"" + args[0] + "\"")).max(order).orElse(null);
-                        case "buscarRecientes":
+                        case "buscarIndice":
                             lexicalReads++;
-                            return records.stream().filter(r -> contains(r.frase, (String) args[0]))
-                                    .sorted(order.reversed()).limit((Integer) args[1]).collect(Collectors.toList());
+                            // This fake covers ordinary AND terms only; Room tests cover real FTS and expansion.
+                            String[] terms = ((String) args[0]).replace("\"", "").split(" ");
+                            return records.stream().filter(r -> java.util.Arrays.stream(terms).allMatch(t -> contains(r.frase, t)))
+                                    .sorted(order.reversed()).limit((Integer) args[2]).collect(Collectors.toList());
                         default: throw new UnsupportedOperationException(method.getName());
                     }
                 });

@@ -78,6 +78,8 @@ android {
         }
     }
 
+    sourceSets { test.resources.srcDir("$projectDir/schemas") }
+
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'

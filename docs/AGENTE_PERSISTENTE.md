@@ -61,6 +61,8 @@ Se activa la exportación de esquemas Room. El fixture de pruebas `memory-v4.sql
 
 ## Continuación de la arquitectura
 
+La [segunda entrega de recuperación de memoria](MEMORIA_INDEXADA.md) implementa búsqueda local indexada, expansión controlada de vocabulario, procedencia y propagación al índice de correcciones/borrados. La búsqueda vectorial y el historial bitemporal siguen pendientes.
+
 1. Ampliar MemoryService con búsqueda híbrida, temporalidad, contradicciones y borrado propagado.
 2. Generalizar TaskStore a planes con ejecutores tipados y un PolicyEngine común; conservar checkpoints y recibos.
 3. Añadir búsqueda general y navegador externo, seguido de código aislado y APIs.

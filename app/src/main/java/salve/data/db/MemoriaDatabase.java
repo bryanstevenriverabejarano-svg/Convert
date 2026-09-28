@@ -19,6 +19,7 @@ import androidx.room.RoomDatabase;
 @Database(
         entities = {
                 RecuerdoEntity.class,           // Recuerdos persistidos
+                RecuerdoSearchEntity.class,     // Índice derivado, sin otra copia del texto
                 ReflexionEntity.class,          // Reflexiones generadas
                 MisionEntity.class,             // Misiones estáticas/dinámicas
                 PluginEntity.class,             // Plugins dinámicos descubiertos
@@ -29,7 +30,7 @@ import androidx.room.RoomDatabase;
                 ResearchTaskEntity.class,
                 AgentControlEntity.class
         },
-        version = 6,
+        version = 7,
         exportSchema = true
 )
 public abstract class MemoriaDatabase extends RoomDatabase {
@@ -67,7 +68,8 @@ public abstract class MemoriaDatabase extends RoomDatabase {
     /** Shared production/test configuration; missing migration paths preserve the database. */
     public static RoomDatabase.Builder<MemoriaDatabase> builder(Context context, String name) {
         return Room.databaseBuilder(context.getApplicationContext(), MemoriaDatabase.class, name)
-                .addMigrations(MemoryMigrations.FROM_4_TO_5, MemoryMigrations.FROM_5_TO_6);
+                .addMigrations(MemoryMigrations.FROM_4_TO_5, MemoryMigrations.FROM_5_TO_6,
+                        MemoryMigrations.FROM_6_TO_7);
     }
 
     public static MemoriaDatabase getInstance(Context context) {

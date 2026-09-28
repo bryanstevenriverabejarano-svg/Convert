@@ -21,6 +21,38 @@ public final class MemoryEvidenceRanker {
     }
     private MemoryEvidenceRanker() {}
 
+    /** Group coverage first, exact vocabulary second; opposing statements remain separate. */
+    public static List<Integer> rankExpanded(List<Candidate> candidates, MemorySearchQuery query, int limit) {
+        if (candidates == null || candidates.size() > MemorySearchService.MAX_CANDIDATES
+                || query == null || limit < 0 || limit > 4) throw new IllegalArgumentException("Evidence budget exceeded");
+        List<Scored> unique = new ArrayList<>();
+        Set<Integer> seen = new HashSet<>();
+        for (Candidate candidate : candidates) if (candidate != null && seen.add(candidate.id)) {
+            String text = candidate.text.substring(0, Math.min(candidate.text.length(), 64_000));
+            Set<String> words = new HashSet<>(java.util.Arrays.asList(normalize(text).split("[^\\p{L}0-9]+")));
+            int groups = 0, exact = 0;
+            for (List<String> group : query.groups())
+                for (String term : group) if (words.contains(term)) { groups++; break; }
+            for (String term : query.terms()) if (words.contains(term)) exact++;
+            unique.add(new Scored(candidate, groups, exact));
+        }
+        unique.sort(Comparator.<Scored>comparingInt(c -> c.groups).reversed()
+                .thenComparing(Comparator.comparingInt((Scored c) -> c.exact).reversed())
+                .thenComparing(Comparator.comparingLong((Scored c) -> c.record.timestamp).reversed())
+                .thenComparingInt(c -> c.record.id));
+        List<Integer> result = new ArrayList<>();
+        for (Scored candidate : unique) {
+            if (result.size() == limit) break;
+            if (candidate.groups > 0) result.add(candidate.record.id);
+        }
+        return result;
+    }
+    private static final class Scored {
+        final Candidate record;
+        final int groups, exact;
+        Scored(Candidate record, int groups, int exact) { this.record = record; this.groups = groups; this.exact = exact; }
+    }
+
     /** Coverage first, recency only as a tie breaker. Keeps contradictory evidence distinct. */
     public static List<Integer> rank(List<Candidate> candidates, List<String> queryTerms, int limit) {
         if (candidates == null || candidates.size() > MAX_CANDIDATES || queryTerms == null
@@ -46,7 +78,7 @@ public final class MemoryEvidenceRanker {
         return result;
     }
     private static int coverage(String text, Set<String> terms) {
-        String normalized = normalize(text.length() > 16_384 ? text.substring(0, 16_384) : text);
+        String normalized = normalize(text.length() > 64_000 ? text.substring(0, 64_000) : text);
         int score = 0;
         for (String term : terms) {
             int at = -1;

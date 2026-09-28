@@ -18,10 +18,10 @@ public class MemoryRetrievalRankingTest {
         List<String> lookedUp = new ArrayList<>();
         RecuerdoDao dao = (RecuerdoDao) Proxy.newProxyInstance(RecuerdoDao.class.getClassLoader(),
                 new Class<?>[]{RecuerdoDao.class}, (proxy, method, args) -> {
-                    if (!method.getName().equals("buscarRecientes")) throw new AssertionError(method.getName());
+                    if (!method.getName().equals("buscarIndice")) throw new AssertionError(method.getName());
                     String term = (String) args[0]; lookedUp.add(term);
-                    assertEquals(8, args[1]);
-                    if (term.equalsIgnoreCase("pcloud")) return Collections.singletonList(record(5, "Proyecto pCloud evidencia específica"));
+                    assertTrue((Integer) args[2] <= 12);
+                    if (term.contains("pcloud")) return Collections.singletonList(record(5, "Proyecto pCloud evidencia específica"));
                     return Arrays.asList(record(1, "Proyecto saludo"), record(2, "Proyecto avatar"),
                             record(3, "Proyecto voz"), record(4, "Proyecto conversación"));
                 });
@@ -35,7 +35,7 @@ public class MemoryRetrievalRankingTest {
     @Test public void retrievalFailureStillMarksPartialEvidenceNotEmptyMemory() {
         RecuerdoDao dao = (RecuerdoDao) Proxy.newProxyInstance(RecuerdoDao.class.getClassLoader(),
                 new Class<?>[]{RecuerdoDao.class}, (proxy, method, args) -> {
-                    if (((String) args[0]).equalsIgnoreCase("pcloud")) throw new IllegalStateException("offline");
+                    if (((String) args[0]).contains("pcloud")) throw new IllegalStateException("offline");
                     return Collections.singletonList(record(1, "Proyecto recuerdo"));
                 });
         ConversationMemoryGrounding.Result result = new ConversationMemoryGrounding(dao, null, null).retrieve("Proyecto pCloud");

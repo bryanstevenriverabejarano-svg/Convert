@@ -14,7 +14,9 @@ public final class MemoryQueryTerms {
     private static final Set<String> STOP_WORDS = new HashSet<>(Arrays.asList(
             "para", "pero", "porque", "como", "cuando", "donde", "quien", "esto", "esta",
             "este", "estos", "estas", "sobre", "desde", "hasta", "tengo", "quiero", "puedes",
-            "podrias", "dime", "sabes", "algo", "salve", "bryan", "tambien", "mucho", "hacer"));
+            "podrias", "dime", "sabes", "algo", "salve", "tambien", "mucho", "hacer",
+            "que", "del", "con", "por", "una", "uno", "los", "las", "mis", "tus", "sus",
+            "soy", "era", "fue", "son", "hay", "ese", "esa", "nos", "mas", "sin", "han"));
 
     private MemoryQueryTerms() {}
 
@@ -25,7 +27,7 @@ public final class MemoryQueryTerms {
         LinkedHashSet<String> unique = new LinkedHashSet<>();
         for (String token : lowercase.split("[^\\p{L}0-9]+")) {
             String folded = Normalizer.normalize(token, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-            if (token.length() < 4 || STOP_WORDS.contains(folded)) continue;
+            if (token.length() < 3 || token.length() > 64 || STOP_WORDS.contains(folded)) continue;
             unique.add(token);
             if (unique.size() == maxTerms) break;
         }
