@@ -21,11 +21,11 @@ public class MemoryRetrievalRankingTest {
                     if (!method.getName().equals("buscarRecientes")) throw new AssertionError(method.getName());
                     String term = (String) args[0]; lookedUp.add(term);
                     assertEquals(8, args[1]);
-                    if (term.equalsIgnoreCase("pcloud")) return Collections.singletonList(record(5, "Salve pCloud evidencia específica"));
-                    return Arrays.asList(record(1, "Salve saludo"), record(2, "Salve avatar"),
-                            record(3, "Salve voz"), record(4, "Salve conversación"));
+                    if (term.equalsIgnoreCase("pcloud")) return Collections.singletonList(record(5, "Proyecto pCloud evidencia específica"));
+                    return Arrays.asList(record(1, "Proyecto saludo"), record(2, "Proyecto avatar"),
+                            record(3, "Proyecto voz"), record(4, "Proyecto conversación"));
                 });
-        ConversationMemoryGrounding.Result result = new ConversationMemoryGrounding(dao, null, null).retrieve("Salve pCloud");
+        ConversationMemoryGrounding.Result result = new ConversationMemoryGrounding(dao, null, null).retrieve("Proyecto pCloud");
         assertTrue(lookedUp.size() >= 2);
         assertTrue(result.getContext().contains("recuerdos:5"));
         assertTrue(result.getContext().indexOf("recuerdos:5") < result.getContext().indexOf("recuerdos:1"));
@@ -36,9 +36,9 @@ public class MemoryRetrievalRankingTest {
         RecuerdoDao dao = (RecuerdoDao) Proxy.newProxyInstance(RecuerdoDao.class.getClassLoader(),
                 new Class<?>[]{RecuerdoDao.class}, (proxy, method, args) -> {
                     if (((String) args[0]).equalsIgnoreCase("pcloud")) throw new IllegalStateException("offline");
-                    return Collections.singletonList(record(1, "Salve recuerdo"));
+                    return Collections.singletonList(record(1, "Proyecto recuerdo"));
                 });
-        ConversationMemoryGrounding.Result result = new ConversationMemoryGrounding(dao, null, null).retrieve("Salve pCloud");
+        ConversationMemoryGrounding.Result result = new ConversationMemoryGrounding(dao, null, null).retrieve("Proyecto pCloud");
         assertEquals(ConversationMemoryGrounding.Status.PARTIAL, result.getStatus());
         assertTrue(result.getContext().contains("ERROR_DE_LECTURA"));
     }
