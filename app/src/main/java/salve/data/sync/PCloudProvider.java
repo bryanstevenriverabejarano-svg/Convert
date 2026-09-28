@@ -113,36 +113,77 @@ public final class PCloudProvider implements CloudProvider {
             String normalized = normalizeRemotePath(folderPath);
             JsonObject result = json(authenticatedGet(c, "listfolder", "path", normalized), c);
             if (!ok(result) || !result.has("metadata")) return Collections.emptyList();
-            JsonObject metadata = result.getAsJsonObject("metadata");
-            JsonArray contents = metadata.getAsJsonArray("contents");
-            if (contents == null) return Collections.emptyList();
-            List<String> paths = new ArrayList<>();
-            for (int i = 0; i < contents.size(); i++) {
-                JsonObject item = contents.get(i).getAsJsonObject();
-                if (!item.has("isfolder") || !item.get("isfolder").getAsBoolean()) {
-                    if (item.has("path")) paths.add(item.get("path").getAsString());
-                }
-            }
-            return paths;
+            return filePaths(normalized, result.getAsJsonObject("metadata").getAsJsonArray("contents"));
         } catch (Exception e) {
             return Collections.emptyList();
         }
     }
 
+    static List<String> filePaths(String folder, JsonArray contents) {
+        List<String> paths = new ArrayList<>();
+        if (contents == null) return paths;
+        String base = normalizeRemotePath(folder);
+        if (!base.endsWith("/")) base += "/";
+        for (int i = 0; i < contents.size(); i++) {
+            try {
+                JsonObject item = contents.get(i).getAsJsonObject();
+                if (item.has("isfolder") && item.get("isfolder").getAsBoolean()) continue;
+                String path = item.has("path") ? item.get("path").getAsString()
+                        : base + item.get("name").getAsString();
+                path = normalizeRemotePath(path);
+                if (path.startsWith(base) && !path.substring(base.length()).contains("/")) paths.add(path);
+            } catch (RuntimeException invalid) { /* Ignore malformed entries, preserving valid siblings. */ }
+        }
+        return paths;
+    }
+
     @Override
     public byte[] download(String remotePath) {
+        return downloadBounded(remotePath, 16 * 1024 * 1024);
+    }
+
+    public byte[] downloadBounded(String remotePath, int maxBytes) {
         Credentials c = credentials();
-        if (c == null) return null;
+        if (c == null || maxBytes < 1) return null;
         try {
             String normalized = normalizeRemotePath(remotePath);
-            Request request = authenticatedGet(c, "gettextfile", "path", normalized);
-            try (Response response = client.newCall(request).execute()) {
+            JsonObject link = json(authenticatedGet(c, "getfilelink", "path", normalized), c);
+            if (!ok(link)) return null;
+            HttpUrl downloadUrl = downloadUrl(link);
+            if (downloadUrl == null) return null;
+            // The signed content URL does not need our bearer token. Binary photos must not
+            // use gettextfile, which performs character-encoding conversion.
+            Request request = new Request.Builder().url(downloadUrl).get().build();
+            try (Response response = client.newBuilder().followRedirects(false).build().newCall(request).execute()) {
                 if (!response.isSuccessful() || response.body() == null) return null;
-                return response.body().bytes();
+                if (response.body().contentLength() > maxBytes) return null;
+                try (java.io.InputStream in = response.body().byteStream();
+                     java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+                    byte[] buffer = new byte[8192];
+                    int count;
+                    while ((count = in.read(buffer)) != -1) {
+                        if (out.size() > maxBytes - count) return null;
+                        out.write(buffer, 0, count);
+                    }
+                    return out.toByteArray();
+                }
             }
         } catch (Exception e) {
             return null;
         }
+    }
+
+    static HttpUrl downloadUrl(JsonObject link) {
+        try {
+            JsonArray hosts = link.getAsJsonArray("hosts");
+            if (hosts == null || hosts.size() == 0) return null;
+            String host = hosts.get(0).getAsString().toLowerCase(Locale.ROOT);
+            String path = link.get("path").getAsString();
+            if (!host.matches("[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.pcloud\\.com")
+                    || !path.startsWith("/") || path.startsWith("//") || path.contains("\\")) return null;
+            HttpUrl url = HttpUrl.get("https://" + host + path);
+            return host.equals(url.host()) && url.port() == 443 ? url : null;
+        } catch (RuntimeException invalid) { return null; }
     }
 
     private boolean ensureFolderTree(Credentials c, String folder) throws Exception {

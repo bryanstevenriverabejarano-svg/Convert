@@ -22,4 +22,7 @@ public interface KnowledgeRelationDao {
     /** One-hop traversal includes incoming links as well as outgoing links. */
     @Query("SELECT * FROM knowledge_relations WHERE origenId = :nodeId OR destinoId = :nodeId ORDER BY peso DESC, creadoEn DESC, id ASC LIMIT :limit")
     List<KnowledgeRelationEntity> relacionesDeNodo(long nodeId, int limit);
+
+    @Query("DELETE FROM knowledge_relations WHERE destinoId = :photoId AND tipoRelacion = :type")
+    void deleteVisualIdentity(long photoId, String type);
 }

@@ -31,6 +31,13 @@ public final class GrafoRecuerdos {
 
     /** Genera graph.json + memories_index.json y los sube. */
     public static void generar(Context ctx) {
+        generar(ctx, true);
+    }
+
+    /** Visual persistence exports the recorded graph without an extra generative-model call. */
+    public static void generarVisual(Context ctx) { generar(ctx, false); }
+
+    private static void generar(Context ctx, boolean summarize) {
         new Thread(() -> {
             try {
                 // 1) Tomamos últimos 200 eventos encolados (o ya enviados) para armar un grafo simple
@@ -84,6 +91,7 @@ public final class GrafoRecuerdos {
                     prevId = id;
                 }
 
+                appendVisualGraph(db, nodes, links);
                 JSONObject graph = new JSONObject();
                 graph.put("nodes", nodes);
                 graph.put("links", links);
@@ -115,7 +123,7 @@ public final class GrafoRecuerdos {
                 }
 
                 // ✅ 4.5) Pedir un resumen narrativo al LLM sobre este índice de recuerdos
-                generarResumenTemporalConLLM(ctx, index);
+                if (summarize) generarResumenTemporalConLLM(ctx, index);
 
                 // 5) SUBIR a la nube (usa salve_data.php con 'kind' = graph/index/viewer)
                 CloudSyncManager.uploadGrafoBundle(ctx, graphFile, indexFile, viewerFile);
@@ -126,6 +134,29 @@ public final class GrafoRecuerdos {
                 Log.e(TAG, "generar error", e);
             }
         }).start();
+    }
+
+    /** Export the actual identity edges, including corrections, instead of inferring them from event text. */
+    private static void appendVisualGraph(MemoriaDatabase db, JSONArray nodes, JSONArray links) throws Exception {
+        java.util.Set<Long> addedPeople = new java.util.HashSet<>();
+        for (salve.data.db.KnowledgeNodeEntity photo : db.knowledgeNodeDao().fetchPorTipo("foto", 200)) {
+            JSONObject node = new JSONObject();
+            node.put("id", "knowledge:" + photo.id); node.put("title", photo.etiqueta);
+            node.put("group", "foto"); node.put("summary", photo.resumen); nodes.put(node);
+            for (salve.data.db.KnowledgeRelationEntity edge : db.knowledgeRelationDao().relacionesDeNodo(photo.id, 20)) {
+                if (!salve.core.visual.VisualMemoryRepository.EDGE.equals(edge.tipoRelacion) || edge.destinoId != photo.id) continue;
+                salve.data.db.KnowledgeNodeEntity person = db.knowledgeNodeDao().findById(edge.origenId);
+                if (person == null) continue;
+                if (addedPeople.add(person.id)) {
+                    JSONObject p = new JSONObject(); p.put("id", "knowledge:" + person.id);
+                    p.put("title", person.etiqueta); p.put("group", "persona_confirmada");
+                    p.put("summary", person.resumen); nodes.put(p);
+                }
+                JSONObject link = new JSONObject(); link.put("source", "knowledge:" + person.id);
+                link.put("target", "knowledge:" + photo.id); link.put("type", edge.tipoRelacion);
+                link.put("description", edge.narrativa); links.put(link);
+            }
+        }
     }
 
     /**
