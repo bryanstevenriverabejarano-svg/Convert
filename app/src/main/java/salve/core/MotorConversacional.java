@@ -1087,10 +1087,14 @@ public class MotorConversacional {
                                 break;
                             case BED:
                                 state.createBed();
-                                hablar("La cama está preparada en mi habitación.");
+                                hablar("Aquí tienes mi cama. Puedes decirme «acuéstate» o «guarda la cama».");
+                                break;
+                            case HIDE_BED:
+                                state.removeBed();
+                                hablar("He guardado la cama.");
                                 break;
                             case SLEEP:
-                                if (!state.sleep()) hablar("Primero crea una cama en mi habitación.");
+                                if (!state.sleep()) hablar("Dime «cama» para prepararla primero.");
                                 else hablar("El personaje está acostado en su cama.");
                                 break;
                             case WAKE:

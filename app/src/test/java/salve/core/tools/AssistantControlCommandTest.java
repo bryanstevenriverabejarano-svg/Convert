@@ -4,6 +4,15 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AssistantControlCommandTest {
+    @Test public void bedCanBeShownAndHiddenWithExplicitShortCommands() {
+        assertEquals(AssistantControlCommand.Type.BED, AssistantControlCommand.parse("Salve, cama.").type);
+        assertEquals(AssistantControlCommand.Type.BED, AssistantControlCommand.parse("muestra tu cama").type);
+        assertEquals(AssistantControlCommand.Type.HIDE_BED, AssistantControlCommand.parse("guarda la cama").type);
+        assertEquals(AssistantControlCommand.Type.HIDE_BED, AssistantControlCommand.parse("oculta la cama").type);
+        assertNull(AssistantControlCommand.parse("No muestres la cama"));
+        assertNull(AssistantControlCommand.parse("Mi cama es blanca"));
+        assertNull(AssistantControlCommand.parse("¿Dónde está la cama?"));
+    }
     @Test public void financeOnlyOpensForAnExplicitCommand() {
         assertEquals(AssistantControlCommand.Type.FINANCES, AssistantControlCommand.parse("Salve, abre finanzas").type);
         assertNull(AssistantControlCommand.parse("Quiero aprender de finanzas"));
