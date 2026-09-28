@@ -28,7 +28,7 @@ public class ModelCatalogTest {
     private JsonObject bundled() throws Exception {
         JsonObject root = fullCatalog();
         JsonArray gemmaOnly = new JsonArray();
-        gemmaOnly.add(root.getAsJsonArray("items").get(2).deepCopy());
+        gemmaOnly.add(root.getAsJsonArray("items").get(1).deepCopy());
         root.add("items", gemmaOnly);
         return root;
     }
@@ -37,13 +37,13 @@ public class ModelCatalogTest {
         ModelCatalog catalog = read(fullCatalog());
         ModelCatalog.Entry dolphin = catalog.selectDownload(TEXT, null);
         assertEquals(LocalModelPolicy.PRIMARY, dolphin.id);
-        assertEquals(4920749472L, dolphin.sizeBytes);
-        assertEquals("268390e07edd407ad93ea21a868b7ae995b5950e01cad0db9e1802ae5049d405", dolphin.sha256);
-        assertEquals("fd2736a6e6f4e637b2242b06e267572495d88e2f", dolphin.revision);
+        assertEquals(2019382400L, dolphin.sizeBytes);
+        assertEquals("5d6d02eeefa1ab5dbf23f97afdf5c2c95ad3d946dc3b6e9ab72e6c1637d54177", dolphin.sha256);
+        assertEquals("ac6b1ee98e3864ebd5998216f800a07d74b166b5", dolphin.revision);
         assertFalse(dolphin.supportsVision);
         assertEquals(LocalModelPolicy.FALLBACK, catalog.selectDownload(TEXT, LocalModelPolicy.FALLBACK).id);
         assertNull(catalog.selectDownload(VISION, dolphin.id));
-        assertEquals(3, catalog.getEntries().size());
+        assertEquals(2, catalog.getEntries().size());
     }
 
     @Test public void rejectsGgufVisionAndMismatchedArtifactFormat() throws Exception {
