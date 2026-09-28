@@ -46,7 +46,9 @@ jobs:
             mlc4j/build.gradle
 
       - name: Test evaluation oracles, memory queries and development scripts
-        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_*.py' -v
+          bash scripts/test-research-kernel.sh
 
       - name: Prepare Android SDK 36 and Build Tools 36.0.0
         timeout-minutes: 10
