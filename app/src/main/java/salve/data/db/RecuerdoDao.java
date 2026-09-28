@@ -47,6 +47,15 @@ public interface RecuerdoDao {
     @Query("DELETE FROM recuerdos WHERE instr(etiquetas, '\"' || :etiqueta || '\"') > 0")
     int eliminarPorEtiqueta(String etiqueta);
 
+    @Query("SELECT COUNT(*) FROM recuerdos WHERE timestamp = :time AND frase = :text")
+    int countExact(long time, String text);
+
+    @Query("SELECT * FROM recuerdos WHERE etiquetas LIKE '%profile:%' ORDER BY timestamp ASC")
+    List<RecuerdoEntity> perfiles();
+
+    @Query("SELECT * FROM recuerdos WHERE (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0)) ORDER BY timestamp ASC, id ASC LIMIT 1")
+    RecuerdoEntity primerRecuerdoCompartido();
+
     @Transaction
     default void reemplazarPorEtiqueta(String etiqueta, RecuerdoEntity recuerdo) {
         eliminarPorEtiqueta(etiqueta);

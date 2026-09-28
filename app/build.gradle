@@ -33,7 +33,7 @@ android {
         minSdk 26
         targetSdk 34
         ndk { abiFilters "arm64-v8a", "x86_64" }
-        externalNativeBuild { cmake { arguments "-DANDROID_STL=c++_static" } }
+        externalNativeBuild { cmake { arguments "-DANDROID_STL=c++_static", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON" } }
 
         versionCode 1
         versionName "1.0"
@@ -96,7 +96,8 @@ dependencies {
             exclude: []
     )
 
-    implementation 'org.tensorflow:tensorflow-lite:2.17.0'
+    // Same Interpreter API; native runtime verified for 16 KB pages.
+    implementation 'com.google.ai.edge.litert:litert:1.4.2'
     implementation 'androidx.room:room-runtime:2.8.4'
     annotationProcessor 'androidx.room:room-compiler:2.8.4'
     implementation 'androidx.work:work-runtime:2.11.1'

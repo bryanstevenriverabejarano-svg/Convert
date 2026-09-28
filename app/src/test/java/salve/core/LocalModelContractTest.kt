@@ -13,8 +13,13 @@ class LocalModelContractTest {
 
     @Test fun catalogPinsPrimaryAndFallbackWithoutBundledWeights() {
         val items = ModelDownloader.loadItems(catalog().inputStream())
-        assertEquals(listOf(LocalModelPolicy.PRIMARY, LocalModelPolicy.FALLBACK), items.map { it.id })
-        val primary = items.first()
+        assertEquals(listOf(LocalModelPolicy.PRIMARY, LocalModelPolicy.LIGHT, LocalModelPolicy.FALLBACK), items.map { it.id })
+        val large = items.first()
+        assertEquals(4920749472L, large.sizeBytes)
+        assertEquals("268390e07edd407ad93ea21a868b7ae995b5950e01cad0db9e1802ae5049d405", large.sha256)
+        assertTrue(large.url.contains("/resolve/fd2736a6e6f4e637b2242b06e267572495d88e2f/"))
+        assertFalse(large.supportsVision)
+        val primary = items.single { it.id == LocalModelPolicy.LIGHT }
         assertEquals(2019382400L, primary.sizeBytes)
         assertEquals("5d6d02eeefa1ab5dbf23f97afdf5c2c95ad3d946dc3b6e9ab72e6c1637d54177", primary.sha256)
         assertTrue(primary.url.contains("/resolve/ac6b1ee98e3864ebd5998216f800a07d74b166b5/"))

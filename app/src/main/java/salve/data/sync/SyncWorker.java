@@ -31,11 +31,14 @@ public class SyncWorker extends Worker {
     @Override
     public Result doWork() {
         try {
+            CloudSyncManager.indexLocalJournal(getApplicationContext());
+            CloudSyncManager.enqueueExistingProfiles(getApplicationContext());
             CloudSyncManager.enqueueArchivedPhotos(getApplicationContext());
             int enviados = CloudSyncManager.flush(getApplicationContext(), 50);
             Log.d(TAG, "Flush completado. Enviados=" + enviados);
+            CloudSyncManager.RestoreBatch restored = CloudSyncManager.restoreMemoryBatch(getApplicationContext(), 200);
             // Keep draining batches and retry failed image/JSON uploads after connectivity returns.
-            return CloudSyncManager.hasPending(getApplicationContext()) ? Result.retry() : Result.success();
+            return (restored.retry || CloudSyncManager.hasPending(getApplicationContext())) ? Result.retry() : Result.success();
         } catch (Exception e) {
             Log.e(TAG, "Error durante flush", e);
             return Result.retry();

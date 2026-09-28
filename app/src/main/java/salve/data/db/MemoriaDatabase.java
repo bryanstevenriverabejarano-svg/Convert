@@ -24,9 +24,10 @@ import androidx.room.RoomDatabase;
                 PluginEntity.class,             // Plugins dinámicos descubiertos
                 SyncEventEntity.class,          // Eventos pendientes de sincronizar
                 KnowledgeNodeEntity.class,      // Nodos del grafo de conocimiento vivo
-                KnowledgeRelationEntity.class   // Relaciones del grafo
+                KnowledgeRelationEntity.class,  // Relaciones del grafo
+                MemorySyncStateEntity.class
         },
-        version = 4,                // 🔼 Incrementado para incluir grafo de conocimiento vivo
+        version = 5,                // Non-destructive 4→5: import receipts and profile deletion revisions
         exportSchema = false
 )
 public abstract class MemoriaDatabase extends RoomDatabase {
@@ -52,6 +53,8 @@ public abstract class MemoriaDatabase extends RoomDatabase {
     /** DAO para relaciones del grafo de conocimiento. */
     public abstract KnowledgeRelationDao knowledgeRelationDao();
 
+    public abstract MemorySyncStateDao memorySyncStateDao();
+
     // ============================================================
     // SINGLETON
     // ============================================================
@@ -66,6 +69,11 @@ public abstract class MemoriaDatabase extends RoomDatabase {
                                     MemoriaDatabase.class,
                                     "memoria.db"
                             )
+                            .addMigrations(new androidx.room.migration.Migration(4, 5) {
+                                @Override public void migrate(@androidx.annotation.NonNull androidx.sqlite.db.SupportSQLiteDatabase db) {
+                                    db.execSQL("CREATE TABLE IF NOT EXISTS memory_sync_state (`key` TEXT NOT NULL, updatedAt INTEGER NOT NULL, deleted INTEGER NOT NULL, PRIMARY KEY(`key`))");
+                                }
+                            })
                             .fallbackToDestructiveMigration()
                             .build();
                 }

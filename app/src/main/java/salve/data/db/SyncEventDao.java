@@ -19,6 +19,9 @@ public interface SyncEventDao {
     @Query("SELECT * FROM sync_events ORDER BY createdAt DESC LIMIT :n")
     List<SyncEventEntity> getLast(int n);
 
+    @Query("SELECT * FROM sync_events WHERE id > :afterId ORDER BY id ASC LIMIT :limit")
+    List<SyncEventEntity> pageAfter(long afterId, int limit);
+
     /** Kept for explicit maintenance; cloud synchronization does not delete successful entries. */
     @Delete
     void delete(SyncEventEntity e);

@@ -8,8 +8,14 @@ public final class ModelResult {
     private final String text;
     private final String error;
     private final long latencyMillis;
+    private final String provider;
 
     private ModelResult(Status status, String text, String error, long latencyMillis) {
+        this(status, text, error, latencyMillis, null);
+    }
+
+    private ModelResult(Status status, String text, String error, long latencyMillis, String provider) {
+        this.provider = provider;
         this.status = status;
         this.text = text;
         this.error = error;
@@ -24,6 +30,9 @@ public final class ModelResult {
         if (status == Status.SUCCESS) throw new IllegalArgumentException("SUCCESS requiere texto");
         return new ModelResult(status, null, error, latencyMillis);
     }
+
+    public ModelResult withProvider(String name) { return new ModelResult(status, text, error, latencyMillis, name); }
+    public String getProvider() { return provider; }
 
     public boolean isSuccess() { return status == Status.SUCCESS; }
     public Status getStatus() { return status; }

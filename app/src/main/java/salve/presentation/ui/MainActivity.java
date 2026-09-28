@@ -96,12 +96,30 @@ public class MainActivity extends AppCompatActivity {
             new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri != null) importarModeloLocal(uri);
             });
+    private final ActivityResultLauncher<String[]> chatPhotoPicker = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri == null) return;
+                String question = visualQuestion;
+                boolean localOnly = SalveLLM.getInstance(this).isLocalOnly();
+                inferenceChecks.execute(() -> {
+                    try {
+                        Bitmap photo = cargarBitmapSeguro(uri);
+                        if (photo == null) throw new java.io.IOException("Imagen inválida");
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) { photo.recycle(); return; }
+                            mostrarFotoParaEnviar(photo, question, localOnly);
+                        });
+                    } catch (Exception failure) {
+                        runOnUiThread(() -> Toast.makeText(this, "No pude abrir esa foto. Elige otra imagen.", Toast.LENGTH_LONG).show());
+                    }
+                });
+            });
     private final ActivityResultLauncher<Void> photoAnalysisLauncher = registerForActivityResult(
             new ActivityResultContracts.TakePicturePreview(), photo -> {
                 String question = visualQuestion;
                 visualQuestion = null;
                 if (photo != null && this.motorConversacional != null) {
-                    mostrarFotoParaEnviar(photo, question, visualLocalOnly);
+                    mostrarFotoParaEnviar(photo, question, SalveLLM.getInstance(this).isLocalOnly());
                 } else {
                     if (photo != null) photo.recycle();
                     Toast.makeText(this, "No se capturó ninguna foto.", Toast.LENGTH_SHORT).show();
@@ -149,6 +167,18 @@ public class MainActivity extends AppCompatActivity {
 
     // ===== DESCARGA DE MODELOS =====
     private ModelDownloadViewModel modelDownloadViewModel;
+    private final android.os.Handler modelStatusHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable refreshModelStatus = new Runnable() {
+        @Override public void run() {
+            if (!activityResumed || isFinishing() || isDestroyed()) return;
+            String status = motorConversacional == null ? "Modelo: preparando" : motorConversacional.getCompactModelStatus();
+            TextView stageStatus = findViewById(R.id.activeModelStatus);
+            TextView chatStatus = findViewById(R.id.chatModelStatus);
+            if (stageStatus != null) stageStatus.setText(status);
+            if (chatStatus != null) chatStatus.setText(status);
+            modelStatusHandler.postDelayed(this, 2000);
+        }
+    };
     private ActivityResultLauncher<String> audioPermissionLauncher;
 
     // ===== VERIFICACIÓN DE MODELOS LLM (por carpetas) =====
@@ -948,7 +978,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Botón Adjuntar (si existe en el layout)
         if (btnAdjuntar != null) {
-            btnAdjuntar.setOnClickListener(v -> mostrarMenuPdf());
+            btnAdjuntar.setOnClickListener(v -> mostrarAdjuntosChat());
         }
 
         // ==== PERMISOS Y SERVICIOS ====
@@ -961,7 +991,7 @@ public class MainActivity extends AppCompatActivity {
         handleShareIntent(getIntent());
 
         // Preserve existing model paths. New downloads/imports use app-private storage.
-        if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("dolphin_download_requested", false)) {
+        if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, false)) {
             iniciarDescargaModelos();
         }
     }
@@ -978,6 +1008,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         activityResumed = true;
+        modelStatusHandler.removeCallbacks(refreshModelStatus);
+        modelStatusHandler.post(refreshModelStatus);
         if (motorConversacional != null) motorConversacional.setConversationForeground(true);
         if (pendingLiveVoiceStart) {
             pendingLiveVoiceStart = false;
@@ -1053,18 +1085,9 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
-        // === Diagnóstico LLM ===
-        boolean preguntaModelo =
-                q.contains("que modelo usas") || q.contains("qué modelo usas") ||
-                        q.contains("modelo activo") || q.contains("estado modelos") ||
-                        q.contains("estas usando llm") || q.contains("estás usando llm");
-
-        if (preguntaModelo) {
-            GeminiService gemini = GeminiService.getInstance(this);
-            String resp = SalveLLM.getInstance(this).getStatusDescription() + ". "
-                    + (gemini.isAvailable() ? "Gemini configurado: " + gemini.getModelName() + ". " : "Gemini no está configurado. ")
-                    + "Abre IA y cámara y ejecuta una prueba para comprobar qué motor devuelve una respuesta.";
-            motorConversacional.hablar(sanitizeForSpeech(resp));
+        // Model questions share the same deterministic path in text and continuous voice.
+        if (salve.core.ModelRuntimeInfo.isStatusQuestion(q)) {
+            motorConversacional.hablar(motorConversacional.getModelStatusDescription());
             return true;
         }
 
@@ -1513,6 +1536,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         activityResumed = false;
+        modelStatusHandler.removeCallbacks(refreshModelStatus);
         pendingLiveVoiceStart = false;
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);
         if (liveVoiceSession != null) {
@@ -1582,10 +1606,7 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNeutralButton("Estado", (dialog, which) -> new AlertDialog.Builder(this)
                         .setTitle("Estado de los motores")
-                        .setMessage((SalveLLM.getInstance(this).isLocalOnly() ? "Chat y fotos: local\n" : "Chat y fotos: Gemini\n")
-                                + SalveLLM.getInstance(this).getStatusDescription() + "\n"
-                                + (GeminiService.getInstance(this).isAvailable() ? "Gemini: clave configurada" : "Gemini: sin clave API")
-                                + "\n" + motorConversacional.getVoiceStatus())
+                        .setMessage(motorConversacional.getModelStatusDescription() + "\n" + motorConversacional.getVoiceStatus())
                         .setPositiveButton("Cerrar", null).show())
                 .setNegativeButton("Cerrar", null).show();
     }
@@ -1594,14 +1615,13 @@ public class MainActivity extends AppCompatActivity {
         boolean connected = CloudSyncManager.isPCloudConfigured(this);
         new AlertDialog.Builder(this).setTitle("Memoria en pCloud")
                 .setMessage(connected ? "Cuenta conectada. Sincronización: "
-                        + (CloudSyncManager.isEnabled(this) ? "activa" : "pausada")
+                        + (CloudSyncManager.isEnabled(this) ? "activa" : "pausada") + "\n\n" + CloudSyncManager.memoryStatus(this)
                         : "Cuenta sin conectar. Primero registra en pCloud esta Redirect URI:\n"
                         + PCloudOAuth.REDIRECT_URI + "\nDespués pulsa Conectar y autoriza Salve en el navegador.")
                 .setPositiveButton(connected ? "Sincronizar ahora" : "Conectar", (d, w) -> {
                     if (connected) {
                         CloudSyncManager.setEnabled(this, true);
-                        CloudSyncManager.uploadGrafoBundle(this);
-                        Toast.makeText(this, "Sincronización solicitada", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Recuperación y sincronización solicitadas", Toast.LENGTH_SHORT).show();
                     } else conectarPCloud();
                 })
                 .setNeutralButton(connected ? "Pausar" : "Cerrar", (d, w) -> {
@@ -1727,10 +1747,12 @@ public class MainActivity extends AppCompatActivity {
                         + "El modelo se guarda aparte de la aplicación. Podrás pausarlo y reanudarlo; "
                         + "se activará después de verificar el archivo y probar una respuesta. "
                         + (entry.supportsVision ? "El catálogo declara soporte de fotos; su ejecución se comprueba al analizar una imagen."
-                                : "Dolphin procesa texto en el móvil. Gemma solo se preparará si falla Dolphin; si ya está descargado, se reutilizará."))
+                                : "Se guardan Dolphin 8B (4,92 GB) y el respaldo 3B (2,02 GB): unos 6,94 GB en total. "
+                                + "Salve mide la RAM antes de cargar y pasa al 3B si hace falta. Gemma solo se prepara si tampoco funciona el 3B. "
+                                + "Ambos Dolphin procesan texto. Los archivos existentes se verifican y reutilizan."))
                 .setPositiveButton("Descargar por Wi-Fi", (d, which) -> iniciarDescargaModelos())
                 .setNeutralButton("Usar datos móviles", (d, which) -> {
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("dolphin_download_requested", true).apply();
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, true).apply();
                     modelDownloadViewModel.startDownload(true);
                 })
                 .setNegativeButton("Cerrar", null).show();
@@ -1872,25 +1894,23 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void solicitarFotoAnalisis() {
-        SalveLLM local = SalveLLM.getInstance(this);
-        visualLocalOnly = local.isLocalOnly();
-        if (visualLocalOnly && !local.supportsVision()) {
-            Toast.makeText(this, "Dolphin solo procesa texto. El modelo local activo no permite analizar fotos.", Toast.LENGTH_LONG).show();
-            return;
-        }
-        if (!visualLocalOnly && !GeminiService.getInstance(this).isAvailable()) { configurarGemini(); return; }
-        visualQuestion = inputChat.getText().toString().trim();
-        new AlertDialog.Builder(this).setTitle(visualLocalOnly ? "Analizar foto en el móvil" : "Analizar foto con Gemini")
-                .setMessage((visualLocalOnly ? "La foto se procesará con el modelo local. "
-                        : "Se enviará la foto que tomes a Google para responder a tu pregunta. ")
-                        + "Podrás escribir la pregunta junto a la foto. Se guardará como recuerdo y permanecerá "
-                        + "en el chat hasta que la quites o elijas otra. Si la sincronización está activa, "
-                        + "la foto y su análisis también se copiarán a pCloud.")
-                .setPositiveButton("Abrir cámara", (dialog, which) -> {
-                    if (hasCameraPermission()) launchAnalysisCamera();
-                    else photoPermissionLauncher.launch(Manifest.permission.CAMERA);
+    private void mostrarAdjuntosChat() {
+        new AlertDialog.Builder(this).setTitle("Adjuntar al chat")
+                .setItems(new String[]{"Foto de la galería", "Tomar foto", "Fotos guardadas", "Documentos PDF"}, (d, which) -> {
+                    if (which == 2) { mostrarFotosGuardadas(); return; }
+                    if (which == 3) { mostrarMenuPdf(); return; }
+                    visualQuestion = inputChat.getText().toString().trim();
+                    visualLocalOnly = SalveLLM.getInstance(this).isLocalOnly();
+                    if (which == 0) chatPhotoPicker.launch(new String[]{"image/*"});
+                    else solicitarFotoAnalisis();
                 }).setNegativeButton("Cancelar", null).show();
+    }
+
+    private void solicitarFotoAnalisis() {
+        visualQuestion = inputChat.getText().toString().trim();
+        visualLocalOnly = SalveLLM.getInstance(this).isLocalOnly();
+        if (hasCameraPermission()) launchAnalysisCamera();
+        else photoPermissionLauncher.launch(Manifest.permission.CAMERA);
     }
 
     private void launchAnalysisCamera() {
@@ -1919,19 +1939,33 @@ public class MainActivity extends AppCompatActivity {
         preview.setMaxHeight((int) (180 * getResources().getDisplayMetrics().density));
         preview.setContentDescription("Foto que enviarás con tu mensaje"); form.addView(preview);
         EditText message = photoField(form, "Pregunta o contexto de la foto", question == null ? "" : question);
+        EditText name = photoField(form, "Nombre de la persona (opcional)", "");
+        EditText relation = photoField(form, "Relación contigo: yo, mi hermano…", "");
+        EditText position = photoField(form, "Quién es: única persona, izquierda…", "");
         TextView info = new TextView(this);
-        info.setText("La foto y tu texto se enviarán juntos. Después podrás tocar la foto del chat para identificar "
-                + "a una persona o corregir su nombre. Quitarla del chat conserva el recuerdo.");
+        boolean canAnalyze = !localOnly || SalveLLM.getInstance(this).supportsVision();
+        info.setText((localOnly
+                ? (canAnalyze ? "La imagen se analizará en el móvil. " : "Dolphin conserva la foto y los datos que indiques, pero no puede analizar sus píxeles. ")
+                : "Se enviará la foto y el mensaje a Gemini (Google) para analizarlos. ")
+                + "El nombre lo confirmas tú. Escribe «yo» en relación para asociarla a tu perfil. "
+                + "La foto quedará en el chat y en tus recuerdos. "
+                + (CloudSyncManager.isEnabled(this) ? "También se copiará a pCloud porque la sincronización está activa." : "La sincronización con pCloud está desactivada."));
         form.addView(info);
         final boolean[] transferred = {false};
         android.widget.ScrollView scroll = new android.widget.ScrollView(this); scroll.addView(form);
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Foto y mensaje").setView(scroll)
-                .setPositiveButton("Enviar", (d, which) -> {
-                    if (motorConversacional == null || isDestroyed()) return;
-                    transferred[0] = true;
-                    motorConversacional.procesarImagen(message.getText().toString(), photo, localOnly);
-                    if (inputChat.getText().toString().trim().equals(question == null ? "" : question)) inputChat.setText("");
-                }).setNegativeButton("Cancelar", null).create();
+                .setPositiveButton("Enviar", null).setNegativeButton("Cancelar", null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (motorConversacional == null || isDestroyed()) return;
+            if (!name.getText().toString().trim().isEmpty() && position.getText().toString().trim().isEmpty()) {
+                position.setError("Indica qué persona estás identificando"); return;
+            }
+            transferred[0] = true;
+            motorConversacional.procesarImagen(message.getText().toString(), photo, localOnly,
+                    name.getText().toString(), relation.getText().toString(), position.getText().toString());
+            if (inputChat.getText().toString().trim().equals(question == null ? "" : question)) inputChat.setText("");
+            dialog.dismiss();
+        }));
         dialog.setOnDismissListener(d -> { preview.setImageDrawable(null); if (!transferred[0]) photo.recycle(); });
         dialog.show();
     }
@@ -1958,12 +1992,13 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         AlertDialog progress = new AlertDialog.Builder(this).setTitle("Recuperar fotos")
-                .setMessage("Buscando fotos en los últimos 1000 recuerdos sincronizados…")
+                .setMessage("Recuperando recuerdos y fotos de pCloud, desde los más antiguos…")
                 .setPositiveButton("Cerrar", null).show();
         inferenceChecks.execute(() -> {
             salve.core.visual.VisualMemoryRepository archive = new salve.core.visual.VisualMemoryRepository(this);
             int before = archive.store.list().size();
-            CloudSyncManager.restoreEvents(this, 1000);
+            CloudSyncManager.restoreEvents(this, 200);
+            SyncWorker.enqueueWhenOnline(this);
             int after = archive.store.list().size();
             if (after > 0) salve.core.GrafoRecuerdos.generarVisual(getApplicationContext());
             runOnUiThread(() -> {
@@ -1971,7 +2006,7 @@ public class MainActivity extends AppCompatActivity {
                 progress.dismiss();
                 new AlertDialog.Builder(this).setTitle("Fotos disponibles: " + after)
                         .setMessage("Fotos añadidas: " + Math.max(0, after - before)
-                                + ". Si falta alguna, comprueba la conexión y que terminó de subirse desde el otro móvil.")
+                                + ". " + CloudSyncManager.memoryStatus(this))
                         .setPositiveButton("Ver fotos", (d, which) -> mostrarFotosGuardadas())
                         .setNegativeButton("Cerrar", null).show();
             });
@@ -2025,6 +2060,15 @@ public class MainActivity extends AppCompatActivity {
 
     // ===================== HELPERS PDF/IMAGEN =========================
     private Bitmap cargarBitmapSeguro(Uri uri) throws Exception {
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            return android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(getContentResolver(), uri),
+                    (decoder, info, source) -> {
+                        int width = info.getSize().getWidth(), height = info.getSize().getHeight();
+                        float scale = Math.min(1f, 1600f / Math.max(width, height));
+                        decoder.setTargetSize(Math.max(1, (int) (width * scale)), Math.max(1, (int) (height * scale)));
+                        decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
+                    });
+        }
         BitmapFactory.Options bounds = new BitmapFactory.Options();
         bounds.inJustDecodeBounds = true;
         try (InputStream in = getContentResolver().openInputStream(uri)) {
@@ -2104,7 +2148,7 @@ public class MainActivity extends AppCompatActivity {
 
     /** ▶️ Descarga automática de modelos usando precheck + descarga asíncrona + consola visual */
     private void iniciarDescargaModelos() {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("dolphin_download_requested", true).apply();
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, true).apply();
         // WorkManager waits for an unmetered network and retains .part files if the network is lost.
         modelDownloadViewModel.startDownload();
     }

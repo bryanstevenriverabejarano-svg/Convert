@@ -107,16 +107,24 @@ public final class PCloudProvider implements CloudProvider {
     }
 
     public List<String> listFiles(String folderPath) {
+        try { return listFilesChecked(folderPath); }
+        catch (java.io.IOException failure) { return Collections.emptyList(); }
+    }
+
+    /** A disconnected account must not be confused with an empty history. */
+    public List<String> listFilesChecked(String folderPath) throws java.io.IOException {
         Credentials c = credentials();
-        if (c == null) return Collections.emptyList();
+        if (c == null) throw new java.io.IOException("pCloud sin conectar");
         try {
             String normalized = normalizeRemotePath(folderPath);
             JsonObject result = json(authenticatedGet(c, "listfolder", "path", normalized), c);
-            if (!ok(result) || !result.has("metadata")) return Collections.emptyList();
+            if (result != null && result.has("result") && result.get("result").getAsInt() == 2005)
+                return Collections.emptyList();
+            if (!ok(result) || !result.has("metadata") || !result.getAsJsonObject("metadata").has("contents"))
+                throw new java.io.IOException("No se pudo consultar pCloud; revisa la conexión y la cuenta");
             return filePaths(normalized, result.getAsJsonObject("metadata").getAsJsonArray("contents"));
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        } catch (java.io.IOException failure) { throw failure; }
+        catch (Exception failure) { throw new java.io.IOException("No se pudo leer el índice de pCloud", failure); }
     }
 
     static List<String> filePaths(String folder, JsonArray contents) {

@@ -50,6 +50,17 @@ public final class ConversationMemoryGrounding {
         public String getDirectAnswer() { return directAnswer; }
         public Status getStatus() { return status; }
         public boolean hasEvidence() { return evidence; }
+        public Result withCloudStatus(String cloudStatus, boolean complete) {
+            String answer = directAnswer;
+            if (!complete && answer != null) {
+                answer = evidence ? "Entre los registros disponibles ahora: " + answer
+                        : "Todavía no recuperé un registro que permita confirmar ese recuerdo.";
+                answer += " " + cloudStatus;
+            }
+            return new Result(context + "\nESTADO_PERSISTENCIA: " + cloudStatus
+                    + " No confundas una recuperación incompleta con ausencia de historia.",
+                    answer, complete ? status : (evidence ? Status.PARTIAL : status), evidence);
+        }
         public static Result unavailable() { return unavailable(null); }
         public static Result unavailable(String input) {
             return new Result(HEADER + "ESTADO: ERROR_DE_LECTURA; no equivale a memoria vacía.",
@@ -78,9 +89,14 @@ public final class ConversationMemoryGrounding {
                 || text.matches(".*\\b(recuerda|recuerdas|recuerdos?|memoria|nodos?|grafo|dije|hablamos|lo anterior)\\b.*")
                 || !queryTerms(input).isEmpty());
     }
+    public static boolean isPersonalHistoryQuery(String input) {
+        String text = normalize(input);
+        return simpleChronology(input) != 0 || !profileCategories(text).isEmpty()
+                || text.matches(".*\\b(recuerdas|recuerdos?|memoria|dije|hablamos)\\b.*");
+    }
     public Result retrieve(String input) {
         int chronological = simpleChronology(input);
-        if (chronological != 0) return chronology(chronological);
+        if (chronological != 0) return chronology(chronological, normalize(input).contains("conmigo") || normalize(input).contains("juntos"));
         String normalized = normalize(input);
         Set<String> categories = profileCategories(normalized);
         Evidence out = new Evidence(maxChars);
@@ -127,11 +143,11 @@ public final class ConversationMemoryGrounding {
         }
         return out.result(null);
     }
-    private Result chronology(int direction) {
+    private Result chronology(int direction, boolean shared) {
         Evidence out = new Evidence(maxChars);
         String qualifier = direction < 0 ? "más antiguo" : "más reciente";
         try {
-            RecuerdoEntity record = direction < 0 ? memories.primerRecuerdo() : memories.ultimoRecuerdo();
+            RecuerdoEntity record = direction < 0 ? (shared ? memories.primerRecuerdoCompartido() : memories.primerRecuerdo()) : memories.ultimoRecuerdo();
             if (record == null) {
                 out.note("MEMORIA_VACIA: no hay registros guardados en la tabla recuerdos.");
                 return out.result("Todavía no tengo recuerdos guardados en mi memoria persistente.");
@@ -205,6 +221,7 @@ public final class ConversationMemoryGrounding {
         String text = normalize(input).replaceAll("[¿?¡!.,;:]", " ").replaceAll("\\s+", " ").trim();
         text = text.replaceAll("^(?:salve )?(?:(?:cual (?:es|fue)|dime|muestra(?:me)?|recuerdas) )?", "")
                 .replaceAll("^(?:tu|el|su) ", "").replaceAll(" (?:por favor|que tienes|que guardaste|registrado)$", "");
+        text = text.replaceAll(" (?:conmigo|juntos|que tienes conmigo|que tuvimos juntos)$", "");
         if (text.matches("primer(?:o)? recuerdo|recuerdo (?:mas antiguo|primero)|primera memoria")) return -1;
         if (text.matches("ultimo recuerdo|recuerdo (?:mas reciente|ultimo)|ultima memoria")) return 1;
         return 0;
@@ -260,7 +277,7 @@ public final class ConversationMemoryGrounding {
         private void error() { failed = true; }
         private void memory(RecuerdoEntity r, String kind) {
             if (append("{\"fuente\":\"recuerdos:" + r.id + "\",\"tipo\":" + json(kind)
-                    + ",\"origen\":" + json(isConfiguration(r) ? "configuracion_sistema" : "registro_persistido")
+                    + ",\"origen\":" + json(isConfiguration(r) ? "configuracion_sistema" : (r.etiquetas != null && r.etiquetas.contains("\"pcloud\"")) ? "pcloud_restaurado" : "registro_persistido")
                     + ",\"fecha_registro\":" + json(date(r.timestamp)) + ",\"texto\":"
                     + json(shorten(r.frase == null ? "" : r.frase, 620)) + "}")) evidence = true;
         }

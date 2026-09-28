@@ -11,7 +11,7 @@ import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import salve.data.db.MemoriaDatabase;
+import salve.data.db.*;
 import salve.data.db.SyncEventDao;
 import salve.data.db.SyncEventEntity;
 import salve.core.visual.VisualMemoryRecord;
@@ -175,50 +175,151 @@ public final class CloudSyncManager {
         if (viewer != null && viewer.isFile()) uploadAsync(provider, viewer, ROOT + "/graphs/viewer.html");
     }
 
-    /** Restore synchronized event journal entries without duplicating existing local rows. */
-    public static int restoreEvents(Context ctx, int maxEvents) {
-        if (!isEnabled(ctx) || maxEvents <= 0) return 0;
-        PCloudProvider provider = new PCloudProvider(ctx);
-        if (!provider.isConfigured()) return 0;
-        try {
-            SyncEventDao dao = MemoriaDatabase.getInstance(ctx).syncEventDao();
-            List<String> files = new java.util.ArrayList<>(provider.listFiles(ROOT + "/events"));
-            files.removeIf(path -> !path.endsWith(".json") || timestampFromEventPath(path) <= 0);
-            files.sort(java.util.Comparator.comparingLong(CloudSyncManager::timestampFromEventPath).thenComparing(path -> path));
-            int restored = 0;
-            for (int i = Math.max(0, files.size() - maxEvents); i < files.size(); i++) {
-                String remote = files.get(i);
-                byte[] bytes = provider.download(remote);
-                if (bytes == null) continue;
-                String payload = new String(bytes, StandardCharsets.UTF_8);
-                try {
-                    VisualMemoryRecord photo = visualRecord(payload);
-                    if (photo != null) {
-                        VisualMemoryRepository archive = new VisualMemoryRepository(ctx);
-                        byte[] image = archive.store.imageFile(photo.id).isFile() ? null
-                                : provider.downloadBounded(ROOT + "/images/" + photo.id + ".jpg", VisualMemoryStore.MAX_IMAGE_BYTES);
-                        if (image == null && !archive.store.imageFile(photo.id).isFile()) continue;
-                        archive.restore(photo, image);
-                    }
-                } catch (Exception invalidPhoto) { Log.w(TAG, "No se pudo restaurar una foto"); continue; }
-                long createdAt = timestampFromEventPath(remote);
-                if (createdAt <= 0) {
-                    try { createdAt = new JSONObject(payload).optLong("time_ms", 0L); }
-                    catch (Exception ignored) {}
+    private static final String RESTORE_PREFS = "salve_memory_restore";
+    private static final Object RESTORE_LOCK = new Object();
+    private static final Object LOCAL_INDEX_LOCK = new Object();
+
+    public static String memoryStatus(Context ctx) {
+        if (!isPCloudConfigured(ctx)) return "pCloud sin conectar; consulto los recuerdos disponibles en este móvil.";
+        if (!isEnabled(ctx)) return "pCloud en pausa; consulto la copia disponible en este móvil.";
+        return ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE).getString("status",
+                "Recuperación de pCloud pendiente; la historia disponible puede estar incompleta.");
+    }
+
+    public static boolean memoryRestoreComplete(Context ctx) {
+        return isEnabled(ctx) && isPCloudConfigured(ctx)
+                && ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE).getBoolean("complete", false);
+    }
+
+    private static void restoreStatus(Context ctx, String status, boolean complete) {
+        ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE).edit()
+                .putString("status", status).putBoolean("complete", complete).apply();
+    }
+
+    public static final class RestoreBatch {
+        public final int restored;
+        public final boolean retry;
+        RestoreBatch(int restored, boolean retry) { this.restored = restored; this.retry = retry; }
+    }
+
+    /** Restartable batches, oldest first. Import receipts avoid downloading the same journal again. */
+    public static RestoreBatch restoreMemoryBatch(Context ctx, int maxEvents) {
+        if (!isEnabled(ctx) || !isPCloudConfigured(ctx) || maxEvents <= 0) return new RestoreBatch(0, false);
+        synchronized (RESTORE_LOCK) {
+            int restored = 0, scanned = 0, pending = 0, errors = 0, invalid = 0, verified = 0;
+            restoreStatus(ctx, "Recuperando recuerdos de pCloud…", false);
+            try {
+                PCloudProvider provider = new PCloudProvider(ctx);
+                MemoriaDatabase db = MemoriaDatabase.getInstance(ctx);
+                CloudMemoryImporter importer = new CloudMemoryImporter(db.recuerdoDao(), db.memorySyncStateDao());
+                List<String> files = new java.util.ArrayList<>(provider.listFilesChecked(ROOT + "/events"));
+                files.removeIf(path -> !path.endsWith(".json") || timestampFromEventPath(path) <= 0);
+                files.sort(java.util.Comparator.comparingLong(CloudSyncManager::timestampFromEventPath).thenComparing(path -> path));
+                for (String remote : files) {
+                    MemorySyncStateEntity receipt = db.memorySyncStateDao().get("remote:" + remote);
+                    if (receipt != null) { if (receipt.deleted) invalid++; else verified++; continue; }
+                    if (scanned >= maxEvents || Thread.currentThread().isInterrupted() || !isEnabled(ctx)) { pending++; continue; }
+                    scanned++;
+                    byte[] bytes = provider.downloadBounded(remote, 256 * 1024);
+                    if (bytes == null) { errors++; continue; }
+                    String payload = new String(bytes, StandardCharsets.UTF_8);
+                    long createdAt = timestampFromEventPath(remote);
+                    try {
+                        VisualMemoryRecord photo = visualRecord(payload);
+                        if (photo != null) {
+                            VisualMemoryRepository archive = new VisualMemoryRepository(ctx);
+                            byte[] image = archive.store.imageFile(photo.id).isFile() ? null
+                                    : provider.downloadBounded(ROOT + "/images/" + photo.id + ".jpg", VisualMemoryStore.MAX_IMAGE_BYTES);
+                            if (image == null && !archive.store.imageFile(photo.id).isFile()) { errors++; continue; }
+                            archive.restore(photo, image);
+                        }
+                        db.runInTransaction(() -> {
+                            importer.ingest(payload, createdAt);
+                            if (db.syncEventDao().countExact(createdAt, payload) == 0) {
+                                SyncEventEntity event = new SyncEventEntity();
+                                event.payload = payload; event.createdAt = createdAt; event.tries = -1;
+                                db.syncEventDao().insert(event);
+                            }
+                            db.memorySyncStateDao().put(MemorySyncStateEntity.of("remote:" + remote, createdAt, false));
+                        });
+                        restored++; verified++;
+                    } catch (com.google.gson.JsonParseException | IllegalArgumentException invalidData) {
+                        // Retain a rejection receipt without letting one malformed file block older siblings.
+                        db.memorySyncStateDao().put(MemorySyncStateEntity.of("remote:" + remote, createdAt, true));
+                        invalid++;
+                    } catch (Exception unavailable) { errors++; }
                 }
-                if (createdAt <= 0) continue;
-                if (dao.countExact(createdAt, payload) > 0) continue;
-                SyncEventEntity e = new SyncEventEntity();
-                e.payload = payload;
-                e.createdAt = createdAt;
-                e.tries = -1;
-                dao.insert(e);
-                restored++;
+                boolean complete = pending == 0 && errors == 0 && invalid == 0;
+                restoreStatus(ctx, "pCloud: " + verified + " de " + files.size() + " eventos recuperados. "
+                        + (complete ? "Historial de eventos disponible hasta la última sincronización."
+                        : pending + " pendientes; " + errors + " sin descargar; " + invalid + " no legibles. La historia puede estar incompleta."), complete);
+                return new RestoreBatch(restored, pending > 0 || errors > 0);
+            } catch (Exception failure) {
+                restoreStatus(ctx, "No pude recuperar pCloud. Revisa la conexión y la cuenta; los recuerdos locales se conservan.", false);
+                return new RestoreBatch(restored, true);
             }
-            return restored;
-        } catch (Exception e) {
-            Log.e(TAG, "restoreEvents error", e);
-            return 0;
+        }
+    }
+
+    /** Repair journals downloaded by older app versions, including while offline. */
+    public static void indexLocalJournal(Context ctx) {
+        synchronized (LOCAL_INDEX_LOCK) {
+            MemoriaDatabase db = MemoriaDatabase.getInstance(ctx);
+            MemorySyncStateEntity cursor = db.memorySyncStateDao().get("local_cursor_v1");
+            long after = cursor == null ? 0 : cursor.updatedAt;
+            CloudMemoryImporter importer = new CloudMemoryImporter(db.recuerdoDao(), db.memorySyncStateDao());
+            while (!Thread.currentThread().isInterrupted()) {
+                List<SyncEventEntity> page = db.syncEventDao().pageAfter(after, 200);
+                if (page.isEmpty()) return;
+                for (SyncEventEntity event : page) {
+                    db.runInTransaction(() -> {
+                        try { importer.ingest(event.payload, event.createdAt); }
+                        catch (com.google.gson.JsonParseException | IllegalArgumentException invalidData) {
+                            Log.w(TAG, "Evento antiguo no legible; se conserva el original");
+                        }
+                        db.memorySyncStateDao().put(MemorySyncStateEntity.of("local_cursor_v1", event.id, false));
+                    });
+                    after = event.id;
+                }
+            }
+        }
+    }
+
+    public static int restoreEvents(Context ctx, int maxEvents) {
+        indexLocalJournal(ctx);
+        return restoreMemoryBatch(ctx, maxEvents).restored;
+    }
+
+    /** Full profile text and original date, with idempotent outbox insertion. Call off the UI thread. */
+    public static void enqueueMemory(Context ctx, RecuerdoEntity record) {
+        if (!isEnabled(ctx)) return;
+        enqueueStable(ctx, CloudMemoryImporter.serialize(record), record.timestamp);
+    }
+
+    public static void enqueueProfileDeletion(Context ctx, String category, long time) {
+        if (!isEnabled(ctx)) return;
+        com.google.gson.JsonObject event = new com.google.gson.JsonObject();
+        event.addProperty("type", "profile_delete"); event.addProperty("category", category);
+        event.addProperty("time_ms", time);
+        enqueueStable(ctx, event.toString(), time);
+    }
+
+    private static void enqueueStable(Context ctx, String payload, long time) {
+        MemoriaDatabase db = MemoriaDatabase.getInstance(ctx);
+        db.runInTransaction(() -> {
+            if (db.syncEventDao().countExact(time, payload) > 0) return;
+            SyncEventEntity event = new SyncEventEntity();
+            event.payload = payload; event.createdAt = time; event.tries = 0;
+            db.syncEventDao().insert(event);
+        });
+        SyncWorker.enqueueWhenOnline(ctx);
+    }
+
+    public static void enqueueExistingProfiles(Context ctx) {
+        if (!isEnabled(ctx)) return;
+        for (RecuerdoEntity profile : MemoriaDatabase.getInstance(ctx).recuerdoDao().perfiles()) {
+            // Remote records already exist in pCloud; no upload loop.
+            if (profile.etiquetas == null || !profile.etiquetas.contains("\"pcloud\"")) enqueueMemory(ctx, profile);
         }
     }
 

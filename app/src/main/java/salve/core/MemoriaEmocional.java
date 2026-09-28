@@ -146,6 +146,7 @@ public class MemoriaEmocional {
         reflexionDao = database.reflexionDao();
         conversationMemory = new ConversationMemoryGrounding(recuerdoDao,
                 database.knowledgeNodeDao(), database.knowledgeRelationDao());
+        memoryWriteExecutor.execute(() -> CloudSyncManager.indexLocalJournal(context));
 
         // ⚠️ GrafoConocimientoVivo lanza Exception en su constructor.
         // Lo blindamos para que si falla no rompa MemoriaEmocional.
@@ -707,13 +708,19 @@ public class MemoriaEmocional {
         }
         memoryWriteExecutor.execute(() -> {
             try {
-                recuerdoDao.reemplazarPorEtiqueta(etiqueta, crearRecuerdoEntity(recuerdo));
+                RecuerdoEntity entity = crearRecuerdoEntity(recuerdo);
+                MemoriaDatabase db = MemoriaDatabase.getInstance(context);
+                db.runInTransaction(() -> {
+                    recuerdoDao.reemplazarPorEtiqueta(etiqueta, entity);
+                    db.memorySyncStateDao().put(salve.data.db.MemorySyncStateEntity.of(etiqueta, entity.timestamp, false));
+                    CloudSyncManager.enqueueMemory(context, entity);
+                });
             } catch (Exception e) {
                 Log.e(TAG, "No se pudo reemplazar el dato de perfil " + categoria, e);
                 throw new IllegalStateException("Falló la escritura del perfil", e);
             }
         });
-        CloudLogger.log("memoria_perfil", categoria, 7);
+        // The full profile record is queued atomically with its Room revision above.
     }
 
     /** Elimina únicamente una categoría de perfil etiquetada explícitamente. */
@@ -731,8 +738,15 @@ public class MemoriaEmocional {
                         }
                     }
                 }
-                int removedFromDatabase = recuerdoDao.eliminarPorEtiqueta(etiqueta);
-                return removedFromMemory || removedFromDatabase > 0;
+                long deletionTime = System.currentTimeMillis();
+                MemoriaDatabase db = MemoriaDatabase.getInstance(context);
+                final int[] removed = {0};
+                db.runInTransaction(() -> {
+                    removed[0] = recuerdoDao.eliminarPorEtiqueta(etiqueta);
+                    db.memorySyncStateDao().put(salve.data.db.MemorySyncStateEntity.of(etiqueta, deletionTime, true));
+                    CloudSyncManager.enqueueProfileDeletion(context, categoria.trim().toLowerCase(Locale.ROOT), deletionTime);
+                });
+                return removedFromMemory || removed[0] > 0;
             }).get(3, TimeUnit.SECONDS);
         } catch (Exception e) {
             Log.e(TAG, "No se pudo eliminar el dato de perfil " + categoria, e);
@@ -763,7 +777,12 @@ public class MemoriaEmocional {
     public ConversationMemoryGrounding.Result recuperarContextoConversacional(String consulta) {
         try {
             memoryWriteExecutor.awaitReady(3, TimeUnit.SECONDS);
-            return conversationMemory.retrieve(consulta);
+            ConversationMemoryGrounding.Result result = conversationMemory.retrieve(consulta);
+            if (ConversationMemoryGrounding.isPersonalHistoryQuery(consulta)) {
+                if (CloudSyncManager.isEnabled(context)) salve.data.sync.SyncWorker.enqueueWhenOnline(context);
+                return result.withCloudStatus(CloudSyncManager.memoryStatus(context), CloudSyncManager.memoryRestoreComplete(context));
+            }
+            return result;
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return ConversationMemoryGrounding.Result.unavailable(consulta);
@@ -1361,18 +1380,7 @@ public class MemoriaEmocional {
             try {
                 RecuerdoEntity entity = crearRecuerdoEntity(r);
                 recuerdoDao.insertRecuerdo(entity);
-                try {
-                    JSONObject cloud = new JSONObject();
-                    cloud.put("type", "memory");
-                    cloud.put("content", entity.frase == null ? "" : entity.frase);
-                    cloud.put("emotion", entity.emocion == null ? "" : entity.emocion);
-                    cloud.put("intensity", entity.intensidad);
-                    cloud.put("tags", entity.etiquetas == null ? "[]" : entity.etiquetas);
-                    cloud.put("time_ms", entity.timestamp);
-                    CloudSyncManager.enqueue(context, cloud.toString());
-                } catch (Exception cloudError) {
-                    Log.w(TAG, "Recuerdo local guardado; no se pudo encolar copia cloud", cloudError);
-                }
+                CloudSyncManager.enqueueMemory(context, entity);
             } catch (Exception ex) {
                 Log.e("Salve", "Error insertando recuerdo", ex);
                 throw new IllegalStateException("Falló la escritura del recuerdo", ex);
