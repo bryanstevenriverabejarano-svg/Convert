@@ -4,6 +4,8 @@ import android.app.Application;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import org.junit.After;
@@ -29,7 +31,18 @@ public class MemoryMigrationTest {
              InputStream input = getClass().getResourceAsStream("/salve/memory-v4.sql")) {
             assertNotNull(input);
             String sql = new String(input.readAllBytes(), StandardCharsets.UTF_8).replaceAll("(?m)^--.*$", "");
-            for (String statement : sql.split(";")) if (!statement.trim().isEmpty()) db.execSQL(statement);
+            if (version == 6) {
+                try (InputStream schema = getClass().getResourceAsStream("/salve.data.db.MemoriaDatabase/6.json")) {
+                    assertNotNull(schema);
+                    for (JsonElement entity : JsonParser.parseString(new String(schema.readAllBytes(), StandardCharsets.UTF_8))
+                            .getAsJsonObject().getAsJsonObject("database").getAsJsonArray("entities")) {
+                        String table = entity.getAsJsonObject().get("tableName").getAsString();
+                        db.execSQL(entity.getAsJsonObject().get("createSql").getAsString().replace("${TABLE_NAME}", table));
+                        for (JsonElement index : entity.getAsJsonObject().getAsJsonArray("indices"))
+                            db.execSQL(index.getAsJsonObject().get("createSql").getAsString().replace("${TABLE_NAME}", table));
+                    }
+                }
+            } else for (String statement : sql.split(";")) if (!statement.trim().isEmpty()) db.execSQL(statement);
             db.execSQL("INSERT INTO recuerdos VALUES (7, 'Mi nombre es Bryan', 'no evaluada', 7, '[\"profile:name\"]', '0101', 1234)");
             db.execSQL("INSERT INTO misiones VALUES (8, 'Conservar mi historia')");
             db.execSQL("INSERT INTO reflexiones VALUES (9, 'nota', 'Contenido conservado', 0.2, 'curiosidad', 'declarado', 0.3, 'pendiente', 1235)");
@@ -42,6 +55,10 @@ public class MemoryMigrationTest {
                 db.execSQL("CREATE TABLE memory_sync_state (`key` TEXT NOT NULL, updatedAt INTEGER NOT NULL, deleted INTEGER NOT NULL, PRIMARY KEY(`key`))");
                 db.execSQL("INSERT INTO memory_sync_state VALUES ('profile:residence', 9000, 1)");
             }
+            if (version == 6) {
+                db.execSQL("INSERT INTO agent_control VALUES (1, 1)");
+                db.execSQL("INSERT INTO agent_research_tasks VALUES ('pending', 'Tema', 'QUEUED', '', NULL, NULL, 0, 1234, 1234, 0, 0)");
+            }
             db.setVersion(version);
         }
     }
@@ -50,8 +67,8 @@ public class MemoryMigrationTest {
         assertEquals("Mi nombre es Bryan", migrated.recuerdoDao().primerRecuerdo().frase);
         assertEquals(1234, migrated.recuerdoDao().primerRecuerdo().timestamp);
         assertEquals(7, migrated.recuerdoDao().primerRecuerdo().id);
-        assertEquals(6, migrated.getOpenHelper().getWritableDatabase().getVersion());
-        assertEquals(0, migrated.researchTaskDao().pendingCount());
+        assertEquals(7, migrated.getOpenHelper().getWritableDatabase().getVersion());
+        assertEquals(7, migrated.recuerdoDao().buscarIndice("\"bryan\"", true, 4).get(0).id);
         assertEquals(2, migrated.syncEventDao().getPending(1).get(0).tries);
         for (String table : new String[]{"misiones", "reflexiones", "plugins", "knowledge_relations"})
             try (Cursor rows = migrated.query("SELECT COUNT(*) FROM " + table, null)) {
@@ -59,7 +76,13 @@ public class MemoryMigrationTest {
             }
         assertEquals("Salve", migrated.knowledgeNodeDao().findById(12).etiqueta);
     }
-    @Test public void migratesHistoricalFourThroughFiveToSixWithoutLoss() throws Exception { legacy(4); assertMigrated(); }
+    @Test public void migratesHistoricalFourThroughSevenWithoutLoss() throws Exception { legacy(4); assertMigrated(); }
+    @Test public void migratesExportedSixRebuildsIndexAndPreservesAgentState() throws Exception {
+        legacy(6); assertMigrated();
+        assertEquals(1, migrated.researchTaskDao().pendingCount());
+        assertEquals(1, migrated.researchTaskDao().paused());
+        assertEquals("Tema", migrated.researchTaskDao().get("pending").question);
+    }
     @Test public void migratesFiveAndPreservesProfileDeletionRevision() throws Exception {
         legacy(5); assertMigrated();
         assertTrue(migrated.memorySyncStateDao().get("profile:residence").deleted);

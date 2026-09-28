@@ -18,4 +18,11 @@ public final class MemoryMigrations {
             db.execSQL("CREATE TABLE IF NOT EXISTS agent_control (id INTEGER NOT NULL, paused INTEGER NOT NULL, PRIMARY KEY(id))");
         }
     };
+    public static final Migration FROM_6_TO_7 = new Migration(6, 7) {
+        @Override public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `recuerdos_fts` USING FTS4(`frase` TEXT, tokenize=unicode61, content=`recuerdos`)");
+            // Includes old and cloud-restored records. Room recreates sync triggers after migration.
+            db.execSQL("INSERT INTO recuerdos_fts(recuerdos_fts) VALUES ('rebuild')");
+        }
+    };
 }
