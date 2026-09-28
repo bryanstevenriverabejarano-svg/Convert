@@ -9,7 +9,7 @@ import salve.data.db.RecuerdoEntity;
 
 /** Shared indexed retrieval for every provider. No model/network calls or persistent cache. */
 public final class MemorySearchService {
-    public static final int MAX_CANDIDATES = 56;
+    public static final int MAX_CANDIDATES = MemoryEvidenceRanker.MAX_EXPANDED_CANDIDATES;
     public static final int MAX_SEARCHES = 6;
     private final RecuerdoDao memories;
     public MemorySearchService(RecuerdoDao memories) { this.memories = memories; }

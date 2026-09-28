@@ -23,6 +23,7 @@ public class MemorySearchQueryTest {
     }
     @Test public void normalizedDuplicatesAndShortNamesArePreservedOnce() {
         assertEquals(java.util.Arrays.asList("ana", "orion"), MemorySearchQuery.parse("Ana orión ORION").terms());
+        assertEquals(MemorySearchQuery.parse("Orión").terms(), MemorySearchQuery.parse("Orio\u0301n").terms());
     }
     @Test public void excerptsPreserveUnicodeWithoutSplittingSurrogatePairs() {
         String text = String.join("", Collections.nCopies(400, "🙂")) + " telescopio "

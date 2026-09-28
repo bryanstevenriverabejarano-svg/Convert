@@ -11,6 +11,7 @@ import java.util.Set;
 /** Bounded multi-term evidence ranking, not a truth classifier or entity resolver. */
 public final class MemoryEvidenceRanker {
     public static final int MAX_CANDIDATES = 32;
+    public static final int MAX_EXPANDED_CANDIDATES = 56;
     public static final class Candidate {
         public final int id;
         public final String text;
@@ -23,7 +24,7 @@ public final class MemoryEvidenceRanker {
 
     /** Group coverage first, exact vocabulary second; opposing statements remain separate. */
     public static List<Integer> rankExpanded(List<Candidate> candidates, MemorySearchQuery query, int limit) {
-        if (candidates == null || candidates.size() > MemorySearchService.MAX_CANDIDATES
+        if (candidates == null || candidates.size() > MAX_EXPANDED_CANDIDATES
                 || query == null || limit < 0 || limit > 4) throw new IllegalArgumentException("Evidence budget exceeded");
         List<Scored> unique = new ArrayList<>();
         Set<Integer> seen = new HashSet<>();
