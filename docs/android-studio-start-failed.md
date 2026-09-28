@@ -39,8 +39,10 @@ conserva la evidencia de fallo. Dolphin sigue siendo el modelo principal y Gemma
 continúa como respaldo tras un fallo técnico.
 
 Además, antes de activar Gemma se comprueba de nuevo, bajo el mismo bloqueo que la
-recarga de modelos, que el fallo que originó su descarga siga pendiente. Así un
+recarga de modelos, que Dolphin siga teniendo un fallo pendiente. Así un
 respaldo que estaba descargándose no sustituye a un Dolphin que acaba de recuperarse.
+Si Dolphin vuelve a fallar durante esa descarga, el mismo respaldo puede atender el
+nuevo fallo sin perder la solicitud que WorkManager agrupa con la anterior.
 
 Para una copia del repositorio descargada sin submódulos, antes de sincronizar Gradle:
 

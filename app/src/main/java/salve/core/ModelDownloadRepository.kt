@@ -25,6 +25,8 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
                 attempt = { id ->
                     val fallbackFailure = if (id == LocalModelPolicy.FALLBACK)
                         prefs.getString(LocalModelPolicy.FAILURE_KEY, null) else null
+                    if (id == LocalModelPolicy.FALLBACK && fallbackFailure.isNullOrBlank())
+                        throw LocalModelPolicy.SupersededFallbackException()
                     var ready: ModelDownloadEvent.Prepared? = null
                     downloader.downloadSelected(context, jsonBytes.inputStream(), id).collect { event ->
                         when (event) {

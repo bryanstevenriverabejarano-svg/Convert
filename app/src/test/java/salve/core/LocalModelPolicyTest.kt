@@ -83,10 +83,10 @@ class LocalModelPolicyTest {
             LocalModelPolicy.confirmRecovery({ throw IllegalStateException("broken native load") }, { fail("Not recovered") })
         }
     }
-    @Test fun oldFallbackCannotReplaceRecoveredDolphinOrNewFailure() {
+    @Test fun oldFallbackCannotReplaceRecoveredDolphinButCanServeANewRealFailure() {
         assertTrue(LocalModelPolicy.fallbackStillNeeded("failed A", "failed A"))
         assertFalse(LocalModelPolicy.fallbackStillNeeded("failed A", null))
-        assertFalse(LocalModelPolicy.fallbackStillNeeded("failed A", "failed B"))
+        assertTrue(LocalModelPolicy.fallbackStillNeeded("failed A", "failed B"))
         assertFalse(LocalModelPolicy.fallbackStillNeeded(null, null))
         assertFalse(LocalModelPolicy.fallbackStillNeeded("", ""))
     }

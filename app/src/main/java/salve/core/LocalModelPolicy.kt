@@ -10,7 +10,7 @@ object LocalModelPolicy {
     const val FALLBACK = "Gemma 4 E2B"
     const val FAILURE_KEY = "dolphin_failure"
     class SupersededFallbackException : IllegalStateException(
-        "El estado del modelo ha cambiado; se ha descartado el respaldo antiguo.")
+        "Dolphin ya no tiene un fallo pendiente; se ha descartado el respaldo antiguo.")
 
     @JvmStatic fun isDolphin(path: String?): Boolean = path != null &&
         java.io.File(path).name.startsWith("Dolphin3.0-Llama3.2-3B-") && path.endsWith(".gguf")
@@ -27,7 +27,9 @@ object LocalModelPolicy {
     }
 
     @JvmStatic fun fallbackStillNeeded(expectedFailure: String?, currentFailure: String?): Boolean =
-        !expectedFailure.isNullOrBlank() && expectedFailure == currentFailure
+        !expectedFailure.isNullOrBlank() && !currentFailure.isNullOrBlank()
+        // A newer genuine failure still needs Gemma. Rejecting it would lose the request
+        // coalesced by WorkManager KEEP while the earlier download was running.
 
     suspend fun <T> prepare(fallbackOnly: Boolean, primaryFailure: String?,
                             attempt: suspend (String) -> T,
