@@ -3,12 +3,19 @@
 > La arquitectura, los límites de autonomía y la hoja de ruta de evolución segura de
 > Salve se documentan en [GOBERNANZA_Y_EVOLUCION.md](GOBERNANZA_Y_EVOLUCION.md).
 
+## Modelo local principal
+
+Salve prioriza Dolphin 3.0 Llama 3.2 3B Q4_K_M (2,02 GB), con llama.cpp para
+Android. Gemma solo se prepara tras un fallo de Dolphin y se reutiliza si ya está
+descargado. Consulta [instalación, límites y pruebas](docs/dolphin-android.md).
+
 ## Preparar el Android SDK
 
 El proyecto compila con Android API 36. En Linux se puede instalar y configurar el
 SDK necesario de forma reproducible desde la raíz del repositorio:
 
 ```bash
+git submodule update --init --recursive
 ./scripts/setup-android-sdk.sh
 source ~/.config/convert/android-sdk-env.sh
 ./gradlew tasks
@@ -16,7 +23,7 @@ source ~/.config/convert/android-sdk-env.sh
 
 El instalador descarga las herramientas oficiales de línea de comandos, acepta las
 licencias e instala `platform-tools`, `platforms;android-36` y
-`build-tools;36.0.0`. También genera el archivo local (no versionado)
+`build-tools;36.0.0`, NDK `27.2.12479018` y CMake `3.22.1`. También genera el archivo local (no versionado)
 `local.properties` con `sdk.dir` y un archivo de entorno que define tanto
 `ANDROID_HOME` como `ANDROID_SDK_ROOT`.
 

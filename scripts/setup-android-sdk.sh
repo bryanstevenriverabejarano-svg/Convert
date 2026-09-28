@@ -44,7 +44,9 @@ yes | "$sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
 "$sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
     "platform-tools" \
     "platforms;android-36" \
-    "build-tools;36.0.0"
+    "build-tools;36.0.0" \
+    "ndk;27.2.12479018" \
+    "cmake;3.22.1"
 
 # Gradle admite barras normales incluso en local.properties y así no hay que escapar la ruta.
 escaped_sdk_dir="${ANDROID_SDK_ROOT//\\/\\\\}"

@@ -33,10 +33,11 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
             val jsonBytes = withContext(Dispatchers.IO) {
                 applicationContext.assets.open("config/models.json").use { it.readBytes() }
             }
-            ModelDownloadRepository().downloadAndPrepareModels(applicationContext, jsonBytes).collect { event ->
+            ModelDownloadRepository().downloadAndPrepareModels(applicationContext, jsonBytes, inputData.getBoolean(KEY_FALLBACK, false)).collect { event ->
                 when (event) {
                     is ModelDownloadEvent.Status -> updateProgress(event.percent, event.message)
                     is ModelDownloadEvent.Prepared -> {
+                        failure = null
                         ready = "${event.modelName} activo. Prueba de texto: ${event.latencyMillis} ms. Chat en modo local." +
                             if (event.supportsVision) " Visión declarada por el catálogo; pendiente de probar con una foto." else ""
                     }
@@ -92,8 +93,24 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         const val KEY_PROGRESS = "progress"
         const val KEY_MESSAGE = "message"
         const val KEY_STATUS = "status"
+        private const val KEY_FALLBACK = "fallback_only"
         private const val CHANNEL_ID = "model_download_channel"
         private const val NOTIFICATION_ID = 2001
+
+        /** Called after a real Dolphin inference failure; cached Gemma can be verified offline. */
+        @JvmStatic fun enqueueFallback(context: Context) {
+            val prefs = context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE)
+            if (prefs.getString(salve.core.LocalModelPolicy.FAILURE_KEY, null).isNullOrBlank()) return
+            val catalog = salve.core.ModelCatalog.read(context.assets.open("config/models.json"))
+            val entry = requireNotNull(catalog.findById(salve.core.LocalModelPolicy.FALLBACK))
+            val cached = java.io.File(salve.core.ModelStore.dir(context), entry.filename).isFile
+            val work = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
+                .setInputData(workDataOf(KEY_FALLBACK to true))
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(
+                    if (cached) NetworkType.NOT_REQUIRED else NetworkType.UNMETERED)
+                    .setRequiresStorageNotLow(true).build()).build()
+            WorkManager.getInstance(context).enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.KEEP, work)
+        }
 
         @JvmStatic @JvmOverloads
         fun enqueue(context: Context, allowMetered: Boolean = false) {

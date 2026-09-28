@@ -20,11 +20,21 @@ android {
 
     namespace 'com.salve.app'
     compileSdk 36
+    ndkVersion "27.2.12479018"
+    externalNativeBuild {
+        cmake {
+            path file("src/main/cpp/CMakeLists.txt")
+            version "3.22.1"
+        }
+    }
 
     defaultConfig {
         applicationId "com.salve.app"
         minSdk 26
         targetSdk 34
+        ndk { abiFilters "arm64-v8a", "x86_64" }
+        externalNativeBuild { cmake { arguments "-DANDROID_STL=c++_static" } }
+
         versionCode 1
         versionName "1.0"
 
