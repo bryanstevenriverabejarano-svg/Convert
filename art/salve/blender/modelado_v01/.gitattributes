@@ -1,0 +1,3 @@
+# Preserve delivered files byte-for-byte; retain original source whitespace.
+outputs/** -text -whitespace
+source_scripts/** -text -whitespace
