@@ -1,0 +1,317 @@
+{
+  "source": "Entrega local conservada sin cambios",
+  "source_base_commit": "7155ee8660da6a059506dfa269a5b1d47db61370",
+  "status": "VERSION_INICIAL_ESTILIZADA_NO_FINAL",
+  "files": [
+    {
+      "path": "outputs/expresiones/01_NEUTRAL.png",
+      "size": 437389,
+      "sha256": "dccdc7fb688e6cb539696970200e33c0f28b7045cd90b44172fe06d8d0abcfc2"
+    },
+    {
+      "path": "outputs/expresiones/02_WARM.png",
+      "size": 437581,
+      "sha256": "d2d77b30322b9e5bad5fb4c4b5f1ef8e7fb1edb30a18ac5d795cca57c80c5638"
+    },
+    {
+      "path": "outputs/expresiones/03_CURIOUS.png",
+      "size": 437373,
+      "sha256": "deeebaeb7791046b11e215e27a21c5734f33e4138cdcb21a1d41f50bd3417d64"
+    },
+    {
+      "path": "outputs/expresiones/04_CONCERNED.png",
+      "size": 437862,
+      "sha256": "8b4f9c7c5b73f78415fe465a77110d75c143596acb6ac728cfb7104f0d75fa18"
+    },
+    {
+      "path": "outputs/expresiones/05_SAD.png",
+      "size": 437726,
+      "sha256": "dd0e1994af4cecbaf66b0006bb8c1f3810379dc3db6e031a208462a12ba48ed3"
+    },
+    {
+      "path": "outputs/expresiones/06_ANGRY.png",
+      "size": 438269,
+      "sha256": "fd451d7e68689c304380b1e87bde850b1d97d762b28013828678d663fb5e3337"
+    },
+    {
+      "path": "outputs/expresiones/07_SURPRISED.png",
+      "size": 440133,
+      "sha256": "0b68094719db1bbbe4a7513ebbeb49c9bac47472bc08accfb106f94f46c5ed0c"
+    },
+    {
+      "path": "outputs/expresiones/08_SHY.png",
+      "size": 436926,
+      "sha256": "9e63987d511970164b94f10a518e8dd5dfe403b542163cde23c459703cbfbd2d"
+    },
+    {
+      "path": "outputs/expresiones/09_LAUGH.png",
+      "size": 431321,
+      "sha256": "ccc2026be709700c85572002ad134c13f43129eea16280cdcd511e733fe1f225"
+    },
+    {
+      "path": "outputs/expresiones/10_CRY.png",
+      "size": 442894,
+      "sha256": "179de8c2f1858a847bc2e86b9b7c1be7fcf9fba03e953adb1b1233ab61c2d0c2"
+    },
+    {
+      "path": "outputs/expresiones/11_STARTLE.png",
+      "size": 440041,
+      "sha256": "e42274acceb1630d9909b68124943b9caba4373d584210b316b2358e8e7ebeeb"
+    },
+    {
+      "path": "outputs/expresiones/12_THINK.png",
+      "size": 437700,
+      "sha256": "c0233cbd9c52fe0cb0c920ce4e2bdd2a3e406bab39da6e48db4ed723e0cd15da"
+    },
+    {
+      "path": "outputs/expresiones/13_WINK.png",
+      "size": 434003,
+      "sha256": "c7e284f6b7968e9635c6114879d330909af4570fc09ae9b83bc3246558137f98"
+    },
+    {
+      "path": "outputs/expresiones/14_A.png",
+      "size": 439775,
+      "sha256": "a8480a98d11f34aa5bc08169e24efc380b9bfd3c06eca31f2a228fe62d37e295"
+    },
+    {
+      "path": "outputs/expresiones/15_E.png",
+      "size": 439996,
+      "sha256": "705d4ab753b146786e441f377b498834c9a3ee72e0ec22354729bba235bb0f59"
+    },
+    {
+      "path": "outputs/expresiones/16_I.png",
+      "size": 439034,
+      "sha256": "4ee832c70a77230458cb8415a9531ed9240b71fcf821c2d6fa3feeeae1f2107f"
+    },
+    {
+      "path": "outputs/expresiones/17_O.png",
+      "size": 439555,
+      "sha256": "22b9a8c9d7fd96e02588e97d510ca3218401065218f73e6ca04d2a3a6c7a3203"
+    },
+    {
+      "path": "outputs/expresiones/18_U.png",
+      "size": 439258,
+      "sha256": "87234f74ee7609bb6ce7f311c2d8f2870e56a5ebb72396091754d3152ad90a2f"
+    },
+    {
+      "path": "outputs/expresiones/19_MBP.png",
+      "size": 437514,
+      "sha256": "c28b86635a5c82ab3b76c9366206b963493d16549cbf4efcf48d116539de2b48"
+    },
+    {
+      "path": "outputs/expresiones/20_SILENCE.png",
+      "size": 437389,
+      "sha256": "50a8e607d6c45b2585e6406c5ee3e236b66528810e9176f6e8dcf5f1c1f4051b"
+    },
+    {
+      "path": "outputs/expresiones_controles.json",
+      "size": 1374,
+      "sha256": "f2bf2006ab8a518f46698164a4c2e1d9b19480c23d64a3ce036b1f91459f831c"
+    },
+    {
+      "path": "outputs/LEEME_Salve_entrega.md",
+      "size": 5737,
+      "sha256": "aca130fb120230b705490e64c99db749757f2e5ad7c9380550a37b0f17c1ddfa"
+    },
+    {
+      "path": "outputs/Salve_20_vistas.png",
+      "size": 1404575,
+      "sha256": "4889e111048a37e2d17d9ec0f940a5f8aae3fa1aca88dcafd161ba3821507c86"
+    },
+    {
+      "path": "outputs/Salve_base_respaldo.blend",
+      "size": 29310731,
+      "sha256": "b4d975517d3162fde8561ca95a6d8c26ed396774c5ab586b0a23ab7c2a5150a9"
+    },
+    {
+      "path": "outputs/Salve_comparacion_20.png",
+      "size": 1496951,
+      "sha256": "63726751cd6790c67bf3b688b763160f876a331ef0b39e905a3f4b9e59e5bac7"
+    },
+    {
+      "path": "outputs/Salve_entrega_v01.zip",
+      "size": 96213607,
+      "sha256": "ce3c6af6ad097850da91817c52833668b8d1b4c26f8f69c8df2c079c6a55551a"
+    },
+    {
+      "path": "outputs/Salve_hoja_expresiones.png",
+      "size": 758114,
+      "sha256": "b5c444414fda3a22b6ce1766e97310ba758d04a47a4fb1f6c5b64fc994ef0f5f"
+    },
+    {
+      "path": "outputs/Salve_modelado_v01.blend",
+      "size": 36106449,
+      "sha256": "b08442d219fc6e4bc13ff26b8d56c463cfd738cdc7d5fd827b04437e84158033"
+    },
+    {
+      "path": "outputs/Salve_revision_de_fuentes.md",
+      "size": 4038,
+      "sha256": "0e53eb8f4164de85a117f327de920e91fdc2db2b14a790a5c65d33dae797313a"
+    },
+    {
+      "path": "outputs/Salve_validacion.json",
+      "size": 27547,
+      "sha256": "f52fe84db29a4ad3855031e221bc724c07d2a573edb087979b8fac243abd5b94"
+    },
+    {
+      "path": "outputs/SHA256SUMS.txt",
+      "size": 4627,
+      "sha256": "425e8bab202eae75754400a7d3292bf3ae5842777b1d1003d943e83af03ff1c5"
+    },
+    {
+      "path": "outputs/vistas_20/01_front.png",
+      "size": 915014,
+      "sha256": "2b8cfd61699d136aa11cde0baaf88afe196cf3e4618f01c0de1f9c23eba46751"
+    },
+    {
+      "path": "outputs/vistas_20/02_front_three_quarter.png",
+      "size": 928274,
+      "sha256": "a856271cc062d1b5b947ac764a5196674d0af81611668f63dff0afad7d87a5e9"
+    },
+    {
+      "path": "outputs/vistas_20/03_right.png",
+      "size": 885571,
+      "sha256": "f5636dfe7100cef939135a99f6068d503194552c9265d8dc9def4beb14309ad4"
+    },
+    {
+      "path": "outputs/vistas_20/04_rear_right.png",
+      "size": 925482,
+      "sha256": "c35bad5fc82a21fa120cda44048976a98bb30134eef27c6389bd1291c5a04fce"
+    },
+    {
+      "path": "outputs/vistas_20/05_rear.png",
+      "size": 899638,
+      "sha256": "1af00b371729f08d7c79284e5aa42bf66e86500482e8e9826529257305f4bdbc"
+    },
+    {
+      "path": "outputs/vistas_20/06_rear_three_quarter.png",
+      "size": 926098,
+      "sha256": "e677f23b7aa0592884472ffe462d04d979ad90b43cf32c57dc859269017ddcd9"
+    },
+    {
+      "path": "outputs/vistas_20/07_left.png",
+      "size": 879127,
+      "sha256": "aae06e229ab27658483dd59b3bf3c86b0f719408eda343c191375f713e8eea05"
+    },
+    {
+      "path": "outputs/vistas_20/08_front_opposite.png",
+      "size": 925230,
+      "sha256": "345161148feef588fc2663dbc571ab677ca84243778c8c89941507c9aac86bf1"
+    },
+    {
+      "path": "outputs/vistas_20/09_front_variant.png",
+      "size": 928089,
+      "sha256": "284f320809b294deb168eadcd9a390274d905ff556b3aeca583831352660ea5f"
+    },
+    {
+      "path": "outputs/vistas_20/10_above.png",
+      "size": 968717,
+      "sha256": "3d9edc8f0b1c295b67ec1512bf0064307a002406db603b28ea00fd53ae5330b3"
+    },
+    {
+      "path": "outputs/vistas_20/11_below.png",
+      "size": 920602,
+      "sha256": "2f84656fbdb17fa87d18bfdd5c288ae1fbc4829538bb2f32f9cc25386e107bde"
+    },
+    {
+      "path": "outputs/vistas_20/12_a_front.png",
+      "size": 928017,
+      "sha256": "31429c9d65b60e709f7e407827e946826210f91887b82e0180db6df57b47e520"
+    },
+    {
+      "path": "outputs/vistas_20/13_a_open_hair.png",
+      "size": 938236,
+      "sha256": "2282d1d618783aa317d9605e4ee80a47c52de56df5c0b2d015e9b779d53d9c5d"
+    },
+    {
+      "path": "outputs/vistas_20/14_a_rear.png",
+      "size": 910706,
+      "sha256": "d35d3d6f451b23e847642a5166683b8976ec9aa7a5ad5974b06612a101d48b99"
+    },
+    {
+      "path": "outputs/vistas_20/15_seated.png",
+      "size": 1038894,
+      "sha256": "23d1e1e8072a46edc1adacb4e49e64533f34989d952859c11af0941dad4498ca"
+    },
+    {
+      "path": "outputs/vistas_20/16_crouched.png",
+      "size": 1028407,
+      "sha256": "b51bc4c728ab8efe34988be3d113718c0d3baf0f311f97107429e021145e2475"
+    },
+    {
+      "path": "outputs/vistas_20/17_kneeling.png",
+      "size": 921509,
+      "sha256": "6909d5ab34d04e91ea17dfba2a9a00a1dc79d13e95a3ff2a5065e4233b3a3335"
+    },
+    {
+      "path": "outputs/vistas_20/18_kneeling_variant.png",
+      "size": 809590,
+      "sha256": "bb472e1edbd0ed90d770441268777a849875bdb3a5fe572984ea158a4d4b1755"
+    },
+    {
+      "path": "outputs/vistas_20/19_leaning.png",
+      "size": 939638,
+      "sha256": "766102ac21e3e2bff0f434aff568c8b56c2c414a4eeb86b58b63e19d570ca0c4"
+    },
+    {
+      "path": "outputs/vistas_20/20_leaning_variant.png",
+      "size": 983640,
+      "sha256": "8f8e22afb87073ada7dd4b75454781c8f422a29d0db0d4506eb2ace9118db6a5"
+    },
+    {
+      "path": "outputs/vistas_manifest.json",
+      "size": 5579,
+      "sha256": "1f8ec1124cf7aa98acb86a13b096d7afbe3870a0e7cd9d214795cf00fd420880"
+    },
+    {
+      "path": "source_scripts/artistic_refinement.py",
+      "size": 5876,
+      "sha256": "a043bd1e362e6c7762c74982efc499752e2905f6ec445bbaef0f44b76d4bde31"
+    },
+    {
+      "path": "source_scripts/build_salve.py",
+      "size": 24501,
+      "sha256": "2ccd46e797e7495de85f3e2d97b266abc40ae5e7d493fc51f1524834020064ee"
+    },
+    {
+      "path": "source_scripts/check_facial.py",
+      "size": 851,
+      "sha256": "47c6d4b870ab6e45bb56da9e2fb9844edb52b04a07188c792cef914fd7652529"
+    },
+    {
+      "path": "source_scripts/final_contacts.py",
+      "size": 776,
+      "sha256": "f01c39eacb3bcf9250d5f12783de9629092046cec26c6e6397f6864812f5864e"
+    },
+    {
+      "path": "source_scripts/final_validate.py",
+      "size": 4547,
+      "sha256": "01c696ce824c5178dec1f71e11539e360c3d7c7c55108509f9a19511c7bd6865"
+    },
+    {
+      "path": "source_scripts/package_salve.py",
+      "size": 2604,
+      "sha256": "1c3c286fc84b2b03ce518715a484753994959cb58cca6802ece97505464197de"
+    },
+    {
+      "path": "source_scripts/poses_and_validation.py",
+      "size": 6153,
+      "sha256": "4d808dae2153631c329209dd4e5b58d8cd763ed6b8e1c57ad467b854f95da09c"
+    },
+    {
+      "path": "source_scripts/refine_salve.py",
+      "size": 7146,
+      "sha256": "937a1a9bc81a2475793846a10a0edab23c12b6dcc44963a746adaab8bf19b7b7"
+    },
+    {
+      "path": "source_scripts/render_salve.py",
+      "size": 3768,
+      "sha256": "6a8538fd572c0deeda9fe9ee598b04bca1ff6536f0bd73d244fd7da8215cfc68"
+    },
+    {
+      "path": "source_scripts/repair_shape_keys.py",
+      "size": 2152,
+      "sha256": "b98a3c1dcf5fd216a800bbfad214bb1e2d4398220d3c6de831ffa746d67f554b"
+    }
+  ]
+}
