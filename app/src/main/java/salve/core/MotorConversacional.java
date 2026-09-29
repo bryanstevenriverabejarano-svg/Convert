@@ -668,6 +668,11 @@ public class MotorConversacional {
         String inputLower = entrada.toLowerCase(Locale.ROOT);
         AvatarMotionProtocol.Result gestureCommand = avatarSession == null ? null : AvatarMotionProtocol.parseCommand(entrada);
         if (gestureCommand != null) {
+            if (gestureCommand.body.requiresCoreArtwork() && !"core".equals(
+                    salve.avatar.AvatarWardrobeStore.get(context).selected().template)) {
+                hablar("Esta postura está disponible con el traje Núcleo. Puedes seleccionarlo en mi habitación.");
+                return;
+            }
             hablarPreparado(gestureCommand.text, gestureCommand);
             return;
         }

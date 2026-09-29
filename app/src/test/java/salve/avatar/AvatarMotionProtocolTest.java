@@ -27,7 +27,7 @@ public final class AvatarMotionProtocolTest {
         assertEquals("Hola amigo.", result.text);
     }
     @Test public void incompleteAndInvalidReservedFragmentsNeverReachSpeech() {
-        String[] fragments = {"[[salve_motion:DELETE_ALL:WARM]]", "[[salve_motion:WAVE:SAD]]",
+        String[] fragments = {"[[salve_motion:DELETE_ALL:WARM]]", "[[salve_motion:WAVE:UNKNOWN]]",
                 "[[salve_motion:WAVE:WARM", "[salve_motion:WAVE:WARM]", "[[SALVE_MOTION:NOD:NEUTRAL]]",
                 "[[ salve-motion:WAVE:WARM]]", "[[salve_motion:" + new String(new char[1000]).replace('\0', 'x')};
         for (String fragment : fragments) {

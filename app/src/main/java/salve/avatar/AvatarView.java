@@ -15,6 +15,7 @@ public final class AvatarView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final IllustratedAvatarRenderer portrait;
     private final IllustratedBedRenderer bed;
+    private final CorePoseRenderer poses;
     private final AvatarMotionController motion = AvatarMotionController.get();
     private final AvatarStore store;
     private final AvatarWardrobeStore wardrobe;
@@ -24,7 +25,7 @@ public final class AvatarView extends View {
     private boolean overlay, animationEnabled = true, attached;
     private Runnable frameListener;
     private float phase;
-    private final Runnable changed = () -> { updateDescription(); invalidate(); };
+    private final Runnable changed = () -> { normalizePoseForWardrobe(); updateDescription(); invalidate(); };
     private final Runnable frame = new Runnable() {
         @Override public void run() {
             if (!attached || !animationEnabled || !isShown() || getWindowVisibility() != VISIBLE) return;
@@ -46,6 +47,7 @@ public final class AvatarView extends View {
         wardrobe = AvatarWardrobeStore.get(context);
         portrait = new IllustratedAvatarRenderer(context);
         bed = new IllustratedBedRenderer(context);
+        poses = new CorePoseRenderer(context, changed);
         stageGestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent event) { return true; }
             @Override public boolean onDoubleTap(MotionEvent event) { performClick(); return true; }
@@ -66,11 +68,11 @@ public final class AvatarView extends View {
     }
     @Override protected void onAttachedToWindow() {
         super.onAttachedToWindow(); attached = true; store.addListener(changed); motion.addListener(changed);
-        wardrobe.addListener(changed);portrait.addListener(changed);restartFrames();
+        wardrobe.addListener(changed);portrait.addListener(changed);poses.attach();restartFrames();
     }
     @Override protected void onDetachedFromWindow() {
         attached = false; removeCallbacks(frame); store.removeListener(changed); motion.removeListener(changed);
-        wardrobe.removeListener(changed);portrait.removeListener(changed);store.save();
+        wardrobe.removeListener(changed);portrait.removeListener(changed);poses.detach();store.save();
         super.onDetachedFromWindow();
     }
     @Override protected void onVisibilityChanged(View changedView, int visibility) {
@@ -81,10 +83,13 @@ public final class AvatarView extends View {
     }
     private void updateDescription() {
         AvatarState s = store.state();
-        setContentDescription("Salve, " + (s.getPose() == AvatarState.Pose.SLEEPING ? "dormida en su cama"
-                : s.getPose() == AvatarState.Pose.WALKING ? "caminando" : "despierta")
+        setContentDescription("Salve, " + AvatarBodyCue.label(s.getPose())
                 + (immersive ? ". Doble toque para conversar; mantén pulsado para opciones. " : ", avatar ilustrado. ")
                 + (motion.snapshot().speaking ? "Hablando." : motion.snapshot().listening ? "Escuchando." : ""));
+    }
+    private void normalizePoseForWardrobe() {
+        if (wardrobe != null && store != null && AvatarBodyCue.referenceFor(store.state().getPose()) != null
+                && !"core".equals(wardrobe.selected().template)) store.change(AvatarState::wake);
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
         if (overlay) return super.onTouchEvent(event);
@@ -172,7 +177,18 @@ public final class AvatarView extends View {
     }
 
     private void drawPortrait(Canvas canvas, AvatarMotion.Snapshot expression, float height, float stride, boolean sleeping) {
+        AvatarState.Pose body = store.state().getPose();
+        String id = sleeping ? null : AvatarBodyCue.referenceFor(body);
+        // These original pose views belong to the core suit only. Never silently change clothing.
+        if (!"core".equals(wardrobe.selected().template)) id = null;
+        poses.select(id);
+        if (id != null && poses.draw(canvas, id, expression, height)) return;
         canvas.save();
+        if (!sleeping && AvatarBodyCue.isDance(body)) {
+            float tempo = body == AvatarState.Pose.DANCE_POP ? 5.8f : 3.6f;
+            canvas.rotate((float)Math.sin(phase * tempo) * 2.3f, 0, -height * .42f);
+            stride = (float)Math.sin(phase * tempo) * .6f;
+        }
         canvas.translate(-height / 3f, -height);
         canvas.scale(height / 1536f, height / 1536f);
         portrait.draw(canvas, expression, stride, sleeping);

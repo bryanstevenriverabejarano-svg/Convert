@@ -2,7 +2,7 @@ package salve.avatar;
 
 /** Deterministic visual state. No model output, Android APIs, permissions or executable code. */
 public final class AvatarState {
-    public enum Pose { IDLE, WALKING, SLEEPING }
+    public enum Pose { IDLE, WALKING, SLEEPING, SEATED, KNEELING, CROUCHED, DANCE_POP, DANCE_URBAN }
     public enum Outfit { DAY, PAJAMAS }
     public enum Pattern { PLAIN, STARS, STRIPES }
     public static final float BED_X = .70f;
@@ -47,6 +47,12 @@ public final class AvatarState {
         return true;
     }
     public void wake() { pose = Pose.IDLE; targetX = x; sleepAfterWalk = false; }
+    /** Holds a supported illustrated pose; only walkTo/sleep may start navigation. */
+    public void pose(Pose value) {
+        if (value == null || value == Pose.WALKING || value == Pose.SLEEPING)
+            throw new IllegalArgumentException("Use walkTo or sleep for navigation");
+        wake(); pose = value;
+    }
     public void moveByUser(float horizontal, float vertical) {
         wake();
         x = targetX = clamp(horizontal, x);
@@ -97,7 +103,7 @@ public final class AvatarState {
                 if (result.bed) result.x = result.targetX = BED_X;
                 else result.wake();
             }
-            if (pose == Pose.IDLE) result.targetX = result.x;
+            if (pose != Pose.WALKING) result.targetX = result.x;
             return result;
         } catch (IllegalArgumentException ignored) { return new AvatarState(); }
     }
