@@ -1,0 +1,13 @@
+Herramienta: image_gen integrada. Referencia: ../references/front.png
+Estado: propuesta artística para modelado; no es un render de una malla 3D.
+
+Use case: identity-preserve.
+Asset type: technical facial expression reference plate for Salve, a fictional adult sci-fi android woman.
+Input image 1 is the canonical character identity reference. Preserve her exact recognizable face proportions, blue eyes, white long hair, black/blue technological horn-headphones, and black high collar. Do not redesign her head, accessories or clothing. No torso beyond collar and upper shoulders.
+Create one clean high resolution landscape 4 by 4 grid with sixteen uniform square head-and-shoulder portraits, all fully inside their own cell, generous gutters, white background, soft even studio light, same scale and mostly front-facing camera. Polished anime semi-realistic rendering matching the reference. No extra characters, no full bodies.
+Row 1 left to right: neutral closed mouth; warm enthusiastic smile; laughing with naturally open smiling mouth; sadness with lowered inner brows/melancholy.
+Row 2: tearful concern with subtle tears; surprised with wide eyes and rounded O mouth; determined anger with brows furrowed; curious/confused with subtle head tilt.
+Row 3: thinking with gaze upwards, one fingertip at chin; shy with lowered gaze and subtle blush; playful wink with a small smile; vowel A mouth open vertically, neutral brows.
+Row 4: vowel E mouth moderately open and spread; vowel I mouth wide horizontally slightly parted; vowel O clearly rounded lips; vowel U lips narrowly pursed forward.
+Small clear typographic labels under portraits, in this exact order: NEUTRA, SONRISA, RISA, TRISTEZA, PREOCUPACION, SORPRESA, ENOJO, CONFUSION, PENSATIVA, TIMIDEZ, GUINO, A, E, I, O, U.
+This is an artistic reference sheet, not a claim of a finished 3D mesh or rig. Do not draw bones or wireframes. Keep skull, nose, ear equipment and haircut consistent across every portrait.

@@ -1,0 +1,26 @@
+{
+  "commit": "1ccd26e276925b95ec6f5becd7d53070e1c5498e",
+  "verified": [
+    "front",
+    "front_three_quarter",
+    "right",
+    "rear_right",
+    "rear",
+    "rear_three_quarter",
+    "left",
+    "front_opposite",
+    "front_variant",
+    "above",
+    "below",
+    "a_front",
+    "a_open_hair",
+    "a_rear",
+    "seated",
+    "crouched",
+    "kneeling",
+    "kneeling_variant",
+    "leaning",
+    "leaning_variant"
+  ],
+  "count": 20
+}
