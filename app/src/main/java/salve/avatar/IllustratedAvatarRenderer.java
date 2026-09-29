@@ -146,8 +146,10 @@ public final class IllustratedAvatarRenderer {
         float gazeX = asleep ? 0 : pose.gazeX, gazeY = asleep ? 0 : pose.gazeY;
         if (!asleep && pose.expression == AvatarMotion.Expression.CURIOUS) {
             tilt += 1.5f; gazeX += .1f;
-        } else if (!asleep && pose.expression == AvatarMotion.Expression.CONCERNED) {
+        } else if (!asleep && (pose.expression == AvatarMotion.Expression.CONCERNED || pose.expression == AvatarMotion.Expression.SAD)) {
             tilt -= 1.2f; gazeY += .2f; blink = Math.max(blink, .10f);
+        } else if (!asleep && pose.expression == AvatarMotion.Expression.ANGRY) {
+            pitch += 2; blink = Math.max(blink, .18f);
         }
         canvas.save();
         canvas.rotate(asleep ? 0 : AvatarRig.limit(pose.bodyTilt, -3, 3), r.bodyPivot[0], r.bodyPivot[1]);
@@ -160,9 +162,12 @@ public final class IllustratedAvatarRenderer {
             r.frame(tilt,yaw,pitch,blink,gazeX,gazeY,pose.breath,armL,armR,step,kneeL,kneeR).fillVertices(vertices);
             canvas.drawBitmapMesh(texture,r.columns,r.rows,vertices,0,null,0,paint);
         }
-        boolean speakingMouth = !asleep && pose.speaking && pose.mouthOpen > .04f;
+        boolean speakingMouth = !asleep && (pose.speaking || pose.gesture == AvatarMotion.Gesture.LAUGH) && pose.mouthOpen > .04f;
         boolean smile = !asleep && !speakingMouth && pose.expression == AvatarMotion.Expression.WARM;
-        if (speakingMouth || smile) {
+        boolean emotion = !asleep && (pose.expression == AvatarMotion.Expression.SAD
+                || pose.expression == AvatarMotion.Expression.ANGRY || pose.expression == AvatarMotion.Expression.SHY
+                || pose.expression == AvatarMotion.Expression.SURPRISED);
+        if (speakingMouth || smile || emotion) {
             float mx=r.mouth[0], my=r.mouth[1];
             faceFrom[0]=mx-27; faceFrom[1]=my-20; faceFrom[2]=mx+33; faceFrom[3]=my-20; faceFrom[4]=mx-27; faceFrom[5]=my+20;
             mouthSample.set((int)mx-12,(int)my-15,(int)mx+13,(int)my-7);
@@ -172,10 +177,29 @@ public final class IllustratedAvatarRenderer {
             face.setPolyToPoly(faceFrom, 0, faceTo, 0, 3);
             canvas.save(); canvas.concat(face);
             if (speakingMouth) drawMouth(canvas, AvatarRig.limit(pose.mouthOpen, 0, 1), artwork);
-            else drawSmile(canvas, artwork);
+            else if (smile) drawSmile(canvas, artwork);
+            else if (pose.expression == AvatarMotion.Expression.SURPRISED) drawMouth(canvas, .7f, artwork);
+            if (emotion) drawEmotion(canvas, artwork, pose.expression);
             canvas.restore();
         }
         canvas.restore();
+    }
+    private void drawEmotion(Canvas canvas, Artwork artwork, AvatarMotion.Expression expression) {
+        AvatarRig r = artwork.rig;
+        for (float[] eye : new float[][] {r.leftEye, r.rightEye}) {
+            if (expression == AvatarMotion.Expression.SAD) {
+                paint.setColor(0xB58CCEFF);
+                canvas.drawOval(eye[0]-3, eye[1]+12, eye[0]+3, eye[1]+29, paint);
+            } else if (expression == AvatarMotion.Expression.SHY) {
+                paint.setColor(0x48ED98AB);
+                canvas.drawOval(eye[0]-14, eye[1]+18, eye[0]+14, eye[1]+27, paint);
+            } else if (expression == AvatarMotion.Expression.ANGRY) {
+                float side = eye == r.leftEye ? 1 : -1;
+                paint.setColor(0xB78C818D); paint.setStrokeWidth(2);
+                canvas.drawLine(eye[0]-13*side,eye[1]-17,eye[0]+12*side,eye[1]-11,paint);
+            }
+        }
+        paint.setColor(Color.WHITE);
     }
     private void drawMouth(Canvas canvas, float open, Artwork artwork) {
         // Only replace the tiny closed-mouth line during speech; eyes, nose and face stay textured.

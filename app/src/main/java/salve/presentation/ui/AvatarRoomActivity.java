@@ -21,6 +21,7 @@ import android.widget.ArrayAdapter;
 import android.text.InputFilter;
 import java.util.List;
 import salve.avatar.AvatarState;
+import salve.avatar.AvatarBodyCue;
 import salve.avatar.AvatarStore;
 import salve.avatar.AvatarView;
 import salve.avatar.AvatarMotion;
@@ -71,6 +72,14 @@ public final class AvatarRoomActivity extends Activity {
                 "Asentir", () -> preview(AvatarMotion.Gesture.NOD, AvatarMotion.Expression.WARM));
         row(root, "Explicar", () -> preview(AvatarMotion.Gesture.EXPLAIN, AvatarMotion.Expression.NEUTRAL),
                 "Negar", () -> preview(AvatarMotion.Gesture.SHAKE, AvatarMotion.Expression.NEUTRAL));
+        row(root, "Reír", () -> preview(AvatarMotion.Gesture.LAUGH, AvatarMotion.Expression.WARM),
+                "Tristeza", () -> preview(AvatarMotion.Gesture.CRY, AvatarMotion.Expression.SAD));
+        row(root, "Enfado", () -> preview(AvatarMotion.Gesture.NONE, AvatarMotion.Expression.ANGRY),
+                "Sorpresa", () -> preview(AvatarMotion.Gesture.STARTLE, AvatarMotion.Expression.SURPRISED));
+        row(root, "Sentarse", () -> body(AvatarBodyCue.SIT), "De rodillas", () -> body(AvatarBodyCue.KNEEL));
+        row(root, "Cuclillas", () -> body(AvatarBodyCue.CROUCH), "De pie", () -> body(AvatarBodyCue.STAND));
+        row(root, "Baile pop", () -> body(AvatarBodyCue.DANCE_POP), "Baile urbano", () -> body(AvatarBodyCue.DANCE_URBAN));
+        root.addView(label("Las posturas usan las vistas del traje Núcleo. El baile es un movimiento suave de la ilustración; el modelo 3D todavía está pendiente.", 14, 0xFFB3C5D1));
         row(root, "Caminar", () -> store.change(s -> s.walkTo(s.getX() > .5f ? .08f : .92f)),
                 "Detenerse", () -> store.change(AvatarState::wake));
         row(root, "Crear cama", () -> store.change(AvatarState::createBed), "Acostarse", () -> {
@@ -109,6 +118,12 @@ public final class AvatarRoomActivity extends Activity {
     private void preview(AvatarMotion.Gesture gesture, AvatarMotion.Expression expression) {
         if (store.state().getPose() == AvatarState.Pose.SLEEPING) store.change(AvatarState::wake);
         AvatarMotionController.get().previewGesture(gesture, expression);
+    }
+    private void body(AvatarBodyCue cue) {
+        if (cue.requiresCoreArtwork() && !"core".equals(wardrobe.selected().template)) {
+            toast("Esta postura está disponible con el traje Núcleo."); return;
+        }
+        AvatarMotionController.get().previewBody(cue);
     }
     private void movementFeedback(MotionPreferenceProfile.Feedback feedback) {
         AvatarMotionController.get().recordFeedback(this, feedback);
@@ -210,8 +225,7 @@ public final class AvatarRoomActivity extends Activity {
     private void updateStatus() {
         if (status == null) return;
         AvatarState s = store.state();
-        status.setText((s.getPose() == AvatarState.Pose.SLEEPING ? "Descansando en la cama"
-                : s.isGoingToSleep() ? "Caminando hacia la cama" : s.getPose() == AvatarState.Pose.WALKING ? "Caminando" : "Despierta")
+        status.setText((s.isGoingToSleep() ? "Caminando hacia la cama" : AvatarBodyCue.label(s.getPose()))
                 + " · " + wardrobe.selected().name
                 + " · " + (s.hasBed() ? "Cama creada" : "Sin cama"));
         if (motionStatus != null) motionStatus.setText(MotionPreferenceStore.get(this).profile().description());

@@ -24,6 +24,9 @@ public final class AvatarMotionController {
     private volatile Session current;
     private volatile AvatarMotion.Snapshot snapshot = motion.snapshot();
     private long lastFrame;
+    private AvatarStore bodyStore;
+    private AvatarWardrobeStore bodyWardrobe;
+    private long appliedBodyCue;
     private AvatarMotionController() { }
     public static AvatarMotionController get() { return INSTANCE; }
 
@@ -54,10 +57,15 @@ public final class AvatarMotionController {
     public void previewGesture(AvatarMotion.Gesture gesture, AvatarMotion.Expression expression) {
         onMain(() -> { advanceClock(SystemClock.uptimeMillis()); motion.previewGesture(gesture, expression); publish(); });
     }
+    public void previewBody(AvatarBodyCue body) {
+        onMain(() -> { motion.previewBody(body); publish(); });
+    }
     /** Uses the application context only; room and conversation share the same persisted preference. */
     public void initializePreferences(Context context) {
         MotionPreferenceStore store = MotionPreferenceStore.get(context);
-        onMain(() -> { advanceClock(SystemClock.uptimeMillis()); motion.setPreferences(store.profile()); publish(); });
+        AvatarStore poses = AvatarStore.get(context);
+        AvatarWardrobeStore wardrobe = AvatarWardrobeStore.get(context);
+        onMain(() -> { bodyStore = poses; bodyWardrobe = wardrobe; advanceClock(SystemClock.uptimeMillis()); motion.setPreferences(store.profile()); publish(); });
     }
     /** Feedback is an explicit UI action, not something inferred from a model's conversation. */
     public void recordFeedback(Context context, MotionPreferenceProfile.Feedback feedback) {
@@ -102,6 +110,15 @@ public final class AvatarMotionController {
     }
     private void publish() {
         snapshot = motion.snapshot();
+        // The motion state accepts session/turn ownership before exposing a new body cue.
+        // Speech start/end never calls this path with a new cue, so talking cannot reset posture.
+        if (bodyStore != null && appliedBodyCue != snapshot.bodyCueSerial) {
+            appliedBodyCue = snapshot.bodyCueSerial;
+            AvatarBodyCue cue = snapshot.bodyCue;
+            if (cue != AvatarBodyCue.KEEP && (!cue.requiresCoreArtwork()
+                    || bodyWardrobe != null && "core".equals(bodyWardrobe.selected().template)))
+                bodyStore.change(cue::apply);
+        }
         for (Runnable listener : new ArrayList<>(listeners)) listener.run();
     }
     private void onMain(Runnable action) {

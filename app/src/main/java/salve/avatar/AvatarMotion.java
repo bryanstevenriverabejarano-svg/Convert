@@ -2,19 +2,22 @@ package salve.avatar;
 
 /** Transient, deterministic visual state. Call from one thread; no Android, storage, audio or model. */
 public final class AvatarMotion {
-    public enum Gesture { NONE, WAVE, NOD, SHAKE, EXPLAIN, THINK, CELEBRATE }
-    public enum Expression { NEUTRAL, WARM, CURIOUS, CONCERNED }
+    public enum Gesture { NONE, WAVE, NOD, SHAKE, EXPLAIN, THINK, CELEBRATE, LAUGH, CRY, STARTLE }
+    public enum Expression { NEUTRAL, WARM, CURIOUS, CONCERNED, SAD, ANGRY, SURPRISED, SHY }
 
     /** Angles in degrees; arms name screen sides. Positive is clockwise, negative counterclockwise.
      * Both arms stay within 25 degrees to preserve the supplied flat illustration. */
     public static final class Snapshot {
         public final Gesture gesture;
         public final Expression expression;
+        public final AvatarBodyCue bodyCue;
+        public final long bodyCueSerial;
         public final boolean listening, thinking, speaking;
         public final float blink, gazeX, gazeY, headTilt, headYaw, headPitch, bodyTilt;
         public final float leftArm, rightArm, leftKnee, rightKnee, mouthOpen, breath;
         private Snapshot(AvatarMotion m) {
             gesture = m.gesture; expression = m.expression;
+            bodyCue = m.bodyCue; bodyCueSerial = m.bodyCueSerial;
             listening = m.listening; thinking = m.thinking; speaking = m.speaking;
             blink = bounded(m.blink, 0, 1); gazeX = bounded(m.gazeX, -1, 1); gazeY = bounded(m.gazeY, -1, 1);
             headTilt = bounded(m.headTilt, -12, 12); headYaw = bounded(m.headYaw, -14, 14);
@@ -34,6 +37,8 @@ public final class AvatarMotion {
     private Gesture gesture = Gesture.NONE;
     private Expression expression = Expression.NEUTRAL;
     private AvatarMotionProtocol.Result fallback;
+    private AvatarBodyCue bodyCue = AvatarBodyCue.KEEP;
+    private long bodyCueSerial;
     private float blink, gazeX, gazeY, headTilt, headYaw, headPitch, bodyTilt;
     private float leftArm, rightArm, leftKnee, rightKnee, mouthOpen, breath;
 
@@ -65,7 +70,10 @@ public final class AvatarMotion {
         responseCue = false;
         AvatarMotionProtocol.Result chosen = result.hasDirective ? result : fallback;
         if (chosen == null) setGesture(Gesture.NONE, Expression.NEUTRAL);
-        else setGesture(chosen.gesture, chosen.expression);
+        else {
+            setGesture(chosen.gesture, chosen.expression);
+            previewBody(chosen.body);
+        }
     }
     public void clarification(long session, long id) {
         if (validTurn(session, id)) { thinking = false; responseCue = true; setGesture(Gesture.NONE, Expression.CURIOUS); }
@@ -79,6 +87,10 @@ public final class AvatarMotion {
     public void previewGesture(Gesture value, Expression face) {
         if (value == null || face == null) return;
         enabled = true; setGesture(value, face);
+    }
+    public void previewBody(AvatarBodyCue value) {
+        if (value == null || value == AvatarBodyCue.KEEP) return;
+        bodyCue = value; bodyCueSerial++;
     }
     /** Changes gesture comfort only; the audio clock, turn ownership and expiry remain untouched. */
     public void setPreferences(MotionPreferenceProfile profile) {
@@ -124,6 +136,10 @@ public final class AvatarMotion {
             case THINK: targetRight = -11; targetTilt = 6; break;
             case CELEBRATE: targetLeft = 21; targetRight = -21; targetBody = (float)Math.sin(gesturePhase * 6f) * 3;
                 targetKnee = (1 + (float)Math.sin(gesturePhase * 8f)) * .12f; break;
+            case LAUGH: targetPitch = -3; targetBody = (float)Math.sin(gesturePhase * 14f) * 1.5f;
+                targetRight = -8; break;
+            case CRY: targetPitch = 6; targetTilt = -3; targetRight = -7; break;
+            case STARTLE: targetPitch = -7; targetLeft = 12; targetRight = -12; break;
             default: break;
         }
         float blend = 1f - (float)Math.exp(-dt * 13f);
@@ -136,14 +152,16 @@ public final class AvatarMotion {
         leftArm = approach(leftArm, targetLeft * gestureStrength, gestureBlend); rightArm = approach(rightArm, targetRight * gestureStrength, gestureBlend);
         leftKnee = approach(leftKnee, targetKnee * gestureStrength, gestureBlend); rightKnee = approach(rightKnee, targetKnee * gestureStrength, gestureBlend);
         gazeX = approach(gazeX, thinking ? .24f : listening ? 0f : (float)Math.sin(age * .4f) * .09f, blend);
-        gazeY = approach(gazeY, thinking ? -.25f : 0f, blend);
+        gazeY = approach(gazeY, thinking ? -.25f : expression == Expression.SHY || expression == Expression.SAD ? .22f : 0f, blend);
         float blinkPhase = age % 4.2f;
         blink = blinkPhase > 4.04f ? Math.max(0, 1 - Math.abs(blinkPhase - 4.12f) / .08f) : 0;
+        if (gesture == Gesture.LAUGH) blink = Math.max(blink, .45f * strength);
         breath = .5f + (float)Math.sin(age * 1.7f) * .5f;
         rangePulse = Math.max(0, rangePulse - dt * 3f);
         // Timing-based mouth motion; never claim phoneme-accurate lip sync without audio features.
         float targetMouth = speaking ? .12f + Math.abs((float)Math.sin(age * 15f)) * .48f + rangePulse * .25f : 0;
-        mouthOpen = speaking ? approach(mouthOpen, targetMouth, blend) : 0;
+        if (!speaking && gesture == Gesture.LAUGH) targetMouth = (.25f + .25f * Math.abs((float)Math.sin(gesturePhase * 12f))) * strength;
+        mouthOpen = speaking || gesture == Gesture.LAUGH ? approach(mouthOpen, targetMouth, blend) : 0;
     }
 
     private boolean owns(long session) { return ownerOpen && session > 0 && owner == session; }
@@ -158,13 +176,16 @@ public final class AvatarMotion {
     private void reset() {
         acceptsTurn = false; listening = false; thinking = false; responseCue = false; fallback = null; stopAudio();
         gesture = Gesture.NONE; expression = Expression.NEUTRAL;
+        bodyCue = AvatarBodyCue.KEEP;
         headTilt = headYaw = headPitch = bodyTilt = leftArm = rightArm = leftKnee = rightKnee = blink = gazeX = gazeY = 0;
         breath = .5f;
     }
     private static float duration(Gesture value) {
         switch (value) {
             case WAVE: return 2.3f; case NOD: case SHAKE: return 1.5f; case EXPLAIN: return 3f;
-            case THINK: return 3.5f; case CELEBRATE: return 2.5f; default: return 0;
+            case THINK: return 3.5f; case CELEBRATE: return 2.5f;
+            case LAUGH: return 3f; case CRY: return 4f; case STARTLE: return 1.2f;
+            default: return 0;
         }
     }
     private static float approach(float current, float target, float blend) { return current + (target - current) * blend; }
