@@ -1,0 +1,11 @@
+{
+  "blender": "5.2.2 LTS",
+  "reference_images": 20,
+  "packed_images": 21,
+  "bones": 92,
+  "calibration_poses": 6,
+  "character_meshes": 0,
+  "shape_keys": 0,
+  "physics": false,
+  "status": "reference_and_skeleton_scaffold"
+}
