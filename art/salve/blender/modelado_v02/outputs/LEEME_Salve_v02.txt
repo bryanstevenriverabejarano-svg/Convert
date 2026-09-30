@@ -1,0 +1,34 @@
+SALVE V02 - AVANCE EN REVISION
+30 de septiembre de 2026. Blender 5.2.2 LTS.
+
+La definicion de completado NO se cumple todavia. No se declara identidad exacta ni preparacion final de produccion.
+
+ABRIR
+Salve_refinado_v02.blend. Escena 04_SALVE_MODELO_3D.
+Las escenas 01-03 y la coleccion 90_Base_v01_oculta conservan bases de trabajo.
+La entrega se guarda en una ruta nueva; originales intactos.
+
+CONTROLES
+Salve_Rig tiene propiedades faciales mezclables y controles IK opcionales con snap por pose.
+Fotogramas: stand1, trescuartos11, opuesto21, A31, variante41, cabelloabierto61, sentada91, cuclillas121, rodillas151, variante161, inclinada171, variante181.
+Expresiones desde201 cada10 fotogramas; THINK311 y CONFUSED401.
+Las propiedades estan animadas: editar o retirar sus claves si se quiere cambiar manualmente el control.
+Los correctivos capilares son estaticos por fotograma, no simulacion ni animacion dinamica.
+
+ARCHIVOS
+vistas_20/: 19 PNG 1024x1536 y kneeling_variant1374x1145, RGBA con transparencia.
+expresiones/: PNG faciales y visemas.
+texturas/: atlas baseColor/roughness/metallic y validacion. Iris512 empaquetado.
+comparaciones/: referencia y render para cada ID.
+Salve_informe_v02.html y Salve_validacion_v02.json: resultados y diferencias.
+Salve_integracion_v02/: contrato Java, patch y fuentes de revision.
+Salve_paquete_recursos_v02/: staging de recursos; incorporacion al producto no realizada.
+
+PENDIENTES
+Fidelidad canonica de rostro, peinado, anatomia, botas, paneles y poses; revisar todas las diferencias indicadas.
+Retopologia facial y uniones anatomicas soldadas, densidad UV, pintura final y deformaciones extremas.
+Validacion completa de intersecciones y contactos, especialmente dentro de volumen cerrado.
+Compilacion Android y 21 pruebas dirigidas: superadas en copia del proyecto. Prueba visual en dispositivo y aprobacion artistica pendientes antes de sustitucion de recursos.
+
+LIMPIEZA FACIAL RECHAZADA, NO APLICADA
+El guard de conservacion visual fallo en SURPRISED (fotograma 261): 0.0102996826 px supera el limite 0.01 px. Se restauro la malla original; el rostro entregado sigue intacto y conserva 256 vertices aislados y UV pendientes. No se guardo el candidato ni se sustituyeron renders. La medicion parcial no acredita los 33 fotogramas ni las 41 camaras; solo existe control neutral anterior. face_cleanup_visual_conservation_v02.py es la fuente del intento rechazado, no un paso aplicado.

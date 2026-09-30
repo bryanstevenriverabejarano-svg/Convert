@@ -1,0 +1,611 @@
+{
+  "sourceCommit": "18f999ab76e1256485b750af5a215dd84fde3da9",
+  "status": "candidate_not_integrated",
+  "originalsModified": false,
+  "dimensionsAndTransparencyPass": true,
+  "landmarksComplete": true,
+  "productionReady": false,
+  "visualIdentityVerified": false,
+  "views": [
+    {
+      "id": "front",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        169,
+        61,
+        843,
+        1475
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": true,
+      "landmarkOcclusionCheck": "passed"
+    },
+    {
+      "id": "front_three_quarter",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        195,
+        19,
+        795,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "5839ca7dd914083847067b89f46e670ee351fcc4af292dc8384ecc77aaab2456",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "right",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        413,
+        19,
+        764,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "e9bbe9eea1d6b9fa64c16a2dfbc6fa08a9e20ccfff1509809311e2f1875bbead",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "rear_right",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        295,
+        55,
+        821,
+        1479
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "a1415f432e48628bd12e3d84feb7aed42959b2f1c7fdd3f6b77b3ae114b4b39e",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "rear",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        155,
+        33,
+        856,
+        1503
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "5ee3594712520c928d6df6e5a92ef9ca55f4bcd47bbd87e8011be946564e480e",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "rear_three_quarter",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        200,
+        19,
+        754,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "59a4f5b337c400f513ae3aaca3f81a205c097515254f396bd13510f000b6498b",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "left",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        268,
+        19,
+        619,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "e12a80f442d2209ba88b14d337ce0850af964d9305fbb13f52298282f51a2c52",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "front_opposite",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        246,
+        19,
+        853,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "79b3da658ed5cdd0f3273105d4aad11dd620ab8247e9e8306d365a6fb746f8ef",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "front_variant",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        211,
+        21,
+        830,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "bc7ba80e408e739fc4747a8be932e2affdaad2bdc8f86dfd98652e6ad20aa48d",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "above",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        58,
+        19,
+        967,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "fc06ff24c01cb8aa059c6822e97dd361745361a8172b20427f693b93b60e9fa2",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "below",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        146,
+        19,
+        880,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "35226a981b966cb9272e50f035bb36e46afded87d43678455fded128e1b05f0b",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "a_front",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        156,
+        19,
+        870,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "36bc7d4102761ba26e6f2d8a179a418a15342aa0f08df5a9f6c3cd856fe758d3",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "a_open_hair",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        46,
+        19,
+        976,
+        1514
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "c217d950b43e10530e82e481ec696a94912699d970dfa2adb4b301b571cd6925",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "a_rear",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        156,
+        19,
+        868,
+        1511
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "40d83704a51f836ca6d512dfaae2c84296113bd60d728000d73c1148367022b6",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "seated",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        12,
+        212,
+        1012,
+        1325
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": true,
+      "landmarkOcclusionCheck": "passed"
+    },
+    {
+      "id": "crouched",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        69,
+        196,
+        1012,
+        1325
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": true,
+      "landmarkOcclusionCheck": "passed"
+    },
+    {
+      "id": "kneeling",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        12,
+        165,
+        1012,
+        1328
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": true,
+      "landmarkOcclusionCheck": "passed"
+    },
+    {
+      "id": "kneeling_variant",
+      "expectedDimensions": [
+        1374,
+        1145
+      ],
+      "actualDimensions": [
+        1374,
+        1145
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        100,
+        15,
+        1326,
+        1130
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "70fcd2c1642df52798417a14113727861a0c1fc6540bc08c018b21b4fbd8555f",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "leaning",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        130,
+        30,
+        956,
+        1506
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "80b4ec56df320ccc0f5f76a6ffecc453ce745a3b3121318f021c7ddde728261a",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    },
+    {
+      "id": "leaning_variant",
+      "expectedDimensions": [
+        1024,
+        1536
+      ],
+      "actualDimensions": [
+        1024,
+        1536
+      ],
+      "mode": "RGBA",
+      "format": "PNG",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        179,
+        19,
+        936,
+        1517
+      ],
+      "nonemptyImageBorder": false,
+      "sha256": "232cebd51ec81a61ea7003fecfcecda84cc3f19c0400fb5d729f2784bc8b74c4",
+      "pngPass": true,
+      "landmarksProvided": true,
+      "landmarksVisualCheck": false,
+      "landmarkOcclusionCheck": "pending"
+    }
+  ],
+  "errors": [],
+  "pending": [
+    "Validate expression/viseme consumption: existing 2D runtime does not consume all new expression PNGs",
+    "Apply/install/publish only after explicit product incorporation instruction",
+    "Visual verification of pixel-based AvatarRig deformation regions with the new frontal and all runtime gestures",
+    "Room/overlay loading, cancellation, ground contacts and expression masks at different screen sizes on a device"
+  ],
+  "frontalRigGenerated": true,
+  "packageReadyForIntegrationReview": true,
+  "androidModuleCompileVerified": true,
+  "candidateTestRun": {
+    "testsPassed": 21,
+    "coreRigTests": 3,
+    "coreRigSha256": "e9c993c34eba5818a978af09c61e0ba413e50d30c71f6382ec8e1b54751044ea",
+    "frontPNGSourceSha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+    "testsForcedToExecute": true,
+    "deviceTestsPassed": false,
+    "triangleOrientationEnvelope": "54 head/arm/step/blink combinations in CoreRigTest",
+    "artisticDeformationQualityVerified": false
+  }
+}

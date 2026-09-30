@@ -1,0 +1,139 @@
+{
+  "status": "REVIEWED_WITH_SUBSTANTIAL_DIFFERENCES",
+  "production_ready": false,
+  "identity_accepted": false,
+  "regions": [
+    {
+      "region": "Rostro y mandibula",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Contorno mas largo y triangular, planos suaves y expresion neutral distinta; identidad principal pendiente."
+    },
+    {
+      "region": "Ojos e iris",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Iris azules editables y textura radial empaquetada; forma, relacion iris/esclerotica, brillo y gesto no equivalentes a la frontal."
+    },
+    {
+      "region": "Parpados y pestañas",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Hay controles de cierre y apertura; las alas se corrigen en la revision facial local. Contorno, grosor y detalle artistico siguen simplificados."
+    },
+    {
+      "region": "Nariz",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Perfil y relieve no equivalentes; el volumen y el tratamiento de luz de las ilustraciones requieren escultura y material adicionales."
+    },
+    {
+      "region": "Labios",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Bordes y cavidad controlables con visemas; forma, volumen y comisuras artisticas pendientes. El sello MBP se mide y se revisa en PNG por separado."
+    },
+    {
+      "region": "Cuello",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Cuello negro tubular con dos lineas azules, mas simple que los segmentos, collar y conexiones de la referencia."
+    },
+    {
+      "region": "Torso y pecho",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Superficie quad continua reconstruida; volumen y paneles no equivalentes. La sentada muestra deformaciones angulares y costuras/inserts separados, que requieren revision de pesos y superficies."
+    },
+    {
+      "region": "Cintura y pelvis",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "La silueta global estrecha/anchura de cadera es aproximada; falta reproducir transiciones anatomicas y contrapposto."
+    },
+    {
+      "region": "Caderas y gluteos",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Volumen posterior y union con muslos simplificados; compresion en sentada y flexion no aprobada."
+    },
+    {
+      "region": "Hombros",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Extremos superiores demasiado planos y aspecto tubular; las referencias muestran transiciones mas redondeadas."
+    },
+    {
+      "region": "Brazos y codos",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Piezas editables y correctivos regionales; contorno y flexion extrema no aprobados, y las poses no igualan la colocacion exacta de los originales."
+    },
+    {
+      "region": "Antebrazos y muñecas",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Transiciones segmentadas y orientacion aproximada; diferencia visible de altura de antebrazos en cuclillas."
+    },
+    {
+      "region": "Manos",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Tamaño, silueta de palma y gesto distintos. Las palmas del apoyo arrodillado se orientaron al suelo y se midieron; no equivale a aprobar toda la superficie de contacto."
+    },
+    {
+      "region": "Dedos y uñas",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Cinco dedos por mano con controles; longitud, curvatura y detalle no equivalentes. En THINK se corrigieron continuidad de dedos/uñas, contacto superficial aproximado de 1mm y despeje del collar; comprobacion numerica y PNG final revisados por separado. El gesto artistico sigue pendiente."
+    },
+    {
+      "region": "Muslos y piernas",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Longitud aparente, grosor y cruce/contrapposto difieren; superficies regionales separadas no constituyen retopologia de produccion aprobada."
+    },
+    {
+      "region": "Rodillas",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Apoyos minimos medidos; volumen comprimido y orientacion en pose necesitan refinamiento. Polos IK de variante arrodillada aun requieren calibracion."
+    },
+    {
+      "region": "Pantorrillas y tobillos",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Contorno demasiado uniforme y union anatomica simplificada; falta el detalle de articulacion de las referencias."
+    },
+    {
+      "region": "Botas",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Puntera, plataforma, arco y tacon difieren. Tacon posterior de reposo a33.066mm frente al minimo delantero a1mm: apoyo completo pendiente."
+    },
+    {
+      "region": "Cabello frontal y corona",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Se corrigieron puntas del flequillo y defectos negros del atlas; particion y mechones siguen excesivamente regulares respecto al original."
+    },
+    {
+      "region": "Cabello largo",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Capas editables con correctivos estaticos, pero masa en abanicos/surcos rigidos. Quedan puntas/tirantes separados en inclinada lateral y revision de cabeza, autocruces y oclusiones."
+    },
+    {
+      "region": "Auriculares",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Discos y anillos azules coherentes entre vistas; espesor inferido, forma de carcasa y detalle mecanico/iluminacion no equivalentes."
+    },
+    {
+      "region": "Paneles y materiales",
+      "reviewed": true,
+      "accepted_final": false,
+      "observation": "Colores blanco/negro/azul, metalicidad/rugosidad y atlas reales. Recorridos de paneles, circuitos, conexiones y detalle pintado simplificados; acabado definitivo pendiente."
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "sourceSha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+  "width": 1024,
+  "height": 1536,
+  "meshColumns": 64,
+  "meshRows": 96,
+  "headPivot": [
+    506.0,
+    208.17
+  ],
+  "bodyPivot": [
+    506.0,
+    695.43
+  ],
+  "leftEye": [
+    482.84,
+    169.83
+  ],
+  "rightEye": [
+    529.16,
+    169.83
+  ],
+  "mouth": [
+    506.0,
+    216.15
+  ],
+  "joints": {
+    "leftShoulder": [
+      398.16,
+      320.0
+    ],
+    "rightShoulder": [
+      613.84,
+      320.0
+    ],
+    "leftElbow": [
+      347.99,
+      499.18
+    ],
+    "rightElbow": [
+      664.01,
+      499.18
+    ],
+    "leftPalm": [
+      307.59,
+      728.55
+    ],
+    "rightPalm": [
+      704.41,
+      728.55
+    ],
+    "leftHip": [
+      435.71,
+      671.46
+    ],
+    "rightHip": [
+      576.29,
+      671.46
+    ],
+    "leftKnee": [
+      449.29,
+      975.0
+    ],
+    "rightKnee": [
+      562.71,
+      975.0
+    ]
+  },
+  "profile": "core"
+}

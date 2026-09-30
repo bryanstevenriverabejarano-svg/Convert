@@ -1,0 +1,2449 @@
+{
+  "component": "Expresiones, cierres, visemas, rubor y gesto pensativo Salve v02",
+  "reviewed_at_utc": "2026-09-30T02:59:01.825164+00:00",
+  "status": "avance_revisado; equivalencia visual y produccion finales pendientes",
+  "primary_visual_authority": "Las 20 referencias originales, con front.png como identidad principal.",
+  "expression_proposal_reference": "C:/Users/agred/Documents/Codex/2026-09-29/new-chat-2/work/Convert-salve-publicacion/art/salve/blender/design/Salve_expresiones_propuesta.png",
+  "expression_proposal_role": "Guia secundaria de gestos; no sustituye identidad frontal original.",
+  "render_count": 21,
+  "visually_reviewed_count": 21,
+  "numeric_validation_file": "Salve_validacion_facial_v02.json",
+  "numeric_validation_passed": true,
+  "functional_review": {
+    "bilateral_eye_closure": {
+      "state": "LAUGH",
+      "visual_observation": "Cierre bilateral completo, sin iris ni esclerotica visibles. Las alas exteriores ahora se unen al trazo de parpado cerrado, sin segmentos flotantes.",
+      "unresolved_technical_finding": null
+    },
+    "unilateral_eye_closure": {
+      "state": "WINK",
+      "visual_observation": "Ojo izquierdo anatomico, a la derecha de imagen, cerrado por completo sin iris/esclerotica visibles; alas de pestanas unidas al trazo cerrado. Otro ojo abierto con iris azul.",
+      "unresolved_technical_finding": null
+    },
+    "shy_blush": {
+      "state": "SHY",
+      "visual_observation": "Rubor rosa visible en ambas mejillas, simetrico y con borde suave.",
+      "material_strength": 0.7200000286102295,
+      "control_value": 1.0
+    },
+    "mbp_lip_seal": {
+      "state": "MBP",
+      "visual_observation": "Linea horizontal cerrada y palida, sin cavidad ni dientes visibles. El preset estatico sella los bordes internos de labios en altura y profundidad.",
+      "inner_edge_pair_gap_m": 2.890166529796726e-18,
+      "cavity_silhouette_thickness_m": 3.5762786865234375e-07,
+      "unresolved_technical_finding": null
+    },
+    "visemes": {
+      "A": {
+        "visual_observation": "Abertura amplia con dientes superiores y lengua; contorno estable.",
+        "reference_difference": "La propuesta usa una abertura menor y mas redonda/vertical; el render es mas ancho y esquematico.",
+        "unresolved_technical_finding": null
+      },
+      "E": {
+        "visual_observation": "Boca ancha y de poca altura, dientes superiores y lengua contenidos en contorno.",
+        "reference_difference": "Visema distinguible, pero banda dental continua y labios simplificados difieren del detalle pintado de la propuesta.",
+        "unresolved_technical_finding": null
+      },
+      "I": {
+        "visual_observation": "Abertura horizontal muy baja, banda dental visible; se diferencia de E por altura.",
+        "reference_difference": "Forma funcional, pero dientes son una pieza continua y faltan tension de comisuras y delimitacion de labios de la propuesta.",
+        "unresolved_technical_finding": null
+      },
+      "O": {
+        "visual_observation": "Contorno redondeado y cavidad estable. La dentadura reducida queda dentro de las comisuras visibles, sin sobresalir lateralmente.",
+        "reference_difference": "La propuesta muestra una O pequeña; el render es mas abierto, tiene relieve fuerte de labios y dentadura demasiado visible.",
+        "unresolved_technical_finding": null
+      },
+      "U": {
+        "visual_observation": "Labios fruncidos con abertura menor que O; la banda dental reducida queda dentro del contorno visible.",
+        "reference_difference": "La propuesta usa una abertura minima muy fruncida; el render abre mas y expone demasiados dientes.",
+        "unresolved_technical_finding": null
+      }
+    },
+    "thinking_hand_chin": {
+      "state": "THINK",
+      "visual_observation": "Yema del indice apoyada visiblemente en el rostro inferior/zona de barbilla. No persiste el hueco de 20-35 px ni fragmentos blancos aislados sobre el collar. Los dedos laterales visibles se conectan a la mano; el informe de superficies mide margen aproximado de 1 mm sin cruces.",
+      "unresolved_technical_finding": null,
+      "surface_measurement_report": "Salve_contacto_pensativa_superficie_v02.json"
+    }
+  },
+  "comparison_file": "Salve_comparacion_expresiones_v02.png",
+  "shared_findings": [
+    "Los 21 presets se verifican por controles, drivers y mallas evaluadas en Salve_validacion_facial_v02.json; el resultado numerico no equivale a semejanza artistica.",
+    "En neutral ambos iris son azules y coherentes; el flequillo ya no presenta los triangulos negros vistos en la prueba de atlas.",
+    "La identidad difiere de la frontal y de la lamina: cara alargada y estrecha, planos diagonales marcados en mejillas, iris con aspecto de pieza brillante, cejas arqueadas visibles y boca muy fina.",
+    "El cabello presenta volumen de casquete y mechones geometricos gruesos; faltan el reparto, el detalle de fibras y las luces pintadas de las referencias.",
+    "El acabado es el de una figura 3D de materiales lisos; faltan sombreado, patron fino de materiales y detalle de auriculares para acercarse a las ilustraciones."
+  ],
+  "remaining_work": [
+    "Refinar anchura y distribucion facial, parpados, cejas y labios contra front.png, conservando coherencia lateral.",
+    "Reconstruir y pintar flujo del cabello, auriculares y sombreado de piel para acercarse a la identidad y estilo originales.",
+    "Resolver diferencias especificas de las expresiones indicadas por estado y repetir sus comparaciones.",
+    "Soldar y comprobar retopologia facial para el uso de deformacion declarado; los anillos orbitales y orales actuales son componentes separados."
+  ],
+  "states": [
+    {
+      "id": "NEUTRAL",
+      "frame": 201,
+      "file": "expresiones/01_NEUTRAL.png",
+      "sha256": "b26db517b4d114b1cade61b7c17b9336d13ecebd7a4202d952bdd95507b9db25",
+      "reference_cell_zero_based": 0,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Ambos abiertos, azules y sin gris desigual; iris voluminosos y muy redondos respecto a la propuesta.",
+        "mouth": "Linea de labios centrada y fina; forma neutra clara, simplificada respecto a la referencia.",
+        "reference_difference": "El gesto es neutro, pero cejas arqueadas, mandibula estrecha y cabello con casquete alteran la identidad.",
+        "reviewed_sha256": "b26db517b4d114b1cade61b7c17b9336d13ecebd7a4202d952bdd95507b9db25"
+      },
+      "numeric_check": {
+        "frame": 201,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 2.6651264376540557e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.01179157942533493,
+          "xmax": 0.01179157942533493,
+          "zmin": 1.5592806339263916,
+          "zmax": 1.560719609260559
+        },
+        "cavity_projected_bbox_area_m2": 3.393558388786744e-05,
+        "cavity_projected_z_span_m": 0.0014389753341674805,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0014399290084838867,
+        "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "WARM",
+      "frame": 211,
+      "file": "expresiones/02_WARM.png",
+      "sha256": "bfdaad9a5ccd33deb0862b0fbefc7b92be3ecbe3940f56b8dcb56692131eb08e",
+      "reference_cell_zero_based": 1,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Leve reduccion de apertura, ambos iris visibles.",
+        "mouth": "Comisuras elevadas y sonrisa cerrada reconocible.",
+        "reference_difference": "La sonrisa se lee; los cambios de mejillas y mirada son discretos y el acabado facial sigue distinto de la propuesta.",
+        "reviewed_sha256": "bfdaad9a5ccd33deb0862b0fbefc7b92be3ecbe3940f56b8dcb56692131eb08e"
+      },
+      "numeric_check": {
+        "frame": 211,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.15000000596046448,
+          "eyeSquint.R": 0.15000000596046448,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.699999988079071,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.000607921283701407,
+          "R": 0.0006079196772647844
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 3.000971075641434e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.013277320191264153,
+          "xmax": 0.013277320191264153,
+          "zmin": 1.559283971786499,
+          "zmax": 1.562354564666748
+        },
+        "cavity_projected_bbox_area_m2": 8.153848969616462e-05,
+        "cavity_projected_z_span_m": 0.0030705928802490234,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0030760765075683594,
+        "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "CURIOUS",
+      "frame": 221,
+      "file": "expresiones/03_CURIOUS.png",
+      "sha256": "6f18fec63c3e069892dbd795582eac7dc2697cbc21e9c65c6b3ffd2693264fc1",
+      "reference_cell_zero_based": null,
+      "has_equivalent_reference_cell": false,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "parcial",
+        "eyes": "Apertura algo mayor de un ojo y cejas asimetricas; ambos iris azules.",
+        "mouth": "Casi neutra, sin defecto de deformacion visible.",
+        "reference_difference": "No hay celda equivalente. La curiosidad es tenue y depende de comparar con neutral; faltan orientacion de mirada y gesto de cabeza para hacerla inequívoca.",
+        "reviewed_sha256": "6f18fec63c3e069892dbd795582eac7dc2697cbc21e9c65c6b3ffd2693264fc1"
+      },
+      "numeric_check": {
+        "frame": 221,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.25,
+          "browOuterUp.L": 0.6499999761581421,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.20000000298023224,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.10000000149011612,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006832729373473234,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 2.8714843543811838e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.011343500576913357,
+          "xmax": 0.011343500576913357,
+          "zmin": 1.5591944456100464,
+          "zmax": 1.5608060359954834
+        },
+        "cavity_projected_bbox_area_m2": 3.656215293390552e-05,
+        "cavity_projected_z_span_m": 0.0016115903854370117,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0016127824783325195,
+        "mouth_inner_edge_pair_gap_m": 0.0016355129307264193,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "CONCERNED",
+      "frame": 231,
+      "file": "expresiones/04_CONCERNED.png",
+      "sha256": "0d728aa1cbf3df8abe0ab2354737687269041eadd3550c76c7637f99b11ff95b",
+      "reference_cell_zero_based": 4,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "parcial",
+        "eyes": "Ojos abiertos; extremos internos de cejas elevados parcialmente ocultos por flequillo.",
+        "mouth": "Comisuras bajadas, preocupacion tenue.",
+        "reference_difference": "Se distingue de neutral por cejas y labios, pero tiene menos tension de parpados y matiz de preocupacion que la propuesta.",
+        "reviewed_sha256": "0d728aa1cbf3df8abe0ab2354737687269041eadd3550c76c7637f99b11ff95b"
+      },
+      "numeric_check": {
+        "frame": 231,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.7200000286102295,
+          "browInnerUp.R": 0.7200000286102295,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.3799999952316284,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 2.6651918847851036e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.01179157942533493,
+          "xmax": 0.01179157942533493,
+          "zmin": 1.5588467121124268,
+          "zmax": 1.5607181787490845
+        },
+        "cavity_projected_bbox_area_m2": 4.4135094976027744e-05,
+        "cavity_projected_z_span_m": 0.0018714666366577148,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0018739700317382812,
+        "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "SAD",
+      "frame": 241,
+      "file": "expresiones/05_SAD.png",
+      "sha256": "2ccb7adcf9d7a98a5e5fe35631be69692e0d5ef42bf00b874a13ed76730d0c23",
+      "reference_cell_zero_based": 3,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Ambos iris visibles; cejas interiores elevadas con parte central cubierta por cabello.",
+        "mouth": "Frown evidente, con arco invertido mas pronunciado que la propuesta.",
+        "reference_difference": "Se lee tristeza, pero la forma de boca es mas esquematica y faltan los matices de parpado, mirada y labios de la ilustracion.",
+        "reviewed_sha256": "2ccb7adcf9d7a98a5e5fe35631be69692e0d5ef42bf00b874a13ed76730d0c23"
+      },
+      "numeric_check": {
+        "frame": 241,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.6499999761581421,
+          "browInnerUp.R": 0.6499999761581421,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.15000000596046448,
+          "eyeSquint.R": 0.15000000596046448,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.8500000238418579,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.000607921283701407,
+          "R": 0.0006079196772647844
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 2.6650885789760576e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.01179157942533493,
+          "xmax": 0.01179157942533493,
+          "zmin": 1.5576457977294922,
+          "zmax": 1.5607166290283203
+        },
+        "cavity_projected_bbox_area_m2": 7.241990232387252e-05,
+        "cavity_projected_z_span_m": 0.003070831298828125,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0030760765075683594,
+        "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "ANGRY",
+      "frame": 251,
+      "file": "expresiones/06_ANGRY.png",
+      "sha256": "eb363ffa00897bb1047f4df0a8f2752cc2a13fcbacdb981da8ec58752ad0173d",
+      "reference_cell_zero_based": 6,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "debil",
+        "eyes": "Entrecierre mayor que neutral, con alas de pestanas conectadas. Las cejas visibles siguen casi horizontales y su descenso interno queda cubierto por flequillo.",
+        "mouth": "Casi neutra, algo comprimida; sin penetracion visible.",
+        "reference_difference": "La revision distingue mas el entrecierre, pero el enfado sigue tenue y puede leerse como indiferencia. Faltan inclinacion visible de cejas, tension de parpados y matiz de labios de la propuesta.",
+        "reviewed_sha256": "eb363ffa00897bb1047f4df0a8f2752cc2a13fcbacdb981da8ec58752ad0173d"
+      },
+      "numeric_check": {
+        "frame": 251,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.949999988079071,
+          "browDown.R": 0.949999988079071,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.5,
+          "browOuterUp.R": 0.5,
+          "eyeSquint.L": 0.8500000238418579,
+          "eyeSquint.R": 0.8500000238418579,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.3499999940395355,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.00046487931881381006,
+          "R": 0.00046487981173212733
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 1.7324096209154344e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.01179157942533493,
+          "xmax": 0.01179157942533493,
+          "zmin": 1.5595324039459229,
+          "zmax": 1.5604677200317383
+        },
+        "cavity_projected_bbox_area_m2": 2.2057707827372042e-05,
+        "cavity_projected_z_span_m": 0.0009353160858154297,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0009359121322631836,
+        "mouth_inner_edge_pair_gap_m": 0.0009524323359513647,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "SURPRISED",
+      "frame": 261,
+      "file": "expresiones/07_SURPRISED.png",
+      "sha256": "2c271d43e93bda4359333bf3d3fdedf83b78f5c7530a33ddf178edbeb83f29eb",
+      "reference_cell_zero_based": 5,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Apertura mayor y cejas externas levantadas, ambos iris azules.",
+        "mouth": "Oval abierta, dientes y lengua contenidos visualmente en la abertura.",
+        "reference_difference": "La sorpresa se distingue; boca y ojos son mas grandes/abiertos y la propuesta usa una abertura mas pequeña y redonda.",
+        "reviewed_sha256": "2c271d43e93bda4359333bf3d3fdedf83b78f5c7530a33ddf178edbeb83f29eb"
+      },
+      "numeric_check": {
+        "frame": 261,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.800000011920929,
+          "browOuterUp.R": 0.800000011920929,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.7200000286102295,
+          "eyeWide.R": 0.7200000286102295,
+          "frown": 0.0,
+          "jawOpen": 0.6499999761581421,
+          "lipFunnel": 0.44999998807907104,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.000799493199963669,
+          "R": 0.0007994927757730419
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 0.0002082553353917791,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.010305841453373432,
+          "xmax": 0.010305841453373432,
+          "zmin": 1.5535669326782227,
+          "zmax": 1.5664331912994385
+        },
+        "cavity_projected_bbox_area_m2": 0.0002651952428966986,
+        "cavity_projected_z_span_m": 0.01286625862121582,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.008739999495446682,
+            "xmax": 0.008739999495446682,
+            "zmin": 1.5618298053741455,
+            "zmax": 1.5652297735214233
+          },
+          "Lengua": {
+            "xmin": -0.007000000216066837,
+            "xmax": 0.007000000216066837,
+            "zmin": 1.5534999370574951,
+            "zmax": 1.5577000379562378
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.012875914573669434,
+        "mouth_inner_edge_pair_gap_m": 0.012878781195432034,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.020611682906746864,
+          "tooth_width_m": 0.017479998990893364,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "SHY",
+      "frame": 271,
+      "file": "expresiones/08_SHY.png",
+      "sha256": "5315615064959828570abb82f52d81908d43646a7aec5e45125f501558720449",
+      "reference_cell_zero_based": 9,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Parpados parcialmente bajos, iris visibles sin atravesar piel y alas exteriores conectadas al contorno.",
+        "mouth": "Sonrisa pequeña cerrada.",
+        "blush": "Rubor rosa visible en ambas mejillas, simetrico y con borde suave.",
+        "reference_difference": "Rubor mas tenue y local que la propuesta; faltan hachuras, extension sobre puente nasal y orientacion baja de cabeza/mirada.",
+        "reviewed_sha256": "5315615064959828570abb82f52d81908d43646a7aec5e45125f501558720449"
+      },
+      "numeric_check": {
+        "frame": 271,
+        "control_values": {
+          "blink.L": 0.20000000298023224,
+          "blink.R": 0.20000000298023224,
+          "blush": 1.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.3499999940395355,
+          "eyeSquint.R": 0.3499999940395355,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.2800000011920929,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.00043933779990454336,
+          "R": 0.00043933800514039945
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 2.7994594578154225e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.012385876849293709,
+          "xmax": 0.012385876849293709,
+          "zmin": 1.5592820644378662,
+          "zmax": 1.5610604286193848
+        },
+        "cavity_projected_bbox_area_m2": 4.405319949096764e-05,
+        "cavity_projected_z_span_m": 0.0017783641815185547,
+        "blush_material_strength": 0.7200000286102295,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0017812252044677734,
+        "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "LAUGH",
+      "frame": 281,
+      "file": "expresiones/09_LAUGH.png",
+      "sha256": "2621334ebf7b830ed69cce17dc5aa6ce0a5b8efd88314b1510ae3c7bf020fbb0",
+      "reference_cell_zero_based": 2,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Cierre bilateral completo, sin iris ni esclerotica visibles. Las alas exteriores ahora se unen al trazo de parpado cerrado, sin segmentos flotantes.",
+        "mouth": "Abertura sonriente, dientes y lengua visibles.",
+        "reference_difference": "La risa se reconoce; el arco de ojos cerrados es mas recto y la boca mas esquematica que la propuesta.",
+        "reviewed_sha256": "2621334ebf7b830ed69cce17dc5aa6ce0a5b8efd88314b1510ae3c7bf020fbb0"
+      },
+      "numeric_check": {
+        "frame": 281,
+        "control_values": {
+          "blink.L": 1.0,
+          "blink.R": 1.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.8600000143051147,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 1.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 2.7449212894326003e-07,
+          "R": 2.740963265523977e-07
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 0.0003243998059807869,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.013914065435528755,
+          "xmax": 0.013914065435528755,
+          "zmin": 1.5525825023651123,
+          "zmax": 1.567427158355713
+        },
+        "cavity_projected_bbox_area_m2": 0.000413099029642261,
+        "cavity_projected_z_span_m": 0.014844655990600586,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.009999999776482582,
+            "xmax": 0.009999999776482582,
+            "zmin": 1.5627119541168213,
+            "zmax": 1.5661119222640991
+          },
+          "Lengua": {
+            "xmin": -0.007000000216066837,
+            "xmax": 0.007000000216066837,
+            "zmin": 1.5526598691940308,
+            "zmax": 1.5568599700927734
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.01485598087310791,
+        "mouth_inner_edge_pair_gap_m": 0.01485846567980257,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.02782813087105751,
+          "tooth_width_m": 0.019999999552965164,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "CRY",
+      "frame": 291,
+      "file": "expresiones/10_CRY.png",
+      "sha256": "e4431130901ec470b0435c032a7994dab217ce31b62aff03d2b3b47330b42abd",
+      "reference_cell_zero_based": null,
+      "has_equivalent_reference_cell": false,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "parcial",
+        "eyes": "Ojos abiertos, cejas internas levantadas y gotas bajo ambos ojos.",
+        "mouth": "Mueca abierta con comisuras caidas.",
+        "tears": "Gotas azules aisladas visibles; no hay regueros ni agua acumulada en borde de parpado.",
+        "reference_difference": "No hay celda equivalente. Se distingue por las lagrimas, pero parece mueca con adornos y necesita mas tension de parpados/mejillas para lectura de llanto.",
+        "reviewed_sha256": "e4431130901ec470b0435c032a7994dab217ce31b62aff03d2b3b47330b42abd"
+      },
+      "numeric_check": {
+        "frame": 291,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.20000000298023224,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 1.0,
+          "browInnerUp.R": 1.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 1.0,
+          "jawOpen": 0.3799999952316284,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 1.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 0.0001363467669858419,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.01179157942533493,
+          "xmax": 0.01179157942533493,
+          "zmin": 1.5560417175292969,
+          "zmax": 1.5636773109436035
+        },
+        "cavity_projected_bbox_area_m2": 0.00018007141240872215,
+        "cavity_projected_z_span_m": 0.007635593414306641,
+        "blush_material_strength": 0.14400000870227814,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.009999999776482582,
+            "xmax": 0.009999999776482582,
+            "zmin": 1.560696005821228,
+            "zmax": 1.5640959739685059
+          },
+          "Lengua": {
+            "xmin": -0.005851999390870333,
+            "xmax": 0.005851999390870333,
+            "zmin": 1.5549240112304688,
+            "zmax": 1.5584354400634766
+          },
+          "Lagrima.L": {
+            "xmin": 0.04470000043511391,
+            "xmax": 0.04729999974370003,
+            "zmin": 1.593999981880188,
+            "zmax": 1.6059999465942383
+          },
+          "Lagrima.R": {
+            "xmin": -0.04729999974370003,
+            "xmax": -0.04470000043511391,
+            "zmin": 1.593999981880188,
+            "zmax": 1.6059999465942383
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.007643461227416992,
+        "mouth_inner_edge_pair_gap_m": 0.007372977380931611,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.02358315885066986,
+          "tooth_width_m": 0.019999999552965164,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "STARTLE",
+      "frame": 301,
+      "file": "expresiones/11_STARTLE.png",
+      "sha256": "3de588c0b4abb8dd84bca33e7f3d40f2f8c2032b1be010771b3f5e0e538e9705",
+      "reference_cell_zero_based": null,
+      "has_equivalent_reference_cell": false,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Apertura maxima bilateral y cejas exteriores altas.",
+        "mouth": "Oval abierta mas intensa que SURPRISED.",
+        "reference_difference": "No hay celda equivalente. Sobresalto visible, cercano a SURPRISED; diferencia principalmente por intensidad de ojos/boca.",
+        "reviewed_sha256": "3de588c0b4abb8dd84bca33e7f3d40f2f8c2032b1be010771b3f5e0e538e9705"
+      },
+      "numeric_check": {
+        "frame": 301,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 1.0,
+          "browOuterUp.R": 1.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 1.0,
+          "eyeWide.R": 1.0,
+          "frown": 0.0,
+          "jawOpen": 0.7799999713897705,
+          "lipFunnel": 0.75,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.000862074764275883,
+          "R": 0.0008620753671974846
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 0.00023052168403160309,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.009315348230302334,
+          "xmax": 0.009315348230302334,
+          "zmin": 1.5521221160888672,
+          "zmax": 1.5678781270980835
+        },
+        "cavity_projected_bbox_area_m2": 0.00029354545854265446,
+        "cavity_projected_z_span_m": 0.01575601100921631,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.007899999618530273,
+            "xmax": 0.007899999618530273,
+            "zmin": 1.5623759031295776,
+            "zmax": 1.5657758712768555
+          },
+          "Lengua": {
+            "xmin": -0.007000000216066837,
+            "xmax": 0.007000000216066837,
+            "zmin": 1.5529799461364746,
+            "zmax": 1.5571800470352173
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.015767693519592285,
+        "mouth_inner_edge_pair_gap_m": 0.015770035047739953,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.018630696460604668,
+          "tooth_width_m": 0.015799999237060547,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "THINK",
+      "frame": 311,
+      "file": "expresiones/12_THINK.png",
+      "sha256": "c5d808c11ebed81d661ff56b19f2589fe02292577e9ed98f5c36056e665258bd",
+      "reference_cell_zero_based": 8,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 254911,
+        "alpha_bounds_px": [
+          48,
+          81,
+          688,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Mirada frontal, cabeza algo inclinada y ceja asimetrica.",
+        "mouth": "Labios levemente fruncidos.",
+        "hand_chin": "Yema del indice apoyada visiblemente en el rostro inferior/zona de barbilla. No persiste el hueco de 20-35 px ni fragmentos blancos aislados sobre el collar. Los dedos laterales visibles se conectan a la mano; el informe de superficies mide margen aproximado de 1 mm sin cruces.",
+        "reference_difference": "El apoyo ya se lee, pero la propuesta mira arriba/lateral. Persisten mirada frontal, inclinacion distinta de cabeza y dedos/mano simplificados, con sombreado de contacto marcado.",
+        "reviewed_sha256": "c5d808c11ebed81d661ff56b19f2589fe02292577e9ed98f5c36056e665258bd"
+      },
+      "numeric_check": {
+        "frame": 311,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.3799999952316284,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.14000000059604645,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.18000000715255737,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385736048863666,
+          "R": 0.0006099660541676322
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715628683567,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 3.0189740201356716e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.010985041968524456,
+          "xmax": 0.010985033586621284,
+          "zmin": 1.5591254234313965,
+          "zmax": 1.5608751773834229
+        },
+        "cavity_projected_bbox_area_m2": 3.844222652893414e-05,
+        "cavity_projected_z_span_m": 0.0017497539520263672,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.001443954766727984,
+            "xmax": 0.001443954766727984,
+            "zmin": 1.5479636192321777,
+            "zmax": 1.5479636192321777
+          },
+          "Lengua": {
+            "xmin": 0.0016059750923886895,
+            "xmax": 0.0016059750923886895,
+            "zmin": 1.545371174812317,
+            "zmax": 1.545371174812317
+          },
+          "Lagrima.L": {
+            "xmin": 0.04492848366498947,
+            "xmax": 0.04492848366498947,
+            "zmin": 1.589375615119934,
+            "zmax": 1.589375615119934
+          },
+          "Lagrima.R": {
+            "xmin": -0.046892620623111725,
+            "xmax": -0.046892620623111725,
+            "zmin": 1.5836422443389893,
+            "zmax": 1.5836422443389893
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0017508268356323242,
+        "mouth_inner_edge_pair_gap_m": 0.0017717871860150798,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "WINK",
+      "frame": 321,
+      "file": "expresiones/13_WINK.png",
+      "sha256": "d66cc73de90d90597a3151e738d3fecf59b633034bfce9caff5470b73ad9bc87",
+      "reference_cell_zero_based": 10,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Ojo izquierdo anatomico, a la derecha de imagen, cerrado por completo sin iris/esclerotica visibles; alas de pestanas unidas al trazo cerrado. Otro ojo abierto con iris azul.",
+        "mouth": "Sonrisa cerrada.",
+        "reference_difference": "Lado cerrado coincide con propuesta; curva de parpado/labios y expresividad de mejillas requieren mas refinamiento.",
+        "reviewed_sha256": "d66cc73de90d90597a3151e738d3fecf59b633034bfce9caff5470b73ad9bc87"
+      },
+      "numeric_check": {
+        "frame": 321,
+        "control_values": {
+          "blink.L": 1.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.10000000149011612,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.6000000238418579,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 2.7449212894326003e-07,
+          "R": 0.0006181383114101102
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 2.9529868615775588e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.013065071776509285,
+          "xmax": 0.013065071776509285,
+          "zmin": 1.5592834949493408,
+          "zmax": 1.5620354413986206
+        },
+        "cavity_projected_bbox_area_m2": 7.190875576990052e-05,
+        "cavity_projected_z_span_m": 0.002751946449279785,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0027579069137573242,
+        "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "A",
+      "frame": 331,
+      "file": "expresiones/14_A.png",
+      "sha256": "bc0a352d08d89f779b66fafea6110d05756635f04bef7499368a82ea60b317ab",
+      "reference_cell_zero_based": 11,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Rostro y ojos neutros.",
+        "mouth": "Abertura amplia con dientes superiores y lengua; contorno estable.",
+        "reference_difference": "La propuesta usa una abertura menor y mas redonda/vertical; el render es mas ancho y esquematico.",
+        "reviewed_sha256": "bc0a352d08d89f779b66fafea6110d05756635f04bef7499368a82ea60b317ab"
+      },
+      "numeric_check": {
+        "frame": 331,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.8999999761581421,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 0.0002864630074760864,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.01179157942533493,
+          "xmax": 0.01179157942533493,
+          "zmin": 1.5522663593292236,
+          "zmax": 1.5677342414855957
+        },
+        "cavity_projected_bbox_area_m2": 0.0003647815219771644,
+        "cavity_projected_z_span_m": 0.01546788215637207,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.009999999776482582,
+            "xmax": 0.009999999776482582,
+            "zmin": 1.5628799200057983,
+            "zmax": 1.5662798881530762
+          },
+          "Lengua": {
+            "xmin": -0.007000000216066837,
+            "xmax": 0.007000000216066837,
+            "zmin": 1.5524998903274536,
+            "zmax": 1.5566999912261963
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0154799222946167,
+        "mouth_inner_edge_pair_gap_m": 0.015482306805336209,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.02358315885066986,
+          "tooth_width_m": 0.019999999552965164,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "E",
+      "frame": 341,
+      "file": "expresiones/15_E.png",
+      "sha256": "ce761e7e2e3a48bd6a1aea9157a360c2b23683ad4923ec04cae1cf237e34b68e",
+      "reference_cell_zero_based": 12,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Rostro y ojos neutros.",
+        "mouth": "Boca ancha y de poca altura, dientes superiores y lengua contenidos en contorno.",
+        "reference_difference": "Visema distinguible, pero banda dental continua y labios simplificados difieren del detalle pintado de la propuesta.",
+        "reviewed_sha256": "ce761e7e2e3a48bd6a1aea9157a360c2b23683ad4923ec04cae1cf237e34b68e"
+      },
+      "numeric_check": {
+        "frame": 341,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.3199999928474426,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.699999988079071,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 0.0001440210072919286,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.014267810620367527,
+          "xmax": 0.014267810620367527,
+          "zmin": 1.5567867755889893,
+          "zmax": 1.56321382522583
+        },
+        "cavity_projected_bbox_area_m2": 0.00018339985413229343,
+        "cavity_projected_z_span_m": 0.00642704963684082,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.012450001202523708,
+            "xmax": 0.012450001202523708,
+            "zmin": 1.5604441165924072,
+            "zmax": 1.563844084739685
+          },
+          "Lengua": {
+            "xmin": -0.00492800073698163,
+            "xmax": 0.00492800073698163,
+            "zmin": 1.5554416179656982,
+            "zmax": 1.5583986043930054
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.006431937217712402,
+        "mouth_inner_edge_pair_gap_m": 0.00643767452594906,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.028535621240735054,
+          "tooth_width_m": 0.024900002405047417,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "I",
+      "frame": 351,
+      "file": "expresiones/16_I.png",
+      "sha256": "5c5ea5ffa8ffdae3c80dc5dd5420455e70bccb43cbb756b38bd182f0f98d0d2b",
+      "reference_cell_zero_based": 13,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Rostro y ojos neutros.",
+        "mouth": "Abertura horizontal muy baja, banda dental visible; se diferencia de E por altura.",
+        "reference_difference": "Forma funcional, pero dientes son una pieza continua y faltan tension de comisuras y delimitacion de labios de la propuesta.",
+        "reviewed_sha256": "5c5ea5ffa8ffdae3c80dc5dd5420455e70bccb43cbb756b38bd182f0f98d0d2b"
+      },
+      "numeric_check": {
+        "frame": 351,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.12999999523162842,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 1.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 8.34293508731182e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.015329054556787014,
+          "xmax": 0.015329054556787014,
+          "zmin": 1.5582674741744995,
+          "zmax": 1.5617330074310303
+        },
+        "cavity_projected_bbox_area_m2": 0.00010624669671543963,
+        "cavity_projected_z_span_m": 0.0034655332565307617,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.013500000350177288,
+            "xmax": 0.013500000350177288,
+            "zmin": 1.5596458911895752,
+            "zmax": 1.563045859336853
+          },
+          "Lengua": {
+            "xmin": -0.0020019998773932457,
+            "xmax": 0.0020019998773932457,
+            "zmin": 1.5570791959762573,
+            "zmax": 1.5582804679870605
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0034679174423217773,
+        "mouth_inner_edge_pair_gap_m": 0.003478546607022783,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.030658109113574028,
+          "tooth_width_m": 0.027000000700354576,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "O",
+      "frame": 361,
+      "file": "expresiones/17_O.png",
+      "sha256": "dd8e812e1ff975cf401ca2962e51be004b240af400143017878d25afc5bb4feb",
+      "reference_cell_zero_based": 14,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Rostro y ojos neutros.",
+        "mouth": "Contorno redondeado y cavidad estable. La dentadura reducida queda dentro de las comisuras visibles, sin sobresalir lateralmente.",
+        "reference_difference": "La propuesta muestra una O pequeña; el render es mas abierto, tiene relieve fuerte de labios y dentadura demasiado visible.",
+        "reviewed_sha256": "dd8e812e1ff975cf401ca2962e51be004b240af400143017878d25afc5bb4feb"
+      },
+      "numeric_check": {
+        "frame": 361,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.699999988079071,
+          "lipFunnel": 1.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.5475869178771973,
+          "zmax": 1.5724133253097534
+        },
+        "cavity_projected_area_m2": 0.00020306072692097277,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.008489937521517277,
+          "xmax": 0.008489937521517277,
+          "zmin": 1.5523860454559326,
+          "zmax": 1.5676143169403076
+        },
+        "cavity_projected_bbox_area_m2": 0.0002585741469260938,
+        "cavity_projected_z_span_m": 0.015228271484375,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.007200000341981649,
+            "xmax": 0.007200000341981649,
+            "zmin": 1.562039852142334,
+            "zmax": 1.5654398202896118
+          },
+          "Lengua": {
+            "xmin": -0.007000000216066837,
+            "xmax": 0.007000000216066837,
+            "zmin": 1.553299903869629,
+            "zmax": 1.5575000047683716
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.015239834785461426,
+        "mouth_inner_edge_pair_gap_m": 0.01524225718388817,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.016979875043034554,
+          "tooth_width_m": 0.014400000683963299,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "U",
+      "frame": 371,
+      "file": "expresiones/18_U.png",
+      "sha256": "6ca6174d7f9af3a56720fae2573fddaba48effa609bbb628e3e1963460587c43",
+      "reference_cell_zero_based": 15,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Rostro y ojos neutros.",
+        "mouth": "Labios fruncidos con abertura menor que O; la banda dental reducida queda dentro del contorno visible.",
+        "reference_difference": "La propuesta usa una abertura minima muy fruncida; el render abre mas y expone demasiados dientes.",
+        "reviewed_sha256": "6ca6174d7f9af3a56720fae2573fddaba48effa609bbb628e3e1963460587c43"
+      },
+      "numeric_check": {
+        "frame": 371,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.25,
+          "lipFunnel": 0.0,
+          "lipPucker": 1.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 8.109392771260722e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.007310780230909586,
+          "xmax": 0.007310780230909586,
+          "zmin": 1.5564689636230469,
+          "zmax": 1.5635313987731934
+        },
+        "cavity_projected_bbox_area_m2": 0.00010326382255554378,
+        "cavity_projected_z_span_m": 0.007062435150146484,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": -0.006199999712407589,
+            "xmax": 0.006199999712407589,
+            "zmin": 1.560149908065796,
+            "zmax": 1.5635498762130737
+          },
+          "Lengua": {
+            "xmin": -0.003850000211969018,
+            "xmax": 0.003850000211969018,
+            "zmin": 1.5560448169708252,
+            "zmax": 1.5583549737930298
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0070677995681762695,
+        "mouth_inner_edge_pair_gap_m": 0.0070730208799673336,
+        "tooth_commissure_width_check": {
+          "passed": true,
+          "cavity_width_m": 0.014621560461819172,
+          "tooth_width_m": 0.012399999424815178,
+          "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+        }
+      }
+    },
+    {
+      "id": "MBP",
+      "frame": 381,
+      "file": "expresiones/19_MBP.png",
+      "sha256": "441cf16d8e79a1695bcc5f590231817d61c37bae7574bacc254a9e3a3156100e",
+      "reference_cell_zero_based": null,
+      "has_equivalent_reference_cell": false,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Rostro y ojos neutros.",
+        "mouth": "Linea horizontal cerrada y palida, sin cavidad ni dientes visibles. El preset estatico sella los bordes internos de labios en altura y profundidad.",
+        "reference_difference": "No hay celda equivalente. El sello estatico M/B/P se verifica en PNG y malla evaluada; los labios siguen simplificados y no se certifican transiciones animadas.",
+        "reviewed_sha256": "441cf16d8e79a1695bcc5f590231817d61c37bae7574bacc254a9e3a3156100e"
+      },
+      "numeric_check": {
+        "frame": 381,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 1.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 1.8522321306238543e-07,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.01179157942533493,
+          "xmax": 0.01179157942533493,
+          "zmin": 1.5599998235702515,
+          "zmax": 1.5600001811981201
+        },
+        "cavity_projected_bbox_area_m2": 8.433994835854719e-09,
+        "cavity_projected_z_span_m": 3.5762786865234375e-07,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0,
+        "mouth_inner_edge_pair_gap_m": 2.890166529796726e-18,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "SILENCE",
+      "frame": 391,
+      "file": "expresiones/20_SILENCE.png",
+      "sha256": "eccae3e8a0b77d6e1cfcf998c1165c07bf81b1e1b27d8b86401befd61225c6ae",
+      "reference_cell_zero_based": null,
+      "has_equivalent_reference_cell": false,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "visible",
+        "eyes": "Ojos neutros y ambos iris azules.",
+        "mouth": "Misma linea de reposo que NEUTRAL; corresponde al reset de controles.",
+        "reference_difference": "No hay celda equivalente independiente; se compara con neutral. Persiste diferencia general de identidad.",
+        "reviewed_sha256": "eccae3e8a0b77d6e1cfcf998c1165c07bf81b1e1b27d8b86401befd61225c6ae"
+      },
+      "numeric_check": {
+        "frame": 391,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.0,
+          "browInnerUp.L": 0.0,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.0,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 2.6651264376540557e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.01179157942533493,
+          "xmax": 0.01179157942533493,
+          "zmin": 1.5592806339263916,
+          "zmax": 1.560719609260559
+        },
+        "cavity_projected_bbox_area_m2": 3.393558388786744e-05,
+        "cavity_projected_z_span_m": 0.0014389753341674805,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0014399290084838867,
+        "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+        "tooth_commissure_width_check": null
+      }
+    },
+    {
+      "id": "CONFUSED",
+      "frame": 401,
+      "file": "expresiones/21_CONFUSED.png",
+      "sha256": "19324ef6d58bc223f1205f8250f64605a82f1035d6fb8460d17da0b4a5bf1f67",
+      "reference_cell_zero_based": 7,
+      "has_equivalent_reference_cell": true,
+      "image_checks": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "dimensions": [
+          768,
+          768
+        ],
+        "has_alpha": true,
+        "transparent_pixels": 258668,
+        "alpha_bounds_px": [
+          70,
+          89,
+          698,
+          768
+        ],
+        "checks_passed": true,
+        "crop_scope": "Retrato de expresion; corte inferior de busto deliberado. No reemplaza vistas de cuerpo entero."
+      },
+      "visual_review": {
+        "visually_reviewed": true,
+        "function_status": "debil",
+        "eyes": "Cejas algo asimetricas, apertura ocular neutra, mirada frontal.",
+        "mouth": "Leve fruncimiento, casi neutro.",
+        "reference_difference": "La propuesta incluye inclinacion notoria de cabeza y mirada lateral. El gesto actual es tenue y se confunde facilmente con neutral.",
+        "reviewed_sha256": "19324ef6d58bc223f1205f8250f64605a82f1035d6fb8460d17da0b4a5bf1f67"
+      },
+      "numeric_check": {
+        "frame": 401,
+        "control_values": {
+          "blink.L": 0.0,
+          "blink.R": 0.0,
+          "blush": 0.0,
+          "browDown.L": 0.0,
+          "browDown.R": 0.30000001192092896,
+          "browInnerUp.L": 0.6200000047683716,
+          "browInnerUp.R": 0.0,
+          "browOuterUp.L": 0.0,
+          "browOuterUp.R": 0.0,
+          "eyeSquint.L": 0.0,
+          "eyeSquint.R": 0.0,
+          "eyeWide.L": 0.0,
+          "eyeWide.R": 0.0,
+          "frown": 0.0,
+          "jawOpen": 0.0,
+          "lipFunnel": 0.0,
+          "lipPucker": 0.15000000596046448,
+          "mouthPress": 0.0,
+          "mouthWide": 0.0,
+          "smile": 0.0,
+          "tears": 0.0
+        },
+        "preset_mismatches": {},
+        "ocular_projected_area_m2": {
+          "L": 0.0006385729393960926,
+          "R": 0.0006385719066196172
+        },
+        "lip_bounds_rest_m": {
+          "xmin": -0.01798715442419052,
+          "xmax": 0.01798715442419052,
+          "zmin": 1.548288345336914,
+          "zmax": 1.571711778640747
+        },
+        "cavity_projected_area_m2": 2.9655266022460096e-05,
+        "cavity_bounds_rest_m": {
+          "xmin": -0.011119461618363857,
+          "xmax": 0.011119461618363857,
+          "zmin": 1.5591514110565186,
+          "zmax": 1.5608490705490112
+        },
+        "cavity_projected_bbox_area_m2": 3.7754119135646746e-05,
+        "cavity_projected_z_span_m": 0.0016976594924926758,
+        "blush_material_strength": 0.0,
+        "internal_element_bounds_rest_m": {
+          "Dientes_superiores": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5457628965377808,
+            "zmax": 1.5457628965377808
+          },
+          "Lengua": {
+            "xmin": 0.0,
+            "xmax": 0.0,
+            "zmin": 1.5431629419326782,
+            "zmax": 1.5431629419326782
+          },
+          "Lagrima.L": {
+            "xmin": 0.04600000008940697,
+            "xmax": 0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          },
+          "Lagrima.R": {
+            "xmin": -0.04600000008940697,
+            "xmax": -0.04600000008940697,
+            "zmin": 1.5849628448486328,
+            "zmax": 1.5849628448486328
+          }
+        },
+        "mouth_inner_boundary_z_span_m": 0.0016990900039672852,
+        "mouth_inner_edge_pair_gap_m": 0.001720680731404093,
+        "tooth_commissure_width_check": null
+      }
+    }
+  ],
+  "limits": [
+    "Inspeccion de PNG estaticos y propiedades evaluadas; no valida animacion interpolada.",
+    "La malla facial usa anillos orbitales y orales separados; no se certifica retopologia soldada para produccion.",
+    "No se afirma identidad exacta, acabado definitivo ni preparacion final de produccion."
+  ]
+}

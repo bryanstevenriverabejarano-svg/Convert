@@ -1,0 +1,3478 @@
+{
+  "frames": {
+    "stand": 1,
+    "front_three_quarter": 11,
+    "front_opposite": 21,
+    "A": 31,
+    "front_variant": 41,
+    "hair_open": 61,
+    "seated": 91,
+    "crouched": 121,
+    "kneeling": 151,
+    "kneeling_variant": 161,
+    "leaning": 171,
+    "leaning_variant": 181,
+    "THINK": 311
+  },
+  "contact_plane_m": 0.0,
+  "poses": {
+    "stand": {
+      "frame": 1,
+      "finite": true,
+      "minimum_body_z_m": 0.001,
+      "minimum_all_z_m": 0.001,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.56067,
+          "sampled_evaluated_vertices": 2385,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.83707,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.56067,
+          "sampled_evaluated_vertices": 2385,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.83788,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.97504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.09504
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            0.0,
+            1.40504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.49504
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            0.0,
+            1.58504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.74504
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            0.0,
+            1.00504
+          ],
+          "tail": [
+            0.071,
+            -0.026,
+            0.62504
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            0.0,
+            1.00504
+          ],
+          "tail": [
+            -0.071,
+            -0.026,
+            0.62504
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.071,
+            -0.026,
+            0.62504
+          ],
+          "tail": [
+            0.056,
+            0.005,
+            0.16004
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.071,
+            -0.026,
+            0.62504
+          ],
+          "tail": [
+            -0.056,
+            0.005,
+            0.16004
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            0.0,
+            1.44504
+          ],
+          "tail": [
+            0.19781,
+            -0.00798,
+            1.22072
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            0.0,
+            1.44504
+          ],
+          "tail": [
+            -0.19781,
+            -0.00798,
+            1.22072
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.19781,
+            -0.00798,
+            1.22072
+          ],
+          "tail": [
+            0.23493,
+            -0.01801,
+            0.97892
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.19781,
+            -0.00798,
+            1.22072
+          ],
+          "tail": [
+            -0.23493,
+            -0.01801,
+            0.97892
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.23493,
+            -0.01801,
+            0.97892
+          ],
+          "tail": [
+            0.26184,
+            -0.02598,
+            0.88822
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.23493,
+            -0.01801,
+            0.97892
+          ],
+          "tail": [
+            -0.26184,
+            -0.02598,
+            0.88822
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "front_three_quarter": {
+      "frame": 11,
+      "finite": true,
+      "minimum_body_z_m": 0.001998,
+      "minimum_all_z_m": 0.001998,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.56297,
+          "sampled_evaluated_vertices": 2384,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.81552,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.5439,
+          "sampled_evaluated_vertices": 2379,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.822,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.016,
+            0.0,
+            0.96455
+          ],
+          "tail": [
+            -0.00273,
+            0.00788,
+            1.08282
+          ]
+        },
+        "chest": {
+          "head": [
+            -0.02465,
+            0.00289,
+            1.39189
+          ],
+          "tail": [
+            -0.02265,
+            0.00289,
+            1.48187
+          ]
+        },
+        "head": {
+          "head": [
+            -0.02265,
+            0.00289,
+            1.57187
+          ],
+          "tail": [
+            -0.02765,
+            -0.0031,
+            1.73168
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.09824,
+            0.00243,
+            1.00785
+          ],
+          "tail": [
+            0.09924,
+            0.00544,
+            0.62659
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.0756,
+            0.00152,
+            0.98038
+          ],
+          "tail": [
+            -0.04024,
+            -0.09475,
+            0.61317
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.09924,
+            0.00544,
+            0.62659
+          ],
+          "tail": [
+            0.09323,
+            0.02747,
+            0.16088
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.04024,
+            -0.09475,
+            0.61317
+          ],
+          "tail": [
+            -0.0394,
+            0.0186,
+            0.16089
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.1112,
+            0.00289,
+            1.42888
+          ],
+          "tail": [
+            0.16813,
+            -0.00909,
+            1.20318
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.15873,
+            0.00289,
+            1.43488
+          ],
+          "tail": [
+            -0.21565,
+            -0.00909,
+            1.20918
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.16813,
+            -0.00909,
+            1.20318
+          ],
+          "tail": [
+            0.20021,
+            -0.01711,
+            0.96058
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.21565,
+            -0.00909,
+            1.20918
+          ],
+          "tail": [
+            -0.24773,
+            -0.01711,
+            0.96658
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.20021,
+            -0.01711,
+            0.96058
+          ],
+          "tail": [
+            0.21835,
+            -0.02618,
+            0.86783
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.24773,
+            -0.01711,
+            0.96658
+          ],
+          "tail": [
+            -0.26588,
+            -0.02618,
+            0.87383
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "front_opposite": {
+      "frame": 21,
+      "finite": true,
+      "minimum_body_z_m": 0.001998,
+      "minimum_all_z_m": 0.001998,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.5439,
+          "sampled_evaluated_vertices": 2379,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.82152,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.56297,
+          "sampled_evaluated_vertices": 2384,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.816,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            -0.016,
+            0.0,
+            0.96455
+          ],
+          "tail": [
+            0.00273,
+            0.00788,
+            1.08282
+          ]
+        },
+        "chest": {
+          "head": [
+            0.02465,
+            0.00289,
+            1.39189
+          ],
+          "tail": [
+            0.02265,
+            0.00289,
+            1.48187
+          ]
+        },
+        "head": {
+          "head": [
+            0.02265,
+            0.00289,
+            1.57187
+          ],
+          "tail": [
+            0.02765,
+            -0.0031,
+            1.73168
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.0756,
+            0.00152,
+            0.98038
+          ],
+          "tail": [
+            0.04024,
+            -0.09475,
+            0.61317
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.09824,
+            0.00243,
+            1.00785
+          ],
+          "tail": [
+            -0.09924,
+            0.00544,
+            0.62659
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.04024,
+            -0.09475,
+            0.61317
+          ],
+          "tail": [
+            0.0394,
+            0.0186,
+            0.16089
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.09924,
+            0.00544,
+            0.62659
+          ],
+          "tail": [
+            -0.09323,
+            0.02747,
+            0.16088
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.15873,
+            0.00289,
+            1.43488
+          ],
+          "tail": [
+            0.21565,
+            -0.00909,
+            1.20918
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.1112,
+            0.00289,
+            1.42888
+          ],
+          "tail": [
+            -0.16813,
+            -0.00909,
+            1.20318
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.21565,
+            -0.00909,
+            1.20918
+          ],
+          "tail": [
+            0.24773,
+            -0.01711,
+            0.96658
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.16813,
+            -0.00909,
+            1.20318
+          ],
+          "tail": [
+            -0.20021,
+            -0.01711,
+            0.96058
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.24773,
+            -0.01711,
+            0.96658
+          ],
+          "tail": [
+            0.26588,
+            -0.02618,
+            0.87383
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.20021,
+            -0.01711,
+            0.96058
+          ],
+          "tail": [
+            -0.21835,
+            -0.02618,
+            0.86783
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "A": {
+      "frame": 31,
+      "finite": true,
+      "minimum_body_z_m": 0.001,
+      "minimum_all_z_m": 0.001,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.56067,
+          "sampled_evaluated_vertices": 2385,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.88256,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.56067,
+          "sampled_evaluated_vertices": 2385,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.88256,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.97504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.09504
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            0.0,
+            1.40504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.49504
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            0.0,
+            1.58504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.74504
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            0.0,
+            1.00504
+          ],
+          "tail": [
+            0.071,
+            -0.026,
+            0.62504
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            0.0,
+            1.00504
+          ],
+          "tail": [
+            -0.071,
+            -0.026,
+            0.62504
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.071,
+            -0.026,
+            0.62504
+          ],
+          "tail": [
+            0.056,
+            0.005,
+            0.16004
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.071,
+            -0.026,
+            0.62504
+          ],
+          "tail": [
+            -0.056,
+            0.005,
+            0.16004
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            0.0,
+            1.44504
+          ],
+          "tail": [
+            0.235,
+            -0.015,
+            1.23504
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            0.0,
+            1.44504
+          ],
+          "tail": [
+            -0.235,
+            -0.015,
+            1.23504
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.235,
+            -0.015,
+            1.23504
+          ],
+          "tail": [
+            0.342,
+            -0.025,
+            1.01504
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.235,
+            -0.015,
+            1.23504
+          ],
+          "tail": [
+            -0.342,
+            -0.025,
+            1.01504
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.342,
+            -0.025,
+            1.01504
+          ],
+          "tail": [
+            0.384,
+            -0.03,
+            0.93004
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.342,
+            -0.025,
+            1.01504
+          ],
+          "tail": [
+            -0.384,
+            -0.03,
+            0.93004
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "front_variant": {
+      "frame": 41,
+      "finite": true,
+      "minimum_body_z_m": 0.001998,
+      "minimum_all_z_m": 0.001998,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.56297,
+          "sampled_evaluated_vertices": 2384,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.81552,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.54646,
+          "sampled_evaluated_vertices": 2378,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.822,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.016,
+            0.0,
+            0.96455
+          ],
+          "tail": [
+            -0.00273,
+            0.00788,
+            1.08282
+          ]
+        },
+        "chest": {
+          "head": [
+            -0.02465,
+            0.00289,
+            1.39189
+          ],
+          "tail": [
+            -0.02265,
+            0.00289,
+            1.48187
+          ]
+        },
+        "head": {
+          "head": [
+            -0.02265,
+            0.00289,
+            1.57187
+          ],
+          "tail": [
+            -0.02765,
+            -0.0031,
+            1.73168
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.09824,
+            0.00243,
+            1.00785
+          ],
+          "tail": [
+            0.09924,
+            0.00544,
+            0.62659
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.0756,
+            0.00152,
+            0.98038
+          ],
+          "tail": [
+            -0.04139,
+            -0.10276,
+            0.61525
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.09924,
+            0.00544,
+            0.62659
+          ],
+          "tail": [
+            0.09323,
+            0.02747,
+            0.16088
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.04139,
+            -0.10276,
+            0.61525
+          ],
+          "tail": [
+            -0.03972,
+            0.00194,
+            0.16089
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.1112,
+            0.00289,
+            1.42888
+          ],
+          "tail": [
+            0.16813,
+            -0.00909,
+            1.20318
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.15873,
+            0.00289,
+            1.43488
+          ],
+          "tail": [
+            -0.21565,
+            -0.00909,
+            1.20918
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.16813,
+            -0.00909,
+            1.20318
+          ],
+          "tail": [
+            0.20021,
+            -0.01711,
+            0.96058
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.21565,
+            -0.00909,
+            1.20918
+          ],
+          "tail": [
+            -0.24773,
+            -0.01711,
+            0.96658
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.20021,
+            -0.01711,
+            0.96058
+          ],
+          "tail": [
+            0.21835,
+            -0.02618,
+            0.86783
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.24773,
+            -0.01711,
+            0.96658
+          ],
+          "tail": [
+            -0.26588,
+            -0.02618,
+            0.87383
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "hair_open": {
+      "frame": 61,
+      "finite": true,
+      "minimum_body_z_m": 0.001,
+      "minimum_all_z_m": 0.001,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.56067,
+          "sampled_evaluated_vertices": 2385,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.924,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.56067,
+          "sampled_evaluated_vertices": 2385,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.92702,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.97504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.09504
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            0.0,
+            1.40504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.49504
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            0.0,
+            1.58504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.74504
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            0.0,
+            1.00504
+          ],
+          "tail": [
+            0.071,
+            -0.026,
+            0.62504
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            0.0,
+            1.00504
+          ],
+          "tail": [
+            -0.071,
+            -0.026,
+            0.62504
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.071,
+            -0.026,
+            0.62504
+          ],
+          "tail": [
+            0.056,
+            0.005,
+            0.16004
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.071,
+            -0.026,
+            0.62504
+          ],
+          "tail": [
+            -0.056,
+            0.005,
+            0.16004
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            0.0,
+            1.44504
+          ],
+          "tail": [
+            0.27181,
+            0.0,
+            1.25634
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            0.0,
+            1.44504
+          ],
+          "tail": [
+            -0.27181,
+            0.0,
+            1.25634
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.27181,
+            0.0,
+            1.25634
+          ],
+          "tail": [
+            0.39903,
+            -0.00909,
+            1.04733
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.27181,
+            0.0,
+            1.25634
+          ],
+          "tail": [
+            -0.39903,
+            -0.00909,
+            1.04733
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.39903,
+            -0.00909,
+            1.04733
+          ],
+          "tail": [
+            0.45376,
+            -0.01182,
+            0.9698
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.39903,
+            -0.00909,
+            1.04733
+          ],
+          "tail": [
+            -0.45376,
+            -0.01182,
+            0.9698
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "seated": {
+      "frame": 91,
+      "finite": true,
+      "minimum_body_z_m": 0.000228,
+      "minimum_all_z_m": 0.000228,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.00099,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.00335,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.00101,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.34373,
+          "sampled_evaluated_vertices": 2359,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.11326,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.05844
+          ],
+          "tail": [
+            0.01765,
+            0.01569,
+            0.17609
+          ]
+        },
+        "chest": {
+          "head": [
+            0.05986,
+            0.05063,
+            0.46994
+          ],
+          "tail": [
+            0.08981,
+            0.04864,
+            0.55478
+          ]
+        },
+        "head": {
+          "head": [
+            0.07993,
+            0.03876,
+            0.64369
+          ],
+          "tail": [
+            0.06996,
+            0.03078,
+            0.80318
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.09145,
+            0.00307,
+            0.07491
+          ],
+          "tail": [
+            0.36283,
+            -0.26462,
+            0.06702
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.08263,
+            0.00478,
+            0.1008
+          ],
+          "tail": [
+            -0.11169,
+            -0.20873,
+            0.41534
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.36283,
+            -0.26462,
+            0.06702
+          ],
+          "tail": [
+            -0.04778,
+            -0.47454,
+            0.13592
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.11169,
+            -0.20873,
+            0.41534
+          ],
+          "tail": [
+            -0.12269,
+            -0.59825,
+            0.15929
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.20048,
+            0.05026,
+            0.46273
+          ],
+          "tail": [
+            0.30465,
+            0.06739,
+            0.25493
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.05414,
+            0.04923,
+            0.55257
+          ],
+          "tail": [
+            0.05811,
+            -0.07902,
+            0.39358
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.30465,
+            0.06739,
+            0.25493
+          ],
+          "tail": [
+            0.27048,
+            0.11526,
+            0.01725
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            0.05811,
+            -0.07902,
+            0.39358
+          ],
+          "tail": [
+            0.1951,
+            -0.20758,
+            0.23656
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.27048,
+            0.11526,
+            0.01725
+          ],
+          "tail": [
+            0.36484,
+            0.12574,
+            0.01725
+          ]
+        },
+        "hand.R": {
+          "head": [
+            0.1951,
+            -0.20758,
+            0.23656
+          ],
+          "tail": [
+            0.25138,
+            -0.22804,
+            0.16288
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      },
+      "posterior_pelvis_minimum_z_m": 0.001
+    },
+    "crouched": {
+      "frame": 121,
+      "finite": true,
+      "minimum_body_z_m": 0.001,
+      "minimum_all_z_m": 0.001,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.46725,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.53482,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.46725,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.53482,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.28054
+          ],
+          "tail": [
+            0.0,
+            0.02447,
+            0.39801
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            -0.07048,
+            0.69287
+          ],
+          "tail": [
+            0.0,
+            -0.08813,
+            0.78112
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            -0.0743,
+            0.87005
+          ],
+          "tail": [
+            0.0,
+            -0.06432,
+            1.02974
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            0.00612,
+            0.30991
+          ],
+          "tail": [
+            0.15317,
+            -0.28965,
+            0.54151
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            0.00612,
+            0.30991
+          ],
+          "tail": [
+            -0.15317,
+            -0.28965,
+            0.54151
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.15317,
+            -0.28965,
+            0.54151
+          ],
+          "tail": [
+            0.12119,
+            -0.02383,
+            0.15976
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.15317,
+            -0.28965,
+            0.54151
+          ],
+          "tail": [
+            -0.12119,
+            -0.02383,
+            0.15976
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            -0.07833,
+            0.73209
+          ],
+          "tail": [
+            0.218,
+            -0.28899,
+            0.6768
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            -0.07833,
+            0.73209
+          ],
+          "tail": [
+            -0.218,
+            -0.28899,
+            0.6768
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.21801,
+            -0.28899,
+            0.6768
+          ],
+          "tail": [
+            -0.02,
+            -0.30465,
+            0.62151
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.21801,
+            -0.28899,
+            0.6768
+          ],
+          "tail": [
+            0.02,
+            -0.30465,
+            0.62151
+          ]
+        },
+        "hand.L": {
+          "head": [
+            -0.02,
+            -0.30465,
+            0.62151
+          ],
+          "tail": [
+            -0.10466,
+            -0.32158,
+            0.582
+          ]
+        },
+        "hand.R": {
+          "head": [
+            0.02,
+            -0.30465,
+            0.62151
+          ],
+          "tail": [
+            0.10466,
+            -0.32158,
+            0.582
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "kneeling": {
+      "frame": 151,
+      "finite": true,
+      "minimum_body_z_m": 0.001,
+      "minimum_all_z_m": 0.001,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.00101,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.08536,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.00101,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.08536,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.17463
+          ],
+          "tail": [
+            0.0,
+            -0.005,
+            0.29453
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            -0.03082,
+            0.6031
+          ],
+          "tail": [
+            0.0,
+            -0.03082,
+            0.6931
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            -0.02582,
+            0.78296
+          ],
+          "tail": [
+            0.0,
+            -0.03282,
+            0.94281
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            -0.00125,
+            0.20461
+          ],
+          "tail": [
+            0.12104,
+            -0.34969,
+            0.05341
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            -0.00125,
+            0.20461
+          ],
+          "tail": [
+            -0.12104,
+            -0.34969,
+            0.05341
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.12104,
+            -0.34969,
+            0.05341
+          ],
+          "tail": [
+            0.10899,
+            0.11619,
+            0.06825
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.12104,
+            -0.34969,
+            0.05341
+          ],
+          "tail": [
+            -0.10899,
+            0.11619,
+            0.06825
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            -0.03082,
+            0.6431
+          ],
+          "tail": [
+            0.13458,
+            -0.10726,
+            0.42292
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            -0.03082,
+            0.6431
+          ],
+          "tail": [
+            -0.13458,
+            -0.10726,
+            0.42292
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.13458,
+            -0.10726,
+            0.42292
+          ],
+          "tail": [
+            0.11177,
+            -0.18772,
+            0.19279
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.13458,
+            -0.10726,
+            0.42292
+          ],
+          "tail": [
+            -0.11177,
+            -0.18772,
+            0.19279
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.11177,
+            -0.18772,
+            0.19279
+          ],
+          "tail": [
+            0.08595,
+            -0.25485,
+            0.13082
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.11177,
+            -0.18772,
+            0.19279
+          ],
+          "tail": [
+            -0.08595,
+            -0.25485,
+            0.13082
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "kneeling_variant": {
+      "frame": 161,
+      "finite": true,
+      "minimum_body_z_m": 0.001,
+      "minimum_all_z_m": 0.001,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.00159,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.00159,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.28198
+          ],
+          "tail": [
+            0.0,
+            -0.0336,
+            0.39718
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            -0.33357,
+            0.47502
+          ],
+          "tail": [
+            0.0,
+            -0.41833,
+            0.50529
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            -0.4769,
+            0.57363
+          ],
+          "tail": [
+            0.0,
+            -0.54235,
+            0.71963
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            -0.0084,
+            0.31078
+          ],
+          "tail": [
+            0.10101,
+            -0.28862,
+            0.05258
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            -0.0084,
+            0.31078
+          ],
+          "tail": [
+            -0.10101,
+            -0.28862,
+            0.05258
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.10101,
+            -0.28862,
+            0.05258
+          ],
+          "tail": [
+            0.08595,
+            0.17635,
+            0.08391
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.10101,
+            -0.28862,
+            0.05258
+          ],
+          "tail": [
+            -0.08595,
+            0.17635,
+            0.08391
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            -0.37124,
+            0.48848
+          ],
+          "tail": [
+            0.17859,
+            -0.38559,
+            0.25996
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            -0.37124,
+            0.48848
+          ],
+          "tail": [
+            -0.17859,
+            -0.38559,
+            0.25996
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.17859,
+            -0.38559,
+            0.25996
+          ],
+          "tail": [
+            0.20464,
+            -0.41104,
+            0.01784
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.17859,
+            -0.38559,
+            0.25996
+          ],
+          "tail": [
+            -0.20464,
+            -0.41104,
+            0.01784
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.20464,
+            -0.41104,
+            0.01784
+          ],
+          "tail": [
+            0.21512,
+            -0.5054,
+            0.01784
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.20464,
+            -0.41104,
+            0.01784
+          ],
+          "tail": [
+            -0.21512,
+            -0.5054,
+            0.01784
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "leaning": {
+      "frame": 171,
+      "finite": true,
+      "minimum_body_z_m": 0.001,
+      "minimum_all_z_m": 0.001,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.55625,
+          "sampled_evaluated_vertices": 2383,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.78351,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.55625,
+          "sampled_evaluated_vertices": 2383,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.78351,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.96923
+          ],
+          "tail": [
+            0.0,
+            0.01973,
+            1.0876
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            -0.16513,
+            1.33521
+          ],
+          "tail": [
+            0.0,
+            -0.22618,
+            1.40134
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            -0.26115,
+            1.48427
+          ],
+          "tail": [
+            0.0,
+            -0.2413,
+            1.64304
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            0.00493,
+            0.99882
+          ],
+          "tail": [
+            0.09501,
+            -0.05514,
+            0.62238
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            0.00493,
+            0.99882
+          ],
+          "tail": [
+            -0.09501,
+            -0.05514,
+            0.62238
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.09501,
+            -0.05514,
+            0.62238
+          ],
+          "tail": [
+            0.092,
+            0.00504,
+            0.16002
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.09501,
+            -0.05514,
+            0.62238
+          ],
+          "tail": [
+            -0.092,
+            0.00504,
+            0.16002
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            -0.19226,
+            1.3646
+          ],
+          "tail": [
+            0.17094,
+            -0.25373,
+            1.14267
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            -0.19226,
+            1.3646
+          ],
+          "tail": [
+            -0.17094,
+            -0.25373,
+            1.14267
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.17094,
+            -0.25373,
+            1.14267
+          ],
+          "tail": [
+            0.095,
+            -0.16,
+            0.9296
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.17094,
+            -0.25373,
+            1.14267
+          ],
+          "tail": [
+            -0.095,
+            -0.16,
+            0.9296
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.095,
+            -0.16,
+            0.9296
+          ],
+          "tail": [
+            0.09699,
+            -0.15006,
+            0.8352
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.095,
+            -0.16,
+            0.9296
+          ],
+          "tail": [
+            -0.09699,
+            -0.15006,
+            0.8352
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "leaning_variant": {
+      "frame": 181,
+      "finite": true,
+      "minimum_body_z_m": 0.001,
+      "minimum_all_z_m": 0.001,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.55625,
+          "sampled_evaluated_vertices": 2383,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.70056,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.55625,
+          "sampled_evaluated_vertices": 2383,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.70056,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.96923
+          ],
+          "tail": [
+            0.0,
+            0.01973,
+            1.0876
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            -0.23281,
+            1.26377
+          ],
+          "tail": [
+            0.0,
+            -0.31331,
+            1.30402
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            -0.34828,
+            1.38695
+          ],
+          "tail": [
+            0.0,
+            -0.32844,
+            1.54571
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            0.00493,
+            0.99882
+          ],
+          "tail": [
+            0.09501,
+            -0.05514,
+            0.62238
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            0.00493,
+            0.99882
+          ],
+          "tail": [
+            -0.09501,
+            -0.05514,
+            0.62238
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.09501,
+            -0.05514,
+            0.62238
+          ],
+          "tail": [
+            0.092,
+            0.00504,
+            0.16002
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.09501,
+            -0.05514,
+            0.62238
+          ],
+          "tail": [
+            -0.092,
+            0.00504,
+            0.16002
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            -0.26859,
+            1.28166
+          ],
+          "tail": [
+            0.17571,
+            -0.26581,
+            1.05218
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            -0.26859,
+            1.28166
+          ],
+          "tail": [
+            -0.17571,
+            -0.26581,
+            1.05218
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.17571,
+            -0.26581,
+            1.05218
+          ],
+          "tail": [
+            0.095,
+            -0.16,
+            0.84666
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.17571,
+            -0.26581,
+            1.05218
+          ],
+          "tail": [
+            -0.095,
+            -0.16,
+            0.84666
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.095,
+            -0.16,
+            0.84666
+          ],
+          "tail": [
+            0.09699,
+            -0.15006,
+            0.75226
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.095,
+            -0.16,
+            0.84666
+          ],
+          "tail": [
+            -0.09699,
+            -0.15006,
+            0.75226
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    },
+    "THINK": {
+      "frame": 311,
+      "finite": true,
+      "minimum_body_z_m": 0.0010000290349125862,
+      "minimum_all_z_m": 0.0010000290349125862,
+      "floor_penetration_m": 0,
+      "contact_regions": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.56067,
+          "sampled_evaluated_vertices": 2385,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 1.22559,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.56067,
+          "sampled_evaluated_vertices": 2385,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 1.43719,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "bone_points": {
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.97504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.09504
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            0.0,
+            1.40504
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.49504
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            0.0,
+            1.58504
+          ],
+          "tail": [
+            0.00997,
+            -0.00698,
+            1.74457
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.088,
+            0.0,
+            1.00504
+          ],
+          "tail": [
+            0.071,
+            -0.026,
+            0.62504
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.088,
+            0.0,
+            1.00504
+          ],
+          "tail": [
+            -0.071,
+            -0.026,
+            0.62504
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.071,
+            -0.026,
+            0.62504
+          ],
+          "tail": [
+            0.056,
+            0.005,
+            0.16004
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.071,
+            -0.026,
+            0.62504
+          ],
+          "tail": [
+            -0.056,
+            0.005,
+            0.16004
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.135,
+            -0.0,
+            1.44504
+          ],
+          "tail": [
+            0.02883,
+            -0.06148,
+            1.24686
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.135,
+            -0.0,
+            1.44504
+          ],
+          "tail": [
+            -0.23573,
+            -0.12383,
+            1.2752
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.02883,
+            -0.06148,
+            1.24686
+          ],
+          "tail": [
+            -0.19573,
+            -0.15883,
+            1.2402
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.23573,
+            -0.12383,
+            1.2752
+          ],
+          "tail": [
+            -0.06756,
+            -0.09258,
+            1.45039
+          ]
+        },
+        "hand.L": {
+          "head": [
+            -0.19573,
+            -0.15883,
+            1.2402
+          ],
+          "tail": [
+            -0.27547,
+            -0.13969,
+            1.28804
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.06756,
+            -0.09258,
+            1.45039
+          ],
+          "tail": [
+            -0.03442,
+            -0.04337,
+            1.52451
+          ]
+        }
+      },
+      "hair_body_surface_check": {
+        "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+        "objects": {},
+        "tested": 46,
+        "objects_with_surface_crossings": 0,
+        "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+      }
+    }
+  },
+  "ik_snap_checks": {
+    "stand": {
+      "foot.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.706544,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.513902,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.435048,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.62769,
+        "stretch": false
+      }
+    },
+    "front_three_quarter": {
+      "foot.L": {
+        "joint_switch_error_m": 1.1e-05,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.241123,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.300584,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.000158,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.347782,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.841008,
+        "stretch": false
+      }
+    },
+    "front_opposite": {
+      "foot.L": {
+        "joint_switch_error_m": 0.000158,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.793811,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.300584,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 1.1e-05,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.90047,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.841008,
+        "stretch": false
+      }
+    },
+    "A": {
+      "foot.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.706544,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 4e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.464137,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.435048,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.677455,
+        "stretch": false
+      }
+    },
+    "front_variant": {
+      "foot.L": {
+        "joint_switch_error_m": 1.1e-05,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.241123,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.300584,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.000269,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.357478,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.841008,
+        "stretch": false
+      }
+    },
+    "hair_open": {
+      "foot.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.706544,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 1.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.872665,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.435048,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 1.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.268928,
+        "stretch": false
+      }
+    },
+    "seated": {
+      "foot.L": {
+        "joint_switch_error_m": 0.002309,
+        "endpoint_switch_error_m": 2e-06,
+        "pole_angle_rad": 0.814487,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 0.00022,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.203622,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.001096,
+        "endpoint_switch_error_m": 7e-06,
+        "pole_angle_rad": -1.590189,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4.1e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.617994,
+        "stretch": false
+      }
+    },
+    "crouched": {
+      "foot.L": {
+        "joint_switch_error_m": 0.003157,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": 1.444745,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 2.8e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.814487,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.003157,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": 1.696848,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 2.8e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.327106,
+        "stretch": false
+      }
+    },
+    "kneeling": {
+      "foot.L": {
+        "joint_switch_error_m": 0.006189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": 1.40596,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 4.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.562384,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.006189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": 1.735633,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.579209,
+        "stretch": false
+      }
+    },
+    "kneeling_variant": {
+      "foot.L": {
+        "joint_switch_error_m": 0.025156,
+        "endpoint_switch_error_m": 2e-06,
+        "pole_angle_rad": -1.609581,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 3.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.950235,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.025157,
+        "endpoint_switch_error_m": 2e-06,
+        "pole_angle_rad": -1.532011,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 3.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.191358,
+        "stretch": false
+      }
+    },
+    "leaning": {
+      "foot.L": {
+        "joint_switch_error_m": 0.000189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": -1.532011,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 5e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -0.426636,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.000189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": -1.609581,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 5e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -2.714957,
+        "stretch": false
+      }
+    },
+    "leaning_variant": {
+      "foot.L": {
+        "joint_switch_error_m": 0.000189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": -1.532011,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 0.000109,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -0.281192,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.000189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": -1.609581,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 0.000109,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -2.860401,
+        "stretch": false
+      }
+    },
+    "THINK": {
+      "foot.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.706544,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 2e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.930842,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.435048,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 0.006565,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 1.667759,
+        "stretch": false
+      }
+    }
+  },
+  "limitations": [
+    "Envelope checks do not establish absence of self-intersection.",
+    "Contact samples use evaluated vertex weights; diffuse weights can leave a region without samples.",
+    "Hair is manually posed by bone chains; local hair-body collisions still require visual review.",
+    "FK poses are static. Rig pole switching is numerically checked per static pose; full motion continuity and skin correctives are not production certified."
+  ],
+  "postface_floor_repairs": {
+    "seated": {
+      "frame": 91,
+      "root_delta_m": -0.006404446601867676,
+      "posterior_pelvis_before_m": 0.007404446601867676,
+      "posterior_pelvis_after_m": 0.0009999871253967285,
+      "body_before_m": 0.0009998083114624023,
+      "body_after_m": 0.0002282857894897461,
+      "contacts_before": {
+        "foot.L": {
+          "minimum_z_m": 0.0074,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.0074,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.00741,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.35013,
+          "sampled_evaluated_vertices": 2359,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.11967,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "contacts_after": {
+        "foot.L": {
+          "minimum_z_m": 0.00099,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.00335,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.00101,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.34373,
+          "sampled_evaluated_vertices": 2359,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.11326,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "knee_lift_iterations": [
+        {
+          "step": 0,
+          "knee_minimum_before_m": -0.0054,
+          "pole": [
+            0.3615695834159851,
+            -0.26545223593711853,
+            0.06724458932876587
+          ]
+        }
+      ],
+      "ankle_endpoint_target": [
+        -0.047779619693756104,
+        -0.4745368957519531,
+        0.13592523336410522
+      ],
+      "ankle_endpoint_error_m": 2.9280686954655467e-06,
+      "ik_snap": {
+        "foot.L": {
+          "joint_switch_error_m": 0.002309,
+          "endpoint_switch_error_m": 2e-06,
+          "pole_angle_rad": 0.814487,
+          "stretch": false
+        },
+        "hand.L": {
+          "joint_switch_error_m": 0.000335,
+          "endpoint_switch_error_m": 0.0,
+          "pole_angle_rad": 0.203622,
+          "stretch": false
+        },
+        "foot.R": {
+          "joint_switch_error_m": 0.001096,
+          "endpoint_switch_error_m": 7e-06,
+          "pole_angle_rad": -1.590189,
+          "stretch": false
+        },
+        "hand.R": {
+          "joint_switch_error_m": 4.1e-05,
+          "endpoint_switch_error_m": 0.0,
+          "pole_angle_rad": 2.617994,
+          "stretch": false
+        }
+      }
+    },
+    "crouched": {
+      "frame": 121,
+      "root_delta_m": -0.025463128626346587,
+      "body_before_m": 0.026463128626346588,
+      "all_before_m": 0.026463128626346588,
+      "body_after_m": 0.0010000234469771385,
+      "all_after_m": 0.0010000234469771385,
+      "contacts_before": {
+        "foot.L": {
+          "minimum_z_m": 0.02646,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.49272,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.56028,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.02646,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.49272,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.56028,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "contacts_after": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.46725,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.53482,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.46725,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.53482,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "method": "uniform root translation; body, hair and controls move together"
+    },
+    "kneeling": {
+      "frame": 151,
+      "root_delta_m": -0.000997541170567274,
+      "body_before_m": 0.001997541170567274,
+      "all_before_m": 0.001997541170567274,
+      "body_after_m": 0.0010000006295740604,
+      "all_after_m": 0.0010000006295740604,
+      "contacts_before": {
+        "foot.L": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.08635,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.08635,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "contacts_after": {
+        "foot.L": {
+          "minimum_z_m": 0.00101,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.08536,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.00101,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.08536,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "method": "uniform root translation; body, hair and controls move together"
+    },
+    "kneeling_variant": {
+      "frame": 161,
+      "root_delta_m": -0.0009988883286714554,
+      "body_before_m": 0.0019988883286714554,
+      "all_before_m": 0.0019988883286714554,
+      "body_after_m": 0.0010000013280659914,
+      "all_after_m": 0.0010000013280659914,
+      "contacts_before": {
+        "foot.L": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.002,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "contacts_after": {
+        "foot.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.L": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "foot.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 7089,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "knee.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 2352,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        },
+        "hand.R": {
+          "minimum_z_m": 0.001,
+          "sampled_evaluated_vertices": 8233,
+          "method": "evaluated mesh vertices with at least 0.72 weight for region"
+        }
+      },
+      "method": "uniform root translation; body, hair and controls move together"
+    }
+  },
+  "palm_orientation_repairs": {
+    "seated": {
+      "L": {
+        "dorsal_normal_before": [
+          0.052341654896736145,
+          0.005815684795379639,
+          -0.9986121654510498
+        ],
+        "dorsal_normal_after": [
+          0.05234149098396301,
+          0.005815736949443817,
+          0.9986122846603394
+        ],
+        "hand_minimum_z_m": 0.001,
+        "wrist_world": [
+          0.2704775333404541,
+          0.1152588352560997,
+          0.017249761149287224
+        ]
+      },
+      "body_minimum_z_m": 0.0002282857894897461,
+      "all_minimum_z_m": 0.0002282857894897461,
+      "posterior_pelvis_minimum_z_m": 0.0009999871253967285
+    },
+    "kneeling_variant": {
+      "L": {
+        "dorsal_normal_before": [
+          0.005815522745251656,
+          -0.052341386675834656,
+          -0.9986124038696289
+        ],
+        "dorsal_normal_after": [
+          0.005815981421619654,
+          -0.05234115570783615,
+          0.9986124038696289
+        ],
+        "hand_minimum_z_m": 0.00159,
+        "wrist_world": [
+          0.2046370506286621,
+          -0.41103610396385193,
+          0.017839694395661354
+        ]
+      },
+      "R": {
+        "dorsal_normal_before": [
+          -0.005815819371491671,
+          -0.05234135687351227,
+          -0.9986123442649841
+        ],
+        "dorsal_normal_after": [
+          -0.005815817043185234,
+          -0.05234174430370331,
+          0.9986124634742737
+        ],
+        "hand_minimum_z_m": 0.00159,
+        "wrist_world": [
+          -0.2046370506286621,
+          -0.41103610396385193,
+          0.017839694395661354
+        ]
+      },
+      "body_minimum_z_m": 0.0010000013280659914,
+      "all_minimum_z_m": 0.0010000013280659914
+    }
+  },
+  "think_surface_repair": {
+    "nominal_chin_world": [
+      -0.00823211669921875,
+      -0.04443752020597458,
+      1.5485056638717651
+    ],
+    "target_skin_world": [
+      -0.006860487628728151,
+      -0.03954242914915085,
+      1.5501338243484497
+    ],
+    "target_skin_normal": [
+      -0.2631073594093323,
+      -0.9145048260688782,
+      -0.30733615159988403
+    ],
+    "selected_index_vertex": 1166,
+    "selected_index_world": [
+      -0.007196933031082153,
+      -0.04020926356315613,
+      1.5489387512207031
+    ],
+    "selected_to_target_skin_m": 0.0014092776198220444,
+    "distal_minimum_skin_distance_m": 0.0009999568574130535,
+    "closest_index_world": [
+      -0.007951438426971436,
+      -0.03997698798775673,
+      1.5491552352905273
+    ],
+    "closest_skin_world": [
+      -0.007660039234906435,
+      -0.03907426819205284,
+      1.5494716167449951
+    ],
+    "closest_skin_normal": [
+      -0.28767985105514526,
+      -0.9048030972480774,
+      -0.3139611482620239
+    ],
+    "closest_signed_skin_distance_m": 0.0009999448520829901,
+    "selected_signed_skin_distance_m": 0.001064838288584724,
+    "finger_head_surface_crossing_pairs": 0,
+    "bone_tip_world": [
+      -0.007945742458105087,
+      -0.04325990378856659,
+      1.5504547357559204
+    ]
+  },
+  "think_collar_surface_repair": {
+    "target": [
+      -0.006,
+      -0.046,
+      1.535
+    ],
+    "pitch": -0.3,
+    "head_collar_crossings": {},
+    "source_stage": "work/Salve_think_contact_checkpoint.blend; visual rerender and final model save pending"
+  }
+}

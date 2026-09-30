@@ -1,0 +1,2745 @@
+{
+  "blend": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_refinado_v02.blend",
+  "component": "facial_drivers_and_shapes",
+  "read_only": true,
+  "blender": "5.2.2 LTS",
+  "errors": [],
+  "warnings": [],
+  "object_checks": {
+    "Rostro_topologia": {
+      "vertices": 14464,
+      "polygons": 14010,
+      "uv_layers": [
+        "UV_Rostro_cilindrica"
+      ],
+      "shape_keys": [
+        "Basis",
+        "jawOpen",
+        "smile"
+      ],
+      "driver_count": 2,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "jawOpen": 0.003943247672052405,
+        "smile": 0.0017962455749511719
+      },
+      "excessive_shape_deltas": []
+    },
+    "Oreja.L": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Esclerotica.L": {
+      "vertices": 896,
+      "polygons": 832,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "eyeSquint.L",
+        "eyeWide.L",
+        "blink.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "eyeSquint.L": 0.0030400752927750084,
+        "eyeWide.L": 0.003324985469958711,
+        "blink.L": 0.009500026595177841
+      },
+      "excessive_shape_deltas": []
+    },
+    "Parpado_superior.L": {
+      "vertices": 343,
+      "polygons": 288,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L",
+        "eyeSquint.L",
+        "eyeWide.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.0076999664306640625,
+        "eyeSquint.L": 0.006559967863628826,
+        "eyeWide.L": 0.0071749687036374975
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana.L": {
+      "vertices": 392,
+      "polygons": 386,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L",
+        "eyeSquint.L",
+        "eyeWide.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.007699847131862806,
+        "eyeSquint.L": 0.0033750534057617188,
+        "eyeWide.L": 0.0036914349141250564
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana_ala_0.L": {
+      "vertices": 16,
+      "polygons": 10,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L",
+        "eyeSquint.L",
+        "eyeWide.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.003891827368416761,
+        "eyeSquint.L": 0.0021947622525815657,
+        "eyeWide.L": 0.0024005175080834295
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana_ala_1.L": {
+      "vertices": 16,
+      "polygons": 10,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L",
+        "eyeSquint.L",
+        "eyeWide.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.0029722932955787143,
+        "eyeSquint.L": 0.002228379271893008,
+        "eyeWide.L": 0.002437233898627434
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana_ala_2.L": {
+      "vertices": 16,
+      "polygons": 10,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L",
+        "eyeSquint.L",
+        "eyeWide.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.0018982895315664942,
+        "eyeSquint.L": 0.0022611618041992188,
+        "eyeWide.L": 0.0024731159095282406
+      },
+      "excessive_shape_deltas": []
+    },
+    "Parpado_inferior.L": {
+      "vertices": 343,
+      "polygons": 288,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L",
+        "eyeSquint.L",
+        "eyeWide.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.009303524024317993,
+        "eyeSquint.L": 0.005280017831251677,
+        "eyeWide.L": 0.005774974803311929
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana_inferior.L": {
+      "vertices": 392,
+      "polygons": 386,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L",
+        "eyeSquint.L",
+        "eyeWide.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.009304142093797376,
+        "eyeSquint.L": 0.0024830102662986592,
+        "eyeWide.L": 0.002715706801708575
+      },
+      "excessive_shape_deltas": []
+    },
+    "Parpado_cierre.L": {
+      "vertices": 441,
+      "polygons": 384,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L"
+      ],
+      "driver_count": 1,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.029617299505693414
+      },
+      "excessive_shape_deltas": []
+    },
+    "Iris.L": {
+      "vertices": 1632,
+      "polygons": 1536,
+      "uv_layers": [
+        "UV_Iris"
+      ],
+      "shape_keys": [
+        "Basis",
+        "eyeSquint.L",
+        "eyeWide.L",
+        "blink.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "eyeSquint.L": 0.0029439926147460938,
+        "eyeWide.L": 0.0032199621001960284,
+        "blink.L": 0.009199977056239466
+      },
+      "excessive_shape_deltas": []
+    },
+    "Brillo.L": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L"
+      ],
+      "driver_count": 1,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.006982564987203197
+      },
+      "excessive_shape_deltas": []
+    },
+    "Brillo_secundario.L": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.L"
+      ],
+      "driver_count": 1,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.L": 0.005551457383331674
+      },
+      "excessive_shape_deltas": []
+    },
+    "Ceja.L": {
+      "vertices": 200,
+      "polygons": 194,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "browInnerUp.L",
+        "browDown.L",
+        "browOuterUp.L"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "browInnerUp.L": 0.00604274414017338,
+        "browDown.L": 0.0055065827061372115,
+        "browOuterUp.L": 0.007046677062239776
+      },
+      "excessive_shape_deltas": []
+    },
+    "Sonrojo.L": {
+      "vertices": 432,
+      "polygons": 384,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Lagrima.L": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 3,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Oreja.R": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Esclerotica.R": {
+      "vertices": 896,
+      "polygons": 832,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "eyeSquint.R",
+        "eyeWide.R",
+        "blink.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "eyeSquint.R": 0.0030400752927750084,
+        "eyeWide.R": 0.003324985469958711,
+        "blink.R": 0.009500026595177841
+      },
+      "excessive_shape_deltas": []
+    },
+    "Parpado_superior.R": {
+      "vertices": 343,
+      "polygons": 288,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R",
+        "eyeSquint.R",
+        "eyeWide.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.0076999664306640625,
+        "eyeSquint.R": 0.006559967863628826,
+        "eyeWide.R": 0.0071749687036374975
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana.R": {
+      "vertices": 392,
+      "polygons": 386,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R",
+        "eyeSquint.R",
+        "eyeWide.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.007699847131862806,
+        "eyeSquint.R": 0.0033750534057617188,
+        "eyeWide.R": 0.0036914349141250564
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana_ala_0.R": {
+      "vertices": 16,
+      "polygons": 10,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R",
+        "eyeSquint.R",
+        "eyeWide.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.003891827368416761,
+        "eyeSquint.R": 0.0021947622525815657,
+        "eyeWide.R": 0.0024005175080834295
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana_ala_1.R": {
+      "vertices": 16,
+      "polygons": 10,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R",
+        "eyeSquint.R",
+        "eyeWide.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.0029722932955787143,
+        "eyeSquint.R": 0.002228379271893008,
+        "eyeWide.R": 0.002437233898627434
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana_ala_2.R": {
+      "vertices": 16,
+      "polygons": 10,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R",
+        "eyeSquint.R",
+        "eyeWide.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.0018982895315664942,
+        "eyeSquint.R": 0.0022611618041992188,
+        "eyeWide.R": 0.0024731159095282406
+      },
+      "excessive_shape_deltas": []
+    },
+    "Parpado_inferior.R": {
+      "vertices": 343,
+      "polygons": 288,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R",
+        "eyeSquint.R",
+        "eyeWide.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.009303524024317993,
+        "eyeSquint.R": 0.005280017831251677,
+        "eyeWide.R": 0.005774974803311929
+      },
+      "excessive_shape_deltas": []
+    },
+    "Pestana_inferior.R": {
+      "vertices": 392,
+      "polygons": 386,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R",
+        "eyeSquint.R",
+        "eyeWide.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.009304142093797376,
+        "eyeSquint.R": 0.0024830102662986592,
+        "eyeWide.R": 0.002715706801708575
+      },
+      "excessive_shape_deltas": []
+    },
+    "Parpado_cierre.R": {
+      "vertices": 441,
+      "polygons": 384,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R"
+      ],
+      "driver_count": 1,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.029617299505693414
+      },
+      "excessive_shape_deltas": []
+    },
+    "Iris.R": {
+      "vertices": 1632,
+      "polygons": 1536,
+      "uv_layers": [
+        "UV_Iris"
+      ],
+      "shape_keys": [
+        "Basis",
+        "eyeSquint.R",
+        "eyeWide.R",
+        "blink.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "eyeSquint.R": 0.0029439926147460938,
+        "eyeWide.R": 0.0032199621001960284,
+        "blink.R": 0.009199977056239466
+      },
+      "excessive_shape_deltas": []
+    },
+    "Brillo.R": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R"
+      ],
+      "driver_count": 1,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.006982564987203197
+      },
+      "excessive_shape_deltas": []
+    },
+    "Brillo_secundario.R": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "blink.R"
+      ],
+      "driver_count": 1,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "blink.R": 0.005551457383331674
+      },
+      "excessive_shape_deltas": []
+    },
+    "Ceja.R": {
+      "vertices": 200,
+      "polygons": 194,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "browInnerUp.R",
+        "browDown.R",
+        "browOuterUp.R"
+      ],
+      "driver_count": 3,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "browInnerUp.R": 0.00604274414017338,
+        "browDown.R": 0.0055065827061372115,
+        "browOuterUp.R": 0.007046677062239776
+      },
+      "excessive_shape_deltas": []
+    },
+    "Sonrojo.R": {
+      "vertices": 432,
+      "polygons": 384,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Lagrima.R": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 3,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Labios_controles": {
+      "vertices": 672,
+      "polygons": 576,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "jawOpen",
+        "smile",
+        "frown",
+        "mouthWide",
+        "lipPucker",
+        "lipFunnel",
+        "mouthPress"
+      ],
+      "driver_count": 7,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "jawOpen": 0.007799983009110946,
+        "smile": 0.003913998950559955,
+        "frown": 0.0027074813842773438,
+        "mouthWide": 0.003540000010965613,
+        "lipPucker": 0.00472824022519872,
+        "lipFunnel": 0.004820107305156495,
+        "mouthPress": 0.002479102627911929
+      },
+      "excessive_shape_deltas": []
+    },
+    "Boca_interior": {
+      "vertices": 1248,
+      "polygons": 1152,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [
+        "Basis",
+        "jawOpen",
+        "smile",
+        "frown",
+        "mouthWide",
+        "lipPucker",
+        "lipFunnel",
+        "mouthPress"
+      ],
+      "driver_count": 7,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {
+        "jawOpen": 0.007799625498760065,
+        "smile": 0.003913998950559955,
+        "frown": 0.0027074813842773438,
+        "mouthWide": 0.003540000010965613,
+        "lipPucker": 0.00472824022519872,
+        "lipFunnel": 0.0035151699555254056,
+        "mouthPress": 0.0007328676597393671
+      },
+      "excessive_shape_deltas": []
+    },
+    "Dientes_superiores": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 4,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Lengua": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 4,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Fosa_nasal.L": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "Fosa_nasal.R": {
+      "vertices": 672,
+      "polygons": 640,
+      "uv_layers": [
+        "UV_Rostro_proyeccion_local"
+      ],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "LANDMARK_eye_left": {
+      "vertices": 1,
+      "polygons": 0,
+      "uv_layers": [],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "LANDMARK_eye_right": {
+      "vertices": 1,
+      "polygons": 0,
+      "uv_layers": [],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "LANDMARK_mouth": {
+      "vertices": 1,
+      "polygons": 0,
+      "uv_layers": [],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "LANDMARK_head_pivot": {
+      "vertices": 1,
+      "polygons": 0,
+      "uv_layers": [],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    },
+    "LANDMARK_chin": {
+      "vertices": 1,
+      "polygons": 0,
+      "uv_layers": [],
+      "shape_keys": [],
+      "driver_count": 0,
+      "object_driver_count": 0,
+      "invalid_drivers": [],
+      "invalid_object_drivers": [],
+      "finite_base_vertices": true,
+      "finite_shape_vertices": true,
+      "missing_bone_groups": [],
+      "shape_max_deltas_m": {},
+      "excessive_shape_deltas": []
+    }
+  },
+  "preset_checks": {
+    "NEUTRAL": {
+      "frame": 201,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 2.6651264376540557e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.01179157942533493,
+        "xmax": 0.01179157942533493,
+        "zmin": 1.5592806339263916,
+        "zmax": 1.560719609260559
+      },
+      "cavity_projected_bbox_area_m2": 3.393558388786744e-05,
+      "cavity_projected_z_span_m": 0.0014389753341674805,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0014399290084838867,
+      "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+      "tooth_commissure_width_check": null
+    },
+    "WARM": {
+      "frame": 211,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.15000000596046448,
+        "eyeSquint.R": 0.15000000596046448,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.699999988079071,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.000607921283701407,
+        "R": 0.0006079196772647844
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 3.000971075641434e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.013277320191264153,
+        "xmax": 0.013277320191264153,
+        "zmin": 1.559283971786499,
+        "zmax": 1.562354564666748
+      },
+      "cavity_projected_bbox_area_m2": 8.153848969616462e-05,
+      "cavity_projected_z_span_m": 0.0030705928802490234,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0030760765075683594,
+      "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+      "tooth_commissure_width_check": null
+    },
+    "CURIOUS": {
+      "frame": 221,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.25,
+        "browOuterUp.L": 0.6499999761581421,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.20000000298023224,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.10000000149011612,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006832729373473234,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 2.8714843543811838e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.011343500576913357,
+        "xmax": 0.011343500576913357,
+        "zmin": 1.5591944456100464,
+        "zmax": 1.5608060359954834
+      },
+      "cavity_projected_bbox_area_m2": 3.656215293390552e-05,
+      "cavity_projected_z_span_m": 0.0016115903854370117,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0016127824783325195,
+      "mouth_inner_edge_pair_gap_m": 0.0016355129307264193,
+      "tooth_commissure_width_check": null
+    },
+    "CONCERNED": {
+      "frame": 231,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.7200000286102295,
+        "browInnerUp.R": 0.7200000286102295,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.3799999952316284,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 2.6651918847851036e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.01179157942533493,
+        "xmax": 0.01179157942533493,
+        "zmin": 1.5588467121124268,
+        "zmax": 1.5607181787490845
+      },
+      "cavity_projected_bbox_area_m2": 4.4135094976027744e-05,
+      "cavity_projected_z_span_m": 0.0018714666366577148,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0018739700317382812,
+      "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+      "tooth_commissure_width_check": null
+    },
+    "SAD": {
+      "frame": 241,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.6499999761581421,
+        "browInnerUp.R": 0.6499999761581421,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.15000000596046448,
+        "eyeSquint.R": 0.15000000596046448,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.8500000238418579,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.000607921283701407,
+        "R": 0.0006079196772647844
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 2.6650885789760576e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.01179157942533493,
+        "xmax": 0.01179157942533493,
+        "zmin": 1.5576457977294922,
+        "zmax": 1.5607166290283203
+      },
+      "cavity_projected_bbox_area_m2": 7.241990232387252e-05,
+      "cavity_projected_z_span_m": 0.003070831298828125,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0030760765075683594,
+      "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+      "tooth_commissure_width_check": null
+    },
+    "ANGRY": {
+      "frame": 251,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.949999988079071,
+        "browDown.R": 0.949999988079071,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.5,
+        "browOuterUp.R": 0.5,
+        "eyeSquint.L": 0.8500000238418579,
+        "eyeSquint.R": 0.8500000238418579,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.3499999940395355,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.00046487931881381006,
+        "R": 0.00046487981173212733
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 1.7324096209154344e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.01179157942533493,
+        "xmax": 0.01179157942533493,
+        "zmin": 1.5595324039459229,
+        "zmax": 1.5604677200317383
+      },
+      "cavity_projected_bbox_area_m2": 2.2057707827372042e-05,
+      "cavity_projected_z_span_m": 0.0009353160858154297,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0009359121322631836,
+      "mouth_inner_edge_pair_gap_m": 0.0009524323359513647,
+      "tooth_commissure_width_check": null
+    },
+    "SURPRISED": {
+      "frame": 261,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.800000011920929,
+        "browOuterUp.R": 0.800000011920929,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.7200000286102295,
+        "eyeWide.R": 0.7200000286102295,
+        "frown": 0.0,
+        "jawOpen": 0.6499999761581421,
+        "lipFunnel": 0.44999998807907104,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.000799493199963669,
+        "R": 0.0007994927757730419
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 0.0002082553353917791,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.010305841453373432,
+        "xmax": 0.010305841453373432,
+        "zmin": 1.5535669326782227,
+        "zmax": 1.5664331912994385
+      },
+      "cavity_projected_bbox_area_m2": 0.0002651952428966986,
+      "cavity_projected_z_span_m": 0.01286625862121582,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.008739999495446682,
+          "xmax": 0.008739999495446682,
+          "zmin": 1.5618298053741455,
+          "zmax": 1.5652297735214233
+        },
+        "Lengua": {
+          "xmin": -0.007000000216066837,
+          "xmax": 0.007000000216066837,
+          "zmin": 1.5534999370574951,
+          "zmax": 1.5577000379562378
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.012875914573669434,
+      "mouth_inner_edge_pair_gap_m": 0.012878781195432034,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.020611682906746864,
+        "tooth_width_m": 0.017479998990893364,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "SHY": {
+      "frame": 271,
+      "control_values": {
+        "blink.L": 0.20000000298023224,
+        "blink.R": 0.20000000298023224,
+        "blush": 1.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.3499999940395355,
+        "eyeSquint.R": 0.3499999940395355,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.2800000011920929,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.00043933779990454336,
+        "R": 0.00043933800514039945
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 2.7994594578154225e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.012385876849293709,
+        "xmax": 0.012385876849293709,
+        "zmin": 1.5592820644378662,
+        "zmax": 1.5610604286193848
+      },
+      "cavity_projected_bbox_area_m2": 4.405319949096764e-05,
+      "cavity_projected_z_span_m": 0.0017783641815185547,
+      "blush_material_strength": 0.7200000286102295,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0017812252044677734,
+      "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+      "tooth_commissure_width_check": null
+    },
+    "LAUGH": {
+      "frame": 281,
+      "control_values": {
+        "blink.L": 1.0,
+        "blink.R": 1.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.8600000143051147,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 1.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 2.7449212894326003e-07,
+        "R": 2.740963265523977e-07
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 0.0003243998059807869,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.013914065435528755,
+        "xmax": 0.013914065435528755,
+        "zmin": 1.5525825023651123,
+        "zmax": 1.567427158355713
+      },
+      "cavity_projected_bbox_area_m2": 0.000413099029642261,
+      "cavity_projected_z_span_m": 0.014844655990600586,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.009999999776482582,
+          "xmax": 0.009999999776482582,
+          "zmin": 1.5627119541168213,
+          "zmax": 1.5661119222640991
+        },
+        "Lengua": {
+          "xmin": -0.007000000216066837,
+          "xmax": 0.007000000216066837,
+          "zmin": 1.5526598691940308,
+          "zmax": 1.5568599700927734
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.01485598087310791,
+      "mouth_inner_edge_pair_gap_m": 0.01485846567980257,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.02782813087105751,
+        "tooth_width_m": 0.019999999552965164,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "CRY": {
+      "frame": 291,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.20000000298023224,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 1.0,
+        "browInnerUp.R": 1.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 1.0,
+        "jawOpen": 0.3799999952316284,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 1.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 0.0001363467669858419,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.01179157942533493,
+        "xmax": 0.01179157942533493,
+        "zmin": 1.5560417175292969,
+        "zmax": 1.5636773109436035
+      },
+      "cavity_projected_bbox_area_m2": 0.00018007141240872215,
+      "cavity_projected_z_span_m": 0.007635593414306641,
+      "blush_material_strength": 0.14400000870227814,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.009999999776482582,
+          "xmax": 0.009999999776482582,
+          "zmin": 1.560696005821228,
+          "zmax": 1.5640959739685059
+        },
+        "Lengua": {
+          "xmin": -0.005851999390870333,
+          "xmax": 0.005851999390870333,
+          "zmin": 1.5549240112304688,
+          "zmax": 1.5584354400634766
+        },
+        "Lagrima.L": {
+          "xmin": 0.04470000043511391,
+          "xmax": 0.04729999974370003,
+          "zmin": 1.593999981880188,
+          "zmax": 1.6059999465942383
+        },
+        "Lagrima.R": {
+          "xmin": -0.04729999974370003,
+          "xmax": -0.04470000043511391,
+          "zmin": 1.593999981880188,
+          "zmax": 1.6059999465942383
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.007643461227416992,
+      "mouth_inner_edge_pair_gap_m": 0.007372977380931611,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.02358315885066986,
+        "tooth_width_m": 0.019999999552965164,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "STARTLE": {
+      "frame": 301,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 1.0,
+        "browOuterUp.R": 1.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 1.0,
+        "eyeWide.R": 1.0,
+        "frown": 0.0,
+        "jawOpen": 0.7799999713897705,
+        "lipFunnel": 0.75,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.000862074764275883,
+        "R": 0.0008620753671974846
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 0.00023052168403160309,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.009315348230302334,
+        "xmax": 0.009315348230302334,
+        "zmin": 1.5521221160888672,
+        "zmax": 1.5678781270980835
+      },
+      "cavity_projected_bbox_area_m2": 0.00029354545854265446,
+      "cavity_projected_z_span_m": 0.01575601100921631,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.007899999618530273,
+          "xmax": 0.007899999618530273,
+          "zmin": 1.5623759031295776,
+          "zmax": 1.5657758712768555
+        },
+        "Lengua": {
+          "xmin": -0.007000000216066837,
+          "xmax": 0.007000000216066837,
+          "zmin": 1.5529799461364746,
+          "zmax": 1.5571800470352173
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.015767693519592285,
+      "mouth_inner_edge_pair_gap_m": 0.015770035047739953,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.018630696460604668,
+        "tooth_width_m": 0.015799999237060547,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "THINK": {
+      "frame": 311,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.3799999952316284,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.14000000059604645,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.18000000715255737,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385736048863666,
+        "R": 0.0006099660541676322
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715628683567,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 3.0189740201356716e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.010985041968524456,
+        "xmax": 0.010985033586621284,
+        "zmin": 1.5591254234313965,
+        "zmax": 1.5608751773834229
+      },
+      "cavity_projected_bbox_area_m2": 3.844222652893414e-05,
+      "cavity_projected_z_span_m": 0.0017497539520263672,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.001443954766727984,
+          "xmax": 0.001443954766727984,
+          "zmin": 1.5479636192321777,
+          "zmax": 1.5479636192321777
+        },
+        "Lengua": {
+          "xmin": 0.0016059750923886895,
+          "xmax": 0.0016059750923886895,
+          "zmin": 1.545371174812317,
+          "zmax": 1.545371174812317
+        },
+        "Lagrima.L": {
+          "xmin": 0.04492848366498947,
+          "xmax": 0.04492848366498947,
+          "zmin": 1.589375615119934,
+          "zmax": 1.589375615119934
+        },
+        "Lagrima.R": {
+          "xmin": -0.046892620623111725,
+          "xmax": -0.046892620623111725,
+          "zmin": 1.5836422443389893,
+          "zmax": 1.5836422443389893
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0017508268356323242,
+      "mouth_inner_edge_pair_gap_m": 0.0017717871860150798,
+      "tooth_commissure_width_check": null
+    },
+    "WINK": {
+      "frame": 321,
+      "control_values": {
+        "blink.L": 1.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.10000000149011612,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.6000000238418579,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 2.7449212894326003e-07,
+        "R": 0.0006181383114101102
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 2.9529868615775588e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.013065071776509285,
+        "xmax": 0.013065071776509285,
+        "zmin": 1.5592834949493408,
+        "zmax": 1.5620354413986206
+      },
+      "cavity_projected_bbox_area_m2": 7.190875576990052e-05,
+      "cavity_projected_z_span_m": 0.002751946449279785,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0027579069137573242,
+      "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+      "tooth_commissure_width_check": null
+    },
+    "A": {
+      "frame": 331,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.8999999761581421,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 0.0002864630074760864,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.01179157942533493,
+        "xmax": 0.01179157942533493,
+        "zmin": 1.5522663593292236,
+        "zmax": 1.5677342414855957
+      },
+      "cavity_projected_bbox_area_m2": 0.0003647815219771644,
+      "cavity_projected_z_span_m": 0.01546788215637207,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.009999999776482582,
+          "xmax": 0.009999999776482582,
+          "zmin": 1.5628799200057983,
+          "zmax": 1.5662798881530762
+        },
+        "Lengua": {
+          "xmin": -0.007000000216066837,
+          "xmax": 0.007000000216066837,
+          "zmin": 1.5524998903274536,
+          "zmax": 1.5566999912261963
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0154799222946167,
+      "mouth_inner_edge_pair_gap_m": 0.015482306805336209,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.02358315885066986,
+        "tooth_width_m": 0.019999999552965164,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "E": {
+      "frame": 341,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.3199999928474426,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.699999988079071,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 0.0001440210072919286,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.014267810620367527,
+        "xmax": 0.014267810620367527,
+        "zmin": 1.5567867755889893,
+        "zmax": 1.56321382522583
+      },
+      "cavity_projected_bbox_area_m2": 0.00018339985413229343,
+      "cavity_projected_z_span_m": 0.00642704963684082,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.012450001202523708,
+          "xmax": 0.012450001202523708,
+          "zmin": 1.5604441165924072,
+          "zmax": 1.563844084739685
+        },
+        "Lengua": {
+          "xmin": -0.00492800073698163,
+          "xmax": 0.00492800073698163,
+          "zmin": 1.5554416179656982,
+          "zmax": 1.5583986043930054
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.006431937217712402,
+      "mouth_inner_edge_pair_gap_m": 0.00643767452594906,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.028535621240735054,
+        "tooth_width_m": 0.024900002405047417,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "I": {
+      "frame": 351,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.12999999523162842,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 1.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 8.34293508731182e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.015329054556787014,
+        "xmax": 0.015329054556787014,
+        "zmin": 1.5582674741744995,
+        "zmax": 1.5617330074310303
+      },
+      "cavity_projected_bbox_area_m2": 0.00010624669671543963,
+      "cavity_projected_z_span_m": 0.0034655332565307617,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.013500000350177288,
+          "xmax": 0.013500000350177288,
+          "zmin": 1.5596458911895752,
+          "zmax": 1.563045859336853
+        },
+        "Lengua": {
+          "xmin": -0.0020019998773932457,
+          "xmax": 0.0020019998773932457,
+          "zmin": 1.5570791959762573,
+          "zmax": 1.5582804679870605
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0034679174423217773,
+      "mouth_inner_edge_pair_gap_m": 0.003478546607022783,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.030658109113574028,
+        "tooth_width_m": 0.027000000700354576,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "O": {
+      "frame": 361,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.699999988079071,
+        "lipFunnel": 1.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.5475869178771973,
+        "zmax": 1.5724133253097534
+      },
+      "cavity_projected_area_m2": 0.00020306072692097277,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.008489937521517277,
+        "xmax": 0.008489937521517277,
+        "zmin": 1.5523860454559326,
+        "zmax": 1.5676143169403076
+      },
+      "cavity_projected_bbox_area_m2": 0.0002585741469260938,
+      "cavity_projected_z_span_m": 0.015228271484375,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.007200000341981649,
+          "xmax": 0.007200000341981649,
+          "zmin": 1.562039852142334,
+          "zmax": 1.5654398202896118
+        },
+        "Lengua": {
+          "xmin": -0.007000000216066837,
+          "xmax": 0.007000000216066837,
+          "zmin": 1.553299903869629,
+          "zmax": 1.5575000047683716
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.015239834785461426,
+      "mouth_inner_edge_pair_gap_m": 0.01524225718388817,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.016979875043034554,
+        "tooth_width_m": 0.014400000683963299,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "U": {
+      "frame": 371,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.25,
+        "lipFunnel": 0.0,
+        "lipPucker": 1.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 8.109392771260722e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.007310780230909586,
+        "xmax": 0.007310780230909586,
+        "zmin": 1.5564689636230469,
+        "zmax": 1.5635313987731934
+      },
+      "cavity_projected_bbox_area_m2": 0.00010326382255554378,
+      "cavity_projected_z_span_m": 0.007062435150146484,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": -0.006199999712407589,
+          "xmax": 0.006199999712407589,
+          "zmin": 1.560149908065796,
+          "zmax": 1.5635498762130737
+        },
+        "Lengua": {
+          "xmin": -0.003850000211969018,
+          "xmax": 0.003850000211969018,
+          "zmin": 1.5560448169708252,
+          "zmax": 1.5583549737930298
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0070677995681762695,
+      "mouth_inner_edge_pair_gap_m": 0.0070730208799673336,
+      "tooth_commissure_width_check": {
+        "passed": true,
+        "cavity_width_m": 0.014621560461819172,
+        "tooth_width_m": 0.012399999424815178,
+        "test_scope": "Ancho X en reposo relativo a cabeza. No certifica oclusion completa Y/Z; debe inspeccionarse el PNG."
+      }
+    },
+    "MBP": {
+      "frame": 381,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 1.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 1.8522321306238543e-07,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.01179157942533493,
+        "xmax": 0.01179157942533493,
+        "zmin": 1.5599998235702515,
+        "zmax": 1.5600001811981201
+      },
+      "cavity_projected_bbox_area_m2": 8.433994835854719e-09,
+      "cavity_projected_z_span_m": 3.5762786865234375e-07,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0,
+      "mouth_inner_edge_pair_gap_m": 2.890166529796726e-18,
+      "tooth_commissure_width_check": null
+    },
+    "SILENCE": {
+      "frame": 391,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.0,
+        "browInnerUp.L": 0.0,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.0,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 2.6651264376540557e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.01179157942533493,
+        "xmax": 0.01179157942533493,
+        "zmin": 1.5592806339263916,
+        "zmax": 1.560719609260559
+      },
+      "cavity_projected_bbox_area_m2": 3.393558388786744e-05,
+      "cavity_projected_z_span_m": 0.0014389753341674805,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0014399290084838867,
+      "mouth_inner_edge_pair_gap_m": 0.0014653432272441588,
+      "tooth_commissure_width_check": null
+    },
+    "CONFUSED": {
+      "frame": 401,
+      "control_values": {
+        "blink.L": 0.0,
+        "blink.R": 0.0,
+        "blush": 0.0,
+        "browDown.L": 0.0,
+        "browDown.R": 0.30000001192092896,
+        "browInnerUp.L": 0.6200000047683716,
+        "browInnerUp.R": 0.0,
+        "browOuterUp.L": 0.0,
+        "browOuterUp.R": 0.0,
+        "eyeSquint.L": 0.0,
+        "eyeSquint.R": 0.0,
+        "eyeWide.L": 0.0,
+        "eyeWide.R": 0.0,
+        "frown": 0.0,
+        "jawOpen": 0.0,
+        "lipFunnel": 0.0,
+        "lipPucker": 0.15000000596046448,
+        "mouthPress": 0.0,
+        "mouthWide": 0.0,
+        "smile": 0.0,
+        "tears": 0.0
+      },
+      "preset_mismatches": {},
+      "ocular_projected_area_m2": {
+        "L": 0.0006385729393960926,
+        "R": 0.0006385719066196172
+      },
+      "lip_bounds_rest_m": {
+        "xmin": -0.01798715442419052,
+        "xmax": 0.01798715442419052,
+        "zmin": 1.548288345336914,
+        "zmax": 1.571711778640747
+      },
+      "cavity_projected_area_m2": 2.9655266022460096e-05,
+      "cavity_bounds_rest_m": {
+        "xmin": -0.011119461618363857,
+        "xmax": 0.011119461618363857,
+        "zmin": 1.5591514110565186,
+        "zmax": 1.5608490705490112
+      },
+      "cavity_projected_bbox_area_m2": 3.7754119135646746e-05,
+      "cavity_projected_z_span_m": 0.0016976594924926758,
+      "blush_material_strength": 0.0,
+      "internal_element_bounds_rest_m": {
+        "Dientes_superiores": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5457628965377808,
+          "zmax": 1.5457628965377808
+        },
+        "Lengua": {
+          "xmin": 0.0,
+          "xmax": 0.0,
+          "zmin": 1.5431629419326782,
+          "zmax": 1.5431629419326782
+        },
+        "Lagrima.L": {
+          "xmin": 0.04600000008940697,
+          "xmax": 0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        },
+        "Lagrima.R": {
+          "xmin": -0.04600000008940697,
+          "xmax": -0.04600000008940697,
+          "zmin": 1.5849628448486328,
+          "zmax": 1.5849628448486328
+        }
+      },
+      "mouth_inner_boundary_z_span_m": 0.0016990900039672852,
+      "mouth_inner_edge_pair_gap_m": 0.001720680731404093,
+      "tooth_commissure_width_check": null
+    }
+  },
+  "limitations": [
+    "Estas comprobaciones numericas no certifican fidelidad canonica ni ausencia de defectos visuales.",
+    "La topologia facial usa componentes orbitales y orales separados, no retopologia soldada de produccion."
+  ],
+  "preset_count": 21,
+  "preset_names": [
+    "NEUTRAL",
+    "WARM",
+    "CURIOUS",
+    "CONCERNED",
+    "SAD",
+    "ANGRY",
+    "SURPRISED",
+    "SHY",
+    "LAUGH",
+    "CRY",
+    "STARTLE",
+    "THINK",
+    "WINK",
+    "A",
+    "E",
+    "I",
+    "O",
+    "U",
+    "MBP",
+    "SILENCE",
+    "CONFUSED"
+  ],
+  "controls": [
+    "blink.L",
+    "blink.R",
+    "blush",
+    "browDown.L",
+    "browDown.R",
+    "browInnerUp.L",
+    "browInnerUp.R",
+    "browOuterUp.L",
+    "browOuterUp.R",
+    "eyeSquint.L",
+    "eyeSquint.R",
+    "eyeWide.L",
+    "eyeWide.R",
+    "frown",
+    "jawOpen",
+    "lipFunnel",
+    "lipPucker",
+    "mouthPress",
+    "mouthWide",
+    "smile",
+    "tears"
+  ],
+  "iris_texture": {
+    "packed": true,
+    "dimensions": [
+      512,
+      512
+    ]
+  },
+  "passed_numeric_checks": true,
+  "source_file_unchanged": true,
+  "source_file_sha256_before": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+  "source_file_sha256_after": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+  "source_file_sha256_at_wrapper_start": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+  "source_file_unchanged_method": "SHA256 of the actual delivered file before/after load, inspector and facial validator",
+  "delivery_wrapper_phase": {
+    "completed": true
+  },
+  "observed_saved_view_state_initial": {
+    "scene": "04_SALVE_MODELO_3D",
+    "activeScene": "04_SALVE_MODELO_3D",
+    "frame": 1,
+    "camera": "CAM_front",
+    "resolution": [
+      1024,
+      1536
+    ],
+    "resolutionPercentage": 100,
+    "effectiveResolution": [
+      1024,
+      1536
+    ],
+    "imageFormat": "PNG",
+    "colorMode": "RGBA",
+    "transparentFilm": true
+  },
+  "observed_runtime_view_state_final": {
+    "scene": "04_SALVE_MODELO_3D",
+    "activeScene": "04_SALVE_MODELO_3D",
+    "frame": 1,
+    "camera": "CAM_front",
+    "resolution": [
+      1024,
+      1536
+    ],
+    "resolutionPercentage": 100,
+    "effectiveResolution": [
+      1024,
+      1536
+    ],
+    "imageFormat": "PNG",
+    "colorMode": "RGBA",
+    "transparentFilm": true
+  }
+}

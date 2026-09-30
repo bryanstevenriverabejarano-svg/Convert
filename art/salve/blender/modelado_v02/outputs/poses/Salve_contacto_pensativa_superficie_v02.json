@@ -1,0 +1,969 @@
+{
+  "frame": 311,
+  "method": "Evaluated chin/index pad surface, selective FK arm translation and frame311 skin keys; UV/rest weights unchanged",
+  "limits": [
+    "Triangle crossing and sampled surface separation are static checks; no deformation certification.",
+    "Skin keys affect frame311 only and require a new visual review."
+  ],
+  "before_contact": {
+    "nominal_chin_world": [
+      -0.00823211669921875,
+      -0.04443752020597458,
+      1.5485056638717651
+    ],
+    "target_skin_world": [
+      -0.006860487628728151,
+      -0.03954242914915085,
+      1.5501338243484497
+    ],
+    "target_skin_normal": [
+      -0.2631073594093323,
+      -0.9145048260688782,
+      -0.30733615159988403
+    ],
+    "selected_index_vertex": 870,
+    "selected_index_world": [
+      -0.00738111138343811,
+      -0.0399935245513916,
+      1.547180414199829
+    ],
+    "selected_to_target_skin_m": 0.003032683278873101,
+    "distal_minimum_skin_distance_m": 0.000999892596155405,
+    "closest_index_world": [
+      -0.008056640625,
+      -0.039028290659189224,
+      1.5466761589050293
+    ],
+    "closest_skin_world": [
+      -0.007697890978306532,
+      -0.03815579041838646,
+      1.5470075607299805
+    ],
+    "closest_skin_normal": [
+      -0.3641291856765747,
+      -0.8691274523735046,
+      -0.33470475673675537
+    ],
+    "closest_signed_skin_distance_m": 0.000999866912025027,
+    "selected_signed_skin_distance_m": 0.001467430396587588,
+    "finger_head_surface_crossing_pairs": 0,
+    "bone_tip_world": [
+      -0.008050934411585331,
+      -0.04231122136116028,
+      1.5479755401611328
+    ]
+  },
+  "fragment_rays_before": {
+    "366,646": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.973297595977783,
+        "world": [
+          -0.010352000594139099,
+          -0.05970621109008789,
+          1.534475326538086
+        ],
+        "polygon": 890,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.R",
+        "distance_camera_m": 3.986027717590332,
+        "world": [
+          -0.010352000594139099,
+          -0.04697608947753906,
+          1.534475326538086
+        ],
+        "polygon": 907,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.995422840118408,
+        "world": [
+          -0.010352000594139099,
+          -0.03758096694946289,
+          1.534475326538086
+        ],
+        "polygon": 2287,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "366,650": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.9734315872192383,
+        "world": [
+          -0.010352000594139099,
+          -0.05957221984863281,
+          1.5328086614608765
+        ],
+        "polygon": 895,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.R",
+        "distance_camera_m": 3.986095905303955,
+        "world": [
+          -0.010352000594139099,
+          -0.046907901763916016,
+          1.5328086614608765
+        ],
+        "polygon": 904,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.9952797889709473,
+        "world": [
+          -0.010352000594139099,
+          -0.03772401809692383,
+          1.5328086614608765
+        ],
+        "polygon": 2287,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "352,746": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.9725003242492676,
+        "world": [
+          -0.016185332089662552,
+          -0.060503482818603516,
+          1.4928085803985596
+        ],
+        "polygon": 228,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.996586561203003,
+        "world": [
+          -0.016185332089662552,
+          -0.036417245864868164,
+          1.4928085803985596
+        ],
+        "polygon": 1502,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "355,737": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.973473310470581,
+        "world": [
+          -0.014935333281755447,
+          -0.05953049659729004,
+          1.496558666229248
+        ],
+        "polygon": 279,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.996180772781372,
+        "world": [
+          -0.014935333281755447,
+          -0.03682303428649902,
+          1.496558666229248
+        ],
+        "polygon": 1502,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "330,716": [
+      {
+        "object": "Guante_palmar_quad.R",
+        "distance_camera_m": 3.9740869998931885,
+        "world": [
+          -0.025351999327540398,
+          -0.05891680717468262,
+          1.5053086280822754
+        ],
+        "polygon": 1234,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.R",
+        "distance_camera_m": 3.9788718223571777,
+        "world": [
+          -0.025351999327540398,
+          -0.05413198471069336,
+          1.5053086280822754
+        ],
+        "polygon": 370,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 4.001735687255859,
+        "world": [
+          -0.025351999327540398,
+          -0.03126811981201172,
+          1.5053086280822754
+        ],
+        "polygon": 1470,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "375,673": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.973430633544922,
+        "world": [
+          -0.006602000445127487,
+          -0.05957317352294922,
+          1.5232253074645996
+        ],
+        "polygon": 758,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.9943277835845947,
+        "world": [
+          -0.006602000445127487,
+          -0.03867602348327637,
+          1.5232253074645996
+        ],
+        "polygon": 2279,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "273,629": [
+      {
+        "object": "Mechon_largo_15.R",
+        "distance_camera_m": 4.1410980224609375,
+        "world": [
+          -0.04910200089216232,
+          0.1080942153930664,
+          1.5415586233139038
+        ],
+        "polygon": 677,
+        "materials": [
+          "AtlasV02_Cabello | blanco lavanda"
+        ]
+      },
+      {
+        "object": "Mechon_largo_16.R",
+        "distance_camera_m": 4.14580774307251,
+        "world": [
+          -0.04910200089216232,
+          0.11280393600463867,
+          1.5415586233139038
+        ],
+        "polygon": 684,
+        "materials": [
+          "AtlasV02_Cabello | blanco lavanda"
+        ]
+      },
+      {
+        "object": "Mechon_largo_17.R",
+        "distance_camera_m": 4.1539483070373535,
+        "world": [
+          -0.04910200089216232,
+          0.12094449996948242,
+          1.5415586233139038
+        ],
+        "polygon": 685,
+        "materials": [
+          "AtlasV02_Cabello | blanco lavanda"
+        ]
+      }
+    ],
+    "282,657": [
+      {
+        "object": "Dedo_ring_quad.R",
+        "distance_camera_m": 3.9803466796875,
+        "world": [
+          -0.04535200074315071,
+          -0.052657127380371094,
+          1.5298919677734375
+        ],
+        "polygon": 553,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Guante_palmar_quad.R",
+        "distance_camera_m": 3.9842991828918457,
+        "world": [
+          -0.04535200074315071,
+          -0.04870462417602539,
+          1.5298919677734375
+        ],
+        "polygon": 1892,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_pinky_quad.R",
+        "distance_camera_m": 3.9859325885772705,
+        "world": [
+          -0.04535200074315071,
+          -0.047071218490600586,
+          1.5298919677734375
+        ],
+        "polygon": 322,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      }
+    ],
+    "290,688": [
+      {
+        "object": "Dedo_middle_quad.R",
+        "distance_camera_m": 3.973301649093628,
+        "world": [
+          -0.04201866686344147,
+          -0.059702157974243164,
+          1.5169752836227417
+        ],
+        "polygon": 510,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Guante_palmar_quad.R",
+        "distance_camera_m": 3.9754951000213623,
+        "world": [
+          -0.04201866686344147,
+          -0.05750870704650879,
+          1.5169752836227417
+        ],
+        "polygon": 1416,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_ring_quad.R",
+        "distance_camera_m": 3.9798583984375,
+        "world": [
+          -0.04201866686344147,
+          -0.053145408630371094,
+          1.5169752836227417
+        ],
+        "polygon": 324,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      }
+    ]
+  },
+  "skin_keys": [],
+  "status": "head_collar_floor_surface_checks_passed_checkpoint_visual_review_pending",
+  "contact_iterations": [
+    {
+      "nominal_chin_world": [
+        -0.00823211669921875,
+        -0.04443752020597458,
+        1.5485056638717651
+      ],
+      "target_skin_world": [
+        -0.006860487628728151,
+        -0.03954242914915085,
+        1.5501338243484497
+      ],
+      "target_skin_normal": [
+        -0.2631073594093323,
+        -0.9145048260688782,
+        -0.30733615159988403
+      ],
+      "selected_index_vertex": 870,
+      "selected_index_world": [
+        -0.00738111138343811,
+        -0.0399935245513916,
+        1.547180414199829
+      ],
+      "selected_to_target_skin_m": 0.003032683278873101,
+      "distal_minimum_skin_distance_m": 0.000999892596155405,
+      "closest_index_world": [
+        -0.008056640625,
+        -0.039028290659189224,
+        1.5466761589050293
+      ],
+      "closest_skin_world": [
+        -0.007697890978306532,
+        -0.03815579041838646,
+        1.5470075607299805
+      ],
+      "closest_skin_normal": [
+        -0.3641291856765747,
+        -0.8691274523735046,
+        -0.33470475673675537
+      ],
+      "closest_signed_skin_distance_m": 0.000999866912025027,
+      "selected_signed_skin_distance_m": 0.001467430396587588,
+      "finger_head_surface_crossing_pairs": 0,
+      "bone_tip_world": [
+        -0.008050934411585331,
+        -0.04231122136116028,
+        1.5479755401611328
+      ]
+    },
+    {
+      "nominal_chin_world": [
+        -0.00823211669921875,
+        -0.04443752020597458,
+        1.5485056638717651
+      ],
+      "target_skin_world": [
+        -0.006860487628728151,
+        -0.03954242914915085,
+        1.5501338243484497
+      ],
+      "target_skin_normal": [
+        -0.2631073594093323,
+        -0.9145048260688782,
+        -0.30733615159988403
+      ],
+      "selected_index_vertex": 291,
+      "selected_index_world": [
+        -0.007688075304031372,
+        -0.039978429675102234,
+        1.5498665571212769
+      ],
+      "selected_to_target_skin_m": 0.0009728461235158806,
+      "distal_minimum_skin_distance_m": 0.00046463467879220843,
+      "closest_index_world": [
+        -0.007799208164215088,
+        -0.0394916906952858,
+        1.549322247505188
+      ],
+      "closest_skin_world": [
+        -0.00766380550339818,
+        -0.03907223045825958,
+        1.549469232559204
+      ],
+      "closest_skin_normal": [
+        -0.28767985105514526,
+        -0.9048030972480774,
+        -0.3139611482620239
+      ],
+      "closest_signed_skin_distance_m": 0.00046462912359857,
+      "selected_signed_skin_distance_m": 0.0007011390407569706,
+      "finger_head_surface_crossing_pairs": 0,
+      "bone_tip_world": [
+        -0.0077933939173817635,
+        -0.04277464374899864,
+        1.550621509552002
+      ]
+    },
+    {
+      "nominal_chin_world": [
+        -0.00823211669921875,
+        -0.04443752020597458,
+        1.5485056638717651
+      ],
+      "target_skin_world": [
+        -0.006860487628728151,
+        -0.03954242914915085,
+        1.5501338243484497
+      ],
+      "target_skin_normal": [
+        -0.2631073594093323,
+        -0.9145048260688782,
+        -0.30733615159988403
+      ],
+      "selected_index_vertex": 1166,
+      "selected_index_world": [
+        -0.007196933031082153,
+        -0.04020926356315613,
+        1.5489387512207031
+      ],
+      "selected_to_target_skin_m": 0.0014092776198220444,
+      "distal_minimum_skin_distance_m": 0.0009999568574130535,
+      "closest_index_world": [
+        -0.007951438426971436,
+        -0.03997698798775673,
+        1.5491552352905273
+      ],
+      "closest_skin_world": [
+        -0.007660039234906435,
+        -0.03907426819205284,
+        1.5494716167449951
+      ],
+      "closest_skin_normal": [
+        -0.28767985105514526,
+        -0.9048030972480774,
+        -0.3139611482620239
+      ],
+      "closest_signed_skin_distance_m": 0.0009999448520829901,
+      "selected_signed_skin_distance_m": 0.001064838288584724,
+      "finger_head_surface_crossing_pairs": 0,
+      "bone_tip_world": [
+        -0.007945742458105087,
+        -0.04325990378856659,
+        1.5504547357559204
+      ]
+    }
+  ],
+  "after_contact": {
+    "nominal_chin_world": [
+      -0.00823211669921875,
+      -0.04443752020597458,
+      1.5485056638717651
+    ],
+    "target_skin_world": [
+      -0.006860487628728151,
+      -0.03954242914915085,
+      1.5501338243484497
+    ],
+    "target_skin_normal": [
+      -0.2631073594093323,
+      -0.9145048260688782,
+      -0.30733615159988403
+    ],
+    "selected_index_vertex": 1166,
+    "selected_index_world": [
+      -0.007196933031082153,
+      -0.04020926356315613,
+      1.5489387512207031
+    ],
+    "selected_to_target_skin_m": 0.0014092776198220444,
+    "distal_minimum_skin_distance_m": 0.0009999568574130535,
+    "closest_index_world": [
+      -0.007951438426971436,
+      -0.03997698798775673,
+      1.5491552352905273
+    ],
+    "closest_skin_world": [
+      -0.007660039234906435,
+      -0.03907426819205284,
+      1.5494716167449951
+    ],
+    "closest_skin_normal": [
+      -0.28767985105514526,
+      -0.9048030972480774,
+      -0.3139611482620239
+    ],
+    "closest_signed_skin_distance_m": 0.0009999448520829901,
+    "selected_signed_skin_distance_m": 0.001064838288584724,
+    "finger_head_surface_crossing_pairs": 0,
+    "bone_tip_world": [
+      -0.007945742458105087,
+      -0.04325990378856659,
+      1.5504547357559204
+    ]
+  },
+  "fragment_rays_after": {
+    "366,646": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.9727799892425537,
+        "world": [
+          -0.010352000594139099,
+          -0.06022381782531738,
+          1.534475326538086
+        ],
+        "polygon": 892,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.R",
+        "distance_camera_m": 3.9851133823394775,
+        "world": [
+          -0.010352000594139099,
+          -0.047890424728393555,
+          1.534475326538086
+        ],
+        "polygon": 904,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.995422840118408,
+        "world": [
+          -0.010352000594139099,
+          -0.03758096694946289,
+          1.534475326538086
+        ],
+        "polygon": 2287,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "366,650": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.972827434539795,
+        "world": [
+          -0.010352000594139099,
+          -0.06017637252807617,
+          1.5328086614608765
+        ],
+        "polygon": 847,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.R",
+        "distance_camera_m": 3.9852943420410156,
+        "world": [
+          -0.010352000594139099,
+          -0.04770946502685547,
+          1.5328086614608765
+        ],
+        "polygon": 858,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.9952797889709473,
+        "world": [
+          -0.010352000594139099,
+          -0.03772401809692383,
+          1.5328086614608765
+        ],
+        "polygon": 2287,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "352,746": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.9709770679473877,
+        "world": [
+          -0.016185332089662552,
+          -0.0620267391204834,
+          1.4928085803985596
+        ],
+        "polygon": 182,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.996586561203003,
+        "world": [
+          -0.016185332089662552,
+          -0.036417245864868164,
+          1.4928085803985596
+        ],
+        "polygon": 1502,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "355,737": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.9719181060791016,
+        "world": [
+          -0.014935333281755447,
+          -0.06108570098876953,
+          1.496558666229248
+        ],
+        "polygon": 231,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.996180772781372,
+        "world": [
+          -0.014935333281755447,
+          -0.03682303428649902,
+          1.496558666229248
+        ],
+        "polygon": 1502,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "330,716": [
+      {
+        "object": "Guante_palmar_quad.R",
+        "distance_camera_m": 3.9716312885284424,
+        "world": [
+          -0.025351999327540398,
+          -0.06137251853942871,
+          1.5053086280822754
+        ],
+        "polygon": 1236,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.R",
+        "distance_camera_m": 3.9768645763397217,
+        "world": [
+          -0.025351999327540398,
+          -0.056139230728149414,
+          1.5053086280822754
+        ],
+        "polygon": 322,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 4.001735687255859,
+        "world": [
+          -0.025351999327540398,
+          -0.03126811981201172,
+          1.5053086280822754
+        ],
+        "polygon": 1470,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "375,673": [
+      {
+        "object": "Dedo_thumb_quad.R",
+        "distance_camera_m": 3.972968578338623,
+        "world": [
+          -0.006602000445127487,
+          -0.06003522872924805,
+          1.5232253074645996
+        ],
+        "polygon": 710,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Cuello_y_collar_negro",
+        "distance_camera_m": 3.9943277835845947,
+        "world": [
+          -0.006602000445127487,
+          -0.03867602348327637,
+          1.5232253074645996
+        ],
+        "polygon": 2279,
+        "materials": [
+          "AtlasV02_Paneles | grafito"
+        ]
+      }
+    ],
+    "273,629": [
+      {
+        "object": "Mechon_largo_15.R",
+        "distance_camera_m": 4.1410980224609375,
+        "world": [
+          -0.04910200089216232,
+          0.1080942153930664,
+          1.5415586233139038
+        ],
+        "polygon": 677,
+        "materials": [
+          "AtlasV02_Cabello | blanco lavanda"
+        ]
+      },
+      {
+        "object": "Mechon_largo_16.R",
+        "distance_camera_m": 4.14580774307251,
+        "world": [
+          -0.04910200089216232,
+          0.11280393600463867,
+          1.5415586233139038
+        ],
+        "polygon": 684,
+        "materials": [
+          "AtlasV02_Cabello | blanco lavanda"
+        ]
+      },
+      {
+        "object": "Mechon_largo_17.R",
+        "distance_camera_m": 4.1539483070373535,
+        "world": [
+          -0.04910200089216232,
+          0.12094449996948242,
+          1.5415586233139038
+        ],
+        "polygon": 685,
+        "materials": [
+          "AtlasV02_Cabello | blanco lavanda"
+        ]
+      }
+    ],
+    "282,657": [
+      {
+        "object": "Dedo_ring_quad.R",
+        "distance_camera_m": 3.980372428894043,
+        "world": [
+          -0.04535200074315071,
+          -0.052631378173828125,
+          1.5298919677734375
+        ],
+        "polygon": 508,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Guante_palmar_quad.R",
+        "distance_camera_m": 3.9812562465667725,
+        "world": [
+          -0.04535200074315071,
+          -0.05174756050109863,
+          1.5298919677734375
+        ],
+        "polygon": 1703,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_pinky_quad.R",
+        "distance_camera_m": 3.9850645065307617,
+        "world": [
+          -0.04535200074315071,
+          -0.047939300537109375,
+          1.5298919677734375
+        ],
+        "polygon": 321,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      }
+    ],
+    "290,688": [
+      {
+        "object": "Guante_palmar_quad.R",
+        "distance_camera_m": 3.9727931022644043,
+        "world": [
+          -0.04201866686344147,
+          -0.0602107048034668,
+          1.5169752836227417
+        ],
+        "polygon": 1323,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_middle_quad.R",
+        "distance_camera_m": 3.9731929302215576,
+        "world": [
+          -0.04201866686344147,
+          -0.05981087684631348,
+          1.5169752836227417
+        ],
+        "polygon": 462,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      },
+      {
+        "object": "Dedo_ring_quad.R",
+        "distance_camera_m": 3.97891902923584,
+        "world": [
+          -0.04201866686344147,
+          -0.05408477783203125,
+          1.5169752836227417
+        ],
+        "polygon": 279,
+        "materials": [
+          "AtlasV02_Traje | ceramica perla"
+        ]
+      }
+    ]
+  },
+  "ik_snap_checks": {
+    "foot.L": {
+      "joint_switch_error_m": 3.4e-05,
+      "endpoint_switch_error_m": 0.0,
+      "pole_angle_rad": -1.706544,
+      "stretch": false
+    },
+    "hand.L": {
+      "joint_switch_error_m": 2e-06,
+      "endpoint_switch_error_m": 0.0,
+      "pole_angle_rad": 0.930842,
+      "stretch": false
+    },
+    "foot.R": {
+      "joint_switch_error_m": 3.4e-05,
+      "endpoint_switch_error_m": 0.0,
+      "pole_angle_rad": -1.435048,
+      "stretch": false
+    },
+    "hand.R": {
+      "joint_switch_error_m": 0.006565,
+      "endpoint_switch_error_m": 0.0,
+      "pole_angle_rad": 1.667759,
+      "stretch": false
+    }
+  },
+  "hair_body_surface_check": {
+    "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+    "objects": {},
+    "tested": 46,
+    "objects_with_surface_crossings": 0,
+    "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+  },
+  "right_hand_head_surface_crossings": {},
+  "body_minimum_z_m": 0.0010000290349125862,
+  "all_minimum_z_m": 0.0010000290349125862,
+  "ik_measurement_stage": "After static THINK surface/contact corrective and arm311 adjustment; final saved-frame controllers recalibrated here.",
+  "right_hand_collar_surface_crossings": {},
+  "current_PNG_visual_review": {
+    "file": "expresiones/12_THINK.png",
+    "sha256": "c5d808c11ebed81d661ff56b19f2589fe02292577e9ed98f5c36056e665258bd",
+    "contact_readable": true,
+    "visible_isolated_white_fragments_over_collar": false,
+    "finger_continuity_readable": true,
+    "identity_exact_approved": false,
+    "review_report": "poses/Salve_revision_pensativa_v02.json"
+  },
+  "final_model_incorporation": {
+    "file": "Salve_refinado_v02.blend",
+    "sha256": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+    "evidence": "finish_static_review_final_v02.log registra FINAL_STATIC_LOCAL_REVIEW_SAVED después del render THINK y de validar 21 presets; el helper facial verifica que conserva las matrices de huesos.",
+    "independent_final_geometry_audit": "A cargo del inspector final; estas cifras de contacto fueron tomadas en el checkpoint corregido."
+  }
+}

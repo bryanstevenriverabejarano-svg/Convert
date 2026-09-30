@@ -1,0 +1,1809 @@
+{
+  "coordinateSystem": "pixels_top_left",
+  "views": {
+    "front": {
+      "sourceSha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+      "frame": 1,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        482.84,
+        169.83
+      ],
+      "rightEye": [
+        529.16,
+        169.83
+      ],
+      "mouth": [
+        506.0,
+        216.15
+      ],
+      "headPivot": [
+        506.0,
+        208.17
+      ],
+      "bodyPivot": [
+        506.0,
+        695.43
+      ],
+      "groundAnchor": [
+        506.0,
+        1474.27
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 1.0,
+      "joints": {
+        "leftShoulder": [
+          398.16,
+          320.0
+        ],
+        "rightShoulder": [
+          613.84,
+          320.0
+        ],
+        "leftElbow": [
+          347.99,
+          499.18
+        ],
+        "rightElbow": [
+          664.01,
+          499.18
+        ],
+        "leftPalm": [
+          307.59,
+          728.55
+        ],
+        "rightPalm": [
+          704.41,
+          728.55
+        ],
+        "leftHip": [
+          435.71,
+          671.46
+        ],
+        "rightHip": [
+          576.29,
+          671.46
+        ],
+        "leftKnee": [
+          449.29,
+          975.0
+        ],
+        "rightKnee": [
+          562.71,
+          975.0
+        ],
+        "leftAnkle": [
+          461.27,
+          1346.44
+        ],
+        "rightAnkle": [
+          550.73,
+          1346.44
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "passed",
+      "occlusionCheck": "passed",
+      "technicalReviewNote": "Examinado para los dos centros de iris y mouth; no prueba máscaras del runtime ni identidad artística."
+    },
+    "front_three_quarter": {
+      "sourceSha256": "5839ca7dd914083847067b89f46e670ee351fcc4af292dc8384ecc77aaab2456",
+      "frame": 11,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        342.89,
+        135.28
+      ],
+      "rightEye": [
+        381.96,
+        127.94
+      ],
+      "mouth": [
+        366.35,
+        180.88
+      ],
+      "headPivot": [
+        390.37,
+        177.67
+      ],
+      "bodyPivot": [
+        415.02,
+        682.08
+      ],
+      "groundAnchor": [
+        373.05,
+        1519.86
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.001997583545744419,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.93573,
+      "joints": {
+        "leftShoulder": [
+          301.03,
+          301.46
+        ],
+        "rightShoulder": [
+          482.02,
+          286.53
+        ],
+        "leftElbow": [
+          258.66,
+          486.92
+        ],
+        "rightElbow": [
+          516.45,
+          474.71
+        ],
+        "leftPalm": [
+          226.34,
+          720.98
+        ],
+        "rightPalm": [
+          540.01,
+          722.63
+        ],
+        "leftHip": [
+          354.47,
+          670.27
+        ],
+        "rightHip": [
+          472.74,
+          644.31
+        ],
+        "leftKnee": [
+          329.22,
+          979.01
+        ],
+        "rightKnee": [
+          474.89,
+          967.34
+        ],
+        "leftAnkle": [
+          386.9,
+          1347.3
+        ],
+        "rightAnkle": [
+          481.3,
+          1358.21
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "right": {
+      "sourceSha256": "e9bbe9eea1d6b9fa64c16a2dfbc6fa08a9e20ccfff1509809311e2f1875bbead",
+      "frame": 1,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        508.52,
+        133.74
+      ],
+      "rightEye": [
+        508.52,
+        133.74
+      ],
+      "mouth": [
+        511.36,
+        182.86
+      ],
+      "headPivot": [
+        552.9,
+        174.39
+      ],
+      "bodyPivot": [
+        552.9,
+        691.05
+      ],
+      "groundAnchor": [
+        455.27,
+        1516.88
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.94311,
+      "joints": {
+        "leftShoulder": [
+          552.9,
+          292.97
+        ],
+        "rightShoulder": [
+          552.9,
+          292.97
+        ],
+        "leftElbow": [
+          546.14,
+          482.96
+        ],
+        "rightElbow": [
+          546.14,
+          482.96
+        ],
+        "leftPalm": [
+          534.27,
+          726.17
+        ],
+        "rightPalm": [
+          534.27,
+          726.17
+        ],
+        "leftHip": [
+          552.9,
+          665.64
+        ],
+        "rightHip": [
+          552.9,
+          665.64
+        ],
+        "leftKnee": [
+          530.87,
+          987.49
+        ],
+        "rightKnee": [
+          530.88,
+          987.49
+        ],
+        "leftAnkle": [
+          557.13,
+          1381.33
+        ],
+        "rightAnkle": [
+          557.13,
+          1381.33
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "rear_right": {
+      "sourceSha256": "a1415f432e48628bd12e3d84feb7aed42959b2f1c7fdd3f6b77b3ae114b4b39e",
+      "frame": 1,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        444.19,
+        176.32
+      ],
+      "rightEye": [
+        477.38,
+        182.75
+      ],
+      "mouth": [
+        462.74,
+        225.37
+      ],
+      "headPivot": [
+        490.14,
+        212.27
+      ],
+      "bodyPivot": [
+        490.14,
+        702.53
+      ],
+      "groundAnchor": [
+        426.24,
+        1481.11
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.99187,
+      "joints": {
+        "leftShoulder": [
+          410.82,
+          313.1
+        ],
+        "rightShoulder": [
+          565.49,
+          335.89
+        ],
+        "leftElbow": [
+          367.99,
+          495.22
+        ],
+        "rightElbow": [
+          594.79,
+          514.98
+        ],
+        "leftPalm": [
+          328.58,
+          734.42
+        ],
+        "rightPalm": [
+          613.58,
+          737.44
+        ],
+        "leftHip": [
+          438.91,
+          676.9
+        ],
+        "rightHip": [
+          539.69,
+          679.9
+        ],
+        "leftKnee": [
+          434.35,
+          985.7
+        ],
+        "rightKnee": [
+          515.65,
+          979.92
+        ],
+        "leftAnkle": [
+          460.56,
+          1364.49
+        ],
+        "rightAnkle": [
+          524.69,
+          1351.9
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "rear": {
+      "sourceSha256": "5ee3594712520c928d6df6e5a92ef9ca55f4bcd47bbd87e8011be946564e480e",
+      "frame": 1,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        481.4,
+        145.79
+      ],
+      "rightEye": [
+        529.6,
+        145.79
+      ],
+      "mouth": [
+        505.5,
+        193.98
+      ],
+      "headPivot": [
+        505.5,
+        185.67
+      ],
+      "bodyPivot": [
+        505.5,
+        692.51
+      ],
+      "groundAnchor": [
+        505.5,
+        1502.65
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.96137,
+      "joints": {
+        "leftShoulder": [
+          393.33,
+          302.0
+        ],
+        "rightShoulder": [
+          617.67,
+          302.0
+        ],
+        "leftElbow": [
+          341.15,
+          488.37
+        ],
+        "rightElbow": [
+          669.85,
+          488.37
+        ],
+        "leftPalm": [
+          299.12,
+          726.97
+        ],
+        "rightPalm": [
+          711.88,
+          726.97
+        ],
+        "leftHip": [
+          432.38,
+          667.58
+        ],
+        "rightHip": [
+          578.62,
+          667.58
+        ],
+        "leftKnee": [
+          446.51,
+          983.32
+        ],
+        "rightKnee": [
+          564.49,
+          983.32
+        ],
+        "leftAnkle": [
+          458.97,
+          1369.68
+        ],
+        "rightAnkle": [
+          552.03,
+          1369.68
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "rear_three_quarter": {
+      "sourceSha256": "59a4f5b337c400f513ae3aaca3f81a205c097515254f396bd13510f000b6498b",
+      "frame": 21,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        567.9,
+        157.61
+      ],
+      "rightEye": [
+        603.58,
+        149.18
+      ],
+      "mouth": [
+        583.62,
+        200.87
+      ],
+      "headPivot": [
+        555.59,
+        185.31
+      ],
+      "bodyPivot": [
+        581.26,
+        697.79
+      ],
+      "groundAnchor": [
+        644.64,
+        1519.92
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.001997583545744419,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.93573,
+      "joints": {
+        "leftShoulder": [
+          473.93,
+          313.18
+        ],
+        "rightShoulder": [
+          640.29,
+          293.61
+        ],
+        "leftElbow": [
+          447.94,
+          502.38
+        ],
+        "rightElbow": [
+          684.58,
+          486.87
+        ],
+        "leftPalm": [
+          431.81,
+          737.31
+        ],
+        "rightPalm": [
+          719.32,
+          739.66
+        ],
+        "leftHip": [
+          524.09,
+          685.79
+        ],
+        "rightHip": [
+          632.16,
+          659.14
+        ],
+        "leftKnee": [
+          600.14,
+          989.9
+        ],
+        "rightKnee": [
+          631.07,
+          989.15
+        ],
+        "leftAnkle": [
+          536.19,
+          1377.04
+        ],
+        "rightAnkle": [
+          614.42,
+          1394.5
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "left": {
+      "sourceSha256": "e12a80f442d2209ba88b14d337ce0850af964d9305fbb13f52298282f51a2c52",
+      "frame": 1,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        523.48,
+        133.74
+      ],
+      "rightEye": [
+        523.48,
+        133.74
+      ],
+      "mouth": [
+        520.64,
+        182.86
+      ],
+      "headPivot": [
+        479.1,
+        174.39
+      ],
+      "bodyPivot": [
+        479.1,
+        691.05
+      ],
+      "groundAnchor": [
+        576.73,
+        1516.88
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.94311,
+      "joints": {
+        "leftShoulder": [
+          479.1,
+          292.97
+        ],
+        "rightShoulder": [
+          479.1,
+          292.97
+        ],
+        "leftElbow": [
+          485.86,
+          482.96
+        ],
+        "rightElbow": [
+          485.86,
+          482.96
+        ],
+        "leftPalm": [
+          497.73,
+          726.17
+        ],
+        "rightPalm": [
+          497.73,
+          726.17
+        ],
+        "leftHip": [
+          479.1,
+          665.64
+        ],
+        "rightHip": [
+          479.1,
+          665.64
+        ],
+        "leftKnee": [
+          501.13,
+          987.49
+        ],
+        "rightKnee": [
+          501.13,
+          987.49
+        ],
+        "leftAnkle": [
+          474.87,
+          1381.33
+        ],
+        "rightAnkle": [
+          474.87,
+          1381.33
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "front_opposite": {
+      "sourceSha256": "79b3da658ed5cdd0f3273105d4aad11dd620ab8247e9e8306d365a6fb746f8ef",
+      "frame": 21,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        657.88,
+        127.3
+      ],
+      "rightEye": [
+        698.35,
+        134.2
+      ],
+      "mouth": [
+        674.32,
+        180.12
+      ],
+      "headPivot": [
+        651.83,
+        177.14
+      ],
+      "bodyPivot": [
+        626.21,
+        681.98
+      ],
+      "groundAnchor": [
+        664.89,
+        1519.89
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.001997583545744419,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.93573,
+      "joints": {
+        "leftShoulder": [
+          557.22,
+          286.88
+        ],
+        "rightShoulder": [
+          744.35,
+          300.27
+        ],
+        "leftElbow": [
+          521.16,
+          475.08
+        ],
+        "rightElbow": [
+          787.78,
+          485.95
+        ],
+        "leftPalm": [
+          496.3,
+          722.64
+        ],
+        "rightPalm": [
+          820.8,
+          720.73
+        ],
+        "leftHip": [
+          566.75,
+          644.33
+        ],
+        "rightHip": [
+          688.9,
+          670.05
+        ],
+        "leftKnee": [
+          564.68,
+          967.11
+        ],
+        "rightKnee": [
+          710.35,
+          979.31
+        ],
+        "leftAnkle": [
+          559.14,
+          1357.63
+        ],
+        "rightAnkle": [
+          656.15,
+          1347.72
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "front_variant": {
+      "sourceSha256": "bc7ba80e408e739fc4747a8be932e2affdaad2bdc8f86dfd98652e6ad20aa48d",
+      "frame": 41,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        382.96,
+        133.6
+      ],
+      "rightEye": [
+        426.95,
+        127.82
+      ],
+      "mouth": [
+        408.3,
+        180.24
+      ],
+      "headPivot": [
+        425.8,
+        177.69
+      ],
+      "bodyPivot": [
+        453.93,
+        683.0
+      ],
+      "groundAnchor": [
+        422.49,
+        1519.93
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.001997583545744419,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.937,
+      "joints": {
+        "leftShoulder": [
+          325.16,
+          299.01
+        ],
+        "rightShoulder": [
+          527.87,
+          289.5
+        ],
+        "leftElbow": [
+          279.3,
+          485.05
+        ],
+        "rightElbow": [
+          568.27,
+          477.55
+        ],
+        "leftPalm": [
+          244.78,
+          721.31
+        ],
+        "rightPalm": [
+          596.69,
+          723.93
+        ],
+        "leftHip": [
+          385.77,
+          670.8
+        ],
+        "rightHip": [
+          517.69,
+          645.69
+        ],
+        "leftKnee": [
+          372.3,
+          979.56
+        ],
+        "rightKnee": [
+          519.49,
+          967.5
+        ],
+        "leftAnkle": [
+          412.66,
+          1351.7
+        ],
+        "rightAnkle": [
+          522.36,
+          1356.74
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "above": {
+      "sourceSha256": "fc06ff24c01cb8aa059c6822e97dd361745361a8172b20427f693b93b60e9fa2",
+      "frame": 1,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        471.83,
+        244.06
+      ],
+      "rightEye": [
+        553.48,
+        244.06
+      ],
+      "mouth": [
+        512.64,
+        306.02
+      ],
+      "headPivot": [
+        512.63,
+        253.38
+      ],
+      "bodyPivot": [
+        512.52,
+        811.29
+      ],
+      "groundAnchor": [
+        512.42,
+        1504.56
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.94311,
+      "joints": {
+        "leftShoulder": [
+          336.91,
+          400.61
+        ],
+        "rightShoulder": [
+          688.3,
+          400.61
+        ],
+        "leftElbow": [
+          271.77,
+          617.68
+        ],
+        "rightElbow": [
+          753.36,
+          617.68
+        ],
+        "leftPalm": [
+          232.99,
+          860.97
+        ],
+        "rightPalm": [
+          792.05,
+          860.97
+        ],
+        "leftHip": [
+          412.09,
+          788.3
+        ],
+        "rightHip": [
+          612.97,
+          788.3
+        ],
+        "leftKnee": [
+          438.77,
+          1075.26
+        ],
+        "rightKnee": [
+          586.19,
+          1075.26
+        ],
+        "leftAnkle": [
+          460.77,
+          1312.58
+        ],
+        "rightAnkle": [
+          564.08,
+          1312.58
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "below": {
+      "sourceSha256": "35226a981b966cb9272e50f035bb36e46afded87d43678455fded128e1b05f0b",
+      "frame": 1,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        488.09,
+        92.56
+      ],
+      "rightEye": [
+        537.88,
+        92.56
+      ],
+      "mouth": [
+        512.99,
+        136.43
+      ],
+      "headPivot": [
+        512.97,
+        153.03
+      ],
+      "bodyPivot": [
+        513.04,
+        625.05
+      ],
+      "groundAnchor": [
+        513.23,
+        1519.66
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.94311,
+      "joints": {
+        "leftShoulder": [
+          396.36,
+          255.85
+        ],
+        "rightShoulder": [
+          629.62,
+          255.85
+        ],
+        "leftElbow": [
+          337.48,
+          423.84
+        ],
+        "rightElbow": [
+          688.55,
+          423.84
+        ],
+        "leftPalm": [
+          284.44,
+          651.27
+        ],
+        "rightPalm": [
+          741.66,
+          651.27
+        ],
+        "leftHip": [
+          433.21,
+          600.3
+        ],
+        "rightHip": [
+          592.87,
+          600.3
+        ],
+        "leftKnee": [
+          445.25,
+          918.72
+        ],
+        "rightKnee": [
+          580.93,
+          918.72
+        ],
+        "leftAnkle": [
+          457.03,
+          1369.77
+        ],
+        "rightAnkle": [
+          569.27,
+          1369.77
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "a_front": {
+      "sourceSha256": "36bc7d4102761ba26e6f2d8a179a418a15342aa0f08df5a9f6c3cd856fe758d3",
+      "frame": 31,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        488.44,
+        133.74
+      ],
+      "rightEye": [
+        537.56,
+        133.74
+      ],
+      "mouth": [
+        513.0,
+        182.86
+      ],
+      "headPivot": [
+        513.0,
+        174.39
+      ],
+      "bodyPivot": [
+        513.0,
+        691.05
+      ],
+      "groundAnchor": [
+        513.0,
+        1516.88
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.94311,
+      "joints": {
+        "leftShoulder": [
+          398.66,
+          292.97
+        ],
+        "rightShoulder": [
+          627.34,
+          292.97
+        ],
+        "leftElbow": [
+          313.96,
+          470.84
+        ],
+        "rightElbow": [
+          712.04,
+          470.84
+        ],
+        "leftPalm": [
+          205.55,
+          693.17
+        ],
+        "rightPalm": [
+          820.45,
+          693.17
+        ],
+        "leftHip": [
+          438.47,
+          665.64
+        ],
+        "rightHip": [
+          587.53,
+          665.64
+        ],
+        "leftKnee": [
+          452.86,
+          987.49
+        ],
+        "rightKnee": [
+          573.14,
+          987.49
+        ],
+        "leftAnkle": [
+          465.57,
+          1381.33
+        ],
+        "rightAnkle": [
+          560.43,
+          1381.33
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "a_open_hair": {
+      "sourceSha256": "c217d950b43e10530e82e481ec696a94912699d970dfa2adb4b301b571cd6925",
+      "frame": 61,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        486.49,
+        133.51
+      ],
+      "rightEye": [
+        535.51,
+        133.51
+      ],
+      "mouth": [
+        511.0,
+        182.53
+      ],
+      "headPivot": [
+        511.0,
+        174.08
+      ],
+      "bodyPivot": [
+        511.0,
+        689.69
+      ],
+      "groundAnchor": [
+        511.0,
+        1513.85
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.94502,
+      "joints": {
+        "leftShoulder": [
+          396.89,
+          292.42
+        ],
+        "rightShoulder": [
+          625.11,
+          292.42
+        ],
+        "leftElbow": [
+          281.25,
+          451.92
+        ],
+        "rightElbow": [
+          740.75,
+          451.92
+        ],
+        "leftPalm": [
+          150.59,
+          661.35
+        ],
+        "rightPalm": [
+          871.41,
+          661.35
+        ],
+        "leftHip": [
+          436.62,
+          664.33
+        ],
+        "rightHip": [
+          585.38,
+          664.33
+        ],
+        "leftKnee": [
+          450.99,
+          985.53
+        ],
+        "rightKnee": [
+          571.01,
+          985.53
+        ],
+        "leftAnkle": [
+          463.67,
+          1378.57
+        ],
+        "rightAnkle": [
+          558.33,
+          1378.57
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "a_rear": {
+      "sourceSha256": "40d83704a51f836ca6d512dfaae2c84296113bd60d728000d73c1148367022b6",
+      "frame": 31,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        487.54,
+        133.28
+      ],
+      "rightEye": [
+        536.46,
+        133.28
+      ],
+      "mouth": [
+        512.0,
+        182.21
+      ],
+      "headPivot": [
+        512.0,
+        173.77
+      ],
+      "bodyPivot": [
+        512.0,
+        688.34
+      ],
+      "groundAnchor": [
+        512.0,
+        1510.84
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000290349125862,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.94692,
+      "joints": {
+        "leftShoulder": [
+          398.12,
+          291.87
+        ],
+        "rightShoulder": [
+          625.88,
+          291.87
+        ],
+        "leftElbow": [
+          313.76,
+          469.02
+        ],
+        "rightElbow": [
+          710.24,
+          469.02
+        ],
+        "leftPalm": [
+          205.79,
+          690.45
+        ],
+        "rightPalm": [
+          818.21,
+          690.45
+        ],
+        "leftHip": [
+          437.77,
+          663.04
+        ],
+        "rightHip": [
+          586.23,
+          663.04
+        ],
+        "leftKnee": [
+          452.11,
+          983.59
+        ],
+        "rightKnee": [
+          571.89,
+          983.59
+        ],
+        "leftAnkle": [
+          464.76,
+          1375.84
+        ],
+        "rightAnkle": [
+          559.24,
+          1375.84
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "seated": {
+      "sourceSha256": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+      "frame": 91,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        472.04,
+        365.99
+      ],
+      "rightEye": [
+        534.32,
+        362.07
+      ],
+      "mouth": [
+        507.98,
+        426.93
+      ],
+      "headPivot": [
+        514.49,
+        412.31
+      ],
+      "bodyPivot": [
+        426.18,
+        1028.03
+      ],
+      "groundAnchor": [
+        401.25,
+        1327.3
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0002282857894897461,
+        "contactSamples": 198,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.59549,
+      "joints": {
+        "leftShoulder": [
+          376.76,
+          507.88
+        ],
+        "rightShoulder": [
+          642.3,
+          604.96
+        ],
+        "leftElbow": [
+          472.98,
+          690.55
+        ],
+        "rightElbow": [
+          751.17,
+          821.44
+        ],
+        "leftPalm": [
+          636.83,
+          933.07
+        ],
+        "rightPalm": [
+          764.98,
+          1051.75
+        ],
+        "leftHip": [
+          342.07,
+          981.13
+        ],
+        "rightHip": [
+          521.2,
+          1013.43
+        ],
+        "leftKnee": [
+          259.3,
+          679.47
+        ],
+        "rightKnee": [
+          793.36,
+          1100.7
+        ],
+        "leftAnkle": [
+          135.64,
+          1068.73
+        ],
+        "rightAnkle": [
+          267.77,
+          1063.78
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "passed",
+      "occlusionCheck": "passed",
+      "technicalReviewNote": "Examinado para los dos centros de iris y mouth; no prueba máscaras del runtime ni identidad artística."
+    },
+    "crouched": {
+      "sourceSha256": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+      "frame": 121,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        364.71,
+        336.39
+      ],
+      "rightEye": [
+        410.59,
+        336.23
+      ],
+      "mouth": [
+        387.67,
+        398.91
+      ],
+      "headPivot": [
+        422.81,
+        390.9
+      ],
+      "bodyPivot": [
+        474.9,
+        986.46
+      ],
+      "groundAnchor": [
+        380.03,
+        1327.69
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000234469771385,
+        "contactSamples": 142,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.74466,
+      "joints": {
+        "leftShoulder": [
+          318.19,
+          530.99
+        ],
+        "rightShoulder": [
+          529.38,
+          542.34
+        ],
+        "leftElbow": [
+          102.14,
+          596.1
+        ],
+        "rightElbow": [
+          447.06,
+          622.94
+        ],
+        "leftPalm": [
+          199.47,
+          688.62
+        ],
+        "rightPalm": [
+          297.61,
+          698.8
+        ],
+        "leftHip": [
+          413.06,
+          945.34
+        ],
+        "rightHip": [
+          547.17,
+          968.25
+        ],
+        "leftKnee": [
+          151.01,
+          742.97
+        ],
+        "rightKnee": [
+          391.47,
+          772.33
+        ],
+        "leftAnkle": [
+          369.96,
+          1089.97
+        ],
+        "rightAnkle": [
+          553.81,
+          1129.47
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "passed",
+      "occlusionCheck": "passed",
+      "technicalReviewNote": "Examinado para los dos centros de iris y mouth; no prueba máscaras del runtime ni identidad artística."
+    },
+    "kneeling": {
+      "sourceSha256": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2",
+      "frame": 151,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        335.36,
+        320.05
+      ],
+      "rightEye": [
+        389.42,
+        317.25
+      ],
+      "mouth": [
+        366.27,
+        384.98
+      ],
+      "headPivot": [
+        397.11,
+        374.05
+      ],
+      "bodyPivot": [
+        414.68,
+        1041.53
+      ],
+      "groundAnchor": [
+        373.39,
+        1329.68
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000006295740604,
+        "contactSamples": 222,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.66381,
+      "joints": {
+        "leftShoulder": [
+          273.52,
+          530.98
+        ],
+        "rightShoulder": [
+          521.89,
+          529.44
+        ],
+        "leftElbow": [
+          224.9,
+          773.76
+        ],
+        "rightElbow": [
+          474.54,
+          785.65
+        ],
+        "leftPalm": [
+          179.77,
+          1080.98
+        ],
+        "rightPalm": [
+          365.62,
+          1102.73
+        ],
+        "leftHip": [
+          335.59,
+          1001.86
+        ],
+        "rightHip": [
+          494.8,
+          1017.14
+        ],
+        "leftKnee": [
+          65.19,
+          1228.08
+        ],
+        "rightKnee": [
+          297.33,
+          1263.82
+        ],
+        "leftAnkle": [
+          388.47,
+          1123.92
+        ],
+        "rightAnkle": [
+          580.94,
+          1147.2
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "passed",
+      "occlusionCheck": "passed",
+      "technicalReviewNote": "Examinado para los dos centros de iris y mouth; no prueba máscaras del runtime ni identidad artística."
+    },
+    "kneeling_variant": {
+      "sourceSha256": "70fcd2c1642df52798417a14113727861a0c1fc6540bc08c018b21b4fbd8555f",
+      "frame": 161,
+      "width": 1374,
+      "height": 1145,
+      "leftEye": [
+        174.75,
+        236.25
+      ],
+      "rightEye": [
+        197.09,
+        237.34
+      ],
+      "mouth": [
+        224.55,
+        309.52
+      ],
+      "headPivot": [
+        278.8,
+        267.62
+      ],
+      "bodyPivot": [
+        854.96,
+        623.31
+      ],
+      "groundAnchor": [
+        768.17,
+        1119.63
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0010000013280659914,
+        "contactSamples": 336,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.53523,
+      "joints": {
+        "leftShoulder": [
+          359.16,
+          371.37
+        ],
+        "rightShoulder": [
+          487.29,
+          393.98
+        ],
+        "leftElbow": [
+          329.31,
+          651.9
+        ],
+        "rightElbow": [
+          494.88,
+          730.5
+        ],
+        "leftPalm": [
+          237.75,
+          944.25
+        ],
+        "rightPalm": [
+          416.23,
+          1098.15
+        ],
+        "leftHip": [
+          794.47,
+          575.03
+        ],
+        "rightHip": [
+          901.82,
+          603.54
+        ],
+        "leftKnee": [
+          479.52,
+          910.59
+        ],
+        "rightKnee": [
+          580.18,
+          975.39
+        ],
+        "leftAnkle": [
+          979.76,
+          818.47
+        ],
+        "rightAnkle": [
+          1092.1,
+          861.87
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "leaning": {
+      "sourceSha256": "80b4ec56df320ccc0f5f76a6ffecc453ce745a3b3121318f021c7ddde728261a",
+      "frame": 171,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        519.19,
+        138.98
+      ],
+      "rightEye": [
+        573.8,
+        138.98
+      ],
+      "mouth": [
+        546.5,
+        193.71
+      ],
+      "headPivot": [
+        545.97,
+        195.76
+      ],
+      "bodyPivot": [
+        543.1,
+        664.65
+      ],
+      "groundAnchor": [
+        543.63,
+        1508.05
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0009999722242355347,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.90136,
+      "joints": {
+        "leftShoulder": [
+          422.95,
+          312.85
+        ],
+        "rightShoulder": [
+          667.39,
+          312.85
+        ],
+        "leftElbow": [
+          388.71,
+          513.63
+        ],
+        "rightElbow": [
+          702.57,
+          513.63
+        ],
+        "leftPalm": [
+          459.4,
+          746.44
+        ],
+        "rightPalm": [
+          629.55,
+          746.44
+        ],
+        "leftHip": [
+          468.44,
+          639.4
+        ],
+        "rightHip": [
+          617.72,
+          639.4
+        ],
+        "leftKnee": [
+          462.02,
+          963.33
+        ],
+        "rightKnee": [
+          624.74,
+          963.33
+        ],
+        "leftAnkle": [
+          465.82,
+          1339.6
+        ],
+        "rightAnkle": [
+          619.32,
+          1339.6
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    },
+    "leaning_variant": {
+      "sourceSha256": "232cebd51ec81a61ea7003fecfcecda84cc3f19c0400fb5d729f2784bc8b74c4",
+      "frame": 181,
+      "width": 1024,
+      "height": 1536,
+      "leftEye": [
+        322.34,
+        145.48
+      ],
+      "rightEye": [
+        369.91,
+        142.04
+      ],
+      "mouth": [
+        343.94,
+        203.91
+      ],
+      "headPivot": [
+        374.51,
+        203.45
+      ],
+      "bodyPivot": [
+        565.65,
+        611.05
+      ],
+      "groundAnchor": [
+        507.49,
+        1519.22
+      ],
+      "groundAnchorMethod": {
+        "scope": "2D central X of body/boot/glove support span and maximum projected Y at z=0; hair excluded",
+        "minimumBodyZ_m": 0.0009999722242355347,
+        "contactSamples": 138,
+        "thresholdAboveMinimum_m": 0.003
+      },
+      "scaleToStanding": 0.83618,
+      "joints": {
+        "leftShoulder": [
+          316.38,
+          317.65
+        ],
+        "rightShoulder": [
+          532.91,
+          310.71
+        ],
+        "leftElbow": [
+          288.91,
+          538.47
+        ],
+        "rightElbow": [
+          568.56,
+          544.05
+        ],
+        "leftPalm": [
+          412.58,
+          771.93
+        ],
+        "rightPalm": [
+          561.65,
+          782.82
+        ],
+        "leftHip": [
+          501.91,
+          582.02
+        ],
+        "rightHip": [
+          636.39,
+          585.89
+        ],
+        "leftKnee": [
+          466.49,
+          922.29
+        ],
+        "rightKnee": [
+          611.16,
+          937.66
+        ],
+        "leftAnkle": [
+          499.33,
+          1314.99
+        ],
+        "rightAnkle": [
+          636.22,
+          1341.54
+        ]
+      },
+      "semantic": "left/right sorted by screen x, not anatomical Blender .L/.R",
+      "visualCheck": "pending",
+      "occlusionCheck": "pending"
+    }
+  }
+}

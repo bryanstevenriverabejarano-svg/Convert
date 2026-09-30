@@ -1,0 +1,2 @@
+* -text -whitespace
+outputs/Salve_entrega_v02.zip filter=lfs diff=lfs merge=lfs -text

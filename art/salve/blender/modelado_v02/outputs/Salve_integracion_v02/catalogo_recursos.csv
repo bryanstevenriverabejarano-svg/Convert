@@ -1,0 +1,21 @@
+﻿indice,id,nombre,grupo,ancho,alto,png_entrega,ruta_producto,sha256_referencia
+1,front,Frontal,turnaround,1024,1536,01_front.png,avatar/core/front.png,9065a2fa9da111f7d4db905bc24af4cc1a60f2c23dd8cab846a6951b8ad5ab5e
+2,front_three_quarter,Frontal tres cuartos,turnaround,1024,1536,02_front_three_quarter.png,avatar/core/front_three_quarter.png,e28ad34b4a36bf1be88a694e8105f39b8a0a803e36d3f099fd561159f61ec93e
+3,right,Lateral derecha,turnaround,1024,1536,03_right.png,avatar/core/right.png,d3c8178d034e6e93f4fc329bb65712dd87ba3cac2e32cbd254bc8fb202fb96b7
+4,rear_right,Trasera tres cuartos derecha,turnaround,1024,1536,04_rear_right.png,avatar/core/rear_right.png,06f29ffd26cbe9d3924c3aa3dde7e7c8324a68aa248fda9a9e1180c6a88d998a
+5,rear,Trasera,turnaround,1024,1536,05_rear.png,avatar/core/rear.png,5d42fcb1ba3abcec413ec95c10db5e0814a7fa613930a994e4aa301c945a7058
+6,rear_three_quarter,Trasera tres cuartos,turnaround,1024,1536,06_rear_three_quarter.png,avatar/core/rear_three_quarter.png,c78ce6a0d7afaf9ecb1c533eaaee35648874746f3424c34a70693e6e8697d6e6
+7,left,Lateral izquierda,turnaround,1024,1536,07_left.png,avatar/core/left.png,2f890a5ffe53ca9ecac4abdf7e0dd330eec6dd347afaaab0ae31050f3c8a31a6
+8,front_opposite,Frontal tres cuartos contrario,turnaround,1024,1536,08_front_opposite.png,avatar/core/front_opposite.png,45e9e90d6599f8eaf4b2d073306efec8148cf67f38b699de7a3138faa6f45f3f
+9,front_variant,Variante frontal derecha,reference,1024,1536,09_front_variant.png,avatar/core/front_variant.png,fe1ff13f2bbc006bbeb31c9e7d89f54e7e107331374f82f60113719f0bc8a0eb
+10,above,Vista superior,reference,1024,1536,10_above.png,avatar/core/above.png,5635662a3c267ad4040b13c2c7c7b9fac46a71277790f269af733d42ddc5500f
+11,below,Vista inferior,reference,1024,1536,11_below.png,avatar/core/below.png,a23c8599b3190c568cd83f6dcfcc01c6bf7263c93467a259a78cd2a0ef030952
+12,a_front,Pose A frontal,bind,1024,1536,12_a_front.png,avatar/core/a_front.png,5e93415cb864e521b9803af17de85bbccf58dc34595dbe5af7556db8e2e6beb2
+13,a_open_hair,Pose A con cabello abierto,bind,1024,1536,13_a_open_hair.png,avatar/core/a_open_hair.png,f5109a645ce8e67a8fcc2360d652df6ae94f7b3544031a09886e5e4ead29595b
+14,a_rear,Pose A trasera,bind,1024,1536,14_a_rear.png,avatar/core/a_rear.png,17d4546dd935e0277e3113de4619ccacde34cd42eac377d4d229c3c1ec79b04f
+15,seated,Sentada,pose,1024,1536,15_seated.png,avatar/core/seated.png,68d59233dce94ed5dbcbd7b9881a1b4cd87f2331e0592b320609f29b214e63b5
+16,crouched,Agachada,pose,1024,1536,16_crouched.png,avatar/core/crouched.png,5966ded2cc3ca82f619b128ea94d24074ae81432d1456f441e7ee7eefdc29ee5
+17,kneeling,De rodillas,pose,1024,1536,17_kneeling.png,avatar/core/kneeling.png,1ad4fa15517f17c0ff88fc228dbe535ff06869cbbd02010ad63ebf10278f70be
+18,kneeling_variant,Rodillas variante derecha,pose,1374,1145,18_kneeling_variant.png,avatar/core/kneeling_variant.png,184be196d2e997f98214a27c7c9a5b1c3df67d039a445b4a2efca74382a91af6
+19,leaning,Inclinada,pose,1024,1536,19_leaning.png,avatar/core/leaning.png,a64b2e869e28646b88581b673ca3b105f9a3f518424cc8e97c5b461ffc9aeb15
+20,leaning_variant,Inclinada variante,pose,1024,1536,20_leaning_variant.png,avatar/core/leaning_variant.png,f412a20485bc1f4421cd500ee6da085f8960fb9e63d9238d3dccd2868a76c828

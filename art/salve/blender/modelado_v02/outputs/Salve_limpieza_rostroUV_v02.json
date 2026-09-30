@@ -1,0 +1,596 @@
+{
+  "evaluation_claim": "Conservation at the delivered image resolution under declared numeric bounds; evaluated bit equality is NOT claimed.",
+  "pixel_displacement_limit": 0.01,
+  "normal_angle_limit_deg": 1.0,
+  "exact_input_invariants": [
+    "Base cage surviving coordinates",
+    "All surviving shape coordinates/settings/drivers",
+    "Vertex weights",
+    "Face layout and material IDs",
+    "World and camera matrices"
+  ],
+  "subdivision_viewport_and_render_levels": 1,
+  "inferred_cause": "Small Subsurf reevaluation differences after Mesh/BMesh rebuilding, strongest near the high-valence lower cap. Inference; no separate causal attribution is claimed.",
+  "visual_review_status": "La comprobacion numerica fallo antes del render posterior. No se aplico ni guardo la limpieza; no existe comparacion visual antes/despues completa.",
+  "saved": false,
+  "numeric_guard_passed": false,
+  "error": "Traceback (most recent call last):\n  File \"salve_face_visual_conservation\", line 240, in main\n  File \"C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\face_topology_uv_safe_cleanup_v02.py_visual_metric_adaptation\", line 268, in clean_face_topology_uv\nAssertionError: Visual conservation bound failed: {\"frame\": 261, \"matrix_exact\": true, \"face_layout_exact\": true, \"max_world_position_delta_m\": 4.29153443014406e-06, \"max_corner_normal_angle_deg\": 0.2628903216190349, \"max_face_normal_angle_deg\": 0.7535111016706642, \"max_corner_normal_vector_delta\": 0.004588297570806734, \"views\": [{\"id\": \"SURPRISED\", \"camera\": \"CAM_FACE_SURPRISED\", \"size\": [768, 768], \"maximum_pixel_displacement\": 0.010299682632345744, \"points_tested\": 225152, \"passed\": false, \"scope\": \"All evaluated face corners, including occluded/off-frame points; conservative bound.\"}], \"passed\": false}\n",
+  "metrics_at_unique_frames": [
+    {
+      "frame": 1,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.503406168392066e-06,
+      "max_corner_normal_angle_deg": 0.16081524158112587,
+      "max_face_normal_angle_deg": 0.3846714539406249,
+      "max_corner_normal_vector_delta": 0.002806754453922419,
+      "views": [
+        {
+          "id": "front",
+          "camera": "CAM_front",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.001999677489913873,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        },
+        {
+          "id": "right",
+          "camera": "CAM_right",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.002120318863479302,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        },
+        {
+          "id": "rear_right",
+          "camera": "CAM_rear_right",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0020100912539931905,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        },
+        {
+          "id": "rear",
+          "camera": "CAM_rear",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.00208002167200122,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        },
+        {
+          "id": "left",
+          "camera": "CAM_left",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0021203188634793227,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        },
+        {
+          "id": "above",
+          "camera": "CAM_above",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.002677772223344952,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        },
+        {
+          "id": "below",
+          "camera": "CAM_below",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.001845577270627339,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 11,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.506847048078437e-06,
+      "max_corner_normal_angle_deg": 0.1669401853081981,
+      "max_face_normal_angle_deg": 0.38556939840229915,
+      "max_corner_normal_vector_delta": 0.0029136547952928835,
+      "views": [
+        {
+          "id": "front_three_quarter",
+          "camera": "CAM_front_three_quarter",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0021077185333312244,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 21,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.5067882278861642e-06,
+      "max_corner_normal_angle_deg": 0.17252093237739413,
+      "max_face_normal_angle_deg": 0.38516837263257786,
+      "max_corner_normal_vector_delta": 0.003011057217360774,
+      "views": [
+        {
+          "id": "rear_three_quarter",
+          "camera": "CAM_rear_three_quarter",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0020947627454735002,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        },
+        {
+          "id": "front_opposite",
+          "camera": "CAM_front_opposite",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.002110427934946306,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 31,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.503406168392066e-06,
+      "max_corner_normal_angle_deg": 0.16081524158112587,
+      "max_face_normal_angle_deg": 0.3846714539406249,
+      "max_corner_normal_vector_delta": 0.002806754453922419,
+      "views": [
+        {
+          "id": "a_front",
+          "camera": "CAM_a_front",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0021203096195138585,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        },
+        {
+          "id": "a_rear",
+          "camera": "CAM_a_rear",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0021117605036199937,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 41,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.506847048078437e-06,
+      "max_corner_normal_angle_deg": 0.1669401853081981,
+      "max_face_normal_angle_deg": 0.38556939840229915,
+      "max_corner_normal_vector_delta": 0.0029136547952928835,
+      "views": [
+        {
+          "id": "front_variant",
+          "camera": "CAM_front_variant",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0021152515666602316,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 61,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.503406168392066e-06,
+      "max_corner_normal_angle_deg": 0.16081524158112587,
+      "max_face_normal_angle_deg": 0.3846714539406249,
+      "max_corner_normal_vector_delta": 0.002806754453922419,
+      "views": [
+        {
+          "id": "a_open_hair",
+          "camera": "CAM_a_open_hair",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0021160127151359405,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 91,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.5118624484824e-06,
+      "max_corner_normal_angle_deg": 0.15843998817177327,
+      "max_face_normal_angle_deg": 0.3864750428497241,
+      "max_corner_normal_vector_delta": 0.0027652986487149843,
+      "views": [
+        {
+          "id": "seated",
+          "camera": "CAM_seated",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0027027672846248125,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 121,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.50875570631374e-06,
+      "max_corner_normal_angle_deg": 0.15768938839841312,
+      "max_face_normal_angle_deg": 0.3858779072775568,
+      "max_corner_normal_vector_delta": 0.0027521980695576808,
+      "views": [
+        {
+          "id": "crouched",
+          "camera": "CAM_crouched",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0026771780893678847,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 151,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.50623180059814e-06,
+      "max_corner_normal_angle_deg": 0.16416233951371018,
+      "max_face_normal_angle_deg": 0.3850276486868779,
+      "max_corner_normal_vector_delta": 0.0028651723872079315,
+      "views": [
+        {
+          "id": "kneeling",
+          "camera": "CAM_kneeling",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0028356253258314933,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 161,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.4936192914177346e-06,
+      "max_corner_normal_angle_deg": 0.15562835737031805,
+      "max_face_normal_angle_deg": 0.3819712315983034,
+      "max_corner_normal_vector_delta": 0.0027162265562987787,
+      "views": [
+        {
+          "id": "kneeling_variant",
+          "camera": "CAM_kneeling_variant",
+          "size": [
+            1374,
+            1145
+          ],
+          "maximum_pixel_displacement": 0.003449032305520644,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 171,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.5210723192197076e-06,
+      "max_corner_normal_angle_deg": 0.16469573720752054,
+      "max_face_normal_angle_deg": 0.3878822220454914,
+      "max_corner_normal_vector_delta": 0.002874481954157177,
+      "views": [
+        {
+          "id": "leaning",
+          "camera": "CAM_leaning",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0023411948734134587,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 181,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.528810910653642e-06,
+      "max_corner_normal_angle_deg": 0.16379524703002007,
+      "max_face_normal_angle_deg": 0.3895835641672309,
+      "max_corner_normal_vector_delta": 0.0028587653740274497,
+      "views": [
+        {
+          "id": "leaning_variant",
+          "camera": "CAM_leaning_variant",
+          "size": [
+            1024,
+            1536
+          ],
+          "maximum_pixel_displacement": 0.0025807891676762136,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 201,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.503406168392066e-06,
+      "max_corner_normal_angle_deg": 0.16081524158112587,
+      "max_face_normal_angle_deg": 0.3846714539406249,
+      "max_corner_normal_vector_delta": 0.002806754453922419,
+      "views": [
+        {
+          "id": "NEUTRAL",
+          "camera": "CAM_FACE_NEUTRAL",
+          "size": [
+            768,
+            768
+          ],
+          "maximum_pixel_displacement": 0.006008148608446246,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 211,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.8610237071309012e-06,
+      "max_corner_normal_angle_deg": 0.19539798003370634,
+      "max_face_normal_angle_deg": 0.4187733382645533,
+      "max_corner_normal_vector_delta": 0.0034103364430335195,
+      "views": [
+        {
+          "id": "WARM",
+          "camera": "CAM_FACE_WARM",
+          "size": [
+            768,
+            768
+          ],
+          "maximum_pixel_displacement": 0.00686645544124075,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 221,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.503406168392066e-06,
+      "max_corner_normal_angle_deg": 0.16081524158112587,
+      "max_face_normal_angle_deg": 0.3846714539406249,
+      "max_corner_normal_vector_delta": 0.002806754453922419,
+      "views": [
+        {
+          "id": "CURIOUS",
+          "camera": "CAM_FACE_CURIOUS",
+          "size": [
+            768,
+            768
+          ],
+          "maximum_pixel_displacement": 0.006008148608446246,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 231,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.503406168392066e-06,
+      "max_corner_normal_angle_deg": 0.16081524158112587,
+      "max_face_normal_angle_deg": 0.3846714539406249,
+      "max_corner_normal_vector_delta": 0.002806754453922419,
+      "views": [
+        {
+          "id": "CONCERNED",
+          "camera": "CAM_FACE_CONCERNED",
+          "size": [
+            768,
+            768
+          ],
+          "maximum_pixel_displacement": 0.006008148608446246,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 241,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.503406168392066e-06,
+      "max_corner_normal_angle_deg": 0.16081524158112587,
+      "max_face_normal_angle_deg": 0.3846714539406249,
+      "max_corner_normal_vector_delta": 0.002806754453922419,
+      "views": [
+        {
+          "id": "SAD",
+          "camera": "CAM_FACE_SAD",
+          "size": [
+            768,
+            768
+          ],
+          "maximum_pixel_displacement": 0.006008148608446246,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 251,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 2.503406168392066e-06,
+      "max_corner_normal_angle_deg": 0.16081524158112587,
+      "max_face_normal_angle_deg": 0.3846714539406249,
+      "max_corner_normal_vector_delta": 0.002806754453922419,
+      "views": [
+        {
+          "id": "ANGRY",
+          "camera": "CAM_FACE_ANGRY",
+          "size": [
+            768,
+            768
+          ],
+          "maximum_pixel_displacement": 0.006008148608446246,
+          "points_tested": 225152,
+          "passed": true,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": true
+    },
+    {
+      "frame": 261,
+      "matrix_exact": true,
+      "face_layout_exact": true,
+      "max_world_position_delta_m": 4.29153443014406e-06,
+      "max_corner_normal_angle_deg": 0.2628903216190349,
+      "max_face_normal_angle_deg": 0.7535111016706642,
+      "max_corner_normal_vector_delta": 0.004588297570806734,
+      "views": [
+        {
+          "id": "SURPRISED",
+          "camera": "CAM_FACE_SURPRISED",
+          "size": [
+            768,
+            768
+          ],
+          "maximum_pixel_displacement": 0.010299682632345744,
+          "points_tested": 225152,
+          "passed": false,
+          "scope": "All evaluated face corners, including occluded/off-frame points; conservative bound."
+        }
+      ],
+      "passed": false
+    }
+  ],
+  "neutral_renders": {
+    "before": {
+      "file": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\face_cleanup_neutral_before.png",
+      "sha256": "b3ce411b4fdd62a4344dcb76b62922d5efeebd2660252c970cca43b73596608e",
+      "frame": 201,
+      "camera": "CAM_FACE_NEUTRAL",
+      "size": [
+        768,
+        768
+      ]
+    }
+  },
+  "neutral_image_comparison": {},
+  "candidate_in_memory": false,
+  "original_restored_on_failure": true,
+  "delivered_pngs_replaced": false,
+  "saved_model": false,
+  "status": "rejected_rolled_back",
+  "source_model": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_refinado_v02.blend",
+  "source_model_sha256": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+  "active_issues_retained": [
+    "Rostro: 256 vertices aislados",
+    "UV_Rostro_cilindrica: 126 componentes fuera de 0..1 y 2 caras UV con area cero"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "fixtureOnly": true,
+  "passed": 12,
+  "tests": [
+    {
+      "name": "missing_landmarks",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "valid_fixture",
+      "exitCode": 0,
+      "packageReady": true,
+      "landmarksComplete": true
+    },
+    {
+      "name": "mismatched_source",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "out_of_bounds",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "unreviewed_landmarks",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "invalid_face_scale",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "degenerate_eyes",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "reference_profile_coincident_eyes",
+      "exitCode": 0,
+      "packageReady": true,
+      "landmarksComplete": true
+    },
+    {
+      "name": "stage_eye_occlusion_pending",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "opaque_png",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "wrong_dimensions",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    },
+    {
+      "name": "cropped_border",
+      "exitCode": 2,
+      "packageReady": false,
+      "landmarksComplete": false
+    }
+  ]
+}

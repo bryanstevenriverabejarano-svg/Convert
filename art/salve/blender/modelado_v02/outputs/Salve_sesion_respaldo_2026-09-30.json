@@ -1,0 +1,23 @@
+{
+  "source_file": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_refinado_v02.blend",
+  "source_sha256_before": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+  "source_sha256_after": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+  "session_file": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_sesion_respaldo_2026-09-30.blend",
+  "session_sha256": "5bf385ad1fa54ec2edcaf8cfe6044b81f6e4179a27865e6cb4fb2c2344ba250c",
+  "blender": "5.2.2 LTS",
+  "scene": "04_SALVE_MODELO_3D",
+  "frame": 1,
+  "camera": "CAM_front",
+  "objects": 405,
+  "resolution": [
+    1024,
+    1536
+  ],
+  "resolution_percentage": 100,
+  "live_addon_version": [
+    1,
+    7
+  ],
+  "live_scene_name": "04_SALVE_MODELO_3D",
+  "scope": "Separate snapshot of the open GUI session. Not a new artistically accepted version; original V02 and rendered package remain unchanged."
+}

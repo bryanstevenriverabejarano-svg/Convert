@@ -1,0 +1,277 @@
+diff --git a/app/src/main/java/salve/avatar/CorePoseRenderer.java b/app/src/main/java/salve/avatar/CorePoseRenderer.java
+--- a/app/src/main/java/salve/avatar/CorePoseRenderer.java
++++ b/app/src/main/java/salve/avatar/CorePoseRenderer.java
+@@ -8,7 +8,7 @@
+ import java.util.concurrent.ExecutorService;
+ import java.util.concurrent.Executors;
+ 
+-/** Original 2D pose artwork, not a synthetic 3D mesh or a morphed transition. */
++/** Catalogued 2D pose artwork with image-specific facial and contact anchors. */
+ final class CorePoseRenderer {
+     private final Context context;
+     private final Runnable changed;
+@@ -18,6 +18,7 @@
+     private volatile long generation;
+     private String requested, loaded;
+     private Bitmap bitmap;
++    private CorePoseLandmarks.Entry landmarks;
+     private boolean attached;
+ 
+     CorePoseRenderer(Context context, Runnable changed) {
+@@ -27,29 +28,40 @@
+     void detach() {
+         attached = false; generation++;
+         if (worker != null) worker.shutdownNow();
+-        worker = null; requested = loaded = null;
++        worker = null; requested = loaded = null; landmarks = null;
+         if (bitmap != null) bitmap.recycle(); bitmap = null;
+     }
+     void select(String id) {
+         if (!attached || java.util.Objects.equals(requested, id)) return;
+         requested = id; final long task = ++generation;
+-        loaded = null;
++        loaded = null; landmarks = null;
+         if (bitmap != null) bitmap.recycle(); bitmap = null;
+         if (id == null) return;
+         // One queue slot matters: superseded requests never decode or publish a stale pose.
+         worker.execute(() -> {
+             if (task != generation) return;
+             Bitmap decoded = null;
+-            try (InputStream in = context.getAssets().open("avatar/core/" + id + ".png")) {
++            try {
++                CoreViewCatalog.Entry entry=CoreViewCatalog.find(id);
++                CorePoseLandmarks.Entry anchors;
++                try(java.io.Reader reader=new java.io.InputStreamReader(context.getAssets().open("avatar/core/landmarks.json"),java.nio.charset.StandardCharsets.UTF_8)) {
++                    anchors=CorePoseLandmarks.read(reader,id);
++                } catch(java.io.FileNotFoundException originalAssets) { anchors=CorePoseLandmarks.original(id); }
++                if(anchors.sourceSha256!=null)try(InputStream source=context.getAssets().open(entry.path)) {
++                    CorePoseLandmarks.verifyHash(source,anchors.sourceSha256);
++                }
++                final CorePoseLandmarks.Entry readyAnchors=anchors;
++                try (InputStream in = context.getAssets().open(entry.path)) {
+                 BitmapFactory.Options options = new BitmapFactory.Options(); options.inScaled = false;
+                 decoded = BitmapFactory.decodeStream(in, null, options);
+-                if (decoded == null || decoded.getWidth() != 1024 || decoded.getHeight() != 1536)
++                if (decoded == null || decoded.getWidth() != entry.width || decoded.getHeight() != entry.height)
+                     throw new IllegalArgumentException("Unexpected core pose dimensions");
+                 Bitmap ready = decoded;
+                 main.post(() -> {
+                     if (!attached || task != generation) { ready.recycle(); return; }
+-                    bitmap = ready; loaded = id; changed.run();
++                    bitmap = ready; landmarks = readyAnchors; loaded = id; changed.run();
+                 });
++                }
+             } catch (java.io.IOException | RuntimeException | OutOfMemoryError error) {
+                 if (decoded != null) decoded.recycle();
+                 main.post(() -> { if (attached && task == generation) changed.run(); });
+@@ -58,40 +70,37 @@
+     }
+     /** Source images fill different canvases; scale by face size, not the pose's bounding box. */
+     boolean draw(Canvas canvas, String id, AvatarMotion.Snapshot motion, float standingHeight) {
+-        if (bitmap == null || !id.equals(loaded)) return false;
+-        float factor = "seated".equals(id) ? .55f : "kneeling".equals(id) ? .55f : .60f;
+-        float scale = standingHeight / 1536f * factor;
+-        canvas.save(); canvas.translate(-512f * scale, -1536f * scale); canvas.scale(scale, scale);
++        CorePoseLandmarks.Entry anchors=landmarks;
++        if (bitmap == null || anchors == null || !id.equals(loaded)) return false;
++        float scale = standingHeight / 1536f * anchors.scaleToStanding;
++        canvas.save(); canvas.translate(-anchors.groundAnchor[0] * scale, -anchors.groundAnchor[1] * scale); canvas.scale(scale, scale);
+         canvas.drawBitmap(bitmap, 0, 0, paint);
+         boolean movingMouth = (motion.speaking || motion.gesture == AvatarMotion.Gesture.LAUGH) && motion.mouthOpen > .04f;
+         if (movingMouth || motion.expression == AvatarMotion.Expression.WARM || motion.expression == AvatarMotion.Expression.SURPRISED) {
+-            // Landmarks were checked against each exact source. No whole-face replacement.
+-            float x = "seated".equals(id) ? 540 : "kneeling".equals(id) ? 506 : 345;
+-            float y = "seated".equals(id) ? 289 : "kneeling".equals(id) ? 296 : 349;
+-            canvas.save(); canvas.rotate("seated".equals(id) ? -12 : "kneeling".equals(id) ? 7 : 0, x, y);
+-            Rect sample = new Rect((int)x-8, (int)y-12, (int)x+8, (int)y-7);
+-            canvas.drawBitmap(bitmap, sample, new RectF(x-14,y-4,x+14,y+6), paint);
++            float x = anchors.mouth[0], y = anchors.mouth[1], s=anchors.faceScale;
++            canvas.save(); canvas.rotate(anchors.mouthRotationDegrees, x, y);
++            Rect sample = new Rect((int)(x-8*s), (int)(y-12*s), (int)(x+8*s), (int)(y-7*s));
++            canvas.drawBitmap(bitmap, sample, new RectF(x-14*s,y-4*s,x+14*s,y+6*s), paint);
+             paint.setColor(0xFF754945);
+             if (movingMouth || motion.expression == AvatarMotion.Expression.SURPRISED)
+-                canvas.drawOval(x-9,y-2,x+9,y+2+10*(movingMouth?motion.mouthOpen:.7f),paint);
++                canvas.drawOval(x-9*s,y-2*s,x+9*s,y+(2+10*(movingMouth?motion.mouthOpen:.7f))*s,paint);
+             else {
+-                Path smile = new Path(); smile.moveTo(x-12,y-1); smile.quadTo(x,y+7,x+12,y-1);
+-                paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.5f); canvas.drawPath(smile,paint);
++                Path smile = new Path(); smile.moveTo(x-12*s,y-s); smile.quadTo(x,y+7*s,x+12*s,y-s);
++                paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.5f*s); canvas.drawPath(smile,paint);
+                 paint.setStyle(Paint.Style.FILL);
+             }
+             paint.setColor(Color.WHITE); canvas.restore();
+         }
+-        float[][] eyes = "seated".equals(id) ? new float[][]{{467,246},{564,210}}
+-                : "kneeling".equals(id) ? new float[][]{{470,220},{561,240}} : new float[][]{{303,294},{377,261}};
++        float[][] eyes = new float[][]{anchors.leftEye,anchors.rightEye};
+         for(int i=0;i<eyes.length;i++) {
+-            float x=eyes[i][0],y=eyes[i][1];
++            float x=eyes[i][0],y=eyes[i][1],s=anchors.faceScale;
+             if(motion.expression==AvatarMotion.Expression.SAD){
+-                paint.setColor(0xB58CCEFF);canvas.drawOval(x-3,y+12,x+3,y+34,paint);
++                paint.setColor(0xB58CCEFF);canvas.drawOval(x-3*s,y+12*s,x+3*s,y+34*s,paint);
+             } else if(motion.expression==AvatarMotion.Expression.SHY){
+-                paint.setColor(0x48ED98AB);canvas.drawOval(x-17,y+20,x+17,y+30,paint);
++                paint.setColor(0x48ED98AB);canvas.drawOval(x-17*s,y+20*s,x+17*s,y+30*s,paint);
+             } else if(motion.expression==AvatarMotion.Expression.ANGRY){
+-                float side=i==0?1:-1;paint.setColor(0xB78C818D);paint.setStrokeWidth(2);
+-                canvas.drawLine(x-17*side,y-20,x+15*side,y-13,paint);
++                float side=i==0?1:-1;paint.setColor(0xB78C818D);paint.setStrokeWidth(2*s);
++                canvas.drawLine(x-17*side*s,y-20*s,x+15*side*s,y-13*s,paint);
+             }
+         }
+         paint.setColor(Color.WHITE);
+diff --git a/app/src/main/java/salve/avatar/IllustratedAvatarRenderer.java b/app/src/main/java/salve/avatar/IllustratedAvatarRenderer.java
+--- a/app/src/main/java/salve/avatar/IllustratedAvatarRenderer.java
++++ b/app/src/main/java/salve/avatar/IllustratedAvatarRenderer.java
+@@ -23,7 +23,7 @@
+ import java.util.List;
+ import com.salve.app.R;
+ 
+-/** Textured 2D puppet. The user's original pixels remain the character, including its face. */
++/** Textured 2D puppet; the selected frontal PNG and rig must share the exact source hash. */
+ public final class IllustratedAvatarRenderer {
+     private static final class Artwork {
+         final Bitmap bitmap; final AvatarRig rig;
+@@ -51,7 +51,13 @@
+             try (InputStreamReader reader = new InputStreamReader(context.getAssets().open("avatar/core/rig.json"), StandardCharsets.UTF_8)) { coreRig = new AvatarRig(reader); }
+             if (original == null || original.getWidth() != rig.width || original.getHeight() != rig.height)
+                 throw new IllegalArgumentException("The portrait and its rig do not match");
+-            Bitmap base=BitmapFactory.decodeResource(context.getResources(),R.drawable.salve_imagen,options);
++            Bitmap base;
++            try(InputStream source=context.getAssets().open(CoreViewCatalog.find("front").path)) {
++                CorePoseLandmarks.verifyHash(source,coreRig.sourceSha256);
++            }
++            try(InputStream source=context.getAssets().open(CoreViewCatalog.find("front").path)) {
++                base=BitmapFactory.decodeStream(source,null,options);
++            }
+             if(base==null || base.getWidth()!=coreRig.width || base.getHeight()!=coreRig.height)
+                 throw new java.io.IOException("Missing or invalid core artwork");
+             baseArtwork=new Artwork(base,coreRig);
+diff --git a/app/src/main/java/salve/avatar/CorePoseLandmarks.java b/app/src/main/java/salve/avatar/CorePoseLandmarks.java
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/salve/avatar/CorePoseLandmarks.java
+@@ -0,0 +1,74 @@
++package salve.avatar;
++
++import com.google.gson.JsonArray;
++import com.google.gson.JsonObject;
++import com.google.gson.JsonParser;
++import java.io.IOException;
++import java.io.InputStream;
++import java.io.Reader;
++import java.security.MessageDigest;
++import java.security.NoSuchAlgorithmException;
++
++/** Pixel anchors belong to the exact PNG bytes, never to a pose name alone. */
++final class CorePoseLandmarks {
++    static final class Entry {
++        final String sourceSha256;
++        final float[] leftEye, rightEye, mouth, groundAnchor;
++        final float scaleToStanding, mouthRotationDegrees, faceScale;
++        private Entry(String sha, float[] left, float[] right, float[] mouth, float[] ground,
++                      float scale, float rotation, float faceScale) {
++            sourceSha256=sha; leftEye=left; rightEye=right; this.mouth=mouth; groundAnchor=ground;
++            scaleToStanding=scale; mouthRotationDegrees=rotation; this.faceScale=faceScale;
++        }
++    }
++    static Entry read(Reader reader, String id) {
++        JsonObject root=JsonParser.parseReader(reader).getAsJsonObject();
++        if(root.get("version").getAsInt()!=1 || !"pixels_top_left".equals(root.get("coordinateSystem").getAsString()))
++            throw new IllegalArgumentException("Unknown pose landmarks");
++        JsonObject value=root.getAsJsonObject("views").getAsJsonObject(id);
++        if(value==null)throw new IllegalArgumentException("Missing landmarks for "+id);
++        CoreViewCatalog.Entry view=CoreViewCatalog.find(id);
++        if(value.get("width").getAsInt()!=view.width || value.get("height").getAsInt()!=view.height)
++            throw new IllegalArgumentException("Landmarks dimensions do not match catalog");
++        String sha=value.get("sourceSha256").getAsString();
++        if(!sha.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("Invalid image hash");
++        float[] left=point(value,"leftEye",view), right=point(value,"rightEye",view);
++        float distance=(float)Math.hypot(right[0]-left[0],right[1]-left[1]);
++        if(distance<2)throw new IllegalArgumentException("Invalid eye distance");
++        float factor=finite(value,"scaleToStanding",.1f,5f);
++        float rotation=value.has("mouthRotationDegrees")?finite(value,"mouthRotationDegrees",-180,180):0;
++        float faceScale=value.has("faceScale")?finite(value,"faceScale",.1f,5f):Math.max(.1f,Math.min(5f,distance/68f));
++        return new Entry(sha,left,right,point(value,"mouth",view),point(value,"groundAnchor",view),factor,rotation,faceScale);
++    }
++    private static float finite(JsonObject value,String key,float low,float high) {
++        float result=value.get(key).getAsFloat();
++        if(!Float.isFinite(result)||result<low||result>high)throw new IllegalArgumentException("Invalid "+key);
++        return result;
++    }
++    private static float[] point(JsonObject value,String key,CoreViewCatalog.Entry view) {
++        JsonArray values=value.getAsJsonArray(key);
++        if(values==null||values.size()!=2)throw new IllegalArgumentException("Invalid "+key);
++        float x=values.get(0).getAsFloat(),y=values.get(1).getAsFloat();
++        if(!Float.isFinite(x)||!Float.isFinite(y)||x<0||x>=view.width||y<0||y>=view.height)
++            throw new IllegalArgumentException("Anchor outside image");
++        return new float[]{x,y};
++    }
++    /** Only the unchanged original assets may use these historical anchors. */
++    static Entry original(String id) {
++        if("seated".equals(id))return new Entry("68d59233dce94ed5dbcbd7b9881a1b4cd87f2331e0592b320609f29b214e63b5",new float[]{467,246},new float[]{564,210},new float[]{540,289},new float[]{512,1536},.55f,-12,1);
++        if("kneeling".equals(id))return new Entry("1ad4fa15517f17c0ff88fc228dbe535ff06869cbbd02010ad63ebf10278f70be",new float[]{470,220},new float[]{561,240},new float[]{506,296},new float[]{512,1536},.55f,7,1);
++        if("crouched".equals(id))return new Entry("5966ded2cc3ca82f619b128ea94d24074ae81432d1456f441e7ee7eefdc29ee5",new float[]{303,294},new float[]{377,261},new float[]{345,349},new float[]{512,1536},.60f,0,1);
++        throw new IllegalArgumentException("This view has no original stage anchors");
++    }
++    static void verifyHash(InputStream source,String expected) throws IOException {
++        try {
++            MessageDigest digest=MessageDigest.getInstance("SHA-256");
++            byte[] buffer=new byte[8192];int length;
++            while((length=source.read(buffer))!=-1)digest.update(buffer,0,length);
++            StringBuilder actual=new StringBuilder();
++            for(byte value:digest.digest())actual.append(String.format(java.util.Locale.ROOT,"%02x",value&255));
++            if(!actual.toString().equals(expected))throw new IOException("PNG and landmarks hash mismatch");
++        } catch(NoSuchAlgorithmException impossible) { throw new IOException("SHA-256 unavailable",impossible); }
++    }
++    private CorePoseLandmarks() {}
++}
+diff --git a/app/src/test/java/salve/avatar/CorePoseLandmarksTest.java b/app/src/test/java/salve/avatar/CorePoseLandmarksTest.java
+new file mode 100644
+--- /dev/null
++++ b/app/src/test/java/salve/avatar/CorePoseLandmarksTest.java
+@@ -0,0 +1,42 @@
++package salve.avatar;
++
++import java.io.ByteArrayInputStream;
++import java.io.IOException;
++import java.io.StringReader;
++import java.nio.charset.StandardCharsets;
++import org.junit.Test;
++import static org.junit.Assert.*;
++
++public final class CorePoseLandmarksTest {
++    private static final String ABC_SHA="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
++    private String document(String coordinates,String sha) {
++        return "{\"version\":1,\"coordinateSystem\":\"pixels_top_left\",\"views\":{\"seated\":{"
++                + "\"sourceSha256\":\""+sha+"\",\"width\":1024,\"height\":1536,"
++                + "\"leftEye\":"+coordinates+",\"rightEye\":[500,200],\"mouth\":[450,250],"
++                + "\"groundAnchor\":[512,1500],\"scaleToStanding\":0.5,\"mouthRotationDegrees\":12}}}";
++    }
++    @Test public void sourceBoundAnchorsControlScaleAndContact() {
++        CorePoseLandmarks.Entry entry=CorePoseLandmarks.read(new StringReader(document("[400,200]",ABC_SHA)),"seated");
++        assertEquals(ABC_SHA,entry.sourceSha256);assertEquals(.5f,entry.scaleToStanding,0);
++        assertArrayEquals(new float[]{512,1500},entry.groundAnchor,0);
++        assertEquals(12,entry.mouthRotationDegrees,0);assertEquals(100f/68f,entry.faceScale,.00001f);
++    }
++    @Test public void exactPngBytesMustMatchTheirLandmarks() throws Exception {
++        CorePoseLandmarks.verifyHash(new ByteArrayInputStream("abc".getBytes(StandardCharsets.UTF_8)),ABC_SHA);
++        try {CorePoseLandmarks.verifyHash(new ByteArrayInputStream("changed".getBytes(StandardCharsets.UTF_8)),ABC_SHA);fail();}
++        catch(IOException expected) {assertTrue(expected.getMessage().contains("mismatch"));}
++    }
++    @Test public void outOfCanvasAnchorsAreRejected() {
++        try {CorePoseLandmarks.read(new StringReader(document("[1024,200]",ABC_SHA)),"seated");fail();}
++        catch(IllegalArgumentException expected) {assertTrue(expected.getMessage().contains("outside"));}
++    }
++    @Test public void coincidentEyesCannotInventAFaceScale() {
++        try {CorePoseLandmarks.read(new StringReader(document("[500,200]",ABC_SHA)),"seated");fail();}
++        catch(IllegalArgumentException expected) {assertTrue(expected.getMessage().contains("distance"));}
++    }
++    @Test public void historicalAnchorsAreBoundToHistoricalArtwork() {
++        assertEquals("68d59233dce94ed5dbcbd7b9881a1b4cd87f2331e0592b320609f29b214e63b5",CorePoseLandmarks.original("seated").sourceSha256);
++        try {CorePoseLandmarks.original("kneeling_variant");fail();}
++        catch(IllegalArgumentException expected) {assertTrue(expected.getMessage().contains("no original"));}
++    }
++}

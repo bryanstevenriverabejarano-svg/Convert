@@ -1,0 +1,336 @@
+{
+  "seated": {
+    "frame": 91,
+    "root_delta_m": -0.006404446601867676,
+    "posterior_pelvis_before_m": 0.007404446601867676,
+    "posterior_pelvis_after_m": 0.0009999871253967285,
+    "body_before_m": 0.0009998083114624023,
+    "body_after_m": 0.0002282857894897461,
+    "contacts_before": {
+      "foot.L": {
+        "minimum_z_m": 0.0074,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.0074,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.00741,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.35013,
+        "sampled_evaluated_vertices": 2359,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.11967,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "contacts_after": {
+      "foot.L": {
+        "minimum_z_m": 0.00099,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.00335,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.00101,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.34373,
+        "sampled_evaluated_vertices": 2359,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.11326,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "knee_lift_iterations": [
+      {
+        "step": 0,
+        "knee_minimum_before_m": -0.0054,
+        "pole": [
+          0.3615695834159851,
+          -0.26545223593711853,
+          0.06724458932876587
+        ]
+      }
+    ],
+    "ankle_endpoint_target": [
+      -0.047779619693756104,
+      -0.4745368957519531,
+      0.13592523336410522
+    ],
+    "ankle_endpoint_error_m": 2.9280686954655467e-06,
+    "ik_snap": {
+      "foot.L": {
+        "joint_switch_error_m": 0.002309,
+        "endpoint_switch_error_m": 2e-06,
+        "pole_angle_rad": 0.814487,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 0.000335,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.203622,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.001096,
+        "endpoint_switch_error_m": 7e-06,
+        "pole_angle_rad": -1.590189,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4.1e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.617994,
+        "stretch": false
+      }
+    }
+  },
+  "crouched": {
+    "frame": 121,
+    "root_delta_m": -0.025463128626346587,
+    "body_before_m": 0.026463128626346588,
+    "all_before_m": 0.026463128626346588,
+    "body_after_m": 0.0010000234469771385,
+    "all_after_m": 0.0010000234469771385,
+    "contacts_before": {
+      "foot.L": {
+        "minimum_z_m": 0.02646,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.49272,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.56028,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.02646,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.49272,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.56028,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "contacts_after": {
+      "foot.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.46725,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.53482,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.46725,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.53482,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "method": "uniform root translation; body, hair and controls move together"
+  },
+  "kneeling": {
+    "frame": 151,
+    "root_delta_m": -0.000997541170567274,
+    "body_before_m": 0.001997541170567274,
+    "all_before_m": 0.001997541170567274,
+    "body_after_m": 0.0010000006295740604,
+    "all_after_m": 0.0010000006295740604,
+    "contacts_before": {
+      "foot.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.08635,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.08635,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "contacts_after": {
+      "foot.L": {
+        "minimum_z_m": 0.00101,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.08536,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.00101,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.08536,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "method": "uniform root translation; body, hair and controls move together"
+  },
+  "kneeling_variant": {
+    "frame": 161,
+    "root_delta_m": -0.0009988883286714554,
+    "body_before_m": 0.0019988883286714554,
+    "all_before_m": 0.0019988883286714554,
+    "body_after_m": 0.0010000013280659914,
+    "all_after_m": 0.0010000013280659914,
+    "contacts_before": {
+      "foot.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "contacts_after": {
+      "foot.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "method": "uniform root translation; body, hair and controls move together"
+  }
+}

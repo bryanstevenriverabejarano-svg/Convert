@@ -1,0 +1,20 @@
+{
+  "file": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_refinado_v02.blend",
+  "fileSha256": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+  "blenderVersion": "5.2.2 LTS",
+  "scene": "04_SALVE_MODELO_3D",
+  "frame": 1,
+  "camera": "CAM_front",
+  "resolution": [
+    1024,
+    1536
+  ],
+  "resolutionPercentage": 100,
+  "objectCount": 405,
+  "guiOpened": true,
+  "openedWithoutStartupPython": true,
+  "addonStatus": "running",
+  "mcpTransportVerified": false,
+  "mcpTransportWarning": "Live get_addon_status failed with Incomplete JSON response received after reopening without startup Python. GUI console was used for the record; no addon-version mismatch is inferred.",
+  "scope": "Actual GUI file opening and scene/camera/dimensions. Addon status alone does not verify MCP transport or certify artistic identity or production."
+}

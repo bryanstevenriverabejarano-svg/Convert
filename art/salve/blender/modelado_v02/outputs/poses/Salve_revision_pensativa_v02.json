@@ -1,0 +1,103 @@
+{
+  "id": "THINK",
+  "frame": 311,
+  "render_reviewed": "expresiones/12_THINK.png",
+  "review_method": "Inspección visual del PNG final frontal de 768x768; cámara ortográfica de escala vertical 0.32m",
+  "status": "current_PNG_reviewed_contact_readable_artistic_differences_remain",
+  "followup": "El apoyo y la continuidad visual local están revisados para este PNG. Mantener pendientes la fidelidad artística de gesto/identidad, el salto FK/IK del codo derecho de 6,565 mm y la validación general de deformación.",
+  "notification": "Root y agente de rostro avisados durante la tanda de render; no se abrió Blender en paralelo.",
+  "initial_observations": [
+    {
+      "area": "índice y barbilla",
+      "finding": "La mano está elevada bajo el mentón, pero la punta visible no lo toca. Se distingue un hueco entre la barbilla y la geometría blanca más alta sobre el dedo.",
+      "estimated_vertical_gap_pixels": [
+        20,
+        35
+      ],
+      "projected_gap_estimate_m": [
+        0.008,
+        0.015
+      ],
+      "estimate_limitation": "Estimación visual; aún no se identificaron los vértices de la yema y la superficie exacta de la barbilla. El objetivo por hueso o landmark no prueba contacto de superficie."
+    },
+    {
+      "area": "cuello y dedos",
+      "finding": "Se ven pequeñas piezas blancas aparentemente separadas sobre el índice y delante del cuello.",
+      "cause": "pending_mesh_identification",
+      "required_verification": "Identificar si son dientes/lengua, piezas de dedos u otra geometría antes de corregir."
+    }
+  ],
+  "initial_render_sha256": "f8f9991b866ffd231a6e2fea62fb6ebaceed6540129f059d734e5520d9032e50",
+  "measured_history_clarification": "El hueco aparente del primer PNG no equivalía a la distancia mínima real índice–cara: el primer BVH medía1.640mm. El tramo visible principal era pulgar; partes de índice, pulgar y guante se ocultaban dentro/detrás del collar. Se conservaron las observaciones visuales iniciales como historial, sin tratarlas como distancia geométrica confirmada.",
+  "checkpoint_surface_evidence": {
+    "source": "work/Salve_think_contact_checkpoint.blend",
+    "target_region": "zona frontal inferior del rostro/barbilla; distinto del landmark del vértice más bajo",
+    "rest_target": [
+      -0.006,
+      -0.046,
+      1.535
+    ],
+    "pitch_radians": -0.3,
+    "index_skin_minimum_m": 0.0009999568574130535,
+    "index_skin_signed_minimum_m": 0.0009999448520829901,
+    "hands_collar_head_crossings": {},
+    "hair_suit_crossings": {},
+    "floor_minimum_m": 0.0010000290349125862,
+    "basis_uv_weights_preserved": true,
+    "other_fk_poses_preserved": true
+  },
+  "current_render_sha256": "c5d808c11ebed81d661ff56b19f2589fe02292577e9ed98f5c36056e665258bd",
+  "current_render": {
+    "file": "expresiones/12_THINK.png",
+    "sha256": "c5d808c11ebed81d661ff56b19f2589fe02292577e9ed98f5c36056e665258bd",
+    "size": [
+      768,
+      768
+    ],
+    "mode": "RGBA",
+    "alpha_bbox": [
+      48,
+      81,
+      688,
+      768
+    ]
+  },
+  "comparison_source": "Lámina de propuesta de expresiones previa, celda PENSATIVA; las referencias originales siguen siendo la autoridad principal de identidad.",
+  "current_visual_observations": [
+    {
+      "area": "índice y barbilla",
+      "finding": "La yema se lee apoyada en la zona inferior frontal del rostro/barbilla. El hueco aparente de 20–35 px del primer PNG ya no se ve.",
+      "visual_contact_readable": true,
+      "measurement_limit": "El valor de aproximadamente 1 mm procede de BVH sobre el checkpoint; el PNG verifica la lectura del apoyo, no mide una distancia tridimensional."
+    },
+    {
+      "area": "continuidad de dedos",
+      "finding": "Los tres dedos blancos laterales visibles se unen a la mano a través de sus tramos curvados. No se ven piezas blancas aisladas sobre el cuello en esta proyección.",
+      "remaining_difference": "Falanges, nudillos y puntas conservan una forma tubular y simplificada; la mano queda más abierta y alargada que la mano compacta de la lámina."
+    },
+    {
+      "area": "collar",
+      "finding": "El collar negro y sus líneas azules quedan visibles detrás de la mano. No se observa el corte de la mano en fragmentos producido por la penetración anterior.",
+      "measurement_reference": "Salve_correccion_collar_pensativa_v02.json: manos completas contra superficies de collar y cabeza, cero pares de cruces en el checkpoint."
+    },
+    {
+      "area": "mechón facial derecho",
+      "finding": "El mechón facial próximo a la mano forma una pieza continua; no se ve un tramo atravesando el collar o la mano en este PNG.",
+      "remaining_difference": "Las masas y los bordes del cabello siguen siendo gruesos y rígidos frente a los mechones suaves y finos de la ilustración.",
+      "measurement_limit": "La comprobación BVH de cabello sólo cubre el traje; no certifica ausencia global de autocruces o cruces contra cabeza/manos."
+    },
+    {
+      "area": "gesto e identidad",
+      "finding": "La lámina muestra mirada elevada, leve inclinación de cabeza y dedos recogidos. El render mantiene mirada frontal, una cabeza casi vertical y una mano más abierta. La lectura pensativa mejora por el apoyo, pero no reproduce plenamente el gesto de la lámina.",
+      "remaining_difference": "Ojos, rostro, flequillo, auriculares, collar y materiales conservan diferencias artísticas descritas en el informe general."
+    }
+  ],
+  "identity_exact_approved": false,
+  "production_ready_approved": false,
+  "final_model_incorporation": {
+    "file": "Salve_refinado_v02.blend",
+    "sha256": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+    "evidence": "finish_static_review_final_v02.log registra FINAL_STATIC_LOCAL_REVIEW_SAVED después del render THINK y de validar 21 presets; el helper facial verifica que conserva las matrices de huesos.",
+    "independent_final_geometry_audit": "A cargo del inspector final; estas cifras de contacto fueron tomadas en el checkpoint corregido."
+  }
+}

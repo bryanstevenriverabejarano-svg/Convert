@@ -1,0 +1,459 @@
+{
+  "method": "Read-only disk diagnostic. Temporary FK matrix tests in memory, no save, no shape-key, weight or UV edits. Same checkpoint frame311.",
+  "source": "work/Salve_think_contact_checkpoint.blend",
+  "baseline": {
+    "meshes": {
+      "Guante_palmar_quad.R": {
+        "collar_crossing_pairs": 121,
+        "minimum_signed_collar_surface_m": -0.011290610775631649,
+        "negative_signed_samples": 273,
+        "evaluated_vertex_count": 1970
+      },
+      "Dedo_thumb_quad.R": {
+        "collar_crossing_pairs": 135,
+        "minimum_signed_collar_surface_m": -0.01033883882905684,
+        "negative_signed_samples": 516,
+        "evaluated_vertex_count": 1178
+      },
+      "Dedo_index_quad.R": {
+        "collar_crossing_pairs": 166,
+        "minimum_signed_collar_surface_m": -0.00938661998105772,
+        "negative_signed_samples": 787,
+        "evaluated_vertex_count": 1178
+      },
+      "Dedo_middle_quad.R": {
+        "collar_crossing_pairs": 0,
+        "minimum_signed_collar_surface_m": 0.006061764932383085,
+        "negative_signed_samples": 0,
+        "evaluated_vertex_count": 1178
+      },
+      "Dedo_ring_quad.R": {
+        "collar_crossing_pairs": 0,
+        "minimum_signed_collar_surface_m": 0.006637261814375961,
+        "negative_signed_samples": 0,
+        "evaluated_vertex_count": 1178
+      },
+      "Dedo_pinky_quad.R": {
+        "collar_crossing_pairs": 0,
+        "minimum_signed_collar_surface_m": 0.007405627883827037,
+        "negative_signed_samples": 0,
+        "evaluated_vertex_count": 1178
+      }
+    },
+    "index_head_contact": {
+      "nominal_chin_world": [
+        -0.008840330876410007,
+        -0.03301176801323891,
+        1.5390145778656006
+      ],
+      "target_skin_world": [
+        -0.008036076091229916,
+        -0.03243213891983032,
+        1.5397698879241943
+      ],
+      "target_skin_normal": [
+        -0.6528934836387634,
+        -0.4521358907222748,
+        -0.6077032089233398
+      ],
+      "selected_index_vertex": 291,
+      "selected_index_world": [
+        -0.008626848459243774,
+        -0.03285738453269005,
+        1.5384801626205444
+      ],
+      "selected_to_target_skin_m": 0.0014809581963804491,
+      "distal_minimum_skin_distance_m": 0.0009997828165069222,
+      "closest_index_world": [
+        -0.007290571928024292,
+        -0.032712094485759735,
+        1.5375168323516846
+      ],
+      "closest_skin_world": [
+        -0.006635635159909725,
+        -0.03224498778581619,
+        1.5381104946136475
+      ],
+      "closest_skin_normal": [
+        -0.6441311836242676,
+        -0.4836878776550293,
+        -0.5925715565681458
+      ],
+      "closest_signed_skin_distance_m": 0.0009995864238590002,
+      "selected_signed_skin_distance_m": 0.0013604302948806435,
+      "finger_head_surface_crossing_pairs": 0,
+      "bone_tip_world": [
+        -0.008732304908335209,
+        -0.03575188294053078,
+        1.5383750200271606
+      ]
+    },
+    "total_collar_crossing_pairs": 422
+  },
+  "trials": [
+    {
+      "world_x_rotation_rad": -0.15,
+      "arm_chain_initial_residual_m": 1.5997074956881917e-07,
+      "meshes": {
+        "Guante_palmar_quad.R": {
+          "collar_crossing_pairs": 102,
+          "minimum_signed_collar_surface_m": -0.0075326010241951735,
+          "negative_signed_samples": 173,
+          "evaluated_vertex_count": 1970
+        },
+        "Dedo_thumb_quad.R": {
+          "collar_crossing_pairs": 98,
+          "minimum_signed_collar_surface_m": -0.003220853619779973,
+          "negative_signed_samples": 158,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_index_quad.R": {
+          "collar_crossing_pairs": 135,
+          "minimum_signed_collar_surface_m": -0.006615705499086744,
+          "negative_signed_samples": 464,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_middle_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.010845235595297709,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_ring_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.009758098011843686,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_pinky_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.009114037407471187,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        }
+      },
+      "index_head_contact": {
+        "nominal_chin_world": [
+          -0.008840330876410007,
+          -0.03301176801323891,
+          1.5390145778656006
+        ],
+        "target_skin_world": [
+          -0.008036076091229916,
+          -0.03243213891983032,
+          1.5397698879241943
+        ],
+        "target_skin_normal": [
+          -0.6528934836387634,
+          -0.4521358907222748,
+          -0.6077032089233398
+        ],
+        "selected_index_vertex": 291,
+        "selected_index_world": [
+          -0.008626967668533325,
+          -0.03271196410059929,
+          1.538491129875183
+        ],
+        "selected_to_target_skin_m": 0.0014362023251916348,
+        "distal_minimum_skin_distance_m": 0.000988213112577796,
+        "closest_index_world": [
+          -0.007411211729049683,
+          -0.03318645432591438,
+          1.5380632877349854
+        ],
+        "closest_skin_world": [
+          -0.0067970724776387215,
+          -0.03267410770058632,
+          1.538643717765808
+        ],
+        "closest_skin_normal": [
+          -0.6322543621063232,
+          -0.5037389397621155,
+          -0.5886436700820923
+        ],
+        "closest_signed_skin_distance_m": 0.000988047628197819,
+        "selected_signed_skin_distance_m": 0.0012895208201371133,
+        "finger_head_surface_crossing_pairs": 0,
+        "bone_tip_world": [
+          -0.008732355199754238,
+          -0.03558957204222679,
+          1.538819432258606
+        ]
+      },
+      "total_collar_crossing_pairs": 335
+    },
+    {
+      "world_x_rotation_rad": -0.3,
+      "arm_chain_initial_residual_m": 1.0848209096909341e-07,
+      "meshes": {
+        "Guante_palmar_quad.R": {
+          "collar_crossing_pairs": 76,
+          "minimum_signed_collar_surface_m": -0.00406709593994492,
+          "negative_signed_samples": 78,
+          "evaluated_vertex_count": 1970
+        },
+        "Dedo_thumb_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.0029327592554295734,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_index_quad.R": {
+          "collar_crossing_pairs": 99,
+          "minimum_signed_collar_surface_m": -0.005472859964356758,
+          "negative_signed_samples": 283,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_middle_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.015663474515349662,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_ring_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.012871507507952629,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_pinky_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.01058437488745767,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        }
+      },
+      "index_head_contact": {
+        "nominal_chin_world": [
+          -0.008840330876410007,
+          -0.03301176801323891,
+          1.5390145778656006
+        ],
+        "target_skin_world": [
+          -0.008036076091229916,
+          -0.03243213891983032,
+          1.5397698879241943
+        ],
+        "target_skin_normal": [
+          -0.6528934836387634,
+          -0.4521358907222748,
+          -0.6077032089233398
+        ],
+        "selected_index_vertex": 291,
+        "selected_index_world": [
+          -0.0086270272731781,
+          -0.03256626054644585,
+          1.5384800434112549
+        ],
+        "selected_to_target_skin_m": 0.0014251002745167358,
+        "distal_minimum_skin_distance_m": 0.000906126166228205,
+        "closest_index_world": [
+          -0.007411271333694458,
+          -0.03309938684105873,
+          1.5381278991699219
+        ],
+        "closest_skin_world": [
+          -0.006827814504504204,
+          -0.03265774995088577,
+          1.538662314414978
+        ],
+        "closest_skin_normal": [
+          -0.6322543621063232,
+          -0.5037389397621155,
+          -0.5886436700820923
+        ],
+        "closest_signed_skin_distance_m": 0.0009059429721673951,
+        "selected_signed_skin_distance_m": 0.0012322517286520451,
+        "finger_head_surface_crossing_pairs": 0,
+        "bone_tip_world": [
+          -0.008732298389077187,
+          -0.035362470895051956,
+          1.5392348766326904
+        ]
+      },
+      "total_collar_crossing_pairs": 175
+    },
+    {
+      "world_x_rotation_rad": -0.45,
+      "arm_chain_initial_residual_m": 1.367744784853296e-07,
+      "meshes": {
+        "Guante_palmar_quad.R": {
+          "collar_crossing_pairs": 16,
+          "minimum_signed_collar_surface_m": -0.00013228341625293183,
+          "negative_signed_samples": 1,
+          "evaluated_vertex_count": 1970
+        },
+        "Dedo_thumb_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.007765436871181919,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_index_quad.R": {
+          "collar_crossing_pairs": 75,
+          "minimum_signed_collar_surface_m": -0.005353904551157029,
+          "negative_signed_samples": 186,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_middle_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.020169446069303376,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_ring_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.015689201974055322,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_pinky_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.012032765432195447,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        }
+      },
+      "index_head_contact": {
+        "nominal_chin_world": [
+          -0.008840330876410007,
+          -0.03301176801323891,
+          1.5390145778656006
+        ],
+        "target_skin_world": [
+          -0.008036076091229916,
+          -0.03243213891983032,
+          1.5397698879241943
+        ],
+        "target_skin_normal": [
+          -0.6528934836387634,
+          -0.4521358907222748,
+          -0.6077032089233398
+        ],
+        "selected_index_vertex": 870,
+        "selected_index_world": [
+          -0.008181601762771606,
+          -0.03297360986471176,
+          1.5383763313293457
+        ],
+        "selected_to_target_skin_m": 0.0015021213138166625,
+        "distal_minimum_skin_distance_m": 0.0010000622132793069,
+        "closest_index_world": [
+          -0.0075303614139556885,
+          -0.03307422995567322,
+          1.5380761623382568
+        ],
+        "closest_skin_world": [
+          -0.00689659221097827,
+          -0.03257538005709648,
+          1.5386674404144287
+        ],
+        "closest_skin_normal": [
+          -0.6441311836242676,
+          -0.4836878776550293,
+          -0.5925715565681458
+        ],
+        "closest_signed_skin_distance_m": 0.000999892727122642,
+        "selected_signed_skin_distance_m": 0.0011880483361892402,
+        "finger_head_surface_crossing_pairs": 0,
+        "bone_tip_world": [
+          -0.008851498365402222,
+          -0.0351465567946434,
+          1.5395089387893677
+        ]
+      },
+      "total_collar_crossing_pairs": 91
+    },
+    {
+      "world_x_rotation_rad": -0.6,
+      "arm_chain_initial_residual_m": 1.8326005155218905e-07,
+      "meshes": {
+        "Guante_palmar_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.0038999255218641338,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1970
+        },
+        "Dedo_thumb_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.010839139008680831,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_index_quad.R": {
+          "collar_crossing_pairs": 63,
+          "minimum_signed_collar_surface_m": -0.005366186607716372,
+          "negative_signed_samples": 144,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_middle_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.023886572318815524,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_ring_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.01792057751072207,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        },
+        "Dedo_pinky_quad.R": {
+          "collar_crossing_pairs": 0,
+          "minimum_signed_collar_surface_m": 0.012966022822638479,
+          "negative_signed_samples": 0,
+          "evaluated_vertex_count": 1178
+        }
+      },
+      "index_head_contact": {
+        "nominal_chin_world": [
+          -0.008840330876410007,
+          -0.03301176801323891,
+          1.5390145778656006
+        ],
+        "target_skin_world": [
+          -0.008036076091229916,
+          -0.03243213891983032,
+          1.5397698879241943
+        ],
+        "target_skin_normal": [
+          -0.6528934836387634,
+          -0.4521358907222748,
+          -0.6077032089233398
+        ],
+        "selected_index_vertex": 870,
+        "selected_index_world": [
+          -0.008227795362472534,
+          -0.03286374732851982,
+          1.5383511781692505
+        ],
+        "selected_to_target_skin_m": 0.0014952523415934615,
+        "distal_minimum_skin_distance_m": 0.0009998660534620285,
+        "closest_index_world": [
+          -0.007576435804367065,
+          -0.03300796076655388,
+          1.5380699634552002
+        ],
+        "closest_skin_world": [
+          -0.006942788604646921,
+          -0.0325092077255249,
+          1.5386611223220825
+        ],
+        "closest_skin_normal": [
+          -0.6441311836242676,
+          -0.4836878776550293,
+          -0.5925715565681458
+        ],
+        "closest_signed_skin_distance_m": 0.0009996966400649399,
+        "selected_signed_skin_distance_m": 0.0011824145331047475,
+        "finger_head_surface_crossing_pairs": 0,
+        "bone_tip_world": [
+          -0.008897576481103897,
+          -0.03484288975596428,
+          1.539795994758606
+        ]
+      },
+      "total_collar_crossing_pairs": 63
+    }
+  ]
+}

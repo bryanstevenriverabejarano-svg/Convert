@@ -1,0 +1,24 @@
+{
+  "status": "inferences_from_2d_references_not_demonstrated_contradictions",
+  "originalReferencesModified": false,
+  "interpretations": [
+    {
+      "subject": "Profundidad y orientación de auriculares",
+      "viewsInspected": ["front", "right", "rear"],
+      "observation": "right muestra el disco circular, el anillo luminoso azul y su centro negro de frente. front y rear muestran el mismo accesorio en proyección estrecha en los laterales de la cabeza.",
+      "inference": "Las ilustraciones no fijan su espesor exacto ni toda la profundidad de la carcasa. Se infiere un accesorio lateral con disco circular y carcasa de espesor limitado.",
+      "coherent3DChoice": "Conservar un único disco, carcasa y emblema por lado, con posición común respecto de la cabeza. La cámara explica su apariencia circular o estrecha; no se sustituye la forma al cambiar de vista.",
+      "modelElements": ["Auricular_carcasa.L", "Auricular_disco.L", "Auricular_emblema.L", "Auricular_carcasa.R", "Auricular_disco.R", "Auricular_emblema.R"],
+      "limitation": "Interpretación de profundidad a partir de dibujos 2D; no demuestra una contradicción entre referencias ni equivalencia visual exacta del render."
+    },
+    {
+      "subject": "Distribución del cabello en profundidad",
+      "viewsInspected": ["front", "right", "rear"],
+      "observation": "front distribuye el cabello largo en masas laterales alrededor de los brazos. right muestra una masa detrás del torso. rear presenta un hueco central alto que permite ver el módulo circular de la espalda.",
+      "inference": "Los dibujos definen la silueta visible, pero no la separación en profundidad de todos los mechones ni su volumen oculto. Se infiere una distribución de raíces y capas laterales/posteriores que conserva la identidad desde varias cámaras.",
+      "coherent3DChoice": "Organizar mechones laterales y posteriores sobre un mismo casquete, conservar las capas y raíces comunes, y ajustar su caída por pose. El hueco posterior se resuelve mediante la distribución espacial de mechones, sin considerar como contradicción que otros ángulos oculten el módulo de espalda.",
+      "modelElements": ["Cabello_casquete", "Mechon_largo_*.L", "Mechon_largo_*.R", "Mechon_rostro_*.L", "Mechon_rostro_*.R"],
+      "limitation": "Inferencia espacial por falta de profundidad dibujada. La longitud aparente y densidad visibles pueden variar con proyección y oclusión; requieren comparación de los renders y no prueban por sí mismas una contradicción."
+    }
+  ]
+}

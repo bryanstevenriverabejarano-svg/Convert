@@ -1,0 +1,1630 @@
+{
+  "component": "recoverable_salve_v02_cloud_backup",
+  "createdUtc": "2026-09-30T07:52:35.214478+00:00",
+  "branch": "backup/salve-v02-2026-09-30",
+  "baseCommit": "18f999ab76e1256485b750af5a215dd84fde3da9",
+  "repositoryDirectory": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\Convert-Salve-backup",
+  "destination": "art/salve/blender/modelado_v02",
+  "copiedFiles": [
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/a_front.png",
+      "backupRelativePath": "outputs/comparaciones/a_front.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\a_front.png",
+      "sizeBytes": 1371141,
+      "sha256": "8fbb392545ed39cdbfed24373690a1bb794cab7af8a7a42ec96e8c17081d0e44",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/a_open_hair.png",
+      "backupRelativePath": "outputs/comparaciones/a_open_hair.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\a_open_hair.png",
+      "sizeBytes": 1450578,
+      "sha256": "88a1dc9f9bf5244ace9f84fba531ce93684e5c8dd7d35341a68e2a0edfb1903f",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/a_rear.png",
+      "backupRelativePath": "outputs/comparaciones/a_rear.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\a_rear.png",
+      "sizeBytes": 1370630,
+      "sha256": "ceed429e88298018c663dacee6cb0cb7d239e75726b6ad191c9702461468ca6d",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/above.png",
+      "backupRelativePath": "outputs/comparaciones/above.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\above.png",
+      "sizeBytes": 2049165,
+      "sha256": "0eed5229233cff2507f894c260c42b85e10663d3f69cfb83e83e3756a6e1a47c",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/below.png",
+      "backupRelativePath": "outputs/comparaciones/below.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\below.png",
+      "sizeBytes": 1631144,
+      "sha256": "e9b789743a001131b52d5ffea9e8a785c6dd16b882bb2b612813e3374e57cccc",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/crouched.png",
+      "backupRelativePath": "outputs/comparaciones/crouched.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\crouched.png",
+      "sizeBytes": 2138541,
+      "sha256": "93fc24c13cbb40a67eacbb1a06d617873cfd6e28ab0136b3db8daf3a150c3c32",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/front.png",
+      "backupRelativePath": "outputs/comparaciones/front.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\front.png",
+      "sizeBytes": 1251582,
+      "sha256": "44af67afbc50ecea62016368a59c7dd25704f7a103e877812342ccee13cd8b55",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/front_opposite.png",
+      "backupRelativePath": "outputs/comparaciones/front_opposite.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\front_opposite.png",
+      "sizeBytes": 1324653,
+      "sha256": "0c5db9d6f49fdc1a83213d77ba0d61a6a8f58acc9c8bca96194957d14bf4e471",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/front_three_quarter.png",
+      "backupRelativePath": "outputs/comparaciones/front_three_quarter.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\front_three_quarter.png",
+      "sizeBytes": 1249945,
+      "sha256": "96a6b9105ddaf5aab05dfe77f41009fddb35885783bfd46093b09dbfafc34956",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/front_variant.png",
+      "backupRelativePath": "outputs/comparaciones/front_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\front_variant.png",
+      "sizeBytes": 1381693,
+      "sha256": "d0aa47cfd6482cce7d7a9968f266e517687c606a25f445d9bd423d2bc4972304",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/kneeling.png",
+      "backupRelativePath": "outputs/comparaciones/kneeling.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\kneeling.png",
+      "sizeBytes": 1970364,
+      "sha256": "719e5001d6f50f45e6243854babe4af9c56c15918e540780c417356d97091a88",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/kneeling_variant.png",
+      "backupRelativePath": "outputs/comparaciones/kneeling_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\kneeling_variant.png",
+      "sizeBytes": 2123890,
+      "sha256": "e07c26b3cd08caea405a989608693b82a25dd4d18d95a8b83e9abfe47de7f412",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/leaning.png",
+      "backupRelativePath": "outputs/comparaciones/leaning.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\leaning.png",
+      "sizeBytes": 1640760,
+      "sha256": "4c2859bfbdecf9a05cfcab3daa93ee9aea7be6b136c50af10eda77877b143f1b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/leaning_variant.png",
+      "backupRelativePath": "outputs/comparaciones/leaning_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\leaning_variant.png",
+      "sizeBytes": 1734282,
+      "sha256": "19c01bb3f4825ea379f34cbe86c53a24aeca9ac8559c3095f0345337085157d0",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/left.png",
+      "backupRelativePath": "outputs/comparaciones/left.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\left.png",
+      "sizeBytes": 968925,
+      "sha256": "9df6309ffdae7b57ec2a47d810342fee282badd8662ee4fb44cf66d69f4aa7d0",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/rear.png",
+      "backupRelativePath": "outputs/comparaciones/rear.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\rear.png",
+      "sizeBytes": 1257842,
+      "sha256": "8870a782cf5753359a81bb81870c6526e6f03232b63914de47f27c8cb5d6f57b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/rear_right.png",
+      "backupRelativePath": "outputs/comparaciones/rear_right.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\rear_right.png",
+      "sizeBytes": 1135837,
+      "sha256": "61d9f3d386db3d908f1b7cd5d826377c5c884613b757b40bce31abc9e33643bc",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/rear_three_quarter.png",
+      "backupRelativePath": "outputs/comparaciones/rear_three_quarter.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\rear_three_quarter.png",
+      "sizeBytes": 1363285,
+      "sha256": "6bfaa5edc0316505f84b243385be4cd436709a1ff09987c168b947be2ead7ed7",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/right.png",
+      "backupRelativePath": "outputs/comparaciones/right.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\right.png",
+      "sizeBytes": 1024191,
+      "sha256": "b47219db7ec069d08b22e8b08d7806b98acec44d277394ecf30f305b9b50b1e9",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/comparaciones/seated.png",
+      "backupRelativePath": "outputs/comparaciones/seated.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\comparaciones\\seated.png",
+      "sizeBytes": 2066510,
+      "sha256": "845e202e1bd859405aef23d79203f40b1dc9e2134312f8365ff356dbd6f327d2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/01_NEUTRAL.png",
+      "backupRelativePath": "outputs/expresiones/01_NEUTRAL.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\01_NEUTRAL.png",
+      "sizeBytes": 548241,
+      "sha256": "b26db517b4d114b1cade61b7c17b9336d13ecebd7a4202d952bdd95507b9db25",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/02_WARM.png",
+      "backupRelativePath": "outputs/expresiones/02_WARM.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\02_WARM.png",
+      "sizeBytes": 548847,
+      "sha256": "bfdaad9a5ccd33deb0862b0fbefc7b92be3ecbe3940f56b8dcb56692131eb08e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/03_CURIOUS.png",
+      "backupRelativePath": "outputs/expresiones/03_CURIOUS.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\03_CURIOUS.png",
+      "sizeBytes": 548741,
+      "sha256": "6f18fec63c3e069892dbd795582eac7dc2697cbc21e9c65c6b3ffd2693264fc1",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/04_CONCERNED.png",
+      "backupRelativePath": "outputs/expresiones/04_CONCERNED.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\04_CONCERNED.png",
+      "sizeBytes": 548520,
+      "sha256": "0d728aa1cbf3df8abe0ab2354737687269041eadd3550c76c7637f99b11ff95b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/05_SAD.png",
+      "backupRelativePath": "outputs/expresiones/05_SAD.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\05_SAD.png",
+      "sizeBytes": 548451,
+      "sha256": "2ccb7adcf9d7a98a5e5fe35631be69692e0d5ef42bf00b874a13ed76730d0c23",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/06_ANGRY.png",
+      "backupRelativePath": "outputs/expresiones/06_ANGRY.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\06_ANGRY.png",
+      "sizeBytes": 546145,
+      "sha256": "eb363ffa00897bb1047f4df0a8f2752cc2a13fcbacdb981da8ec58752ad0173d",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/07_SURPRISED.png",
+      "backupRelativePath": "outputs/expresiones/07_SURPRISED.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\07_SURPRISED.png",
+      "sizeBytes": 552838,
+      "sha256": "2c271d43e93bda4359333bf3d3fdedf83b78f5c7530a33ddf178edbeb83f29eb",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/08_SHY.png",
+      "backupRelativePath": "outputs/expresiones/08_SHY.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\08_SHY.png",
+      "sizeBytes": 549394,
+      "sha256": "5315615064959828570abb82f52d81908d43646a7aec5e45125f501558720449",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/09_LAUGH.png",
+      "backupRelativePath": "outputs/expresiones/09_LAUGH.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\09_LAUGH.png",
+      "sizeBytes": 543568,
+      "sha256": "2621334ebf7b830ed69cce17dc5aa6ce0a5b8efd88314b1510ae3c7bf020fbb0",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/10_CRY.png",
+      "backupRelativePath": "outputs/expresiones/10_CRY.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\10_CRY.png",
+      "sizeBytes": 551673,
+      "sha256": "e4431130901ec470b0435c032a7994dab217ce31b62aff03d2b3b47330b42abd",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/11_STARTLE.png",
+      "backupRelativePath": "outputs/expresiones/11_STARTLE.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\11_STARTLE.png",
+      "sizeBytes": 553888,
+      "sha256": "3de588c0b4abb8dd84bca33e7f3d40f2f8c2032b1be010771b3f5e0e538e9705",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/12_THINK.png",
+      "backupRelativePath": "outputs/expresiones/12_THINK.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\12_THINK.png",
+      "sizeBytes": 559506,
+      "sha256": "c5d808c11ebed81d661ff56b19f2589fe02292577e9ed98f5c36056e665258bd",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/13_WINK.png",
+      "backupRelativePath": "outputs/expresiones/13_WINK.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\13_WINK.png",
+      "sizeBytes": 546011,
+      "sha256": "d66cc73de90d90597a3151e738d3fecf59b633034bfce9caff5470b73ad9bc87",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/14_A.png",
+      "backupRelativePath": "outputs/expresiones/14_A.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\14_A.png",
+      "sizeBytes": 550841,
+      "sha256": "bc0a352d08d89f779b66fafea6110d05756635f04bef7499368a82ea60b317ab",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/15_E.png",
+      "backupRelativePath": "outputs/expresiones/15_E.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\15_E.png",
+      "sizeBytes": 549831,
+      "sha256": "ce761e7e2e3a48bd6a1aea9157a360c2b23683ad4923ec04cae1cf237e34b68e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/16_I.png",
+      "backupRelativePath": "outputs/expresiones/16_I.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\16_I.png",
+      "sizeBytes": 549211,
+      "sha256": "5c5ea5ffa8ffdae3c80dc5dd5420455e70bccb43cbb756b38bd182f0f98d0d2b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/17_O.png",
+      "backupRelativePath": "outputs/expresiones/17_O.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\17_O.png",
+      "sizeBytes": 551825,
+      "sha256": "dd8e812e1ff975cf401ca2962e51be004b240af400143017878d25afc5bb4feb",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/18_U.png",
+      "backupRelativePath": "outputs/expresiones/18_U.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\18_U.png",
+      "sizeBytes": 549887,
+      "sha256": "6ca6174d7f9af3a56720fae2573fddaba48effa609bbb628e3e1963460587c43",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/19_MBP.png",
+      "backupRelativePath": "outputs/expresiones/19_MBP.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\19_MBP.png",
+      "sizeBytes": 547626,
+      "sha256": "441cf16d8e79a1695bcc5f590231817d61c37bae7574bacc254a9e3a3156100e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/20_SILENCE.png",
+      "backupRelativePath": "outputs/expresiones/20_SILENCE.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\20_SILENCE.png",
+      "sizeBytes": 548241,
+      "sha256": "eccae3e8a0b77d6e1cfcf998c1165c07bf81b1e1b27d8b86401befd61225c6ae",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones/21_CONFUSED.png",
+      "backupRelativePath": "outputs/expresiones/21_CONFUSED.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones\\21_CONFUSED.png",
+      "sizeBytes": 548548,
+      "sha256": "19324ef6d58bc223f1205f8250f64605a82f1035d6fb8460d17da0b4a5bf1f67",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/expresiones_controles.json",
+      "backupRelativePath": "outputs/expresiones_controles.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\expresiones_controles.json",
+      "sizeBytes": 9061,
+      "sha256": "b1315b5959d57874e79078e645d18e60dcd834dd006eee549939120e77430a4d",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/atlas_uv_faces_v02.json",
+      "backupRelativePath": "outputs/fuentes_reproducibles/atlas_uv_faces_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\atlas_uv_faces_v02.json",
+      "sizeBytes": 22372015,
+      "sha256": "f9e358fc93979187d2aeec7f5e2a7289aa39677634ff28d0382b0c7372850531",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/atlas_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/atlas_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\atlas_v02.py",
+      "sizeBytes": 14756,
+      "sha256": "3bcf8115cd10184a10bc61e1d52ba9b879b9eaf26e46be58fa67ba5c1fc4eccf",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/audit_final_delivery_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/audit_final_delivery_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\audit_final_delivery_v02.py",
+      "sizeBytes": 8641,
+      "sha256": "aa09605b2d1be4bfa316f115e81c7d64018f384d3b08cb7aea63ad6b1eed07af",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/body_correctives_fix.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/body_correctives_fix.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\body_correctives_fix.py",
+      "sizeBytes": 1332,
+      "sha256": "55cd03634fd39ed1735f91937fe1e4b9b3c7cd5b12995ed381e14f47136e9e02",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/body_hair_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/body_hair_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\body_hair_v02.py",
+      "sizeBytes": 21891,
+      "sha256": "54e4dd1d3e54b877a0fe2bbc250237b161d9c6530d0ed266f56b388396de5b21",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/face_cleanup_diagnostic_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/face_cleanup_diagnostic_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\face_cleanup_diagnostic_v02.py",
+      "sizeBytes": 16150,
+      "sha256": "908058e7621529c822b98f828937d4f07dc30c3f3dfa7056a8e1c768d2809eab",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/face_cleanup_visual_conservation_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/face_cleanup_visual_conservation_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\face_cleanup_visual_conservation_v02.py",
+      "sizeBytes": 14997,
+      "sha256": "fa049d46b79d3698ea86bca957e697dbdfd6546aa7073c6050980d12132f4aa2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/face_mbp_seal_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/face_mbp_seal_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\face_mbp_seal_v02.py",
+      "sizeBytes": 7027,
+      "sha256": "166acd3561db12757ca4efe695e7e3874e77582951e00ba591628c863ad73995",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/face_topology_uv_safe_cleanup_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/face_topology_uv_safe_cleanup_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\face_topology_uv_safe_cleanup_v02.py",
+      "sizeBytes": 17441,
+      "sha256": "801d7829ba10dfdc156f8bcfb34f21811f5ce8cbc7ebf0c5d3a01852154b0069",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/face_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/face_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\face_v02.py",
+      "sizeBytes": 23273,
+      "sha256": "5e4e05afb32bc69b4ce2ccc75243004848b54c1751fe0ae82154c6ee34437e99",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/face_v02_shape_fix.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/face_v02_shape_fix.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\face_v02_shape_fix.py",
+      "sizeBytes": 4481,
+      "sha256": "8cd72fb1e0c116407be86b6751508cf260275e8da61e202ae65417a666e32410",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/final_polish_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/final_polish_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\final_polish_v02.py",
+      "sizeBytes": 3782,
+      "sha256": "9a2a6daeeb9ed5c554b36e84f5f4fa1306a29fcc799d7233ff229a3eea43b7e4",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/finish_static_review_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/finish_static_review_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\finish_static_review_v02.py",
+      "sizeBytes": 2416,
+      "sha256": "6b4e110709e131a23a916d5c7d6ebd36fb1a21a82587af83c40c21595dc90f32",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/floor_contacts_postface_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/floor_contacts_postface_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\floor_contacts_postface_v02.py",
+      "sizeBytes": 6145,
+      "sha256": "fc4bc49ea75c5ad0662f4d87895be1896e64074d31b8c1119a6a4fa41559b464",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/fringe_local_polish_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/fringe_local_polish_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\fringe_local_polish_v02.py",
+      "sizeBytes": 3585,
+      "sha256": "de0e61f97b5898fc19e7e3bfe3a20ab01f1a84816987ccd82a4fa40f494c047f",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/hair_clearance_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/hair_clearance_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\hair_clearance_v02.py",
+      "sizeBytes": 12667,
+      "sha256": "41b51d2e6104fc1db97bb2f5f513709af92de521c821823f3c1244c0f86d0982",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/hair_targeted_fix_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/hair_targeted_fix_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\hair_targeted_fix_v02.py",
+      "sizeBytes": 6285,
+      "sha256": "4d5ae1db9394a1ec19fd53d9aa8f2351b41d4f4f7d3a04061796a621e92083b2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/ik_diagnostics_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/ik_diagnostics_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\ik_diagnostics_v02.py",
+      "sizeBytes": 6604,
+      "sha256": "2c546d5af73f3852225c6b73049362072adc4a00ed84d4b8d912270a7d6d97ba",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/inspect_final_blend.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/inspect_final_blend.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\inspect_final_blend.py",
+      "sizeBytes": 9843,
+      "sha256": "0b906603e17835b12f80d3b13b4ad421d50cefd4e70f2fc5435bdcb459b7dd31",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/LEEME.txt",
+      "backupRelativePath": "outputs/fuentes_reproducibles/LEEME.txt",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\LEEME.txt",
+      "sizeBytes": 3936,
+      "sha256": "7a484c2af1f3b9d8150b4d0cdb207ea41db29e67f535ab4b6e640a53deab1711",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/palm_contacts_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/palm_contacts_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\palm_contacts_v02.py",
+      "sizeBytes": 4846,
+      "sha256": "b69d6178d035009175c96121df72197983ecd6ea3240275181fea797d3bf0fea",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/pose_neutral_frame401_fix.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/pose_neutral_frame401_fix.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\pose_neutral_frame401_fix.py",
+      "sizeBytes": 709,
+      "sha256": "6924a1f09baa840ae2fc61a77825e86d862e49e8c4f486acd52031a4c0cc61c3",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/poses_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/poses_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\poses_v02.py",
+      "sizeBytes": 29266,
+      "sha256": "24b4d86d1d56e88eae3c506245156452f1d9aa0c3451c837c005170cb5a4bfe0",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/prepare_salve_ready.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/prepare_salve_ready.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\prepare_salve_ready.py",
+      "sizeBytes": 2041,
+      "sha256": "6d951545a0e55c4fb885da1c157e5923ec3ebfbdd2f9e90089ddfdd63d1c0f88",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/record_final_gui_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/record_final_gui_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\record_final_gui_v02.py",
+      "sizeBytes": 2279,
+      "sha256": "36e93e8e019648a10ead05552f8d39c32d58dc573439e526f394296c26a39acb",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/reload_atlas_repair_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/reload_atlas_repair_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\reload_atlas_repair_v02.py",
+      "sizeBytes": 977,
+      "sha256": "040bb1a42b264f6381abf7213311ea586f5a2e5a72b55cda25ec9d651e02e806",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/render_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/render_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\render_v02.py",
+      "sizeBytes": 13065,
+      "sha256": "90dbb6fbd7d560b9ca05a56346c07ba7222fc2e4b8430c4453cc0da025a9b20e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/repair_atlas_constant_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/repair_atlas_constant_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\repair_atlas_constant_v02.py",
+      "sizeBytes": 8278,
+      "sha256": "7a86798e8aae96f61bc042feca4a16a8d7126596a390d503fd887d838ba13b50",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/rerender_face_local_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/rerender_face_local_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\rerender_face_local_v02.py",
+      "sizeBytes": 3964,
+      "sha256": "0831962ffeaeef5fe8809f57ce1b10d2a6fddeede8b5530546f6a890146675f2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/run_face_cleanup_gui_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/run_face_cleanup_gui_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\run_face_cleanup_gui_v02.py",
+      "sizeBytes": 1517,
+      "sha256": "7bf5b9cc7e3a4d9d9f610163a6b5ef8a411b03f912934af22b437f01d254dfa6",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/think_collar_fix_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/think_collar_fix_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\think_collar_fix_v02.py",
+      "sizeBytes": 9512,
+      "sha256": "bcb3e74797a1ec2df6fc2f4eedc10679443f26e0a92d1ec748ec3beca49b9079",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/think_contact_v02.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/think_contact_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\think_contact_v02.py",
+      "sizeBytes": 17012,
+      "sha256": "bf4a674e162e37a6dcc8067ce7aa978671ca783cb723d65e0ce82c96bdbf2d7c",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/fuentes_reproducibles/validate_face_readonly.py",
+      "backupRelativePath": "outputs/fuentes_reproducibles/validate_face_readonly.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\fuentes_reproducibles\\validate_face_readonly.py",
+      "sizeBytes": 9590,
+      "sha256": "1c059dcd6245f9aca45be2d148d1967ff36caf4b1e2bc7684fe74bcf1eb27268",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Guia_controles_Salve_v02.html",
+      "backupRelativePath": "outputs/Guia_controles_Salve_v02.html",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Guia_controles_Salve_v02.html",
+      "sizeBytes": 4746,
+      "sha256": "fd3b77ac04785cfe6776b463f6270c0bc6dc25dabe8debaaff061b7abee15222",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/LEEME_Salve_v02.txt",
+      "backupRelativePath": "outputs/LEEME_Salve_v02.txt",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\LEEME_Salve_v02.txt",
+      "sizeBytes": 2468,
+      "sha256": "10179a2faef2978c0b159a094585d21568025a57dff37f54e595d6c48ee0beee",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_cabello_correccion_dirigida_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_cabello_correccion_dirigida_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_cabello_correccion_dirigida_v02.json",
+      "sizeBytes": 8143,
+      "sha256": "8e073cd69b782086b55d25176cf14787a0625d6f14ac9566f9f83a141276b7b7",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_contacto_pensativa_superficie_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_contacto_pensativa_superficie_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_contacto_pensativa_superficie_v02.json",
+      "sizeBytes": 26509,
+      "sha256": "92197f9c63764115cf02802dc64585aeeb99344cc6db5b749d22ca8db0fbbc55",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_controles_poses_v02.md",
+      "backupRelativePath": "outputs/poses/Salve_controles_poses_v02.md",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_controles_poses_v02.md",
+      "sizeBytes": 3789,
+      "sha256": "a9d8a2de494712ab6b334ae146344eaaad4aecad3ce1bdd45e6029a136124cb5",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_correccion_apoyos_postrostro_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_correccion_apoyos_postrostro_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_correccion_apoyos_postrostro_v02.json",
+      "sizeBytes": 11764,
+      "sha256": "0fe073ce5d305a2d5acc6cc7fd9786e3d5caf441dcd2b1820d7886fee4284323",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_correccion_collar_pensativa_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_correccion_collar_pensativa_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_correccion_collar_pensativa_v02.json",
+      "sizeBytes": 7964,
+      "sha256": "eb487012e55cb95ff5e17ad540ef9983fdc5bde86f4302859c3718300f59a732",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_diagnostico_apoyos_postrostro_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_diagnostico_apoyos_postrostro_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_diagnostico_apoyos_postrostro_v02.json",
+      "sizeBytes": 66181,
+      "sha256": "fc465032fedb728f3a9ac2eea6c9d909fef8367f28396fab215053f231a1b900",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_diagnostico_collar_pensativa_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_diagnostico_collar_pensativa_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_diagnostico_collar_pensativa_v02.json",
+      "sizeBytes": 15559,
+      "sha256": "fb6f6cf0474b2e552f8d394b990f9c6b21cb6ac844827abb2c2e3ebe464b1f49",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_diagnostico_IK_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_diagnostico_IK_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_diagnostico_IK_v02.json",
+      "sizeBytes": 81800,
+      "sha256": "48b1703518a42aa4955329c10943f57dfc2593bfba69deba34c391db7c8bf236",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_exclusion_envolvente_camara_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_exclusion_envolvente_camara_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_exclusion_envolvente_camara_v02.json",
+      "sizeBytes": 9315,
+      "sha256": "c7203c08f937a6e9ffcad4f93f6928f7b3fb70b7446c2716b8e763c43118a521",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_limites_IK_v02.md",
+      "backupRelativePath": "outputs/poses/Salve_limites_IK_v02.md",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_limites_IK_v02.md",
+      "sizeBytes": 3443,
+      "sha256": "36993de7bb1cf494de48dfd85caeaa4c1bf796d8a92aec44d7fc238d2992fd14",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_orientacion_palmas_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_orientacion_palmas_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_orientacion_palmas_v02.json",
+      "sizeBytes": 1637,
+      "sha256": "9784fdd7b724e9d168c6205f4107a96b8046f8cd9cf889dd37d8e357486810e1",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_revision_pensativa_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_revision_pensativa_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_revision_pensativa_v02.json",
+      "sizeBytes": 6158,
+      "sha256": "c6d3bc7699963420cdae1887888bd47067c892edb2299100ca2df1ec89a91117",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/poses/Salve_revision_poses_v02.json",
+      "backupRelativePath": "outputs/poses/Salve_revision_poses_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\poses\\Salve_revision_poses_v02.json",
+      "sizeBytes": 47102,
+      "sha256": "651b51c143a04b38a25b86a20791223a7d6d9fe11ac74d30d5442f9543ce1639",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/renders_landmarks.json",
+      "backupRelativePath": "outputs/renders_landmarks.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\renders_landmarks.json",
+      "sizeBytes": 39379,
+      "sha256": "4c57f9391c1a62249f3132813ff5461c1e41d1ddf1fcf03d7cfcf32d69ffd2dc",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_20_vistas_v02.png",
+      "backupRelativePath": "outputs/Salve_20_vistas_v02.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_20_vistas_v02.png",
+      "sizeBytes": 850420,
+      "sha256": "34a013a66be324e0a1ff8e360dadb80164618229cbe1721b3be987eff197ad4f",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_apertura_GUI_v02.json",
+      "backupRelativePath": "outputs/Salve_apertura_GUI_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_apertura_GUI_v02.json",
+      "sizeBytes": 904,
+      "sha256": "c8fe1a097e70e81d810dad4e28373d1ecb5916b2233926d4035c28a7325efbd2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_auditoria_blend_v02.json",
+      "backupRelativePath": "outputs/Salve_auditoria_blend_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_auditoria_blend_v02.json",
+      "sizeBytes": 770029,
+      "sha256": "6a71669ebb991755649ff7c6e579b5141d122c42ed9eee3456dfbbfa944a008f",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_cabello_correctivos_v02.json",
+      "backupRelativePath": "outputs/Salve_cabello_correctivos_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_cabello_correctivos_v02.json",
+      "sizeBytes": 194920,
+      "sha256": "ff2b58eff03a8c9d9612a97afe3c4c26e04b165b357b24b04773a8695fb356f4",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_comparacion_20_v02.png",
+      "backupRelativePath": "outputs/Salve_comparacion_20_v02.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_comparacion_20_v02.png",
+      "sizeBytes": 2248748,
+      "sha256": "e2b76d554d2e283903ba69715ca4862dee76640ca588e121a44c1fb995b87f8e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_comparacion_expresiones_v02.png",
+      "backupRelativePath": "outputs/Salve_comparacion_expresiones_v02.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_comparacion_expresiones_v02.png",
+      "sizeBytes": 2920884,
+      "sha256": "a46b4046db6c7a229b63efc12ae580070fd727781d1aaf26f6c9d7508aef7c39",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_entrega_v02.zip",
+      "backupRelativePath": "outputs/Salve_entrega_v02.zip",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_entrega_v02.zip",
+      "sizeBytes": 147047089,
+      "sha256": "aee6142a9e2db9b952f8ed6cc6b94e69bde45ecde6fa8d7ebcc02a4f0eee42e5",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_GUI_respaldo_antes_v02.blend",
+      "backupRelativePath": "outputs/Salve_GUI_respaldo_antes_v02.blend",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_GUI_respaldo_antes_v02.blend",
+      "sizeBytes": 36119151,
+      "sha256": "6ee6689df57b6758bed81062af18f09d503fb718d0c1932017b92e2ff0cd81a4",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_GUI_revision_pre_render.blend",
+      "backupRelativePath": "outputs/Salve_GUI_revision_pre_render.blend",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_GUI_revision_pre_render.blend",
+      "sizeBytes": 45595350,
+      "sha256": "1cfcf6b093cc1e5e61eceac07bab8598e729ba86ad58c2ba2874e7f3fd6732c9",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_hoja_expresiones_v02.png",
+      "backupRelativePath": "outputs/Salve_hoja_expresiones_v02.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_hoja_expresiones_v02.png",
+      "sizeBytes": 345677,
+      "sha256": "e3ab7c424f17ede6e2e0eaca3deca198177ca9690e38318b7be4ebe04c9bc031",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_informe_v02.html",
+      "backupRelativePath": "outputs/Salve_informe_v02.html",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_informe_v02.html",
+      "sizeBytes": 19697,
+      "sha256": "918b36a85df37f45eeba591217030c1f488bb12e688845af78d710d4eb541d90",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/anclajes_crouched.png",
+      "backupRelativePath": "outputs/Salve_integracion_v02/anclajes_crouched.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_crouched.png",
+      "sizeBytes": 582241,
+      "sha256": "e073dc35002f0a938988191e7a384c2882df5b4d33cc85623d32f026557afe60",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/anclajes_front.png",
+      "backupRelativePath": "outputs/Salve_integracion_v02/anclajes_front.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_front.png",
+      "sizeBytes": 461873,
+      "sha256": "1a0f853cd9d0876f74750c4af164061dca0ef733cf74f4f465e9bef13db52fcd",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/anclajes_kneeling.png",
+      "backupRelativePath": "outputs/Salve_integracion_v02/anclajes_kneeling.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_kneeling.png",
+      "sizeBytes": 608878,
+      "sha256": "13942af05738ff381c7889146a3cbdcd2d244a3047746afd357a8d30427ad08c",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/anclajes_revision.json",
+      "backupRelativePath": "outputs/Salve_integracion_v02/anclajes_revision.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_revision.json",
+      "sizeBytes": 5274,
+      "sha256": "b3a73753c68dd670543915f5ebacaeaa80ad5a07a4c33764d8ae51458cbbe793",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/anclajes_seated.png",
+      "backupRelativePath": "outputs/Salve_integracion_v02/anclajes_seated.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_seated.png",
+      "sizeBytes": 628207,
+      "sha256": "7cefe91c42ed3d55e5a736ec2483193b74a0a240c87a07b4885f86c53705c3a3",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/candidate_code/app/src/main/java/salve/avatar/CorePoseLandmarks.java",
+      "backupRelativePath": "outputs/Salve_integracion_v02/candidate_code/app/src/main/java/salve/avatar/CorePoseLandmarks.java",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\candidate_code\\app\\src\\main\\java\\salve\\avatar\\CorePoseLandmarks.java",
+      "sizeBytes": 4908,
+      "sha256": "b52bae32b1484dde015ad5a3c9b3e607d0c0ab72ba967b67ad319edc4ef5f84b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/candidate_code/app/src/main/java/salve/avatar/CorePoseRenderer.java",
+      "backupRelativePath": "outputs/Salve_integracion_v02/candidate_code/app/src/main/java/salve/avatar/CorePoseRenderer.java",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\candidate_code\\app\\src\\main\\java\\salve\\avatar\\CorePoseRenderer.java",
+      "sizeBytes": 6197,
+      "sha256": "4a454a8572473d77b3a7864c5100f02e0bcfc0632e2de3e83a8aad13a7453d80",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/candidate_code/app/src/main/java/salve/avatar/IllustratedAvatarRenderer.java",
+      "backupRelativePath": "outputs/Salve_integracion_v02/candidate_code/app/src/main/java/salve/avatar/IllustratedAvatarRenderer.java",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\candidate_code\\app\\src\\main\\java\\salve\\avatar\\IllustratedAvatarRenderer.java",
+      "sizeBytes": 13601,
+      "sha256": "31476b74473f8e7486748b2b6142349f72b61d4fccd01831781f461ae865c957",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/candidate_code/app/src/test/java/salve/avatar/CorePoseLandmarksTest.java",
+      "backupRelativePath": "outputs/Salve_integracion_v02/candidate_code/app/src/test/java/salve/avatar/CorePoseLandmarksTest.java",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\candidate_code\\app\\src\\test\\java\\salve\\avatar\\CorePoseLandmarksTest.java",
+      "sizeBytes": 2637,
+      "sha256": "8099c00725dbeebe9e75b96f93f488e9b12c33c3d1dc6cf41c84a973b980bc9c",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/catalogo_recursos.csv",
+      "backupRelativePath": "outputs/Salve_integracion_v02/catalogo_recursos.csv",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\catalogo_recursos.csv",
+      "sizeBytes": 3242,
+      "sha256": "85cc45369952e4565e4f9057a29f0210cd903409d5e9e00b166b0e3ae53101db",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/compilation_validation.json",
+      "backupRelativePath": "outputs/Salve_integracion_v02/compilation_validation.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\compilation_validation.json",
+      "sizeBytes": 1737,
+      "sha256": "12b7582f229a8e2fd4888dba5bff0b27a81c395fe42f23c584c001d23b0c153a",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/Informe_integracion_Salve.html",
+      "backupRelativePath": "outputs/Salve_integracion_v02/Informe_integracion_Salve.html",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\Informe_integracion_Salve.html",
+      "sizeBytes": 19865,
+      "sha256": "7241a3002d076203d3ce5ef4e4f00d4f7f0edbf29b9fa837bdecee4c96e43f7b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/Interpretacion_referencias_Salve.json",
+      "backupRelativePath": "outputs/Salve_integracion_v02/Interpretacion_referencias_Salve.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\Interpretacion_referencias_Salve.json",
+      "sizeBytes": 2546,
+      "sha256": "4a8c54ef42078f971734f28e9ccd4d20124c0caf783c8dd5ac9ea5bde7de4af1",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/landmark_visual_checks.json",
+      "backupRelativePath": "outputs/Salve_integracion_v02/landmark_visual_checks.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\landmark_visual_checks.json",
+      "sizeBytes": 2186,
+      "sha256": "4f523913d71f70d302b771d11200284b6ed6379573afa68fb7a0da74f2523b28",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/original_reference_audit.json",
+      "backupRelativePath": "outputs/Salve_integracion_v02/original_reference_audit.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\original_reference_audit.json",
+      "sizeBytes": 5530,
+      "sha256": "f123ace79281ee06781a7ee4f6df0ff4ff6f4ef689b1e20a6c5425b3e080ec7b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/salve_render_integration_candidate.patch",
+      "backupRelativePath": "outputs/Salve_integracion_v02/salve_render_integration_candidate.patch",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\salve_render_integration_candidate.patch",
+      "sizeBytes": 18107,
+      "sha256": "a6c3d69e0d10a3be320116de64a1c1b0cd64b39262ae1b6bb8dbafa41d6e0878",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tests_android/css/base-style.css",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tests_android/css/base-style.css",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tests_android\\css\\base-style.css",
+      "sizeBytes": 2819,
+      "sha256": "57e77adec7c2caa9fea27fe15eb69f426edb930cc59ec48158457d7d07dbe4b5",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tests_android/css/style.css",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tests_android/css/style.css",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tests_android\\css\\style.css",
+      "sizeBytes": 2166,
+      "sha256": "caee7b8535e0ae835c5fa62c7d97d3d79621792a7e626ecf7cab6077db85f9d7",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tests_android/index.html",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tests_android/index.html",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tests_android\\index.html",
+      "sizeBytes": 3092,
+      "sha256": "805fc21eaa82b332c7214f68ed6884d45d71a2f9204306cd97b817e060547f97",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tests_android/js/report.js",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tests_android/js/report.js",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tests_android\\js\\report.js",
+      "sizeBytes": 9362,
+      "sha256": "1bbaf1762dcdd4f5b1f8f7ad9b398d24e53fdf12f9ddcd4c4c785458ecf4badd",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tests_android/salve.avatar.AvatarRigTest/index.html",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tests_android/salve.avatar.AvatarRigTest/index.html",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tests_android\\salve.avatar.AvatarRigTest\\index.html",
+      "sizeBytes": 6057,
+      "sha256": "bd173f5eee7b894e740cc516224b5ef127159a5b27a4566830ec7ba1c16bd7ff",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tests_android/salve.avatar.CorePoseLandmarksTest/index.html",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tests_android/salve.avatar.CorePoseLandmarksTest/index.html",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tests_android\\salve.avatar.CorePoseLandmarksTest\\index.html",
+      "sizeBytes": 3739,
+      "sha256": "8865c3ae09ecdf0d24c56224032d1f0cf3f314feb451d25adeeff6970c410025",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tests_android/salve.avatar.CoreRigTest/index.html",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tests_android/salve.avatar.CoreRigTest/index.html",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tests_android\\salve.avatar.CoreRigTest\\index.html",
+      "sizeBytes": 3203,
+      "sha256": "7cd2cffebce4015e20c5a66f4685a0678f9eeb987e3d58039077aa7e7c5ed1eb",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tools/prepare_bundle.py",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tools/prepare_bundle.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tools\\prepare_bundle.py",
+      "sizeBytes": 11352,
+      "sha256": "ee250f3c26d32d480839cf95e546c7028bd5dbd25d5ddf8c9db6df781c2d54ab",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tools/source/app/src/main/assets/avatar/core/manifest.json",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tools/source/app/src/main/assets/avatar/core/manifest.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tools\\source\\app\\src\\main\\assets\\avatar\\core\\manifest.json",
+      "sizeBytes": 6322,
+      "sha256": "7b31841920013bf38faf55037d6ef4f73c4ed58f504260d70ac5d93684074ffc",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/tools/source/app/src/main/assets/avatar/core/rig.json",
+      "backupRelativePath": "outputs/Salve_integracion_v02/tools/source/app/src/main/assets/avatar/core/rig.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\tools\\source\\app\\src\\main\\assets\\avatar\\core\\rig.json",
+      "sizeBytes": 880,
+      "sha256": "5d1c9a7c4ff3a46e12c2d5a4e0b41f6cbcc3511842a1783f1363dd131d69fba3",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_integracion_v02/validator_regression_checks.json",
+      "backupRelativePath": "outputs/Salve_integracion_v02/validator_regression_checks.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\validator_regression_checks.json",
+      "sizeBytes": 1714,
+      "sha256": "3b3776f204f752787ed48dbea7161fa5695b78ed177c7da5e7b1d21b9bf13cc1",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_limpieza_rostroUV_v02.json",
+      "backupRelativePath": "outputs/Salve_limpieza_rostroUV_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_limpieza_rostroUV_v02.json",
+      "sizeBytes": 20872,
+      "sha256": "ee917029212b332196fa3cad749b4dbb11ca2bfbd24c8b621e67ef6d84ad22b4",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/a_front.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/a_front.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\a_front.png",
+      "sizeBytes": 1098620,
+      "sha256": "36bc7d4102761ba26e6f2d8a179a418a15342aa0f08df5a9f6c3cd856fe758d3",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/a_open_hair.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/a_open_hair.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\a_open_hair.png",
+      "sizeBytes": 1124787,
+      "sha256": "c217d950b43e10530e82e481ec696a94912699d970dfa2adb4b301b571cd6925",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/a_rear.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/a_rear.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\a_rear.png",
+      "sizeBytes": 1050410,
+      "sha256": "40d83704a51f836ca6d512dfaae2c84296113bd60d728000d73c1148367022b6",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/above.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/above.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\above.png",
+      "sizeBytes": 1237528,
+      "sha256": "fc06ff24c01cb8aa059c6822e97dd361745361a8172b20427f693b93b60e9fa2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/below.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/below.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\below.png",
+      "sizeBytes": 1135808,
+      "sha256": "35226a981b966cb9272e50f035bb36e46afded87d43678455fded128e1b05f0b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/crouched.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/crouched.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\crouched.png",
+      "sizeBytes": 1101714,
+      "sha256": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/front.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/front.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\front.png",
+      "sizeBytes": 1023986,
+      "sha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/front_opposite.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/front_opposite.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\front_opposite.png",
+      "sizeBytes": 1059532,
+      "sha256": "79b3da658ed5cdd0f3273105d4aad11dd620ab8247e9e8306d365a6fb746f8ef",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/front_three_quarter.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/front_three_quarter.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\front_three_quarter.png",
+      "sizeBytes": 1051016,
+      "sha256": "5839ca7dd914083847067b89f46e670ee351fcc4af292dc8384ecc77aaab2456",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/front_variant.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/front_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\front_variant.png",
+      "sizeBytes": 1057518,
+      "sha256": "bc7ba80e408e739fc4747a8be932e2affdaad2bdc8f86dfd98652e6ad20aa48d",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/kneeling.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/kneeling.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\kneeling.png",
+      "sizeBytes": 1136165,
+      "sha256": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/kneeling_variant.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/kneeling_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\kneeling_variant.png",
+      "sizeBytes": 1431575,
+      "sha256": "70fcd2c1642df52798417a14113727861a0c1fc6540bc08c018b21b4fbd8555f",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/landmarks.json",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/landmarks.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\landmarks.json",
+      "sizeBytes": 39396,
+      "sha256": "9d253814df19e8eb33be6dfc54e46df395e2f7928ae47a00081265f18f7a7162",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/leaning.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/leaning.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\leaning.png",
+      "sizeBytes": 1152680,
+      "sha256": "80b4ec56df320ccc0f5f76a6ffecc453ce745a3b3121318f021c7ddde728261a",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/leaning_variant.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/leaning_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\leaning_variant.png",
+      "sizeBytes": 1207675,
+      "sha256": "232cebd51ec81a61ea7003fecfcecda84cc3f19c0400fb5d729f2784bc8b74c4",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/left.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/left.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\left.png",
+      "sizeBytes": 919781,
+      "sha256": "e12a80f442d2209ba88b14d337ce0850af964d9305fbb13f52298282f51a2c52",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/manifest.json",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/manifest.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\manifest.json",
+      "sizeBytes": 9398,
+      "sha256": "ea6d4c09c5c751efa9b48b0c60eca4b62b41b4ac5131577e5e456840ab333ee6",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/rear.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/rear.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\rear.png",
+      "sizeBytes": 1034040,
+      "sha256": "5ee3594712520c928d6df6e5a92ef9ca55f4bcd47bbd87e8011be946564e480e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/rear_right.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/rear_right.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\rear_right.png",
+      "sizeBytes": 1012980,
+      "sha256": "a1415f432e48628bd12e3d84feb7aed42959b2f1c7fdd3f6b77b3ae114b4b39e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/rear_three_quarter.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/rear_three_quarter.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\rear_three_quarter.png",
+      "sizeBytes": 1045754,
+      "sha256": "59a4f5b337c400f513ae3aaca3f81a205c097515254f396bd13510f000b6498b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/rig.json",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/rig.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\rig.json",
+      "sizeBytes": 1033,
+      "sha256": "e9c993c34eba5818a978af09c61e0ba413e50d30c71f6382ec8e1b54751044ea",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/right.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/right.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\right.png",
+      "sizeBytes": 927552,
+      "sha256": "e9bbe9eea1d6b9fa64c16a2dfbc6fa08a9e20ccfff1509809311e2f1875bbead",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/seated.png",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/candidate/app/src/main/assets/avatar/core/seated.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\candidate\\app\\src\\main\\assets\\avatar\\core\\seated.png",
+      "sizeBytes": 1136256,
+      "sha256": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/README.md",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/README.md",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\README.md",
+      "sizeBytes": 1948,
+      "sha256": "604c0bf05dedc349ef3408b0255aab410b764c655d763818ea5fe0a9c8548e83",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_paquete_recursos_v02/validation.json",
+      "backupRelativePath": "outputs/Salve_paquete_recursos_v02/validation.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_paquete_recursos_v02\\validation.json",
+      "sizeBytes": 14036,
+      "sha256": "9ec5e5179b21c7db6621a292db3373df77d96a4a0bbda1c1189551975c6bd749",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_poses_contactos_v02.json",
+      "backupRelativePath": "outputs/Salve_poses_contactos_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_poses_contactos_v02.json",
+      "sizeBytes": 88317,
+      "sha256": "3bf537aede38a4fd3ad848c1f3bea72fe366a8efd3451b3fecd683c416fd6d39",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_refinado_v02.blend",
+      "backupRelativePath": "outputs/Salve_refinado_v02.blend",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_refinado_v02.blend",
+      "sizeBytes": 47090837,
+      "sha256": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_refinado_v02.blend1",
+      "backupRelativePath": "outputs/Salve_refinado_v02.blend1",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_refinado_v02.blend1",
+      "sizeBytes": 47091966,
+      "sha256": "ec5134204d568d8cf2eb8a060df22549d7d78da6fec9392e4587f5633313f767",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_revision_anatomia_v02.json",
+      "backupRelativePath": "outputs/Salve_revision_anatomia_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_revision_anatomia_v02.json",
+      "sizeBytes": 6186,
+      "sha256": "4773fdf65614870c6ee689c29eb9e3699ecb7b58abf27a6a8c0f992d696f9fd7",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_revision_expresiones.json",
+      "backupRelativePath": "outputs/Salve_revision_expresiones.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_revision_expresiones.json",
+      "sizeBytes": 89973,
+      "sha256": "fcf2cd239c7b0feb08f62771e560627d6918fbab1fd0e3372900c3746cb4d153",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_revision_visual.json",
+      "backupRelativePath": "outputs/Salve_revision_visual.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_revision_visual.json",
+      "sizeBytes": 12013,
+      "sha256": "799b2d5bef31fd0d069745b056613645fb1ef8b786ba8ebc99d342579787882f",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_sesion_respaldo_2026-09-30.blend",
+      "backupRelativePath": "outputs/Salve_sesion_respaldo_2026-09-30.blend",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_sesion_respaldo_2026-09-30.blend",
+      "sizeBytes": 47176920,
+      "sha256": "5bf385ad1fa54ec2edcaf8cfe6044b81f6e4179a27865e6cb4fb2c2344ba250c",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_sesion_respaldo_2026-09-30.json",
+      "backupRelativePath": "outputs/Salve_sesion_respaldo_2026-09-30.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_sesion_respaldo_2026-09-30.json",
+      "sizeBytes": 969,
+      "sha256": "ef88318a19efb487435a6b0b02c6ebf700ca7b25e96e317218a7be1a4b3349f4",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_validacion_facial_v02.json",
+      "backupRelativePath": "outputs/Salve_validacion_facial_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_validacion_facial_v02.json",
+      "sizeBytes": 82634,
+      "sha256": "a4ae950c3497116c9e83b219a9feba258e169ac72fde97a3a352d604c38bf62c",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/Salve_validacion_v02.json",
+      "backupRelativePath": "outputs/Salve_validacion_v02.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_validacion_v02.json",
+      "sizeBytes": 1652533,
+      "sha256": "142a651a03527b7d20938e93dda7c9f28042059902ae2bf9caebe0f8a93604ab",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/SHA256SUMS_v02.txt",
+      "backupRelativePath": "outputs/SHA256SUMS_v02.txt",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\SHA256SUMS_v02.txt",
+      "sizeBytes": 20618,
+      "sha256": "d07995ce84da9350487d6da63f53dd69d910445c991d76cb70284b8861f13178",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/texturas/atlas_repair_validation.json",
+      "backupRelativePath": "outputs/texturas/atlas_repair_validation.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\atlas_repair_validation.json",
+      "sizeBytes": 54910,
+      "sha256": "24143f9a82daabf8c190afe131da33870e2f706c1000b19d1c5e3d1872ad0fac",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/texturas/atlas_validation.json",
+      "backupRelativePath": "outputs/texturas/atlas_validation.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\atlas_validation.json",
+      "sizeBytes": 52788,
+      "sha256": "4e6044e1810da8bcccd99ebfed0ada0703437368529406db241c1c04a04fed00",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/texturas/SalveV02_Atlas_baseColor.png",
+      "backupRelativePath": "outputs/texturas/SalveV02_Atlas_baseColor.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_baseColor.png",
+      "sizeBytes": 245879,
+      "sha256": "f94709af711c3422d63be137aaad6440e895d9c3189a107890059f93aee810f2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/texturas/SalveV02_Atlas_metallic.png",
+      "backupRelativePath": "outputs/texturas/SalveV02_Atlas_metallic.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_metallic.png",
+      "sizeBytes": 249998,
+      "sha256": "bffc847f758d14c200b6a05a3d3c7cf1040ec90cb4df631bc48bd9dbce07b944",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/texturas/SalveV02_Atlas_roughness.png",
+      "backupRelativePath": "outputs/texturas/SalveV02_Atlas_roughness.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_roughness.png",
+      "sizeBytes": 244549,
+      "sha256": "3baf96bdc28cf08e8c79a69a2d85997d1b8b8cbec120ec09b6990156019de2de",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/texturas/SalveV02_Iris_blue.png",
+      "backupRelativePath": "outputs/texturas/SalveV02_Iris_blue.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Iris_blue.png",
+      "sizeBytes": 258987,
+      "sha256": "05a913f1d812b40e73654c5e0e16d985b11b4dd8a18be8961eeadf350ead91f4",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/01_front.png",
+      "backupRelativePath": "outputs/vistas_20/01_front.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\01_front.png",
+      "sizeBytes": 1023986,
+      "sha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/02_front_three_quarter.png",
+      "backupRelativePath": "outputs/vistas_20/02_front_three_quarter.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\02_front_three_quarter.png",
+      "sizeBytes": 1051016,
+      "sha256": "5839ca7dd914083847067b89f46e670ee351fcc4af292dc8384ecc77aaab2456",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/03_right.png",
+      "backupRelativePath": "outputs/vistas_20/03_right.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\03_right.png",
+      "sizeBytes": 927552,
+      "sha256": "e9bbe9eea1d6b9fa64c16a2dfbc6fa08a9e20ccfff1509809311e2f1875bbead",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/04_rear_right.png",
+      "backupRelativePath": "outputs/vistas_20/04_rear_right.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\04_rear_right.png",
+      "sizeBytes": 1012980,
+      "sha256": "a1415f432e48628bd12e3d84feb7aed42959b2f1c7fdd3f6b77b3ae114b4b39e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/05_rear.png",
+      "backupRelativePath": "outputs/vistas_20/05_rear.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\05_rear.png",
+      "sizeBytes": 1034040,
+      "sha256": "5ee3594712520c928d6df6e5a92ef9ca55f4bcd47bbd87e8011be946564e480e",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/06_rear_three_quarter.png",
+      "backupRelativePath": "outputs/vistas_20/06_rear_three_quarter.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\06_rear_three_quarter.png",
+      "sizeBytes": 1045754,
+      "sha256": "59a4f5b337c400f513ae3aaca3f81a205c097515254f396bd13510f000b6498b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/07_left.png",
+      "backupRelativePath": "outputs/vistas_20/07_left.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\07_left.png",
+      "sizeBytes": 919781,
+      "sha256": "e12a80f442d2209ba88b14d337ce0850af964d9305fbb13f52298282f51a2c52",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/08_front_opposite.png",
+      "backupRelativePath": "outputs/vistas_20/08_front_opposite.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\08_front_opposite.png",
+      "sizeBytes": 1059532,
+      "sha256": "79b3da658ed5cdd0f3273105d4aad11dd620ab8247e9e8306d365a6fb746f8ef",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/09_front_variant.png",
+      "backupRelativePath": "outputs/vistas_20/09_front_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\09_front_variant.png",
+      "sizeBytes": 1057518,
+      "sha256": "bc7ba80e408e739fc4747a8be932e2affdaad2bdc8f86dfd98652e6ad20aa48d",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/10_above.png",
+      "backupRelativePath": "outputs/vistas_20/10_above.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\10_above.png",
+      "sizeBytes": 1237528,
+      "sha256": "fc06ff24c01cb8aa059c6822e97dd361745361a8172b20427f693b93b60e9fa2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/11_below.png",
+      "backupRelativePath": "outputs/vistas_20/11_below.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\11_below.png",
+      "sizeBytes": 1135808,
+      "sha256": "35226a981b966cb9272e50f035bb36e46afded87d43678455fded128e1b05f0b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/12_a_front.png",
+      "backupRelativePath": "outputs/vistas_20/12_a_front.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\12_a_front.png",
+      "sizeBytes": 1098620,
+      "sha256": "36bc7d4102761ba26e6f2d8a179a418a15342aa0f08df5a9f6c3cd856fe758d3",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/13_a_open_hair.png",
+      "backupRelativePath": "outputs/vistas_20/13_a_open_hair.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\13_a_open_hair.png",
+      "sizeBytes": 1124787,
+      "sha256": "c217d950b43e10530e82e481ec696a94912699d970dfa2adb4b301b571cd6925",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/14_a_rear.png",
+      "backupRelativePath": "outputs/vistas_20/14_a_rear.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\14_a_rear.png",
+      "sizeBytes": 1050410,
+      "sha256": "40d83704a51f836ca6d512dfaae2c84296113bd60d728000d73c1148367022b6",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/15_seated.png",
+      "backupRelativePath": "outputs/vistas_20/15_seated.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\15_seated.png",
+      "sizeBytes": 1136256,
+      "sha256": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/16_crouched.png",
+      "backupRelativePath": "outputs/vistas_20/16_crouched.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\16_crouched.png",
+      "sizeBytes": 1101714,
+      "sha256": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/17_kneeling.png",
+      "backupRelativePath": "outputs/vistas_20/17_kneeling.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\17_kneeling.png",
+      "sizeBytes": 1136165,
+      "sha256": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/18_kneeling_variant.png",
+      "backupRelativePath": "outputs/vistas_20/18_kneeling_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\18_kneeling_variant.png",
+      "sizeBytes": 1431575,
+      "sha256": "70fcd2c1642df52798417a14113727861a0c1fc6540bc08c018b21b4fbd8555f",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/19_leaning.png",
+      "backupRelativePath": "outputs/vistas_20/19_leaning.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\19_leaning.png",
+      "sizeBytes": 1152680,
+      "sha256": "80b4ec56df320ccc0f5f76a6ffecc453ce745a3b3121318f021c7ddde728261a",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_20/20_leaning_variant.png",
+      "backupRelativePath": "outputs/vistas_20/20_leaning_variant.png",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\20_leaning_variant.png",
+      "sizeBytes": 1207675,
+      "sha256": "232cebd51ec81a61ea7003fecfcecda84cc3f19c0400fb5d729f2784bc8b74c4",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/outputs/vistas_manifest.json",
+      "backupRelativePath": "outputs/vistas_manifest.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_manifest.json",
+      "sizeBytes": 13014,
+      "sha256": "2ce9f59a1a4998b2b01ac639c6e00177749a2f39d4e0f66ca3f87ed461bd58ad",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/procedencia/source_integrity.json",
+      "backupRelativePath": "procedencia/source_integrity.json",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\source_integrity.json",
+      "sizeBytes": 12139,
+      "sha256": "0f6d26b5eabdcb89ded555665f5080c86ea64ba7ba0925b84e6aec387e3795f6",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/procedencia/verify_delivery_v02.py",
+      "backupRelativePath": "procedencia/verify_delivery_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\verify_delivery_v02.py",
+      "sizeBytes": 24974,
+      "sha256": "8b4d436eba3bd563fd11cbe24a3271a86bd342b78dd3b84f975d9bb2899acf0f",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/procedencia/package_review_v02.py",
+      "backupRelativePath": "procedencia/package_review_v02.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\package_review_v02.py",
+      "sizeBytes": 29325,
+      "sha256": "bf3d9712ee9695d0498ee6999490c4b1007b2d1aff60dfa6327c3d11d310df7b",
+      "copySha256Verified": true
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/procedencia/save_session_cloud_backup.py",
+      "backupRelativePath": "procedencia/save_session_cloud_backup.py",
+      "origin": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\save_session_cloud_backup.py",
+      "sizeBytes": 2095,
+      "sha256": "a609309ba2d9bd0072e52801bdb6e26bf769cd749964aed3ac24b2bd0742c55f",
+      "copySha256Verified": true
+    }
+  ],
+  "generatedFiles": [
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/.gitattributes",
+      "backupRelativePath": ".gitattributes",
+      "origin": "generated by build_salve_cloud_backup.py",
+      "sizeBytes": 86,
+      "sha256": "80e2d170fcecbbc9ebfe44ec6dae367d2196f85cc1fb1b7e9e303fb8e743d212"
+    },
+    {
+      "repositoryPath": "art/salve/blender/modelado_v02/README.md",
+      "backupRelativePath": "README.md",
+      "origin": "generated by build_salve_cloud_backup.py",
+      "sizeBytes": 3896,
+      "sha256": "0aa441f1b6a84ccac784ea2d8b5782497ae51ac27545591ed15407d0ba6dbe04"
+    }
+  ],
+  "outputFilesCopied": 193,
+  "provenanceFilesCopied": 4,
+  "copiedBytes": 492061797,
+  "allCopyHashesMatch": true,
+  "sourceFilesUnchangedBeforeAfter": true,
+  "sourceOutputInventoryUnchanged": true,
+  "historicalRepositoryFilesUnchanged": true,
+  "historicalFilesPreserved": 99,
+  "originalDeliveryZipPreservedByteForByte": true,
+  "originalDeliveryChecksumsScope": "Original package only; retained unmodified, do not cover new session/GUI backups.",
+  "backupChecksums": "SHA256SUMS_respaldo.txt",
+  "checksumManifestScope": "All files under modelado_v02 except SHA256SUMS_respaldo.txt itself; includes BACKUP_MANIFEST.json.",
+  "basicSecretScan": {
+    "status": "passed",
+    "textFilesAndZipTextMembersScanned": 191,
+    "findings": [],
+    "scope": "Recognizable plaintext tokens/keys/credential assignments; binary contents not exhaustively audited."
+  },
+  "modelFile": "outputs/Salve_refinado_v02.blend",
+  "sessionFileIsBackupOnly": true,
+  "artisticAcceptance": false,
+  "productionCertified": false,
+  "sourceOutputsModified": false,
+  "zipRebuilt": false,
+  "gitMutationsPerformed": false,
+  "pushPerformedByThisBuilder": false,
+  "preparationPhase": "prepared_for_upload",
+  "productAssetsReplaced": false
+}
