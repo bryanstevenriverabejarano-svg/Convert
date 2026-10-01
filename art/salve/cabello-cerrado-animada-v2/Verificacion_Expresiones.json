@@ -1,0 +1,132 @@
+{
+  "new_facial_triangles": 710,
+  "individual_shapes_checked": 24,
+  "shapes": {
+    "Basis": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.1788403831157765e-08
+    },
+    "JawOpen": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.5185072138889097e-08
+    },
+    "Smile": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 1.990137468016462e-08
+    },
+    "Smile.L": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 1.9901590556092863e-08
+    },
+    "Smile.R": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 1.990137468016462e-08
+    },
+    "MouthFrown": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.1363697720599983e-08
+    },
+    "MouthPucker": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 1.7431127097289334e-08
+    },
+    "MouthWide": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.409491406396569e-08
+    },
+    "Viseme_A": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.5185072138889097e-08
+    },
+    "Viseme_E": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.5185072138889097e-08
+    },
+    "Viseme_I": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.5185072138889097e-08
+    },
+    "Viseme_O": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.5185072138889097e-08
+    },
+    "Viseme_U": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.2452344081158593e-08
+    },
+    "Viseme_MBP": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 1.885674237589452e-08
+    },
+    "BrowUp.L": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.1788403831157765e-08
+    },
+    "BrowDown.L": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.055212100504633e-08
+    },
+    "Blink.L": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.499721082904749e-09
+    },
+    "Squint.L": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.1788403831157765e-08
+    },
+    "BrowUp.R": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.1788403831157765e-08
+    },
+    "BrowDown.R": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 1.6488080512022663e-08
+    },
+    "Blink.R": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.499717599580009e-09
+    },
+    "Squint.R": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.1788403831157765e-08
+    },
+    "BrowUp": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.1788403831157765e-08
+    },
+    "BrowDown": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 1.6485889237083384e-08
+    },
+    "Blink": {
+      "finite": true,
+      "reversed_triangles": 0,
+      "minimum_signed_area": 2.499717599580009e-09
+    }
+  },
+  "ok": true
+}
