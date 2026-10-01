@@ -1,0 +1,129 @@
+SALVE — CABELLO CERRADO Y ANIMACIÓN / V2
+Entrega local del 1 de octubre de 2026
+
+ARCHIVO PRINCIPAL
+
+Abre SALVE_Animada_Editable.blend en Blender. Incluye las mallas, materiales,
+texturas empaquetadas, huesos, formas faciales, animaciones y una escena de
+presentación. Guardado con Blender 4.2.0 y abierto y comprobado en Blender 5.2.2.
+
+SALVE_Animada.glb incluye el personaje con diez clips independientes; en cada
+clip se combinan el cuerpo y la cara. Es el formato recomendado de intercambio.
+
+SALVE_Animada_Compatibilidad.fbx contiene una única toma con diez segmentos.
+Su tabla de fotogramas está al final. El aspecto de los materiales, especialmente
+el color de los párpados, depende del importador; Blender y GLB conservan el PBR.
+
+CAMBIOS
+
+- Cabello largo cerrado que cubre la espalda y las caderas, conservando la
+  silueta completa del FBX entregado. No se separó para abrirlo por detrás.
+- Malla reducida de 2.000.000 a 158,296 triángulos
+  (92.09% menos). El GLB tiene 158,236 triángulos.
+  La topología sigue siendo triangulada; hay reconstrucción local de manos y cara.
+- 81 huesos, 72 de deformación. Máximo de cuatro influencias por vértice,
+  normalizadas; controles opcionales de brazos y piernas.
+- Dos manos con cinco dedos articulados y unión del puño refinada.
+- Nariz suavizada; ojos e iris separados con pupila definida; párpados y
+  delineado animables; apertura bucal, dientes superiores y lengua.
+- 24 formas faciales, incluidos parpadeos, sonrisa, cejas y vocales.
+- Materiales del traje, rostro, pelo y auriculares ajustados por separado.
+- Cabello animado mediante huesos; ajuste específico para arrodillarse.
+- Diez animaciones a 30 fotogramas por segundo.
+
+ANIMACIONES
+
+- Idle_Breathe: 4 s — Respirar y parpadear
+- Look_Around: 4 s — Mirar alrededor
+- Walk_InPlace: 2 s — Caminar en el sitio
+- Sit_Down: 3 s — Sentarse
+- Kneel: 3 s — Arrodillarse
+- Gentle_Dance: 4 s — Baile suave
+- Wave: 3 s — Saludar
+- Talk_Demo: 4 s — Demostración de visemas
+- Expressions_Demo: 4 s — Sonrisa, cejas y guiño
+- Crouch: 3 s — Agacharse y mantener la pose
+
+La marcha es en el sitio. Sentarse, arrodillarse y agacharse parten de pie.
+Para la pose sentada, coloca un asiento a la altura apropiada en tu escena.
+Agacharse mantiene la posición entre los fotogramas 64 y 91; puedes reproducir
+64 a 1 en sentido inverso para volver a levantarse.
+
+USO EN BLENDER
+
+1. Abre el .blend y pulsa Espacio para reproducir el reposo.
+2. En el editor de texto de Blender, abre el texto integrado
+   SALVE_Reproducir_Clip.py. Cambia CLIP por uno de los nombres de arriba y
+   ejecútalo. Selecciona conjuntamente las animaciones del cuerpo y de la cara.
+3. Las formas faciales están en Salve_Body > Datos de objeto > Shape Keys.
+   Para probarlas manualmente, desasigna primero la acción facial activa.
+4. El esqueleto SALVE_Rig tiene los controles IK_Arms e IK_Legs; empiezan en
+   cero para reproducir los clips preparados. Actívalos sólo al posar manualmente.
+5. El delineado sigue los párpados mediante seis controladores vinculados.
+
+FORMAS FACIALES
+
+JawOpen, Smile, Smile.L, Smile.R, MouthFrown, MouthPucker, MouthWide, Viseme_A, Viseme_E, Viseme_I, Viseme_O, Viseme_U, Viseme_MBP, BrowUp.L, BrowDown.L, Blink.L, Squint.L, BrowUp.R, BrowDown.R, Blink.R, Squint.R, BrowUp, BrowDown, Blink
+
+Blink y Blink.L/Blink.R controlan el mismo cierre; usarlos simultáneamente suma
+el movimiento. Los visemas son alternativas que se deben mezclar gradualmente.
+Talk_Demo es una prueba temporizada de boca, sin voz ni seguimiento de audio.
+Para hablar con una voz concreta, hay que conectar sus fonemas a estos controles.
+
+ESCALA Y EJES
+
+Blender usa Z arriba y el GLB usa Y arriba. La altura de trabajo elegida es
+aproximadamente 1,70 m, con el origen junto a los pies; no procede de una medida
+confirmada del personaje en las ilustraciones.
+
+FBX — UNA TOMA, 30 FPS
+
+- Idle_Breathe: 1–121
+- Look_Around: 122–242
+- Walk_InPlace: 243–303
+- Sit_Down: 304–394
+- Kneel: 395–485
+- Gentle_Dance: 486–606
+- Wave: 607–697
+- Talk_Demo: 698–818
+- Expressions_Demo: 819–939
+- Crouch: 940–1030
+
+En Blender, anim_offset=0 al importar mantiene estos rangos; el ajuste
+predeterminado puede añadir un fotograma.
+
+VERIFICACIÓN
+
+- FBX original intacto; su SHA-256 figura abajo y en el informe.
+- Apertura real del .blend en Blender 5.2.2; diez clips y visemas evaluados,
+  todas las texturas empaquetadas y controladores faciales válidos.
+- Reimportación real de GLB y FBX; 31 muestras de movimiento en el GLB y
+  30 en el FBX, incluida comprobación de visemas.
+- Render del GLB reimportado: rostro, cabello y materiales revisados.
+- Los 710 triángulos faciales reconstruidos mantienen su orientación al
+  evaluar por separado las 24 formas al 100%.
+- Índices, posiciones, pesos y formas finitos; pesos normalizados y máximo 4.
+- Vistas y expresiones renderizadas; revisión de la melena en reposo,
+  al sentarse, arrodillarse y agacharse.
+
+ALCANCE
+
+Es un personaje editable y animable. El pelo utiliza huesos y claves; no tiene
+simulación física con colisiones automáticas. Las poses extremas, contactos
+con objetos nuevos y combinaciones faciales pueden requerir ajustes.
+La integración en una aplicación, sincronización con voz real y rendimiento
+en un móvil no se han probado en esta entrega. No se afirma una coincidencia
+exacta con cada ilustración de referencia.
+
+FUENTE PRESERVADA
+
+Hi3D_Modelo 3D de Androide Anime Sci-Fi Estilizado_allparts_20261001_023259.fbx
+SHA-256: d5cddc4cf85be8b660447e94e2642f3e50b3933d0d62fc57fd646ef3a0297f76
+
+VÍDEO Y VISTAS
+
+SALVE_Animacion_Demo.mp4 contiene 36 segundos de movimiento
+real, a 12 fps y 1280 × 720, sin voz ni audio. El personaje se renderizó
+a 480 × 720; incluye los diez movimientos y una vista posterior adicional.
+Se decodificaron sus 432 fotogramas para comprobar el archivo.
+SALVE_Vistas_y_Expresiones.png muestra vistas y controles faciales del modelo.

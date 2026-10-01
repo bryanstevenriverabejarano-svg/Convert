@@ -1,0 +1,7107 @@
+{
+  "version": "2.0-cabello-cerrado",
+  "source": {
+    "filename": "Hi3D_Modelo 3D de Androide Anime Sci-Fi Estilizado_allparts_20261001_023259.fbx",
+    "sha256": "d5cddc4cf85be8b660447e94e2642f3e50b3933d0d62fc57fd646ef3a0297f76",
+    "original_unchanged": true
+  },
+  "assembly": {
+    "refinement": {
+      "vertices": 23856,
+      "displaced_vertices": 747,
+      "max_displacement": 0.006998807191848755,
+      "nose_z_before": 0.1094994768500328,
+      "nose_z_after": 0.10262250155210495,
+      "uv_preserved": true,
+      "outside_face_displacement": 0.0
+    },
+    "hair_seam": {
+      "deferred": "Closed original hair restored after rig assembly"
+    },
+    "face": {
+      "vertex_count": 22351,
+      "shape_key_count": 24,
+      "finite": true,
+      "keys": {
+        "JawOpen": {
+          "finite": true,
+          "max_displacement": 0.005811585579067469,
+          "outside_face_max_displacement": 0.0
+        },
+        "Smile": {
+          "finite": true,
+          "max_displacement": 0.0017845003167167306,
+          "outside_face_max_displacement": 0.0
+        },
+        "Smile.L": {
+          "finite": true,
+          "max_displacement": 0.0017845003167167306,
+          "outside_face_max_displacement": 0.0
+        },
+        "Smile.R": {
+          "finite": true,
+          "max_displacement": 0.0017845003167167306,
+          "outside_face_max_displacement": 0.0
+        },
+        "MouthFrown": {
+          "finite": true,
+          "max_displacement": 0.0013919157208874822,
+          "outside_face_max_displacement": 0.0
+        },
+        "MouthPucker": {
+          "finite": true,
+          "max_displacement": 0.002608295064419508,
+          "outside_face_max_displacement": 0.0
+        },
+        "MouthWide": {
+          "finite": true,
+          "max_displacement": 0.0013012159615755081,
+          "outside_face_max_displacement": 0.0
+        },
+        "Viseme_A": {
+          "finite": true,
+          "max_displacement": 0.005404772236943245,
+          "outside_face_max_displacement": 0.0
+        },
+        "Viseme_E": {
+          "finite": true,
+          "max_displacement": 0.0026152245700359344,
+          "outside_face_max_displacement": 0.0
+        },
+        "Viseme_I": {
+          "finite": true,
+          "max_displacement": 0.001634484389796853,
+          "outside_face_max_displacement": 0.0
+        },
+        "Viseme_O": {
+          "finite": true,
+          "max_displacement": 0.004380180966109037,
+          "outside_face_max_displacement": 0.0
+        },
+        "Viseme_U": {
+          "finite": true,
+          "max_displacement": 0.0026948468293994665,
+          "outside_face_max_displacement": 0.0
+        },
+        "Viseme_MBP": {
+          "finite": true,
+          "max_displacement": 0.000712851295247674,
+          "outside_face_max_displacement": 0.0
+        },
+        "BrowUp.L": {
+          "finite": true,
+          "max_displacement": 0.001696258783340454,
+          "outside_face_max_displacement": 0.0
+        },
+        "BrowDown.L": {
+          "finite": true,
+          "max_displacement": 0.0013433354906737804,
+          "outside_face_max_displacement": 0.0
+        },
+        "Blink.L": {
+          "finite": true,
+          "max_displacement": 0.005859839729964733,
+          "outside_face_max_displacement": 0.0
+        },
+        "Squint.L": {
+          "finite": true,
+          "max_displacement": 0.0022267450112849474,
+          "outside_face_max_displacement": 0.0
+        },
+        "BrowUp.R": {
+          "finite": true,
+          "max_displacement": 0.001693814992904663,
+          "outside_face_max_displacement": 0.0
+        },
+        "BrowDown.R": {
+          "finite": true,
+          "max_displacement": 0.0013413907727226615,
+          "outside_face_max_displacement": 0.0
+        },
+        "Blink.R": {
+          "finite": true,
+          "max_displacement": 0.005568760447204113,
+          "outside_face_max_displacement": 0.0
+        },
+        "Squint.R": {
+          "finite": true,
+          "max_displacement": 0.0021161362528800964,
+          "outside_face_max_displacement": 0.0
+        },
+        "BrowUp": {
+          "finite": true,
+          "max_displacement": 0.0016963183879852295,
+          "outside_face_max_displacement": 0.0
+        },
+        "BrowDown": {
+          "finite": true,
+          "max_displacement": 0.00134338962379843,
+          "outside_face_max_displacement": 0.0
+        },
+        "Blink": {
+          "finite": true,
+          "max_displacement": 0.005859839729964733,
+          "outside_face_max_displacement": 0.0
+        }
+      }
+    },
+    "apertures": {
+      "eye.L": {
+        "ok": true,
+        "removed_faces": 1698,
+        "center": [
+          0.02275,
+          0.41015
+        ],
+        "kind": "eye",
+        "surface_fit": {
+          "cx": 0.02275,
+          "cy": 0.41015,
+          "a": 0.0107,
+          "b": 0.005825,
+          "coefficients": [
+            0.08995321164516445,
+            -0.0054603979994302,
+            0.0035167262124936,
+            -0.001080326686139646,
+            -0.0021241846818473207,
+            -0.0001431964189239597
+          ],
+          "sample_count": 766
+        }
+      },
+      "eye.R": {
+        "ok": true,
+        "removed_faces": 1668,
+        "center": [
+          -0.02297,
+          0.41015
+        ],
+        "kind": "eye",
+        "surface_fit": {
+          "cx": -0.02297,
+          "cy": 0.41015,
+          "a": 0.0107,
+          "b": 0.005825,
+          "coefficients": [
+            0.08834970565932751,
+            0.008005164308091181,
+            0.0027562931720119485,
+            -0.0007220950238445633,
+            0.0015627720075853573,
+            8.79460205052713e-05
+          ],
+          "sample_count": 629
+        }
+      },
+      "mouth": {
+        "ok": true,
+        "removed_faces": 352,
+        "center": [
+          -0.0004,
+          0.37913
+        ],
+        "kind": "mouth",
+        "surface_fit": {
+          "cx": -0.0004,
+          "cy": 0.37913,
+          "a": 0.00735,
+          "b": 0.0022,
+          "coefficients": [
+            0.09497325930009119,
+            -0.00018875288509629783,
+            0.0008473784497976711,
+            -0.002444838488110088,
+            4.366842842669018e-05,
+            0.00033182050152186134
+          ],
+          "sample_count": 95
+        }
+      }
+    },
+    "rig": {
+      "bone_count": 81,
+      "deform_bones": 72,
+      "meshes": {
+        "Salve_Body": {
+          "region": "body",
+          "vertices": 22351,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 4,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Headphones": {
+          "region": "headphones",
+          "vertices": 4836,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Hand_L": {
+          "region": "hand_L",
+          "vertices": 1328,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Wrist_Trim_L": {
+          "region": "hand_L",
+          "vertices": 384,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Hand_Panel_L": {
+          "region": "hand_L",
+          "vertices": 36,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Hand_R": {
+          "region": "hand_R",
+          "vertices": 1328,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Wrist_Trim_R": {
+          "region": "hand_R",
+          "vertices": 384,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Hand_Panel_R": {
+          "region": "hand_R",
+          "vertices": 36,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Skull_Interior": {
+          "region": "head",
+          "vertices": 1106,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_UpperBack_Repair": {
+          "region": "body",
+          "vertices": 198,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 3,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Headset_Rim_L": {
+          "region": "head",
+          "vertices": 800,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Headset_Rim_R": {
+          "region": "head",
+          "vertices": 800,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Central_Housing": {
+          "region": "body",
+          "vertices": 501,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Unit_Frame": {
+          "region": "body",
+          "vertices": 512,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Unit_Light": {
+          "region": "body",
+          "vertices": 512,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Unit_Core": {
+          "region": "body",
+          "vertices": 128,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Diamond_0_Border": {
+          "region": "body",
+          "vertices": 4,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Diamond_0_Light": {
+          "region": "body",
+          "vertices": 4,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Diamond_1_Border": {
+          "region": "body",
+          "vertices": 4,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Diamond_1_Light": {
+          "region": "body",
+          "vertices": 4,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Diamond_2_Border": {
+          "region": "body",
+          "vertices": 4,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Diamond_2_Light": {
+          "region": "body",
+          "vertices": 4,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Panel_L": {
+          "region": "body",
+          "vertices": 256,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Light_L": {
+          "region": "body",
+          "vertices": 256,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Panel_R": {
+          "region": "body",
+          "vertices": 256,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Back_Light_R": {
+          "region": "body",
+          "vertices": 256,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 2,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "Salve_Hair": {
+          "region": "hair_mixed",
+          "vertices": 40754,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 4,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Sclera.L": {
+          "region": "head",
+          "vertices": 513,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Iris.L": {
+          "region": "eye.L",
+          "vertices": 513,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Eyeliner.L": {
+          "region": "head",
+          "vertices": 192,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Sclera.R": {
+          "region": "head",
+          "vertices": 513,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Iris.R": {
+          "region": "eye.R",
+          "vertices": 513,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Eyeliner.R": {
+          "region": "head",
+          "vertices": 192,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Mouth_Interior": {
+          "region": "head",
+          "vertices": 762,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Teeth_Upper": {
+          "region": "head",
+          "vertices": 50,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        },
+        "SALVE_Tongue": {
+          "region": "head",
+          "vertices": 354,
+          "bad_normalization": 0,
+          "max_weight_sum_error": 0.0,
+          "max_influences": 1,
+          "opposite_leg_influences": 0,
+          "hair_on_body_vertices": 0
+        }
+      },
+      "errors": [],
+      "ok": true,
+      "note": "Structural checks only; facial and deformation appearance require render inspection."
+    },
+    "hand_overrides": {
+      "landmarks": {
+        "wrist.L": [
+          0.24544000625610352,
+          0.08578000217676163,
+          0.07800000160932541
+        ],
+        "hand.L": [
+          0.262529581785202,
+          0.06685392558574677,
+          0.07800000160932541
+        ],
+        "wrist.R": [
+          -0.24544000625610352,
+          0.08578000217676163,
+          0.07750000059604645
+        ],
+        "hand.R": [
+          -0.262529581785202,
+          0.06685392558574677,
+          0.07750000059604645
+        ],
+        "eye.L": [
+          0.02275,
+          0.40890000000000004,
+          0.0733949775
+        ],
+        "eye.R": [
+          -0.02297,
+          0.40890000000000004,
+          0.0740949775
+        ]
+      },
+      "finger_chains": {
+        "thumb.L": [
+          [
+            0.24704043567180634,
+            0.06162552535533905,
+            0.07800000160932541
+          ],
+          [
+            0.2506718635559082,
+            0.044896453619003296,
+            0.07708875089883804
+          ],
+          [
+            0.25367727875709534,
+            0.03427150845527649,
+            0.0754687488079071
+          ],
+          [
+            0.256538987159729,
+            0.02573990449309349,
+            0.07349999994039536
+          ]
+        ],
+        "index.L": [
+          [
+            0.26449450850486755,
+            0.04707062616944313,
+            0.07800000160932541
+          ],
+          [
+            0.2766093313694,
+            0.032848164439201355,
+            0.07645583152770996
+          ],
+          [
+            0.284685879945755,
+            0.023366525769233704,
+            0.0741272121667862
+          ],
+          [
+            0.29141631722450256,
+            0.015465155243873596,
+            0.07150000333786011
+          ]
+        ],
+        "middle.L": [
+          [
+            0.2716611325740814,
+            0.050847142934799194,
+            0.07800000160932541
+          ],
+          [
+            0.2858354449272156,
+            0.03514963388442993,
+            0.07645583152770996
+          ],
+          [
+            0.2952849864959717,
+            0.02468463033437729,
+            0.0741272121667862
+          ],
+          [
+            0.30315959453582764,
+            0.01596379280090332,
+            0.07150000333786011
+          ]
+        ],
+        "ring.L": [
+          [
+            0.2762583792209625,
+            0.05769297108054161,
+            0.07800000160932541
+          ],
+          [
+            0.2897273302078247,
+            0.043783798813819885,
+            0.07645583152770996
+          ],
+          [
+            0.29870662093162537,
+            0.034511011093854904,
+            0.0741272121667862
+          ],
+          [
+            0.3061893880367279,
+            0.02678368240594864,
+            0.07150000333786011
+          ]
+        ],
+        "pinky.L": [
+          [
+            0.2783615291118622,
+            0.06700246781110764,
+            0.07800000160932541
+          ],
+          [
+            0.2901364266872406,
+            0.05611089989542961,
+            0.07645583152770996
+          ],
+          [
+            0.29798632860183716,
+            0.04884985089302063,
+            0.0741272121667862
+          ],
+          [
+            0.3045279383659363,
+            0.042798977345228195,
+            0.07150000333786011
+          ]
+        ],
+        "thumb.R": [
+          [
+            -0.24704043567180634,
+            0.06162552535533905,
+            0.07750000059604645
+          ],
+          [
+            -0.2506718635559082,
+            0.044896453619003296,
+            0.07658874988555908
+          ],
+          [
+            -0.25367727875709534,
+            0.03427150845527649,
+            0.07496874779462814
+          ],
+          [
+            -0.256538987159729,
+            0.02573990449309349,
+            0.0729999989271164
+          ]
+        ],
+        "index.R": [
+          [
+            -0.26449450850486755,
+            0.04707062616944313,
+            0.07750000059604645
+          ],
+          [
+            -0.2766093313694,
+            0.032848164439201355,
+            0.075955830514431
+          ],
+          [
+            -0.284685879945755,
+            0.023366525769233704,
+            0.07362721115350723
+          ],
+          [
+            -0.29141631722450256,
+            0.015465155243873596,
+            0.07100000232458115
+          ]
+        ],
+        "middle.R": [
+          [
+            -0.2716611325740814,
+            0.050847142934799194,
+            0.07750000059604645
+          ],
+          [
+            -0.2858354449272156,
+            0.03514963388442993,
+            0.075955830514431
+          ],
+          [
+            -0.2952849864959717,
+            0.02468463033437729,
+            0.07362721115350723
+          ],
+          [
+            -0.30315959453582764,
+            0.01596379280090332,
+            0.07100000232458115
+          ]
+        ],
+        "ring.R": [
+          [
+            -0.2762583792209625,
+            0.05769297108054161,
+            0.07750000059604645
+          ],
+          [
+            -0.2897273302078247,
+            0.043783798813819885,
+            0.075955830514431
+          ],
+          [
+            -0.29870662093162537,
+            0.034511011093854904,
+            0.07362721115350723
+          ],
+          [
+            -0.3061893880367279,
+            0.02678368240594864,
+            0.07100000232458115
+          ]
+        ],
+        "pinky.R": [
+          [
+            -0.2783615291118622,
+            0.06700246781110764,
+            0.07750000059604645
+          ],
+          [
+            -0.2901364266872406,
+            0.05611089989542961,
+            0.075955830514431
+          ],
+          [
+            -0.29798632860183716,
+            0.04884985089302063,
+            0.07362721115350723
+          ],
+          [
+            -0.3045279383659363,
+            0.042798977345228195,
+            0.07100000232458115
+          ]
+        ]
+      }
+    },
+    "mesh_stats": {
+      "Salve_Body": {
+        "vertices": 22351,
+        "triangles": 42999,
+        "region": "body"
+      },
+      "Salve_Headphones": {
+        "vertices": 4836,
+        "triangles": 9283,
+        "region": "headphones"
+      },
+      "Salve_Hand_L": {
+        "vertices": 1328,
+        "triangles": 2652,
+        "region": "hand_L"
+      },
+      "Salve_Wrist_Trim_L": {
+        "vertices": 384,
+        "triangles": 768,
+        "region": "hand_L"
+      },
+      "Salve_Hand_Panel_L": {
+        "vertices": 36,
+        "triangles": 60,
+        "region": "hand_L"
+      },
+      "Salve_Hand_R": {
+        "vertices": 1328,
+        "triangles": 2652,
+        "region": "hand_R"
+      },
+      "Salve_Wrist_Trim_R": {
+        "vertices": 384,
+        "triangles": 768,
+        "region": "hand_R"
+      },
+      "Salve_Hand_Panel_R": {
+        "vertices": 36,
+        "triangles": 60,
+        "region": "hand_R"
+      },
+      "Salve_Skull_Interior": {
+        "vertices": 1106,
+        "triangles": 2208,
+        "region": "head"
+      },
+      "Salve_UpperBack_Repair": {
+        "vertices": 198,
+        "triangles": 320,
+        "region": "body"
+      },
+      "Salve_Headset_Rim_L": {
+        "vertices": 800,
+        "triangles": 1600,
+        "region": "head"
+      },
+      "Salve_Headset_Rim_R": {
+        "vertices": 800,
+        "triangles": 1600,
+        "region": "head"
+      },
+      "Salve_Back_Central_Housing": {
+        "vertices": 501,
+        "triangles": 950,
+        "region": "body"
+      },
+      "Salve_Back_Unit_Frame": {
+        "vertices": 512,
+        "triangles": 1024,
+        "region": "body"
+      },
+      "Salve_Back_Unit_Light": {
+        "vertices": 512,
+        "triangles": 1024,
+        "region": "body"
+      },
+      "Salve_Back_Unit_Core": {
+        "vertices": 128,
+        "triangles": 252,
+        "region": "body"
+      },
+      "Salve_Back_Diamond_0_Border": {
+        "vertices": 4,
+        "triangles": 2,
+        "region": "body"
+      },
+      "Salve_Back_Diamond_0_Light": {
+        "vertices": 4,
+        "triangles": 2,
+        "region": "body"
+      },
+      "Salve_Back_Diamond_1_Border": {
+        "vertices": 4,
+        "triangles": 2,
+        "region": "body"
+      },
+      "Salve_Back_Diamond_1_Light": {
+        "vertices": 4,
+        "triangles": 2,
+        "region": "body"
+      },
+      "Salve_Back_Diamond_2_Border": {
+        "vertices": 4,
+        "triangles": 2,
+        "region": "body"
+      },
+      "Salve_Back_Diamond_2_Light": {
+        "vertices": 4,
+        "triangles": 2,
+        "region": "body"
+      },
+      "Salve_Back_Panel_L": {
+        "vertices": 256,
+        "triangles": 496,
+        "region": "body"
+      },
+      "Salve_Back_Light_L": {
+        "vertices": 256,
+        "triangles": 496,
+        "region": "body"
+      },
+      "Salve_Back_Panel_R": {
+        "vertices": 256,
+        "triangles": 496,
+        "region": "body"
+      },
+      "Salve_Back_Light_R": {
+        "vertices": 256,
+        "triangles": 496,
+        "region": "body"
+      },
+      "Salve_Hair": {
+        "vertices": 40754,
+        "triangles": 81584,
+        "region": "hair_mixed"
+      },
+      "SALVE_Sclera.L": {
+        "vertices": 513,
+        "triangles": 960,
+        "region": "head"
+      },
+      "SALVE_Iris.L": {
+        "vertices": 513,
+        "triangles": 960,
+        "region": "eye.L"
+      },
+      "SALVE_Eyeliner.L": {
+        "vertices": 192,
+        "triangles": 192,
+        "region": "head"
+      },
+      "SALVE_Sclera.R": {
+        "vertices": 513,
+        "triangles": 960,
+        "region": "head"
+      },
+      "SALVE_Iris.R": {
+        "vertices": 513,
+        "triangles": 960,
+        "region": "eye.R"
+      },
+      "SALVE_Eyeliner.R": {
+        "vertices": 192,
+        "triangles": 192,
+        "region": "head"
+      },
+      "SALVE_Mouth_Interior": {
+        "vertices": 762,
+        "triangles": 1520,
+        "region": "head"
+      },
+      "SALVE_Teeth_Upper": {
+        "vertices": 50,
+        "triangles": 48,
+        "region": "head"
+      },
+      "SALVE_Tongue": {
+        "vertices": 354,
+        "triangles": 704,
+        "region": "head"
+      }
+    },
+    "actions": {
+      "Idle_Breathe": {
+        "rig_action": "SALVE_Idle_Breathe_FullHairReset_v2",
+        "face_action": "SALVE_Face_Idle_Breathe",
+        "frames": [
+          1,
+          121
+        ]
+      },
+      "Look_Around": {
+        "rig_action": "SALVE_Look_Around_FullHairReset_v2",
+        "face_action": "SALVE_Face_Look_Around",
+        "frames": [
+          1,
+          121
+        ]
+      },
+      "Walk_InPlace": {
+        "rig_action": "SALVE_Walk_InPlace_FullHairReset_v2",
+        "face_action": "SALVE_Face_Walk_InPlace",
+        "frames": [
+          1,
+          61
+        ]
+      },
+      "Sit_Down": {
+        "rig_action": "SALVE_Sit_Down_FullHairReset_v2",
+        "face_action": "SALVE_Face_Sit_Down",
+        "frames": [
+          1,
+          91
+        ]
+      },
+      "Kneel": {
+        "rig_action": "SALVE_Kneel_FullHair_v2",
+        "face_action": "SALVE_Face_Kneel",
+        "frames": [
+          1,
+          91
+        ]
+      },
+      "Gentle_Dance": {
+        "rig_action": "SALVE_Gentle_Dance_FullHairReset_v2",
+        "face_action": "SALVE_Face_Gentle_Dance",
+        "frames": [
+          1,
+          121
+        ]
+      },
+      "Wave": {
+        "rig_action": "SALVE_Wave_FullHairReset_v2",
+        "face_action": "SALVE_Face_Wave",
+        "frames": [
+          1,
+          91
+        ]
+      },
+      "Talk_Demo": {
+        "rig_action": "SALVE_Talk_Demo_FullHairReset_v2",
+        "face_action": "SALVE_Face_Talk_Demo",
+        "frames": [
+          1,
+          121
+        ]
+      },
+      "Expressions_Demo": {
+        "rig_action": "SALVE_Expressions_Demo_FullHairReset_v2",
+        "face_action": "SALVE_Face_Expressions_Demo",
+        "frames": [
+          1,
+          121
+        ]
+      },
+      "Crouch": {
+        "rig_action": "SALVE_Crouch_FullHairReset_v2",
+        "face_action": "SALVE_Face_Crouch",
+        "frames": [
+          1,
+          91
+        ],
+        "seconds": 3.0,
+        "fps": 30,
+        "loop": false,
+        "hold_frames": [
+          64,
+          91
+        ],
+        "hold_seconds": [
+          2.1,
+          3.0
+        ],
+        "reverse_frames": [
+          64,
+          1
+        ],
+        "reverse_transition_seconds": 2.1,
+        "speech_layer": "Drive facial morphs independently during the hold"
+      }
+    },
+    "triangles_total": 158296,
+    "original_triangles": 2000000,
+    "version": "2.0",
+    "source_v1_sha256": "1213584608f66e3860fafe0bc6a6af3bc80a226308f1230d9db11154ea6eb7b4",
+    "refinements_v2": {
+      "hair": {
+        "method": "Original uncut source hair curtain, original UVs, silhouette-aware reduction, thin interior, continuous C/L/R skinning.",
+        "requested_change": "Restore full rear coverage of back and hips, without the v1 center opening.",
+        "source_hair_triangles": 1189485,
+        "source_bounds": [
+          [
+            -0.3088816702365875,
+            -0.12064456194639206,
+            -0.14069825410842896
+          ],
+          [
+            0.3100278675556183,
+            0.49747034907341003,
+            0.11330565065145493
+          ]
+        ],
+        "reduced_outer_bounds": [
+          [
+            -0.3088289797306061,
+            -0.12077584117650986,
+            -0.1406230926513672
+          ],
+          [
+            0.310089647769928,
+            0.49756577610969543,
+            0.11331925541162491
+          ]
+        ],
+        "outer_surface_triangles": 38063,
+        "vertices": 40754,
+        "triangles": 81584,
+        "boundary_vertices_preserved": 2729,
+        "interior_thickness_source_units": 0.0006,
+        "silhouette_displacement_applied": false,
+        "original_uvs_retained": true,
+        "actions_modified": false,
+        "previous_hair": {
+          "Salve_Hair": {
+            "vertices": 21922,
+            "triangles": 41999
+          }
+        },
+        "interface": {
+          "body_hair_faces_material_corrected": 4350,
+          "body_hair_vertices_smoothed": 2766
+        },
+        "weights": {
+          "max_influences": 4,
+          "max_sum_error": 0.0,
+          "unweighted_vertices": 0,
+          "non_hair_bones": [],
+          "ok": true
+        }
+      },
+      "eyes": {
+        "ok": true,
+        "version": "2.0",
+        "changed_objects": [
+          "SALVE_Iris.L",
+          "SALVE_Iris.R"
+        ],
+        "material": "SALVE_Iris_Azure_Cyan_v2",
+        "texture_resolution": [
+          512,
+          512
+        ],
+        "base_texture": "work\\recovered\\modeling\\v2\\assets\\SALVE_Iris_Azure_Cyan_512.png",
+        "emission_texture": "work\\recovered\\modeling\\v2\\assets\\SALVE_Iris_Glow_Mask_512.png",
+        "packed_textures": true,
+        "emission_strength": 0.72,
+        "geometry_shapes_drivers_unchanged": true,
+        "geometry_sha256": "0354426e00831ed565e8b5dcc902e7f16105f4f19df4bb3e8e55e0c9ae4ced24",
+        "facial_shapes": {
+          "SALVE_Eyeliner.L": 3,
+          "SALVE_Eyeliner.R": 3,
+          "Salve_Body": 24
+        },
+        "driver_counts": {
+          "SALVE_Eyeliner.L": 3,
+          "SALVE_Eyeliner.R": 3,
+          "Salve_Body": 0
+        },
+        "sclera_material_unchanged": true
+      },
+      "crouch": {
+        "clip_name": "Crouch",
+        "clip": {
+          "rig_action": "SALVE_Crouch",
+          "face_action": "SALVE_Face_Crouch",
+          "frames": [
+            1,
+            91
+          ],
+          "seconds": 3.0,
+          "fps": 30,
+          "loop": false,
+          "hold_frames": [
+            64,
+            91
+          ],
+          "hold_seconds": [
+            2.1,
+            3.0
+          ],
+          "reverse_frames": [
+            64,
+            1
+          ],
+          "reverse_transition_seconds": 2.1,
+          "speech_layer": "Drive facial morphs independently during the hold"
+        },
+        "existing_actions_unchanged": true,
+        "pose_samples": [
+          {
+            "frame": 1,
+            "seconds": 0.0,
+            "crouch_fraction": 0.0,
+            "pelvis": [
+              0.0,
+              0.07999998331069946,
+              0.04500000178813934
+            ],
+            "knees": {
+              "L": [
+                0.06700000166893005,
+                -0.15800005197525024,
+                0.04800000041723251
+              ],
+              "R": [
+                -0.06700000166893005,
+                -0.15800005197525024,
+                0.04800000041723251
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09200000017881393,
+                -0.3970000445842743,
+                0.03200000151991844
+              ],
+              "R": [
+                -0.09200000017881393,
+                -0.3970000147819519,
+                0.03200000151991844
+              ]
+            }
+          },
+          {
+            "frame": 2,
+            "seconds": 0.03333333333333333,
+            "crouch_fraction": 0.0007478594024323427,
+            "pelvis": [
+              0.0,
+              0.07979810237884521,
+              0.04494166746735573
+            ],
+            "knees": {
+              "L": [
+                0.06700000166893005,
+                -0.15816089510917664,
+                0.05024487525224686
+              ],
+              "R": [
+                -0.06699999421834946,
+                -0.15816089510917664,
+                0.05024487525224686
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09200000762939453,
+                -0.3970000147819519,
+                0.03200000524520874
+              ],
+              "R": [
+                -0.09199999272823334,
+                -0.3970000147819519,
+                0.03200000524520874
+              ]
+            }
+          },
+          {
+            "frame": 3,
+            "seconds": 0.06666666666666667,
+            "crouch_fraction": 0.0029594436245985755,
+            "pelvis": [
+              0.0,
+              0.07920104265213013,
+              0.04476916417479515
+            ],
+            "knees": {
+              "L": [
+                0.06699997931718826,
+                -0.15858674049377441,
+                0.055154845118522644
+              ],
+              "R": [
+                -0.06699997931718826,
+                -0.15858674049377441,
+                0.055154845118522644
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09200000017881393,
+                -0.39699995517730713,
+                0.03199993073940277
+              ],
+              "R": [
+                -0.09200000017881393,
+                -0.39699995517730713,
+                0.03199993073940277
+              ]
+            }
+          },
+          {
+            "frame": 4,
+            "seconds": 0.1,
+            "crouch_fraction": 0.006586761688802504,
+            "pelvis": [
+              0.0,
+              0.07822167873382568,
+              0.044486235827207565
+            ],
+            "knees": {
+              "L": [
+                0.06699996441602707,
+                -0.15921735763549805,
+                0.06092138960957527
+              ],
+              "R": [
+                -0.06699996441602707,
+                -0.15921735763549805,
+                0.06092138960957527
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09200000017881393,
+                -0.39699995517730713,
+                0.031999967992305756
+              ],
+              "R": [
+                -0.09200000017881393,
+                -0.39699995517730713,
+                0.03199996054172516
+              ]
+            }
+          },
+          {
+            "frame": 5,
+            "seconds": 0.13333333333333333,
+            "crouch_fraction": 0.011581822617347937,
+            "pelvis": [
+              0.0,
+              0.07687294483184814,
+              0.04409661889076233
+            ],
+            "knees": {
+              "L": [
+                0.06699994206428528,
+                -0.16002517938613892,
+                0.06692782789468765
+              ],
+              "R": [
+                -0.06699994206428528,
+                -0.16002517938613892,
+                0.06692782789468765
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09200000017881393,
+                -0.3970000147819519,
+                0.03199998289346695
+              ],
+              "R": [
+                -0.09199999272823334,
+                -0.3969999849796295,
+                0.03199997544288635
+              ]
+            }
+          },
+          {
+            "frame": 6,
+            "seconds": 0.16666666666666666,
+            "crouch_fraction": 0.01789663543253868,
+            "pelvis": [
+              0.0,
+              0.07516789436340332,
+              0.04360406473278999
+            ],
+            "knees": {
+              "L": [
+                0.06699992716312408,
+                -0.16099414229393005,
+                0.07296611368656158
+              ],
+              "R": [
+                -0.06699991971254349,
+                -0.16099414229393005,
+                0.07296611368656158
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09200000017881393,
+                -0.3970000445842743,
+                0.03200002387166023
+              ],
+              "R": [
+                -0.09199999272823334,
+                -0.3970000147819519,
+                0.032000016421079636
+              ]
+            }
+          },
+          {
+            "frame": 7,
+            "seconds": 0.2,
+            "crouch_fraction": 0.025483209156678538,
+            "pelvis": [
+              0.0,
+              0.07311952114105225,
+              0.043012309819459915
+            ],
+            "knees": {
+              "L": [
+                0.0669999048113823,
+                -0.16211163997650146,
+                0.07895156741142273
+              ],
+              "R": [
+                -0.0669998973608017,
+                -0.16211163997650146,
+                0.07895156741142273
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09200000017881393,
+                -0.3970000445842743,
+                0.032000042498111725
+              ],
+              "R": [
+                -0.09199999272823334,
+                -0.3970000147819519,
+                0.03200002759695053
+              ]
+            }
+          },
+          {
+            "frame": 8,
+            "seconds": 0.23333333333333334,
+            "crouch_fraction": 0.034293552812071325,
+            "pelvis": [
+              0.0,
+              0.07074081897735596,
+              0.042325105518102646
+            ],
+            "knees": {
+              "L": [
+                0.0669998824596405,
+                -0.16336655616760254,
+                0.08484365046024323
+              ],
+              "R": [
+                -0.0669998824596405,
+                -0.16336655616760254,
+                0.08484365046024323
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199999272823334,
+                -0.39699995517730713,
+                0.03199997544288635
+              ],
+              "R": [
+                -0.09199999272823334,
+                -0.39699995517730713,
+                0.031999967992305756
+              ]
+            }
+          },
+          {
+            "frame": 9,
+            "seconds": 0.26666666666666666,
+            "crouch_fraction": 0.04427967542102084,
+            "pelvis": [
+              0.0,
+              0.06804442405700684,
+              0.04154618829488754
+            ],
+            "knees": {
+              "L": [
+                0.06699986755847931,
+                -0.16474875807762146,
+                0.09062038362026215
+              ],
+              "R": [
+                -0.06699986010789871,
+                -0.16474875807762146,
+                0.09062038362026215
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09200000017881393,
+                -0.39700010418891907,
+                0.03200004622340202
+              ],
+              "R": [
+                -0.09199999272823334,
+                -0.3970000743865967,
+                0.032000042498111725
+              ]
+            }
+          },
+          {
+            "frame": 10,
+            "seconds": 0.3,
+            "crouch_fraction": 0.0553935860058309,
+            "pelvis": [
+              0.0,
+              0.06504380702972412,
+              0.04067930206656456
+            ],
+            "knees": {
+              "L": [
+                0.06699984520673752,
+                -0.16624774038791656,
+                0.09626847505569458
+              ],
+              "R": [
+                -0.06699984520673752,
+                -0.16624774038791656,
+                0.09626847505569458
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199999272823334,
+                -0.39699995517730713,
+                0.031999967992305756
+              ],
+              "R": [
+                -0.09199999272823334,
+                -0.39699995517730713,
+                0.03199996054172516
+              ]
+            }
+          },
+          {
+            "frame": 11,
+            "seconds": 0.3333333333333333,
+            "crouch_fraction": 0.0675872935888053,
+            "pelvis": [
+              0.0,
+              0.061751365661621094,
+              0.03972819447517395
+            ],
+            "knees": {
+              "L": [
+                0.06699982285499573,
+                -0.1678541898727417,
+                0.1017795205116272
+              ],
+              "R": [
+                -0.06699982285499573,
+                -0.1678541898727417,
+                0.1017795205116272
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199999272823334,
+                -0.39700010418891907,
+                0.03199998289346695
+              ],
+              "R": [
+                -0.09199999272823334,
+                -0.3970000743865967,
+                0.031999967992305756
+              ]
+            }
+          },
+          {
+            "frame": 12,
+            "seconds": 0.36666666666666664,
+            "crouch_fraction": 0.08081280719224784,
+            "pelvis": [
+              0.0,
+              0.05818057060241699,
+              0.03869660198688507
+            ],
+            "knees": {
+              "L": [
+                0.06699980795383453,
+                -0.16955800354480743,
+                0.1071476936340332
+              ],
+              "R": [
+                -0.06699980050325394,
+                -0.16955800354480743,
+                0.1071476936340332
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199999272823334,
+                -0.3970000445842743,
+                0.03200005739927292
+              ],
+              "R": [
+                -0.09199997782707214,
+                -0.3970000147819519,
+                0.03200005739927292
+              ]
+            }
+          },
+          {
+            "frame": 13,
+            "seconds": 0.4,
+            "crouch_fraction": 0.09502213583846235,
+            "pelvis": [
+              0.0,
+              0.054344117641448975,
+              0.03758827596902847
+            ],
+            "knees": {
+              "L": [
+                0.06699978560209274,
+                -0.17135001718997955,
+                0.11236884444952011
+              ],
+              "R": [
+                -0.06699978560209274,
+                -0.17135001718997955,
+                0.11236885190010071
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199998527765274,
+                -0.3969999849796295,
+                0.03200005739927292
+              ],
+              "R": [
+                -0.09199998527765274,
+                -0.3969999849796295,
+                0.032000064849853516
+              ]
+            }
+          },
+          {
+            "frame": 14,
+            "seconds": 0.43333333333333335,
+            "crouch_fraction": 0.11016728854975265,
+            "pelvis": [
+              0.0,
+              0.050254881381988525,
+              0.036406952887773514
+            ],
+            "knees": {
+              "L": [
+                0.06699977070093155,
+                -0.1732209473848343,
+                0.11743997037410736
+              ],
+              "R": [
+                -0.06699976325035095,
+                -0.1732209473848343,
+                0.11743998527526855
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199998527765274,
+                -0.3970000147819519,
+                0.032000042498111725
+              ],
+              "R": [
+                -0.09199997782707214,
+                -0.3970000147819519,
+                0.03200004994869232
+              ]
+            }
+          },
+          {
+            "frame": 15,
+            "seconds": 0.4666666666666667,
+            "crouch_fraction": 0.1262002743484225,
+            "pelvis": [
+              0.0,
+              0.04592597484588623,
+              0.035156380385160446
+            ],
+            "knees": {
+              "L": [
+                0.06699974834918976,
+                -0.1751614511013031,
+                0.12235881388187408
+              ],
+              "R": [
+                -0.06699974834918976,
+                -0.1751614511013031,
+                0.12235881388187408
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199998527765274,
+                -0.3970000147819519,
+                0.032000020146369934
+              ],
+              "R": [
+                -0.09199998527765274,
+                -0.3970000147819519,
+                0.03199999779462814
+              ]
+            }
+          },
+          {
+            "frame": 16,
+            "seconds": 0.5,
+            "crouch_fraction": 0.14307310225677572,
+            "pelvis": [
+              0.0,
+              0.0413702130317688,
+              0.033840298652648926
+            ],
+            "knees": {
+              "L": [
+                0.06699973344802856,
+                -0.1771625429391861,
+                0.12712371349334717
+              ],
+              "R": [
+                -0.06699972599744797,
+                -0.1771625429391861,
+                0.12712371349334717
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199997782707214,
+                -0.3970000743865967,
+                0.03200002759695053
+              ],
+              "R": [
+                -0.09199997037649155,
+                -0.3970000743865967,
+                0.032000020146369934
+              ]
+            }
+          },
+          {
+            "frame": 17,
+            "seconds": 0.5333333333333333,
+            "crouch_fraction": 0.16073778129711613,
+            "pelvis": [
+              0.0,
+              0.03660088777542114,
+              0.032462455332279205
+            ],
+            "knees": {
+              "L": [
+                0.06699971854686737,
+                -0.1792149543762207,
+                0.13173341751098633
+              ],
+              "R": [
+                -0.06699971109628677,
+                -0.1792149543762207,
+                0.13173343241214752
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199997782707214,
+                -0.39699995517730713,
+                0.031999967992305756
+              ],
+              "R": [
+                -0.09199997782707214,
+                -0.39699995517730713,
+                0.03199996054172516
+              ]
+            }
+          },
+          {
+            "frame": 18,
+            "seconds": 0.5666666666666667,
+            "crouch_fraction": 0.17914632049174756,
+            "pelvis": [
+              0.0,
+              0.031630516052246094,
+              0.03102658875286579
+            ],
+            "knees": {
+              "L": [
+                0.06699969619512558,
+                -0.18131014704704285,
+                0.13618707656860352
+              ],
+              "R": [
+                -0.06699968874454498,
+                -0.18131016194820404,
+                0.13618706166744232
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199997037649155,
+                -0.3970000147819519,
+                0.03200005739927292
+              ],
+              "R": [
+                -0.09199996292591095,
+                -0.3970000147819519,
+                0.03199999779462814
+              ]
+            }
+          },
+          {
+            "frame": 19,
+            "seconds": 0.6,
+            "crouch_fraction": 0.19825072886297376,
+            "pelvis": [
+              0.0,
+              0.02647233009338379,
+              0.029536444693803787
+            ],
+            "knees": {
+              "L": [
+                0.06699968129396439,
+                -0.18343906104564667,
+                0.14048407971858978
+              ],
+              "R": [
+                -0.06699967384338379,
+                -0.18343906104564667,
+                0.14048407971858978
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199997037649155,
+                -0.3970000147819519,
+                0.03200003504753113
+              ],
+              "R": [
+                -0.09199996292591095,
+                -0.3970000147819519,
+                0.03200001269578934
+              ]
+            }
+          },
+          {
+            "frame": 20,
+            "seconds": 0.6333333333333333,
+            "crouch_fraction": 0.21800301543309855,
+            "pelvis": [
+              0.0,
+              0.02113926410675049,
+              0.027995767071843147
+            ],
+            "knees": {
+              "L": [
+                0.0669996589422226,
+                -0.18559299409389496,
+                0.14462406933307648
+              ],
+              "R": [
+                -0.0669996589422226,
+                -0.18559299409389496,
+                0.14462405443191528
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199996292591095,
+                -0.39699995517730713,
+                0.03200003504753113
+              ],
+              "R": [
+                -0.09199996292591095,
+                -0.39699995517730713,
+                0.03200000524520874
+              ]
+            }
+          },
+          {
+            "frame": 21,
+            "seconds": 0.6666666666666666,
+            "crouch_fraction": 0.23835518922442578,
+            "pelvis": [
+              0.0,
+              0.0156441330909729,
+              0.026408297941088676
+            ],
+            "knees": {
+              "L": [
+                0.0669996440410614,
+                -0.18776345252990723,
+                0.14860691130161285
+              ],
+              "R": [
+                -0.0669996365904808,
+                -0.18776345252990723,
+                0.14860691130161285
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199996292591095,
+                -0.3970000147819519,
+                0.03200014680624008
+              ],
+              "R": [
+                -0.09199996292591095,
+                -0.3970000147819519,
+                0.03200013190507889
+              ]
+            }
+          },
+          {
+            "frame": 22,
+            "seconds": 0.7,
+            "crouch_fraction": 0.25925925925925924,
+            "pelvis": [
+              0.0,
+              0.010000050067901611,
+              0.02477777935564518
+            ],
+            "knees": {
+              "L": [
+                0.06699962913990021,
+                -0.18994179368019104,
+                0.15243257582187653
+              ],
+              "R": [
+                -0.06699962168931961,
+                -0.18994180858135223,
+                0.15243256092071533
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199996292591095,
+                -0.3969999849796295,
+                0.03200007230043411
+              ],
+              "R": [
+                -0.09199995547533035,
+                -0.3970000147819519,
+                0.03200003504753113
+              ]
+            }
+          },
+          {
+            "frame": 23,
+            "seconds": 0.7333333333333333,
+            "crouch_fraction": 0.28066723455990267,
+            "pelvis": [
+              0.0,
+              0.0042198896408081055,
+              0.02310795709490776
+            ],
+            "knees": {
+              "L": [
+                0.06699961423873901,
+                -0.19211970269680023,
+                0.15610136091709137
+              ],
+              "R": [
+                -0.06699960678815842,
+                -0.19211970269680023,
+                0.15610136091709137
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199995547533035,
+                -0.3970000147819519,
+                0.031999990344047546
+              ],
+              "R": [
+                -0.09199994802474976,
+                -0.3970000147819519,
+                0.03199998289346695
+              ]
+            }
+          },
+          {
+            "frame": 24,
+            "seconds": 0.7666666666666667,
+            "crouch_fraction": 0.30253112414866007,
+            "pelvis": [
+              0.0,
+              -0.0016834139823913574,
+              0.021402573212981224
+            ],
+            "knees": {
+              "L": [
+                0.06699959188699722,
+                -0.19428879022598267,
+                0.15961366891860962
+              ],
+              "R": [
+                -0.06699959188699722,
+                -0.19428879022598267,
+                0.15961366891860962
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199994802474976,
+                -0.39700010418891907,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199994802474976,
+                -0.3970000743865967,
+                0.0320000946521759
+              ]
+            }
+          },
+          {
+            "frame": 25,
+            "seconds": 0.8,
+            "crouch_fraction": 0.32480293704783497,
+            "pelvis": [
+              0.0,
+              -0.007696688175201416,
+              0.019665373489260674
+            ],
+            "knees": {
+              "L": [
+                0.06699958443641663,
+                -0.19644080102443695,
+                0.16296996176242828
+              ],
+              "R": [
+                -0.06699957698583603,
+                -0.19644080102443695,
+                0.16296996176242828
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199994802474976,
+                -0.3969999849796295,
+                0.03199997544288635
+              ],
+              "R": [
+                -0.09199994802474976,
+                -0.39699995517730713,
+                0.03199997544288635
+              ]
+            }
+          },
+          {
+            "frame": 26,
+            "seconds": 0.8333333333333334,
+            "crouch_fraction": 0.3474346822797314,
+            "pelvis": [
+              0.0,
+              -0.013807296752929688,
+              0.017900096252560616
+            ],
+            "knees": {
+              "L": [
+                0.06699956208467484,
+                -0.19856789708137512,
+                0.1661708950996399
+              ],
+              "R": [
+                -0.06699956208467484,
+                -0.19856789708137512,
+                0.1661708950996399
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199994057416916,
+                -0.3970000743865967,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199994057416916,
+                -0.3970000445842743,
+                0.0320000946521759
+              ]
+            }
+          },
+          {
+            "frame": 27,
+            "seconds": 0.8666666666666667,
+            "crouch_fraction": 0.3703783688666531,
+            "pelvis": [
+              0.0,
+              -0.020002126693725586,
+              0.016110489144921303
+            ],
+            "knees": {
+              "L": [
+                0.06699954718351364,
+                -0.20066213607788086,
+                0.16921722888946533
+              ],
+              "R": [
+                -0.06699954718351364,
+                -0.20066213607788086,
+                0.16921722888946533
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199993312358856,
+                -0.3970000147819519,
+                0.0320000946521759
+              ],
+              "R": [
+                -0.09199993312358856,
+                -0.3970000445842743,
+                0.03200007975101471
+              ]
+            }
+          },
+          {
+            "frame": 28,
+            "seconds": 0.9,
+            "crouch_fraction": 0.39358600583090375,
+            "pelvis": [
+              0.0,
+              -0.0262681245803833,
+              0.01430029422044754
+            ],
+            "knees": {
+              "L": [
+                0.06699953228235245,
+                -0.2027156800031662,
+                0.17210984230041504
+              ],
+              "R": [
+                -0.06699953228235245,
+                -0.2027156800031662,
+                0.17210984230041504
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199992567300797,
+                -0.3969999849796295,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199993312358856,
+                -0.3969999849796295,
+                0.03200012445449829
+              ]
+            }
+          },
+          {
+            "frame": 29,
+            "seconds": 0.9333333333333333,
+            "crouch_fraction": 0.4170096021947874,
+            "pelvis": [
+              0.0,
+              -0.0325925350189209,
+              0.012473251670598984
+            ],
+            "knees": {
+              "L": [
+                0.06699952483177185,
+                -0.20472127199172974,
+                0.17484967410564423
+              ],
+              "R": [
+                -0.06699951738119125,
+                -0.20472125709056854,
+                0.17484967410564423
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199992567300797,
+                -0.3970000147819519,
+                0.03200000524520874
+              ],
+              "R": [
+                -0.09199992567300797,
+                -0.3970000147819519,
+                0.031999990344047546
+              ]
+            }
+          },
+          {
+            "frame": 30,
+            "seconds": 0.9666666666666667,
+            "crouch_fraction": 0.44060116698060764,
+            "pelvis": [
+              0.0,
+              -0.03896230459213257,
+              0.010633111000061035
+            ],
+            "knees": {
+              "L": [
+                0.06699950993061066,
+                -0.20667146146297455,
+                0.1774379462003708
+              ],
+              "R": [
+                -0.06699950248003006,
+                -0.20667146146297455,
+                0.1774379462003708
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199992567300797,
+                -0.3970000147819519,
+                0.0320001095533371
+              ],
+              "R": [
+                -0.09199992567300797,
+                -0.3970000445842743,
+                0.0320000946521759
+              ]
+            }
+          },
+          {
+            "frame": 31,
+            "seconds": 1.0,
+            "crouch_fraction": 0.4643127092106683,
+            "pelvis": [
+              0.0,
+              -0.0453643798828125,
+              0.008783608675003052
+            ],
+            "knees": {
+              "L": [
+                0.06699949502944946,
+                -0.20855922996997833,
+                0.17987574636936188
+              ],
+              "R": [
+                -0.06699948757886887,
+                -0.20855922996997833,
+                0.17987574636936188
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199991077184677,
+                -0.3969999849796295,
+                0.0320001095533371
+              ],
+              "R": [
+                -0.09199991822242737,
+                -0.3969999849796295,
+                0.0320000946521759
+              ]
+            }
+          },
+          {
+            "frame": 32,
+            "seconds": 1.0333333333333334,
+            "crouch_fraction": 0.48809623790727347,
+            "pelvis": [
+              0.0,
+              -0.05178588628768921,
+              0.006928496062755585
+            ],
+            "knees": {
+              "L": [
+                0.06699948012828827,
+                -0.21037790179252625,
+                0.18216444551944733
+              ],
+              "R": [
+                -0.06699947267770767,
+                -0.21037790179252625,
+                0.18216444551944733
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199991077184677,
+                -0.3970000147819519,
+                0.03200016915798187
+              ],
+              "R": [
+                -0.09199990332126617,
+                -0.3970000147819519,
+                0.03200015425682068
+              ]
+            }
+          },
+          {
+            "frame": 33,
+            "seconds": 1.0666666666666667,
+            "crouch_fraction": 0.5119037620927265,
+            "pelvis": [
+              0.0,
+              -0.058214008808135986,
+              0.005071509629487991
+            ],
+            "knees": {
+              "L": [
+                0.06699947267770767,
+                -0.2121211290359497,
+                0.18430547416210175
+              ],
+              "R": [
+                -0.06699946522712708,
+                -0.2121211439371109,
+                0.18430547416210175
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199990332126617,
+                -0.3970000147819519,
+                0.03200003504753113
+              ],
+              "R": [
+                -0.09199990332126617,
+                -0.3970000445842743,
+                0.03200003504753113
+              ]
+            }
+          },
+          {
+            "frame": 34,
+            "seconds": 1.1,
+            "crouch_fraction": 0.5356872907893316,
+            "pelvis": [
+              0.0,
+              -0.06463545560836792,
+              0.003216393291950226
+            ],
+            "knees": {
+              "L": [
+                0.06699945777654648,
+                -0.21378269791603088,
+                0.18630032241344452
+              ],
+              "R": [
+                -0.06699945032596588,
+                -0.21378269791603088,
+                0.18630032241344452
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199989587068558,
+                -0.39699995517730713,
+                0.03200007975101471
+              ],
+              "R": [
+                -0.09199989587068558,
+                -0.3970000147819519,
+                0.0320000946521759
+              ]
+            }
+          },
+          {
+            "frame": 35,
+            "seconds": 1.1333333333333333,
+            "crouch_fraction": 0.5593988330193923,
+            "pelvis": [
+              0.0,
+              -0.07103759050369263,
+              0.0013668909668922424
+            ],
+            "knees": {
+              "L": [
+                0.06699945032596588,
+                -0.21535718441009521,
+                0.18815074861049652
+              ],
+              "R": [
+                -0.06699944287538528,
+                -0.21535718441009521,
+                0.18815073370933533
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199990332126617,
+                -0.39699995517730713,
+                0.032000020146369934
+              ],
+              "R": [
+                -0.09199989587068558,
+                -0.39699995517730713,
+                0.03199997544288635
+              ]
+            }
+          },
+          {
+            "frame": 36,
+            "seconds": 1.1666666666666667,
+            "crouch_fraction": 0.5829903978052127,
+            "pelvis": [
+              0.0,
+              -0.07740730047225952,
+              -0.0004732497036457062
+            ],
+            "knees": {
+              "L": [
+                0.06699943542480469,
+                -0.21683934330940247,
+                0.1898585855960846
+              ],
+              "R": [
+                -0.06699942797422409,
+                -0.21683934330940247,
+                0.1898585855960846
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199988842010498,
+                -0.39699995517730713,
+                0.0320001095533371
+              ],
+              "R": [
+                -0.09199988842010498,
+                -0.3969999849796295,
+                0.0320001095533371
+              ]
+            }
+          },
+          {
+            "frame": 37,
+            "seconds": 1.2,
+            "crouch_fraction": 0.6064139941690961,
+            "pelvis": [
+              0.0,
+              -0.08373165130615234,
+              -0.0023002885282039642
+            ],
+            "knees": {
+              "L": [
+                0.06699942797422409,
+                -0.21822461485862732,
+                0.1914256513118744
+              ],
+              "R": [
+                -0.0669994205236435,
+                -0.21822461485862732,
+                0.1914256513118744
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199989587068558,
+                -0.39699995517730713,
+                0.03200003504753113
+              ],
+              "R": [
+                -0.09199988842010498,
+                -0.39699995517730713,
+                0.03200003504753113
+              ]
+            }
+          },
+          {
+            "frame": 38,
+            "seconds": 1.2333333333333334,
+            "crouch_fraction": 0.6296216311333469,
+            "pelvis": [
+              0.0,
+              -0.08999776840209961,
+              -0.004110485315322876
+            ],
+            "knees": {
+              "L": [
+                0.0669994205236435,
+                -0.21950897574424744,
+                0.19285432994365692
+              ],
+              "R": [
+                -0.0669994130730629,
+                -0.21950897574424744,
+                0.19285432994365692
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199988842010498,
+                -0.3969999849796295,
+                0.032000020146369934
+              ],
+              "R": [
+                -0.09199988842010498,
+                -0.3970000147819519,
+                0.032000020146369934
+              ]
+            }
+          },
+          {
+            "frame": 39,
+            "seconds": 1.2666666666666666,
+            "crouch_fraction": 0.6525653177202686,
+            "pelvis": [
+              0.0,
+              -0.09619253873825073,
+              -0.005900092422962189
+            ],
+            "knees": {
+              "L": [
+                0.0669994056224823,
+                -0.22068899869918823,
+                0.19414685666561127
+              ],
+              "R": [
+                -0.0669993981719017,
+                -0.22068899869918823,
+                0.19414685666561127
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199988096952438,
+                -0.39699995517730713,
+                0.031999990344047546
+              ],
+              "R": [
+                -0.09199988096952438,
+                -0.39699995517730713,
+                0.031999990344047546
+              ]
+            }
+          },
+          {
+            "frame": 40,
+            "seconds": 1.3,
+            "crouch_fraction": 0.675197062952165,
+            "pelvis": [
+              0.0,
+              -0.102303147315979,
+              -0.007665369659662247
+            ],
+            "knees": {
+              "L": [
+                0.0669993981719017,
+                -0.2217620313167572,
+                0.1953059732913971
+              ],
+              "R": [
+                -0.0669993907213211,
+                -0.2217620313167572,
+                0.1953059732913971
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199988096952438,
+                -0.3970000743865967,
+                0.03200019896030426
+              ],
+              "R": [
+                -0.09199987351894379,
+                -0.3970000743865967,
+                0.032000213861465454
+              ]
+            }
+          },
+          {
+            "frame": 41,
+            "seconds": 1.3333333333333333,
+            "crouch_fraction": 0.6974688758513399,
+            "pelvis": [
+              0.0,
+              -0.10831648111343384,
+              -0.009402569383382797
+            ],
+            "knees": {
+              "L": [
+                0.0669993907213211,
+                -0.22272613644599915,
+                0.19633445143699646
+              ],
+              "R": [
+                -0.06699938327074051,
+                -0.22272613644599915,
+                0.19633445143699646
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199987351894379,
+                -0.39699995517730713,
+                0.03200003504753113
+              ],
+              "R": [
+                -0.09199987351894379,
+                -0.39699995517730713,
+                0.032000020146369934
+              ]
+            }
+          },
+          {
+            "frame": 42,
+            "seconds": 1.3666666666666667,
+            "crouch_fraction": 0.7193327654400973,
+            "pelvis": [
+              0.0,
+              -0.1142197847366333,
+              -0.011107955127954483
+            ],
+            "knees": {
+              "L": [
+                0.06699938327074051,
+                -0.22358040511608124,
+                0.19723565876483917
+              ],
+              "R": [
+                -0.06699937582015991,
+                -0.22358040511608124,
+                0.19723565876483917
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199987351894379,
+                -0.3970000743865967,
+                0.0320000946521759
+              ],
+              "R": [
+                -0.09199986606836319,
+                -0.3970000445842743,
+                0.0320000946521759
+              ]
+            }
+          },
+          {
+            "frame": 43,
+            "seconds": 1.4,
+            "crouch_fraction": 0.7407407407407407,
+            "pelvis": [
+              0.0,
+              -0.1199999451637268,
+              -0.012777775526046753
+            ],
+            "knees": {
+              "L": [
+                0.06699937582015991,
+                -0.2243245244026184,
+                0.19801321625709534
+              ],
+              "R": [
+                -0.06699936836957932,
+                -0.2243245244026184,
+                0.19801321625709534
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199986606836319,
+                -0.3970000445842743,
+                0.0320001095533371
+              ],
+              "R": [
+                -0.09199986606836319,
+                -0.3970000445842743,
+                0.0320001095533371
+              ]
+            }
+          },
+          {
+            "frame": 44,
+            "seconds": 1.4333333333333333,
+            "crouch_fraction": 0.7616448107755742,
+            "pelvis": [
+              0.0,
+              -0.12564390897750854,
+              -0.01440829411149025
+            ],
+            "knees": {
+              "L": [
+                0.06699936836957932,
+                -0.22495929896831512,
+                0.19867108762264252
+              ],
+              "R": [
+                -0.06699936091899872,
+                -0.22495931386947632,
+                0.19867108762264252
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199985861778259,
+                -0.3969999849796295,
+                0.03200019896030426
+              ],
+              "R": [
+                -0.09199985861778259,
+                -0.3970000147819519,
+                0.03200019896030426
+              ]
+            }
+          },
+          {
+            "frame": 45,
+            "seconds": 1.4666666666666666,
+            "crouch_fraction": 0.7819969845669014,
+            "pelvis": [
+              0.0,
+              -0.1311390995979309,
+              -0.01599576324224472
+            ],
+            "knees": {
+              "L": [
+                0.06699936091899872,
+                -0.22548691928386688,
+                0.19921386241912842
+              ],
+              "R": [
+                -0.06699935346841812,
+                -0.2254869043827057,
+                0.19921386241912842
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998437166214,
+                -0.39699995517730713,
+                0.03200007975101471
+              ],
+              "R": [
+                -0.0919998437166214,
+                -0.39699995517730713,
+                0.03200007975101471
+              ]
+            }
+          },
+          {
+            "frame": 46,
+            "seconds": 1.5,
+            "crouch_fraction": 0.8017492711370262,
+            "pelvis": [
+              0.0,
+              -0.13647222518920898,
+              -0.01753643900156021
+            ],
+            "knees": {
+              "L": [
+                0.06699935346841812,
+                -0.22590994834899902,
+                0.19964662194252014
+              ],
+              "R": [
+                -0.06699934601783752,
+                -0.22590994834899902,
+                0.19964660704135895
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998437166214,
+                -0.3969999849796295,
+                0.032000020146369934
+              ],
+              "R": [
+                -0.0919998437166214,
+                -0.3970000147819519,
+                0.031999990344047546
+              ]
+            }
+          },
+          {
+            "frame": 47,
+            "seconds": 1.5333333333333334,
+            "crouch_fraction": 0.8208536795082525,
+            "pelvis": [
+              0.0,
+              -0.14163029193878174,
+              -0.019026584923267365
+            ],
+            "knees": {
+              "L": [
+                0.06699934601783752,
+                -0.22623229026794434,
+                0.19997510313987732
+              ],
+              "R": [
+                -0.06699933856725693,
+                -0.22623229026794434,
+                0.19997508823871613
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998437166214,
+                -0.39699992537498474,
+                0.03200003504753113
+              ],
+              "R": [
+                -0.0919998437166214,
+                -0.39699992537498474,
+                0.03200003504753113
+              ]
+            }
+          },
+          {
+            "frame": 48,
+            "seconds": 1.5666666666666667,
+            "crouch_fraction": 0.8392622187028839,
+            "pelvis": [
+              0.0,
+              -0.14660072326660156,
+              -0.020462453365325928
+            ],
+            "knees": {
+              "L": [
+                0.06699934601783752,
+                -0.22645945847034454,
+                0.20020560920238495
+              ],
+              "R": [
+                -0.06699933856725693,
+                -0.22645944356918335,
+                0.20020560920238495
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998437166214,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.0919998437166214,
+                -0.3970000147819519,
+                0.03200012445449829
+              ]
+            }
+          },
+          {
+            "frame": 49,
+            "seconds": 1.6,
+            "crouch_fraction": 0.8569268977432242,
+            "pelvis": [
+              0.0,
+              -0.15137016773223877,
+              -0.021840296685695648
+            ],
+            "knees": {
+              "L": [
+                0.06699933856725693,
+                -0.22659721970558167,
+                0.20034515857696533
+              ],
+              "R": [
+                -0.06699933111667633,
+                -0.22659721970558167,
+                0.20034515857696533
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998437166214,
+                -0.39699995517730713,
+                0.03200007975101471
+              ],
+              "R": [
+                -0.0919998437166214,
+                -0.39699995517730713,
+                0.0320000946521759
+              ]
+            }
+          },
+          {
+            "frame": 50,
+            "seconds": 1.6333333333333333,
+            "crouch_fraction": 0.8737997256515774,
+            "pelvis": [
+              0.0,
+              -0.1559259295463562,
+              -0.02315637469291687
+            ],
+            "knees": {
+              "L": [
+                0.06699933111667633,
+                -0.2266530692577362,
+                0.20040160417556763
+              ],
+              "R": [
+                -0.06699933111667633,
+                -0.2266530841588974,
+                0.20040160417556763
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998288154602,
+                -0.3970000147819519,
+                0.032000064849853516
+              ],
+              "R": [
+                -0.0919998288154602,
+                -0.3970000445842743,
+                0.032000064849853516
+              ]
+            }
+          },
+          {
+            "frame": 51,
+            "seconds": 1.6666666666666667,
+            "crouch_fraction": 0.8898327114502472,
+            "pelvis": [
+              0.0,
+              -0.16025489568710327,
+              -0.024406947195529938
+            ],
+            "knees": {
+              "L": [
+                0.06699933111667633,
+                -0.22663511335849762,
+                0.20038339495658875
+              ],
+              "R": [
+                -0.06699932366609573,
+                -0.22663506865501404,
+                0.20038339495658875
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998288154602,
+                -0.3970000743865967,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.0919998288154602,
+                -0.3970000743865967,
+                0.03200016915798187
+              ]
+            }
+          },
+          {
+            "frame": 52,
+            "seconds": 1.7,
+            "crouch_fraction": 0.9049778641615376,
+            "pelvis": [
+              0.0,
+              -0.16434401273727417,
+              -0.025588274002075195
+            ],
+            "knees": {
+              "L": [
+                0.06699932366609573,
+                -0.22655248641967773,
+                0.20029979944229126
+              ],
+              "R": [
+                -0.06699931621551514,
+                -0.22655248641967773,
+                0.20029979944229126
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998288154602,
+                -0.3970000445842743,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199982136487961,
+                -0.3970000743865967,
+                0.03200012445449829
+              ]
+            }
+          },
+          {
+            "frame": 53,
+            "seconds": 1.7333333333333334,
+            "crouch_fraction": 0.9191871928077522,
+            "pelvis": [
+              0.0,
+              -0.16818052530288696,
+              -0.026696600019931793
+            ],
+            "knees": {
+              "L": [
+                0.06699932366609573,
+                -0.22641530632972717,
+                0.20016086101531982
+              ],
+              "R": [
+                -0.06699931621551514,
+                -0.22641532123088837,
+                0.20016084611415863
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.0919998288154602,
+                -0.3970000445842743,
+                0.03200016915798187
+              ],
+              "R": [
+                -0.09199982136487961,
+                -0.3970000743865967,
+                0.032000184059143066
+              ]
+            }
+          },
+          {
+            "frame": 54,
+            "seconds": 1.7666666666666666,
+            "crouch_fraction": 0.9324127064111946,
+            "pelvis": [
+              0.0,
+              -0.17175132036209106,
+              -0.027728192508220673
+            ],
+            "knees": {
+              "L": [
+                0.06699932366609573,
+                -0.22623425722122192,
+                0.19997704029083252
+              ],
+              "R": [
+                -0.06699931621551514,
+                -0.22623425722122192,
+                0.19997702538967133
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199982136487961,
+                -0.39699995517730713,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199982136487961,
+                -0.3969999849796295,
+                0.03200012445449829
+              ]
+            }
+          },
+          {
+            "frame": 55,
+            "seconds": 1.8,
+            "crouch_fraction": 0.9446064139941691,
+            "pelvis": [
+              0.0,
+              -0.17504364252090454,
+              -0.028679296374320984
+            ],
+            "knees": {
+              "L": [
+                0.06699931621551514,
+                -0.2260206937789917,
+                0.19975967705249786
+              ],
+              "R": [
+                -0.06699931621551514,
+                -0.2260206937789917,
+                0.19975967705249786
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199981391429901,
+                -0.39699995517730713,
+                0.0320000946521759
+              ],
+              "R": [
+                -0.0919998288154602,
+                -0.3969999849796295,
+                0.0320001095533371
+              ]
+            }
+          },
+          {
+            "frame": 56,
+            "seconds": 1.8333333333333333,
+            "crouch_fraction": 0.9557203245789792,
+            "pelvis": [
+              0.0,
+              -0.1780443787574768,
+              -0.029546186327934265
+            ],
+            "knees": {
+              "L": [
+                0.06699931621551514,
+                -0.225786030292511,
+                0.19952015578746796
+              ],
+              "R": [
+                -0.06699930876493454,
+                -0.225786030292511,
+                0.19952018558979034
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199981391429901,
+                -0.39699995517730713,
+                0.032000139355659485
+              ],
+              "R": [
+                -0.09199981391429901,
+                -0.3969999849796295,
+                0.03200016915798187
+              ]
+            }
+          },
+          {
+            "frame": 57,
+            "seconds": 1.8666666666666667,
+            "crouch_fraction": 0.9657064471879286,
+            "pelvis": [
+              0.0,
+              -0.18074053525924683,
+              -0.03032509982585907
+            ],
+            "knees": {
+              "L": [
+                0.06699931621551514,
+                -0.2255418747663498,
+                0.19927042722702026
+              ],
+              "R": [
+                -0.06699930876493454,
+                -0.225541889667511,
+                0.19927042722702026
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199981391429901,
+                -0.3969998061656952,
+                0.0320000946521759
+              ],
+              "R": [
+                -0.09199981391429901,
+                -0.39699986577033997,
+                0.0320001095533371
+              ]
+            }
+          },
+          {
+            "frame": 58,
+            "seconds": 1.9,
+            "crouch_fraction": 0.9745167908433214,
+            "pelvis": [
+              0.0,
+              -0.18311941623687744,
+              -0.031012311577796936
+            ],
+            "knees": {
+              "L": [
+                0.06699931621551514,
+                -0.2253001481294632,
+                0.19902212917804718
+              ],
+              "R": [
+                -0.06699930876493454,
+                -0.2253001481294632,
+                0.19902212917804718
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199981391429901,
+                -0.3969999849796295,
+                0.03200015425682068
+              ],
+              "R": [
+                -0.09199981391429901,
+                -0.3970000147819519,
+                0.03200015425682068
+              ]
+            }
+          },
+          {
+            "frame": 59,
+            "seconds": 1.9333333333333333,
+            "crouch_fraction": 0.9821033645674613,
+            "pelvis": [
+              0.0,
+              -0.18516772985458374,
+              -0.03160405904054642
+            ],
+            "knees": {
+              "L": [
+                0.06699931621551514,
+                -0.2250714749097824,
+                0.1987868845462799
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.2250714749097824,
+                0.1987868845462799
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199981391429901,
+                -0.39699989557266235,
+                0.03200019896030426
+              ],
+              "R": [
+                -0.09199981391429901,
+                -0.39699992537498474,
+                0.03200019896030426
+              ]
+            }
+          },
+          {
+            "frame": 60,
+            "seconds": 1.9666666666666666,
+            "crouch_fraction": 0.988418177382652,
+            "pelvis": [
+              0.0,
+              -0.18687278032302856,
+              -0.03209661692380905
+            ],
+            "knees": {
+              "L": [
+                0.06699931621551514,
+                -0.22486679255962372,
+                0.19857552647590637
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.2248668223619461,
+                0.19857549667358398
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199981391429901,
+                -0.39699995517730713,
+                0.0320001095533371
+              ],
+              "R": [
+                -0.09199981391429901,
+                -0.39699995517730713,
+                0.032000064849853516
+              ]
+            }
+          },
+          {
+            "frame": 61,
+            "seconds": 2.0,
+            "crouch_fraction": 0.9934132383111975,
+            "pelvis": [
+              0.0,
+              -0.1882215142250061,
+              -0.03248623013496399
+            ],
+            "knees": {
+              "L": [
+                0.06699931621551514,
+                -0.22469545900821686,
+                0.19839824736118317
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22469550371170044,
+                0.19839820265769958
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199982136487961,
+                -0.3970000445842743,
+                0.032000213861465454
+              ],
+              "R": [
+                -0.09199981391429901,
+                -0.3970000445842743,
+                0.032000184059143066
+              ]
+            }
+          },
+          {
+            "frame": 62,
+            "seconds": 2.033333333333333,
+            "crouch_fraction": 0.9970405563754013,
+            "pelvis": [
+              0.0,
+              -0.18920093774795532,
+              -0.032769158482551575
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.2245658040046692,
+                0.19826379418373108
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.2245658040046692,
+                0.19826379418373108
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199980646371841,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199979901313782,
+                -0.3970000147819519,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 63,
+            "seconds": 2.066666666666667,
+            "crouch_fraction": 0.9992521405975676,
+            "pelvis": [
+              0.0,
+              -0.18979805707931519,
+              -0.03294166177511215
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22448450326919556,
+                0.1981794238090515
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22448450326919556,
+                0.1981794238090515
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000445842743,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000743865967,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 64,
+            "seconds": 2.1,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 65,
+            "seconds": 2.1333333333333333,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 66,
+            "seconds": 2.1666666666666665,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 67,
+            "seconds": 2.2,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 68,
+            "seconds": 2.2333333333333334,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 69,
+            "seconds": 2.2666666666666666,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 70,
+            "seconds": 2.3,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 71,
+            "seconds": 2.3333333333333335,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 72,
+            "seconds": 2.3666666666666667,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 73,
+            "seconds": 2.4,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 74,
+            "seconds": 2.433333333333333,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 75,
+            "seconds": 2.466666666666667,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 76,
+            "seconds": 2.5,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 77,
+            "seconds": 2.533333333333333,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 78,
+            "seconds": 2.566666666666667,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 79,
+            "seconds": 2.6,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 80,
+            "seconds": 2.6333333333333333,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 81,
+            "seconds": 2.6666666666666665,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 82,
+            "seconds": 2.7,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 83,
+            "seconds": 2.7333333333333334,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 84,
+            "seconds": 2.7666666666666666,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 85,
+            "seconds": 2.8,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 86,
+            "seconds": 2.8333333333333335,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 87,
+            "seconds": 2.8666666666666667,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 88,
+            "seconds": 2.9,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 89,
+            "seconds": 2.933333333333333,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 90,
+            "seconds": 2.966666666666667,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          },
+          {
+            "frame": 91,
+            "seconds": 3.0,
+            "crouch_fraction": 1.0,
+            "pelvis": [
+              0.0,
+              -0.1899999976158142,
+              -0.032999999821186066
+            ],
+            "knees": {
+              "L": [
+                0.06699930876493454,
+                -0.22445668280124664,
+                0.19815045595169067
+              ],
+              "R": [
+                -0.06699930131435394,
+                -0.22445668280124664,
+                0.19815045595169067
+              ]
+            },
+            "ankles": {
+              "L": [
+                0.09199979901313782,
+                -0.3970000147819519,
+                0.03200012445449829
+              ],
+              "R": [
+                -0.09199980646371841,
+                -0.3970000445842743,
+                0.032000139355659485
+              ]
+            }
+          }
+        ]
+      },
+      "kneel_hair": {
+        "clip": "Kneel",
+        "original_action_preserved": "SALVE_Kneel",
+        "rig_action": "SALVE_Kneel_FullHair_v2",
+        "affected_bones": [
+          "hair.back.L.03",
+          "hair.back.L.04",
+          "hair.back.C.03",
+          "hair.back.C.04",
+          "hair.back.R.03",
+          "hair.back.R.04"
+        ],
+        "end_local_scale_y": 0.9,
+        "rest_geometry_changed": false,
+        "rotation_changed": false,
+        "purpose": "Gather lower strands very slightly as knees fold; clear the boots while preserving vertical fall and complete rear width.",
+        "neutral_scale_clips": [
+          "Idle_Breathe",
+          "Look_Around",
+          "Walk_InPlace",
+          "Sit_Down",
+          "Gentle_Dance",
+          "Wave",
+          "Talk_Demo",
+          "Expressions_Demo",
+          "Crouch"
+        ]
+      }
+    },
+    "final_polish": {
+      "eyelid_material_faces_corrected": 388,
+      "new_lid_normals_smoothed": 526,
+      "hair_inner_vertices_tucked": 1142
+    }
+  },
+  "export_and_reimport": {
+    "file_version": "2.0 closed hair",
+    "clips": {
+      "ok": true,
+      "file": "outputs\\SALVE_Cabello_Cerrado\\SALVE_Animada.glb",
+      "bytes": 22831928,
+      "clip_count": 10,
+      "skin_count": 1,
+      "joint_count": 81,
+      "clips": {
+        "Idle_Breathe": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 4.0,
+          "keyframes_min": 121,
+          "keyframes_max": 121,
+          "nonconstant_channel_paths": {
+            "translation": 75,
+            "scale": 62,
+            "rotation": 61,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Look_Around": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 4.0,
+          "keyframes_min": 121,
+          "keyframes_max": 121,
+          "nonconstant_channel_paths": {
+            "rotation": 21,
+            "scale": 21,
+            "translation": 20,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Walk_InPlace": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 2.0,
+          "keyframes_min": 61,
+          "keyframes_max": 61,
+          "nonconstant_channel_paths": {
+            "translation": 73,
+            "rotation": 70,
+            "scale": 70,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Sit_Down": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 3.0,
+          "keyframes_min": 91,
+          "keyframes_max": 91,
+          "nonconstant_channel_paths": {
+            "translation": 77,
+            "rotation": 71,
+            "scale": 71,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Kneel": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 3.0,
+          "keyframes_min": 91,
+          "keyframes_max": 91,
+          "nonconstant_channel_paths": {
+            "translation": 77,
+            "rotation": 71,
+            "scale": 71,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Gentle_Dance": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 4.0,
+          "keyframes_min": 121,
+          "keyframes_max": 121,
+          "nonconstant_channel_paths": {
+            "translation": 73,
+            "rotation": 72,
+            "scale": 72,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Wave": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 3.0,
+          "keyframes_min": 91,
+          "keyframes_max": 91,
+          "nonconstant_channel_paths": {
+            "rotation": 39,
+            "scale": 39,
+            "translation": 37,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Talk_Demo": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 4.0,
+          "keyframes_min": 121,
+          "keyframes_max": 121,
+          "nonconstant_channel_paths": {
+            "translation": 75,
+            "scale": 62,
+            "rotation": 61,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Expressions_Demo": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 4.0,
+          "keyframes_min": 121,
+          "keyframes_max": 121,
+          "nonconstant_channel_paths": {
+            "translation": 75,
+            "scale": 62,
+            "rotation": 61,
+            "weights": 3
+          },
+          "duplicate_channels": []
+        },
+        "Crouch": {
+          "channels": 246,
+          "channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81,
+            "weights": 3
+          },
+          "joint_channel_paths": {
+            "translation": 81,
+            "rotation": 81,
+            "scale": 81
+          },
+          "morph_nodes": [
+            "Salve_Body",
+            "SALVE_Eyeliner.L",
+            "SALVE_Eyeliner.R"
+          ],
+          "start_seconds": 0.0,
+          "end_seconds": 3.0,
+          "keyframes_min": 91,
+          "keyframes_max": 91,
+          "nonconstant_channel_paths": {
+            "translation": 77,
+            "rotation": 71,
+            "scale": 71
+          },
+          "duplicate_channels": []
+        }
+      },
+      "errors": []
+    },
+    "geometry": {
+      "primitives": 52,
+      "skinned_primitives": 52,
+      "vertices_in_primitives": 98231,
+      "triangles": 158236,
+      "morph_target_arrays_checked": 252,
+      "zero_weight_vertices": 0,
+      "maximum_weight_sum_error": 0.0,
+      "maximum_influences": 4,
+      "meshes": [
+        {
+          "node": "Salve_Back_Central_Housing",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Diamond_0_Border",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Diamond_0_Light",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Diamond_1_Border",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Diamond_1_Light",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Diamond_2_Border",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Diamond_2_Light",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Light_L",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Light_R",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Panel_L",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Panel_R",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Unit_Core",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Unit_Frame",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Back_Unit_Light",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Body",
+          "primitive_count": 5,
+          "morph_count": 24
+        },
+        {
+          "node": "SALVE_Eyeliner.L",
+          "primitive_count": 1,
+          "morph_count": 3
+        },
+        {
+          "node": "SALVE_Eyeliner.R",
+          "primitive_count": 1,
+          "morph_count": 3
+        },
+        {
+          "node": "Salve_Hair",
+          "primitive_count": 2,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Hand_L",
+          "primitive_count": 2,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Hand_Panel_L",
+          "primitive_count": 3,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Hand_Panel_R",
+          "primitive_count": 3,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Hand_R",
+          "primitive_count": 2,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Headphones",
+          "primitive_count": 2,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Headset_Rim_L",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Headset_Rim_R",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "SALVE_Iris.L",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "SALVE_Iris.R",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "SALVE_Mouth_Interior",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "SALVE_Sclera.L",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "SALVE_Sclera.R",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Skull_Interior",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "SALVE_Teeth_Upper",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "SALVE_Tongue",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_UpperBack_Repair",
+          "primitive_count": 1,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Wrist_Trim_L",
+          "primitive_count": 3,
+          "morph_count": 0
+        },
+        {
+          "node": "Salve_Wrist_Trim_R",
+          "primitive_count": 3,
+          "morph_count": 0
+        }
+      ],
+      "rest_bounds_y_up": {
+        "min": [
+          -0.5250091670966615,
+          -5.308429650628032e-05,
+          -0.23905895689856926
+        ],
+        "max": [
+          0.5271523009723145,
+          1.70002183430978,
+          0.247111094463389
+        ],
+        "extent": [
+          1.052161468068976,
+          1.7000749186062862,
+          0.48617005136195823
+        ],
+        "height_metres": 1.7000749186062862
+      }
+    },
+    "glb_reimport": {
+      "ok": true,
+      "armature": "SALVE_Rig",
+      "bones": 81,
+      "mesh_count": 36,
+      "morph_meshes": [
+        "Salve_Body_Mesh",
+        "SALVE_Eyeliner.L_Mesh",
+        "SALVE_Eyeliner.R_Mesh"
+      ],
+      "embedded_textures": [
+        {
+          "name": "Salve_BaseColor_4K",
+          "size": [
+            4096,
+            4096
+          ],
+          "has_data": true,
+          "packed_bytes": 3379016
+        },
+        {
+          "name": "Salve_Emission_4K",
+          "size": [
+            4096,
+            4096
+          ],
+          "has_data": true,
+          "packed_bytes": 623654
+        },
+        {
+          "name": "SALVE_Iris_Glow_Mask_512",
+          "size": [
+            512,
+            512
+          ],
+          "has_data": true,
+          "packed_bytes": 138340
+        },
+        {
+          "name": "SALVE_Iris_Azure_Cyan_512",
+          "size": [
+            512,
+            512
+          ],
+          "has_data": true,
+          "packed_bytes": 195116
+        }
+      ],
+      "track_owners": {
+        "SALVE_Rig": {
+          "tracks": 10,
+          "action_names": [
+            "Idle_Breathe_SALVE_Rig",
+            "Look_Around_SALVE_Rig",
+            "Walk_InPlace_SALVE_Rig",
+            "Sit_Down_SALVE_Rig",
+            "Kneel_SALVE_Rig",
+            "Gentle_Dance_SALVE_Rig",
+            "Wave_SALVE_Rig",
+            "Talk_Demo_SALVE_Rig",
+            "Expressions_Demo_SALVE_Rig",
+            "Crouch_SALVE_Rig"
+          ]
+        },
+        "Salve_Body_Mesh": {
+          "tracks": 10,
+          "action_names": [
+            "Idle_Breathe_Salve_Body_Mesh",
+            "Look_Around_Salve_Body_Mesh",
+            "Walk_InPlace_Salve_Body_Mesh",
+            "Sit_Down_Salve_Body_Mesh",
+            "Kneel_Salve_Body_Mesh",
+            "Gentle_Dance_Salve_Body_Mesh",
+            "Wave_Salve_Body_Mesh",
+            "Talk_Demo_Salve_Body_Mesh",
+            "Expressions_Demo_Salve_Body_Mesh",
+            "Crouch_Salve_Body_Mesh"
+          ]
+        },
+        "SALVE_Eyeliner.L_Mesh": {
+          "tracks": 10,
+          "action_names": [
+            "Idle_Breathe_SALVE_Eyeliner.L_Mesh",
+            "Look_Around_SALVE_Eyeliner.L_Mesh",
+            "Walk_InPlace_SALVE_Eyeliner.L_Mesh",
+            "Sit_Down_SALVE_Eyeliner.L_Mesh",
+            "Kneel_SALVE_Eyeliner.L_Mesh",
+            "Gentle_Dance_SALVE_Eyeliner.L_Mesh",
+            "Wave_SALVE_Eyeliner.L_Mesh",
+            "Talk_Demo_SALVE_Eyeliner.L_Mesh",
+            "Expressions_Demo_SALVE_Eyeliner.L_Mesh",
+            "Crouch_SALVE_Eyeliner.L_Mesh"
+          ]
+        },
+        "SALVE_Eyeliner.R_Mesh": {
+          "tracks": 10,
+          "action_names": [
+            "Idle_Breathe_SALVE_Eyeliner.R_Mesh",
+            "Look_Around_SALVE_Eyeliner.R_Mesh",
+            "Walk_InPlace_SALVE_Eyeliner.R_Mesh",
+            "Sit_Down_SALVE_Eyeliner.R_Mesh",
+            "Kneel_SALVE_Eyeliner.R_Mesh",
+            "Gentle_Dance_SALVE_Eyeliner.R_Mesh",
+            "Wave_SALVE_Eyeliner.R_Mesh",
+            "Talk_Demo_SALVE_Eyeliner.R_Mesh",
+            "Expressions_Demo_SALVE_Eyeliner.R_Mesh",
+            "Crouch_SALVE_Eyeliner.R_Mesh"
+          ]
+        }
+      },
+      "rest_bounds_z_up": {
+        "min": [
+          -0.52500963491579,
+          -0.2471110658850064,
+          -5.3425032880860535e-05
+        ],
+        "max": [
+          0.5271522640032558,
+          0.23905915510463302,
+          1.7000220235059382
+        ],
+        "extent": [
+          1.0521618989190458,
+          0.4861702209896394,
+          1.700075448538819
+        ],
+        "vertices": 98231,
+        "pelvis_world_z": 0.9860001802444458
+      },
+      "sampled_poses": {
+        "Idle_Breathe": [
+          {
+            "min": [
+              -0.530473843195125,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5220417407552418,
+              0.23365014460604394,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0525155839503668,
+              0.48076123582298425,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5205099162427089,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5320547610747042,
+              0.24630300985344236,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.052564677317413,
+              0.49341410107038264,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.5,
+            "frame": 60.0
+          },
+          {
+            "min": [
+              -0.530473843195125,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5220417407552418,
+              0.23365014460604394,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0525155839503668,
+              0.48076123582298425,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 1.0,
+            "frame": 120.0
+          }
+        ],
+        "Look_Around": [
+          {
+            "min": [
+              -0.530473843195125,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5220417407552418,
+              0.23365014460604394,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0525155839503668,
+              0.48076123582298425,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5205099162427089,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5320547610747042,
+              0.24630300985344236,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.052564677317413,
+              0.49341410107038264,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.5,
+            "frame": 60.0
+          },
+          {
+            "min": [
+              -0.530473843195125,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5220417407552418,
+              0.23365014460604394,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0525155839503668,
+              0.48076123582298425,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 1.0,
+            "frame": 120.0
+          }
+        ],
+        "Walk_InPlace": [
+          {
+            "min": [
+              -0.5339760900308406,
+              -0.2771141364643397,
+              -5.321095657384589e-05
+            ],
+            "max": [
+              0.5186821636012624,
+              0.23024332519414425,
+              1.6864221475551318
+            ],
+            "extent": [
+              1.052658253632103,
+              0.5073574616584839,
+              1.6864753585117056
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9724000692367554,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5176746603018998,
+              -0.2764123402006378,
+              -5.333512550631525e-05
+            ],
+            "max": [
+              0.5350648583051694,
+              0.2518634303332773,
+              1.6864221475551318
+            ],
+            "extent": [
+              1.0527395186070692,
+              0.5282757705339152,
+              1.686475482680638
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9724000692367554,
+            "fraction": 0.5,
+            "frame": 30.0
+          },
+          {
+            "min": [
+              -0.5339760900308406,
+              -0.2771141364643397,
+              -5.321095657384589e-05
+            ],
+            "max": [
+              0.5186821636012624,
+              0.23024332519414425,
+              1.6864221475551318
+            ],
+            "extent": [
+              1.052658253632103,
+              0.5073574616584839,
+              1.6864753585117056
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9724000692367554,
+            "fraction": 1.0,
+            "frame": 60.0
+          }
+        ],
+        "Sit_Down": [
+          {
+            "min": [
+              -0.5264992056944564,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5257792203083937,
+              0.2375550944680898,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0522784260028502,
+              0.4846661856850301,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.533364474832716,
+              -0.2128595269098396,
+              -0.00011270186749412492
+            ],
+            "max": [
+              0.5373414428750607,
+              0.5667366016966332,
+              1.393558210470546
+            ],
+            "extent": [
+              1.0707059177077767,
+              0.7795961286064728,
+              1.39367091233804
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.6796752214431763,
+            "fraction": 0.5,
+            "frame": 45.0
+          },
+          {
+            "min": [
+              -0.5388384105903512,
+              -0.1921147977777219,
+              -5.4438311996363176e-05
+            ],
+            "max": [
+              0.5373886616759762,
+              0.6496969569935565,
+              1.306165849878329
+            ],
+            "extent": [
+              1.0762270722663274,
+              0.8418117547712783,
+              1.3062202881903255
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.5915999412536621,
+            "fraction": 1.0,
+            "frame": 90.0
+          }
+        ],
+        "Kneel": [
+          {
+            "min": [
+              -0.5264992056944564,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5257792203083937,
+              0.2375550944680898,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0522784260028502,
+              0.4846661856850301,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5245328364872321,
+              -0.24234595864924094,
+              -0.00022813907893892704
+            ],
+            "max": [
+              0.5287166654353044,
+              0.4369757444212154,
+              1.426943793400815
+            ],
+            "extent": [
+              1.0532495019225365,
+              0.6793217030704564,
+              1.4271719324797538
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.7130529284477234,
+            "fraction": 0.5,
+            "frame": 45.0
+          },
+          {
+            "min": [
+              -0.5263813106840161,
+              -0.2686786783721486,
+              -5.273425065910331e-05
+            ],
+            "max": [
+              0.5261988191379885,
+              0.4536495247550325,
+              1.15237490229867
+            ],
+            "extent": [
+              1.0525801298220046,
+              0.7223282031271812,
+              1.1524276365493291
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.4386160373687744,
+            "fraction": 1.0,
+            "frame": 90.0
+          }
+        ],
+        "Gentle_Dance": [
+          {
+            "min": [
+              -0.5399334611944155,
+              -0.247111089161249,
+              -5.3121049178872504e-05
+            ],
+            "max": [
+              0.5127307707837261,
+              0.22439685771016468,
+              1.6847219160745182
+            ],
+            "extent": [
+              1.0526642319781416,
+              0.4715079468714137,
+              1.6847750371236971
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9706999659538269,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5128153289154085,
+              -0.247111089161249,
+              -5.3121049178872504e-05
+            ],
+            "max": [
+              0.5400251629429746,
+              0.26134085612107943,
+              1.6847219160745182
+            ],
+            "extent": [
+              1.0528404918583831,
+              0.5084519452823284,
+              1.6847750371236971
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9706999659538269,
+            "fraction": 0.5,
+            "frame": 60.0
+          },
+          {
+            "min": [
+              -0.5399334611944155,
+              -0.247111089161249,
+              -5.3121049178872504e-05
+            ],
+            "max": [
+              0.5127307707837261,
+              0.22439685771016468,
+              1.6847219160745182
+            ],
+            "extent": [
+              1.0526642319781416,
+              0.4715079468714137,
+              1.6847750371236971
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9706999659538269,
+            "fraction": 1.0,
+            "frame": 120.0
+          }
+        ],
+        "Wave": [
+          {
+            "min": [
+              -0.5299718647836755,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5225146380596897,
+              0.23413646784970638,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0524865028433652,
+              0.4812475590666467,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5253848521256401,
+              -0.4009573131248179,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5246142027900973,
+              0.2649093185946715,
+              1.702074522009668
+            ],
+            "extent": [
+              1.0499990549157374,
+              0.6658666317194895,
+              1.7021277443867868
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.5,
+            "frame": 45.0
+          },
+          {
+            "min": [
+              -0.5299718647836755,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5225146380596897,
+              0.23413646784970638,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0524865028433652,
+              0.4812475590666467,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 1.0,
+            "frame": 90.0
+          }
+        ],
+        "Talk_Demo": [
+          {
+            "min": [
+              -0.530473843195125,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5220417407552418,
+              0.23365014460604394,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0525155839503668,
+              0.48076123582298425,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5205099162427089,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5320547610747042,
+              0.24630300985344236,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.052564677317413,
+              0.49341410107038264,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.5,
+            "frame": 60.0
+          },
+          {
+            "min": [
+              -0.530473843195125,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5220417407552418,
+              0.23365014460604394,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0525155839503668,
+              0.48076123582298425,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 1.0,
+            "frame": 120.0
+          }
+        ],
+        "Expressions_Demo": [
+          {
+            "min": [
+              -0.530473843195125,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5220417407552418,
+              0.23365014460604394,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0525155839503668,
+              0.48076123582298425,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5205099162427089,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5320547610747042,
+              0.24630300985344236,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.052564677317413,
+              0.49341410107038264,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.5,
+            "frame": 60.0
+          },
+          {
+            "min": [
+              -0.530473843195125,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5220417407552418,
+              0.23365014460604394,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0525155839503668,
+              0.48076123582298425,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 1.0,
+            "frame": 120.0
+          }
+        ],
+        "Crouch": [
+          {
+            "min": [
+              -0.5250093815960426,
+              -0.2471110912169403,
+              -5.3222377118689046e-05
+            ],
+            "max": [
+              0.5271523146672052,
+              0.23905900311278544,
+              1.7000219221780357
+            ],
+            "extent": [
+              1.0521616962632478,
+              0.48617009432972574,
+              1.7000751445551545
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.9860000014305115,
+            "fraction": 0.0,
+            "frame": 0.0
+          },
+          {
+            "min": [
+              -0.5330720425163165,
+              -0.3722289741989232,
+              -5.464096759688619e-05
+            ],
+            "max": [
+              0.5345749885776456,
+              0.30316807246356536,
+              1.3247215761468838
+            ],
+            "extent": [
+              1.067647031093962,
+              0.6753970466624886,
+              1.3247762171144806
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.6179973483085632,
+            "fraction": 0.5,
+            "frame": 45.0
+          },
+          {
+            "min": [
+              -0.535038867699086,
+              -0.3631063733956004,
+              -5.4539639835815557e-05
+            ],
+            "max": [
+              0.5363695563321826,
+              0.3192318317984519,
+              1.2290156032343698
+            ],
+            "extent": [
+              1.0714084240312687,
+              0.6823382051940523,
+              1.2290701428742055
+            ],
+            "vertices": 98231,
+            "pelvis_world_z": 0.5270001292228699,
+            "fraction": 1.0,
+            "frame": 90.0
+          }
+        ]
+      },
+      "talk_peak": {
+        "frame": 33.00000071525574,
+        "values": {
+          "Viseme_A": 0.0,
+          "Viseme_E": 0.0,
+          "Viseme_I": 0.8600000143051147,
+          "Viseme_O": 0.0,
+          "Viseme_U": 0.0,
+          "Viseme_MBP": 0.0
+        },
+        "bounds": {
+          "min": [
+            -0.5199137028852263,
+            -0.24848413506136902,
+            0.0009528623316584772
+          ],
+          "max": [
+            0.5400304319937206,
+            0.26610078274103666,
+            1.7024558178036973
+          ],
+          "extent": [
+            1.059944134878947,
+            0.5145849178024057,
+            1.701502955472039
+          ],
+          "vertices": 98231,
+          "pelvis_world_z": 0.9870060682296753
+        }
+      },
+      "pose_samples_checked": 31
+    },
+    "fbx_reimport": {
+      "ok": true,
+      "armature": "SALVE_Rig",
+      "bones": 81,
+      "mesh_count": 36,
+      "morph_meshes": [
+        "SALVE_Eyeliner.L",
+        "SALVE_Eyeliner.R",
+        "Salve_Body"
+      ],
+      "embedded_textures": [
+        {
+          "name": "Salve_BaseColor_4K.jpg",
+          "size": [
+            4096,
+            4096
+          ],
+          "has_data": true,
+          "packed_bytes": 3379016
+        },
+        {
+          "name": "Salve_Emission_4K.png",
+          "size": [
+            4096,
+            4096
+          ],
+          "has_data": true,
+          "packed_bytes": 623654
+        },
+        {
+          "name": "SALVE_Iris_Azure_Cyan_512",
+          "size": [
+            512,
+            512
+          ],
+          "has_data": true,
+          "packed_bytes": 195116
+        },
+        {
+          "name": "SALVE_Iris_Glow_Mask_512",
+          "size": [
+            512,
+            512
+          ],
+          "has_data": true,
+          "packed_bytes": 138340
+        },
+        {
+          "name": "SALVE_Iris_Azure_Cyan_512.001",
+          "size": [
+            512,
+            512
+          ],
+          "has_data": true,
+          "packed_bytes": 195116
+        }
+      ],
+      "animation_owners": {
+        "SALVE_Rig": {
+          "action": "SALVE_Rig|Scene",
+          "curves": 819,
+          "frames": [
+            1.0,
+            1030.0
+          ]
+        },
+        "Key": {
+          "action": "Key|Scene",
+          "curves": 3,
+          "frames": [
+            1.0,
+            1030.0
+          ]
+        },
+        "Key.001": {
+          "action": "Key.001|Scene",
+          "curves": 3,
+          "frames": [
+            1.0,
+            1030.0
+          ]
+        },
+        "Key.002": {
+          "action": "Key.002|Scene",
+          "curves": 24,
+          "frames": [
+            1.0,
+            1030.0
+          ]
+        }
+      },
+      "take_count": 1,
+      "segment_count": 10,
+      "sampled_poses": {
+        "Idle_Breathe": [
+          {
+            "min": [
+              -0.5304736912032766,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5220416900912923,
+              0.2336503590731188,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052515381294569,
+              0.48076144920569164,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 1
+          },
+          {
+            "min": [
+              -0.5205098655787594,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5320548117386537,
+              0.24630312295863457,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052564677317413,
+              0.4934142130912074,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 61.0
+          },
+          {
+            "min": [
+              -0.5304736912032766,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5220416900912923,
+              0.2336503590731188,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052515381294569,
+              0.48076144920569164,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 121
+          }
+        ],
+        "Look_Around": [
+          {
+            "min": [
+              -0.5304736912032766,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5220416900912923,
+              0.2336503590731188,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052515381294569,
+              0.48076144920569164,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 122
+          },
+          {
+            "min": [
+              -0.5205098655787594,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5320548117386537,
+              0.24630312295863457,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052564677317413,
+              0.4934142130912074,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 182.0
+          },
+          {
+            "min": [
+              -0.5304736912032766,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5220416900912923,
+              0.2336503590731188,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052515381294569,
+              0.48076144920569164,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 242
+          }
+        ],
+        "Walk_InPlace": [
+          {
+            "min": [
+              -0.53397614069479,
+              -0.2771143776876783,
+              -5.3416547993068164e-05
+            ],
+            "max": [
+              0.5186821636012624,
+              0.23024361605579352,
+              1.6864223982533857
+            ],
+            "extent": [
+              1.0526583042960524,
+              0.5073579937434718,
+              1.6864758148013788
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9724001884460449,
+            "frame": 243
+          },
+          {
+            "min": [
+              -0.5176745589740008,
+              -0.2764125309226007,
+              -5.33429166972299e-05
+            ],
+            "max": [
+              0.5350650609609673,
+              0.2518634930637903,
+              1.6864223982533857
+            ],
+            "extent": [
+              1.0527396199349681,
+              0.5282760239863911,
+              1.6864757411700828
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9724001884460449,
+            "frame": 273.0
+          },
+          {
+            "min": [
+              -0.53397614069479,
+              -0.2771143776876783,
+              -5.3416547993068164e-05
+            ],
+            "max": [
+              0.5186821636012624,
+              0.23024361605579352,
+              1.6864223982533857
+            ],
+            "extent": [
+              1.0526583042960524,
+              0.5073579937434718,
+              1.6864758148013788
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9724001884460449,
+            "frame": 303
+          }
+        ],
+        "Sit_Down": [
+          {
+            "min": [
+              -0.5264991550305069,
+              -0.24711109013257285,
+              -5.332906839772278e-05
+            ],
+            "max": [
+              0.5257790683165453,
+              0.23755530906777342,
+              1.700022426196044
+            ],
+            "extent": [
+              1.0522782233470522,
+              0.48466639920034627,
+              1.7000757552644417
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 304
+          },
+          {
+            "min": [
+              -0.5333645254966655,
+              -0.2128598338974262,
+              -0.00011169395494659007
+            ],
+            "max": [
+              0.5373414935390102,
+              0.5667369523967717,
+              1.39355872217639
+            ],
+            "extent": [
+              1.0707060190356756,
+              0.7795967862941979,
+              1.3936704161313367
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.6796754598617554,
+            "frame": 349.0
+          },
+          {
+            "min": [
+              -0.5388385119182502,
+              -0.19211505166730067,
+              -5.312641279997532e-05
+            ],
+            "max": [
+              0.5373889149957236,
+              0.6496971583780778,
+              1.3061662125156976
+            ],
+            "extent": [
+              1.0762274269139738,
+              0.8418122100453785,
+              1.3062193389284977
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.591600239276886,
+            "frame": 394
+          }
+        ],
+        "Kneel": [
+          {
+            "min": [
+              -0.5264991550305069,
+              -0.24711109013257285,
+              -5.332906839772278e-05
+            ],
+            "max": [
+              0.5257790683165453,
+              0.23755530906777342,
+              1.700022426196044
+            ],
+            "extent": [
+              1.0522782233470522,
+              0.48466639920034627,
+              1.7000757552644417
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 395
+          },
+          {
+            "min": [
+              -0.5245327858232827,
+              -0.2423460005489375,
+              -0.00022782417955780065
+            ],
+            "max": [
+              0.5287167160992539,
+              0.43697484030893735,
+              1.4269442977626468
+            ],
+            "extent": [
+              1.0532495019225365,
+              0.6793208408578748,
+              1.4271721219422044
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.7130532264709473,
+            "frame": 440.0
+          },
+          {
+            "min": [
+              -0.5263813106840161,
+              -0.2686785985347466,
+              -5.3025993304367525e-05
+            ],
+            "max": [
+              0.5261990724577359,
+              0.45364811851857056,
+              1.1523751028200941
+            ],
+            "extent": [
+              1.052580383141752,
+              0.7223267170533172,
+              1.1524281288133986
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.438616007566452,
+            "frame": 485
+          }
+        ],
+        "Gentle_Dance": [
+          {
+            "min": [
+              -0.5399334611944155,
+              -0.24711108763987705,
+              -5.3633052102819434e-05
+            ],
+            "max": [
+              0.5127309227755745,
+              0.2243971233023377,
+              1.6847223694285764
+            ],
+            "extent": [
+              1.05266438396999,
+              0.47150821094221473,
+              1.6847760024806793
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.970700204372406,
+            "frame": 486
+          },
+          {
+            "min": [
+              -0.5128151262596106,
+              -0.24711108763987705,
+              -5.3633052102819434e-05
+            ],
+            "max": [
+              0.5400253655987726,
+              0.2613409947221235,
+              1.6847223694285764
+            ],
+            "extent": [
+              1.0528404918583831,
+              0.5084520823620006,
+              1.6847760024806793
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.970700204372406,
+            "frame": 546.0
+          },
+          {
+            "min": [
+              -0.5399334611944155,
+              -0.24711108763987705,
+              -5.3633052102819434e-05
+            ],
+            "max": [
+              0.5127309227755745,
+              0.2243971233023377,
+              1.6847223694285764
+            ],
+            "extent": [
+              1.05266438396999,
+              0.47150821094221473,
+              1.6847760024806793
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.970700204372406,
+            "frame": 606
+          }
+        ],
+        "Wave": [
+          {
+            "min": [
+              -0.5299719661115745,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5225146380596897,
+              0.23413673297916845,
+              1.700022426196044
+            ],
+            "extent": [
+              1.0524866041712642,
+              0.4812478231117413,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 607
+          },
+          {
+            "min": [
+              -0.525385054781438,
+              -0.4009574434307165,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5246143547819457,
+              0.26490973539168167,
+              1.7020750261514825
+            ],
+            "extent": [
+              1.0499994095633838,
+              0.6658671788223982,
+              1.702128355219878
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 652.0
+          },
+          {
+            "min": [
+              -0.5299719661115745,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5225146380596897,
+              0.23413673297916845,
+              1.700022426196044
+            ],
+            "extent": [
+              1.0524866041712642,
+              0.4812478231117413,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 697
+          }
+        ],
+        "Talk_Demo": [
+          {
+            "min": [
+              -0.5304736912032766,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5220416900912923,
+              0.2336503590731188,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052515381294569,
+              0.48076144920569164,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 698
+          },
+          {
+            "min": [
+              -0.5205098655787594,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5320548117386537,
+              0.24630312295863457,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052564677317413,
+              0.4934142130912074,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 758.0
+          },
+          {
+            "min": [
+              -0.5304736912032766,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5220416900912923,
+              0.2336503590731188,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052515381294569,
+              0.48076144920569164,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 818
+          }
+        ],
+        "Expressions_Demo": [
+          {
+            "min": [
+              -0.5304736912032766,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5220416900912923,
+              0.2336503590731188,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052515381294569,
+              0.48076144920569164,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 819
+          },
+          {
+            "min": [
+              -0.5205098655787594,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5320548117386537,
+              0.24630312295863457,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052564677317413,
+              0.4934142130912074,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 879.0
+          },
+          {
+            "min": [
+              -0.5304736912032766,
+              -0.24711109013257285,
+              -5.3329068395613355e-05
+            ],
+            "max": [
+              0.5220416900912923,
+              0.2336503590731188,
+              1.700022426196044
+            ],
+            "extent": [
+              1.052515381294569,
+              0.48076144920569164,
+              1.7000757552644394
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 939
+          }
+        ],
+        "Crouch": [
+          {
+            "min": [
+              -0.5250093815960426,
+              -0.24711109013257285,
+              -5.332906839772278e-05
+            ],
+            "max": [
+              0.5271524159951042,
+              0.2390592937016663,
+              1.700022426196044
+            ],
+            "extent": [
+              1.0521617975911468,
+              0.48617038383423916,
+              1.7000757552644417
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.9860002398490906,
+            "frame": 940
+          },
+          {
+            "min": [
+              -0.5330719411884175,
+              -0.3722292031755536,
+              -5.363305207806146e-05
+            ],
+            "max": [
+              0.5345749885776456,
+              0.30316822118315595,
+              1.3247217768954904
+            ],
+            "extent": [
+              1.0676469297660631,
+              0.6753974243587095,
+              1.3247754099475686
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.617997407913208,
+            "frame": 985.0
+          },
+          {
+            "min": [
+              -0.5350387157072376,
+              -0.3631066278325508,
+              -5.3633052146229154e-05
+            ],
+            "max": [
+              0.5363697589879806,
+              0.3192321873244654,
+              1.22901590550085
+            ],
+            "extent": [
+              1.0714084746952182,
+              0.6823388151570162,
+              1.2290695385529964
+            ],
+            "vertices": 80644,
+            "pelvis_world_z": 0.5270001292228699,
+            "frame": 1030
+          }
+        ]
+      },
+      "pose_samples_checked": 30
+    },
+    "ok": true
+  },
+  "blender_5_2": {
+    "blender_version": "5.2.2 LTS",
+    "bones": 81,
+    "deform_bones": 72,
+    "facial_shapes": 24,
+    "clips_checked": 10,
+    "samples": {
+      "Idle_Breathe": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 61,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 121,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "Look_Around": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 61,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 121,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "Walk_InPlace": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.9724001288414001,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 31,
+          "pelvis_z": 0.9724001288414001,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 61,
+          "pelvis_z": 0.9724001288414001,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "Sit_Down": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 46,
+          "pelvis_z": 0.6796753406524658,
+          "head_rotation": [
+            0.999948263168335,
+            -0.010166647844016552,
+            -3.554448402276478e-15,
+            -1.8242397592516113e-09
+          ]
+        },
+        {
+          "frame": 91,
+          "pelvis_z": 0.5916001200675964,
+          "head_rotation": [
+            0.9999144077301025,
+            -0.013089640997350216,
+            -7.112366251504909e-15,
+            -2.348723437961553e-09
+          ]
+        }
+      ],
+      "Kneel": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 46,
+          "pelvis_z": 0.7130531072616577,
+          "head_rotation": [
+            0.9999809861183167,
+            0.006158850155770779,
+            -3.5492442318485473e-15,
+            1.105105229548542e-09
+          ]
+        },
+        {
+          "frame": 91,
+          "pelvis_z": 0.438616007566452,
+          "head_rotation": [
+            0.9999619126319885,
+            0.008726488798856735,
+            -7.098488463697095e-15,
+            1.5658263574636067e-09
+          ]
+        }
+      ],
+      "Gentle_Dance": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.9707001447677612,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 61,
+          "pelvis_z": 0.9707001447677612,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 121,
+          "pelvis_z": 0.9707001447677612,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "Wave": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 46,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            0.9992387294769287,
+            -0.0006090776878409088,
+            -0.03391851857304573,
+            -0.019270628690719604
+          ]
+        },
+        {
+          "frame": 91,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "Talk_Demo": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 61,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 121,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "Expressions_Demo": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 61,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 121,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "Crouch": [
+        {
+          "frame": 1,
+          "pelvis_z": 0.986000120639801,
+          "head_rotation": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 46,
+          "pelvis_z": 0.6179973483085632,
+          "head_rotation": [
+            0.9920802116394043,
+            -0.12560589611530304,
+            -2.7755575615628914e-17,
+            -2.253793951467742e-08
+          ]
+        },
+        {
+          "frame": 91,
+          "pelvis_z": 0.5270001292228699,
+          "head_rotation": [
+            0.9876883625984192,
+            -0.15643441677093506,
+            0.0,
+            -2.8069614188552805e-08
+          ]
+        }
+      ]
+    },
+    "maximum_talk_viseme": 0.8600000143051147,
+    "images": [],
+    "drivers_valid": true,
+    "source_file_unchanged": true,
+    "ok": true
+  },
+  "facial_triangle_orientation": {
+    "new_facial_triangles": 710,
+    "individual_shapes_checked": 24,
+    "shapes": {
+      "Basis": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.1788403831157765e-08
+      },
+      "JawOpen": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.5185072138889097e-08
+      },
+      "Smile": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 1.990137468016462e-08
+      },
+      "Smile.L": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 1.9901590556092863e-08
+      },
+      "Smile.R": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 1.990137468016462e-08
+      },
+      "MouthFrown": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.1363697720599983e-08
+      },
+      "MouthPucker": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 1.7431127097289334e-08
+      },
+      "MouthWide": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.409491406396569e-08
+      },
+      "Viseme_A": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.5185072138889097e-08
+      },
+      "Viseme_E": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.5185072138889097e-08
+      },
+      "Viseme_I": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.5185072138889097e-08
+      },
+      "Viseme_O": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.5185072138889097e-08
+      },
+      "Viseme_U": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.2452344081158593e-08
+      },
+      "Viseme_MBP": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 1.885674237589452e-08
+      },
+      "BrowUp.L": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.1788403831157765e-08
+      },
+      "BrowDown.L": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.055212100504633e-08
+      },
+      "Blink.L": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.499721082904749e-09
+      },
+      "Squint.L": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.1788403831157765e-08
+      },
+      "BrowUp.R": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.1788403831157765e-08
+      },
+      "BrowDown.R": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 1.6488080512022663e-08
+      },
+      "Blink.R": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.499717599580009e-09
+      },
+      "Squint.R": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.1788403831157765e-08
+      },
+      "BrowUp": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.1788403831157765e-08
+      },
+      "BrowDown": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 1.6485889237083384e-08
+      },
+      "Blink": {
+        "finite": true,
+        "reversed_triangles": 0,
+        "minimum_signed_area": 2.499717599580009e-09
+      }
+    },
+    "ok": true
+  },
+  "hair_pose_checks": {
+    "hair_poses": [
+      {
+        "clip": "Idle_Breathe",
+        "frame": 1,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.31204330921173096,
+            -0.1196284070611,
+            -0.13744135200977325
+          ],
+          [
+            0.30708345770835876,
+            0.49756574630737305,
+            0.1136951893568039
+          ]
+        ],
+        "lowest_hair_y": -0.1196284070611,
+        "hair_floor_clearance": 0.3833715929389,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      },
+      {
+        "clip": "Idle_Breathe",
+        "frame": 61,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.30618226528167725,
+            -0.12234419584274292,
+            -0.14488419890403748
+          ],
+          [
+            0.31297340989112854,
+            0.49756574630737305,
+            0.1136951893568039
+          ]
+        ],
+        "lowest_hair_y": -0.12234419584274292,
+        "hair_floor_clearance": 0.3806558041572571,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      },
+      {
+        "clip": "Walk_InPlace",
+        "frame": 16,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.302562952041626,
+            -0.13317245244979858,
+            -0.14772728085517883
+          ],
+          [
+            0.31665483117103577,
+            0.485565721988678,
+            0.11370889842510223
+          ]
+        ],
+        "lowest_hair_y": -0.13317245244979858,
+        "hair_floor_clearance": 0.3698275475502014,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      },
+      {
+        "clip": "Sit_Down",
+        "frame": 46,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.31374362111091614,
+            -0.3058834969997406,
+            -0.3333744704723358
+          ],
+          [
+            0.3160831928253174,
+            0.3173474371433258,
+            -0.043254122138023376
+          ]
+        ],
+        "lowest_hair_y": -0.3058834969997406,
+        "hair_floor_clearance": 0.1971165030002594,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      },
+      {
+        "clip": "Sit_Down",
+        "frame": 91,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.31696367263793945,
+            -0.3623504936695099,
+            -0.38217464089393616
+          ],
+          [
+            0.31611108779907227,
+            0.2657671570777893,
+            -0.0938728004693985
+          ]
+        ],
+        "lowest_hair_y": -0.3623504936695099,
+        "hair_floor_clearance": 0.14064950633049011,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      },
+      {
+        "clip": "Kneel",
+        "frame": 46,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.3085486888885498,
+            -0.26082083582878113,
+            -0.16930145025253296
+          ],
+          [
+            0.31100994348526,
+            0.3368755877017975,
+            0.11336725205183029
+          ]
+        ],
+        "lowest_hair_y": -0.26082083582878113,
+        "hair_floor_clearance": 0.24217916417121887,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      },
+      {
+        "clip": "Kneel",
+        "frame": 91,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.3096359670162201,
+            -0.41217100620269775,
+            -0.17851334810256958
+          ],
+          [
+            0.30952873826026917,
+            0.1753411591053009,
+            0.11414720863103867
+          ]
+        ],
+        "lowest_hair_y": -0.41217100620269775,
+        "hair_floor_clearance": 0.09082899379730225,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      },
+      {
+        "clip": "Gentle_Dance",
+        "frame": 45,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.30453309416770935,
+            -0.13804860413074493,
+            -0.1477106660604477
+          ],
+          [
+            0.3146559000015259,
+            0.48533961176872253,
+            0.11160356551408768
+          ]
+        ],
+        "lowest_hair_y": -0.13804860413074493,
+        "hair_floor_clearance": 0.36495139586925507,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      },
+      {
+        "clip": "Wave",
+        "frame": 56,
+        "finite_vertices": true,
+        "bounds": [
+          [
+            -0.3172457814216614,
+            -0.12159362435340881,
+            -0.15016353130340576
+          ],
+          [
+            0.300285279750824,
+            0.4979225695133209,
+            0.11572065204381943
+          ]
+        ],
+        "lowest_hair_y": -0.12159362435340881,
+        "hair_floor_clearance": 0.3814063756465912,
+        "rear_center_rays_occluded": 75,
+        "rear_center_rays_total": 75
+      }
+    ]
+  },
+  "glb_visual_review": {
+    "front_and_face_rendered": true,
+    "materials_and_closed_hair_checked": true
+  },
+  "limitations": [
+    "Hair is bone/keyframe animation, without automatic physics collision.",
+    "No app/mobile integration or actual speech synchronization verified.",
+    "Triangulated topology, not a full quad retopology."
+  ],
+  "video_verification": {
+    "ok": true,
+    "decoded_all_frames": true,
+    "decoded_frames": 432,
+    "expected_frames": 432,
+    "fps": 12,
+    "seconds": 36.0,
+    "resolution": [
+      1280,
+      720
+    ],
+    "audio_streams": 0,
+    "stream_inventory": [
+      "Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 1280x720, 2403 kb/s, 12 fps, 12 tbr, 12288 tbn (default)"
+    ],
+    "metadata": {
+      "codec": "h264",
+      "fps": 12.0,
+      "duration": 36.0,
+      "size": [
+        1280,
+        720
+      ],
+      "source_size": [
+        1280,
+        720
+      ],
+      "pix_fmt": "yuv420p(progressive)",
+      "audio_codec": null
+    },
+    "source_sha256_unchanged": true,
+    "source_before": {
+      "path": "work\\recovered\\modeling\\v2\\Salve_Animated_SourceSpace_v2.blend",
+      "sha256": "52bcc83ce018afafaabfb7b71ab183a6616d5503813050baa4c82fe1e19608e1",
+      "bytes": 57225008
+    },
+    "source_after": {
+      "path": "work\\recovered\\modeling\\v2\\Salve_Animated_SourceSpace_v2.blend",
+      "sha256": "52bcc83ce018afafaabfb7b71ab183a6616d5503813050baa4c82fe1e19608e1",
+      "bytes": 57225008
+    },
+    "video_sha256": "04140097ac943a2ea970b3c6baa61933bd53a8bf957ebbad20a8744612b89b1b",
+    "sit_camera_reframed_for_complete_hair": true
+  }
+}
