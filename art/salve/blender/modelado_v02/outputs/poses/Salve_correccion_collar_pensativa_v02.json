@@ -1,0 +1,255 @@
+{
+  "frame": 311,
+  "source": "work/Salve_think_contact_checkpoint.blend",
+  "method": "Measured BVH hand/collar/head; bounded wrist rotation about index pad and front-chin target; only311 FK keys, no Basis/UV/weight edits",
+  "before_crossings": {
+    "Guante_palmar_quad.R": {
+      "head_crossing_pairs": 0,
+      "collar_crossing_pairs": 121
+    },
+    "Dedo_thumb_quad.R": {
+      "head_crossing_pairs": 0,
+      "collar_crossing_pairs": 135
+    },
+    "Dedo_index_quad.R": {
+      "head_crossing_pairs": 0,
+      "collar_crossing_pairs": 166
+    }
+  },
+  "before_surface": {
+    "nominal_chin_world": [
+      -0.008840330876410007,
+      -0.03301176801323891,
+      1.5390145778656006
+    ],
+    "target_skin_world": [
+      -0.008036076091229916,
+      -0.03243213891983032,
+      1.5397698879241943
+    ],
+    "target_skin_normal": [
+      -0.6528934836387634,
+      -0.4521358907222748,
+      -0.6077032089233398
+    ],
+    "selected_index_vertex": 291,
+    "selected_index_world": [
+      -0.008626848459243774,
+      -0.03285738453269005,
+      1.5384801626205444
+    ],
+    "selected_to_target_skin_m": 0.0014809581963804491,
+    "distal_minimum_skin_distance_m": 0.0009997828165069222,
+    "closest_index_world": [
+      -0.007290571928024292,
+      -0.032712094485759735,
+      1.5375168323516846
+    ],
+    "closest_skin_world": [
+      -0.006635635159909725,
+      -0.03224498778581619,
+      1.5381104946136475
+    ],
+    "closest_skin_normal": [
+      -0.6441311836242676,
+      -0.4836878776550293,
+      -0.5925715565681458
+    ],
+    "closest_signed_skin_distance_m": 0.0009995864238590002,
+    "selected_signed_skin_distance_m": 0.0013604302948806435,
+    "finger_head_surface_crossing_pairs": 0,
+    "bone_tip_world": [
+      -0.008732304908335209,
+      -0.03575188294053078,
+      1.5383750200271606
+    ]
+  },
+  "trials": [
+    {
+      "front_chin_rest": [
+        -0.006,
+        -0.046,
+        1.535
+      ],
+      "world_x_pitch_rad": -0.3,
+      "crossings": {},
+      "surface_contact": {
+        "nominal_chin_world": [
+          -0.00823211669921875,
+          -0.04443752020597458,
+          1.5485056638717651
+        ],
+        "target_skin_world": [
+          -0.006860487628728151,
+          -0.03954242914915085,
+          1.5501338243484497
+        ],
+        "target_skin_normal": [
+          -0.2631073594093323,
+          -0.9145048260688782,
+          -0.30733615159988403
+        ],
+        "selected_index_vertex": 870,
+        "selected_index_world": [
+          -0.00738111138343811,
+          -0.0399935245513916,
+          1.547180414199829
+        ],
+        "selected_to_target_skin_m": 0.003032683278873101,
+        "distal_minimum_skin_distance_m": 0.000999892596155405,
+        "closest_index_world": [
+          -0.008056640625,
+          -0.039028290659189224,
+          1.5466761589050293
+        ],
+        "closest_skin_world": [
+          -0.007697890978306532,
+          -0.03815579041838646,
+          1.5470075607299805
+        ],
+        "closest_skin_normal": [
+          -0.3641291856765747,
+          -0.8691274523735046,
+          -0.33470475673675537
+        ],
+        "closest_signed_skin_distance_m": 0.000999866912025027,
+        "selected_signed_skin_distance_m": 0.001467430396587588,
+        "finger_head_surface_crossing_pairs": 0,
+        "bone_tip_world": [
+          -0.008050934411585331,
+          -0.04231122136116028,
+          1.5479755401611328
+        ]
+      }
+    }
+  ],
+  "initial_hair_body_surface_check": {
+    "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+    "objects": {
+      "Mechon_rostro_00.R": 82
+    },
+    "tested": 46,
+    "objects_with_surface_crossings": 1,
+    "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+  },
+  "targeted_hair_311_fixes": {
+    "Mechon_rostro_00.R": {
+      "corrected_row_iterations": 119,
+      "maximum_local_shift_m": 0.01767,
+      "key": "PoseClearance_311",
+      "rows": 41,
+      "sides": 12,
+      "detail_lines_followed": 0
+    }
+  },
+  "chosen": {
+    "target": [
+      -0.006,
+      -0.046,
+      1.535
+    ],
+    "pitch": -0.3
+  },
+  "after_crossings": {},
+  "after_contact": {
+    "nominal_chin_world": [
+      -0.00823211669921875,
+      -0.04443752020597458,
+      1.5485056638717651
+    ],
+    "target_skin_world": [
+      -0.006860487628728151,
+      -0.03954242914915085,
+      1.5501338243484497
+    ],
+    "target_skin_normal": [
+      -0.2631073594093323,
+      -0.9145048260688782,
+      -0.30733615159988403
+    ],
+    "selected_index_vertex": 1166,
+    "selected_index_world": [
+      -0.007196933031082153,
+      -0.04020926356315613,
+      1.5489387512207031
+    ],
+    "selected_to_target_skin_m": 0.0014092776198220444,
+    "distal_minimum_skin_distance_m": 0.0009999568574130535,
+    "closest_index_world": [
+      -0.007951438426971436,
+      -0.03997698798775673,
+      1.5491552352905273
+    ],
+    "closest_skin_world": [
+      -0.007660039234906435,
+      -0.03907426819205284,
+      1.5494716167449951
+    ],
+    "closest_skin_normal": [
+      -0.28767985105514526,
+      -0.9048030972480774,
+      -0.3139611482620239
+    ],
+    "closest_signed_skin_distance_m": 0.0009999448520829901,
+    "selected_signed_skin_distance_m": 0.001064838288584724,
+    "finger_head_surface_crossing_pairs": 0,
+    "bone_tip_world": [
+      -0.007945742458105087,
+      -0.04325990378856659,
+      1.5504547357559204
+    ]
+  },
+  "hair_body_surface_check": {
+    "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+    "objects": {},
+    "tested": 46,
+    "objects_with_surface_crossings": 0,
+    "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+  },
+  "ik_snap_checks": {
+    "foot.L": {
+      "joint_switch_error_m": 3.4e-05,
+      "endpoint_switch_error_m": 0.0,
+      "pole_angle_rad": -1.706544,
+      "stretch": false
+    },
+    "hand.L": {
+      "joint_switch_error_m": 2e-06,
+      "endpoint_switch_error_m": 0.0,
+      "pole_angle_rad": 0.930842,
+      "stretch": false
+    },
+    "foot.R": {
+      "joint_switch_error_m": 3.4e-05,
+      "endpoint_switch_error_m": 0.0,
+      "pole_angle_rad": -1.435048,
+      "stretch": false
+    },
+    "hand.R": {
+      "joint_switch_error_m": 0.006565,
+      "endpoint_switch_error_m": 0.0,
+      "pole_angle_rad": 1.667759,
+      "stretch": false
+    }
+  },
+  "floor_minimum_m": 0.0010000290349125862,
+  "basis_uv_weights_hash_before": "18b55e4aec02f87481154b52cfb2c401332ea2ed42293aa7cb7deb726d99d1e3",
+  "basis_uv_weights_hash_after": "18b55e4aec02f87481154b52cfb2c401332ea2ed42293aa7cb7deb726d99d1e3",
+  "other_fk_pose_hashes_preserved": true,
+  "status": "checkpoint_surface_checks_passed_current_PNG_contact_reviewed_artistic_differences_pending",
+  "current_PNG_visual_review": {
+    "file": "expresiones/12_THINK.png",
+    "sha256": "c5d808c11ebed81d661ff56b19f2589fe02292577e9ed98f5c36056e665258bd",
+    "contact_readable": true,
+    "visible_isolated_white_fragments_over_collar": false,
+    "finger_continuity_readable": true,
+    "identity_exact_approved": false,
+    "review_report": "poses/Salve_revision_pensativa_v02.json"
+  },
+  "final_model_incorporation": {
+    "file": "Salve_refinado_v02.blend",
+    "sha256": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+    "evidence": "finish_static_review_final_v02.log registra FINAL_STATIC_LOCAL_REVIEW_SAVED después del render THINK y de validar 21 presets; el helper facial verifica que conserva las matrices de huesos.",
+    "independent_final_geometry_audit": "A cargo del inspector final; estas cifras de contacto fueron tomadas en el checkpoint corregido."
+  }
+}

@@ -1,0 +1,368 @@
+[
+  {
+    "id": "NEUTRAL",
+    "frame": 201,
+    "file": "expresiones/01_NEUTRAL.png",
+    "values": {},
+    "camera": "CAM_FACE_NEUTRAL",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "b26db517b4d114b1cade61b7c17b9336d13ecebd7a4202d952bdd95507b9db25"
+  },
+  {
+    "id": "WARM",
+    "frame": 211,
+    "file": "expresiones/02_WARM.png",
+    "values": {
+      "smile": 0.7,
+      "eyeSquint.L": 0.15,
+      "eyeSquint.R": 0.15
+    },
+    "camera": "CAM_FACE_WARM",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "bfdaad9a5ccd33deb0862b0fbefc7b92be3ecbe3940f56b8dcb56692131eb08e",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "CURIOUS",
+    "frame": 221,
+    "file": "expresiones/03_CURIOUS.png",
+    "values": {
+      "browOuterUp.L": 0.65,
+      "browInnerUp.R": 0.25,
+      "eyeWide.L": 0.2,
+      "lipPucker": 0.1
+    },
+    "camera": "CAM_FACE_CURIOUS",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "6f18fec63c3e069892dbd795582eac7dc2697cbc21e9c65c6b3ffd2693264fc1",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "CONCERNED",
+    "frame": 231,
+    "file": "expresiones/04_CONCERNED.png",
+    "values": {
+      "browInnerUp.L": 0.72,
+      "browInnerUp.R": 0.72,
+      "frown": 0.38
+    },
+    "camera": "CAM_FACE_CONCERNED",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "0d728aa1cbf3df8abe0ab2354737687269041eadd3550c76c7637f99b11ff95b"
+  },
+  {
+    "id": "SAD",
+    "frame": 241,
+    "file": "expresiones/05_SAD.png",
+    "values": {
+      "browInnerUp.L": 0.65,
+      "browInnerUp.R": 0.65,
+      "frown": 0.85,
+      "eyeSquint.L": 0.15,
+      "eyeSquint.R": 0.15
+    },
+    "camera": "CAM_FACE_SAD",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "2ccb7adcf9d7a98a5e5fe35631be69692e0d5ef42bf00b874a13ed76730d0c23",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "ANGRY",
+    "frame": 251,
+    "file": "expresiones/06_ANGRY.png",
+    "values": {
+      "browDown.L": 0.95,
+      "browDown.R": 0.95,
+      "eyeSquint.L": 0.85,
+      "eyeSquint.R": 0.85,
+      "mouthPress": 0.35,
+      "browOuterUp.L": 0.5,
+      "browOuterUp.R": 0.5
+    },
+    "camera": "CAM_FACE_ANGRY",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "eb363ffa00897bb1047f4df0a8f2752cc2a13fcbacdb981da8ec58752ad0173d",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "SURPRISED",
+    "frame": 261,
+    "file": "expresiones/07_SURPRISED.png",
+    "values": {
+      "browOuterUp.L": 0.8,
+      "browOuterUp.R": 0.8,
+      "eyeWide.L": 0.72,
+      "eyeWide.R": 0.72,
+      "jawOpen": 0.65,
+      "lipFunnel": 0.45
+    },
+    "camera": "CAM_FACE_SURPRISED",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "2c271d43e93bda4359333bf3d3fdedf83b78f5c7530a33ddf178edbeb83f29eb",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "SHY",
+    "frame": 271,
+    "file": "expresiones/08_SHY.png",
+    "values": {
+      "smile": 0.28,
+      "blink.L": 0.2,
+      "blink.R": 0.2,
+      "eyeSquint.L": 0.35,
+      "eyeSquint.R": 0.35,
+      "blush": 1.0
+    },
+    "camera": "CAM_FACE_SHY",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "5315615064959828570abb82f52d81908d43646a7aec5e45125f501558720449",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "LAUGH",
+    "frame": 281,
+    "file": "expresiones/09_LAUGH.png",
+    "values": {
+      "smile": 1.0,
+      "jawOpen": 0.86,
+      "blink.L": 1.0,
+      "blink.R": 1.0
+    },
+    "camera": "CAM_FACE_LAUGH",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "2621334ebf7b830ed69cce17dc5aa6ce0a5b8efd88314b1510ae3c7bf020fbb0",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "CRY",
+    "frame": 291,
+    "file": "expresiones/10_CRY.png",
+    "values": {
+      "browInnerUp.L": 1,
+      "browInnerUp.R": 1,
+      "frown": 1,
+      "jawOpen": 0.38,
+      "tears": 1,
+      "blush": 0.2
+    },
+    "camera": "CAM_FACE_CRY",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "e4431130901ec470b0435c032a7994dab217ce31b62aff03d2b3b47330b42abd"
+  },
+  {
+    "id": "STARTLE",
+    "frame": 301,
+    "file": "expresiones/11_STARTLE.png",
+    "values": {
+      "jawOpen": 0.78,
+      "lipFunnel": 0.75,
+      "browOuterUp.L": 1,
+      "browOuterUp.R": 1,
+      "eyeWide.L": 1,
+      "eyeWide.R": 1
+    },
+    "camera": "CAM_FACE_STARTLE",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "3de588c0b4abb8dd84bca33e7f3d40f2f8c2032b1be010771b3f5e0e538e9705",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "THINK",
+    "frame": 311,
+    "file": "expresiones/12_THINK.png",
+    "values": {
+      "browInnerUp.L": 0.38,
+      "lipPucker": 0.18,
+      "eyeSquint.R": 0.14
+    },
+    "camera": "CAM_FACE_THINK",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "c5d808c11ebed81d661ff56b19f2589fe02292577e9ed98f5c36056e665258bd",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "WINK",
+    "frame": 321,
+    "file": "expresiones/13_WINK.png",
+    "values": {
+      "blink.L": 1,
+      "smile": 0.6,
+      "eyeSquint.R": 0.1
+    },
+    "camera": "CAM_FACE_WINK",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "d66cc73de90d90597a3151e738d3fecf59b633034bfce9caff5470b73ad9bc87",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "A",
+    "frame": 331,
+    "file": "expresiones/14_A.png",
+    "values": {
+      "jawOpen": 0.9
+    },
+    "camera": "CAM_FACE_A",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "bc0a352d08d89f779b66fafea6110d05756635f04bef7499368a82ea60b317ab"
+  },
+  {
+    "id": "E",
+    "frame": 341,
+    "file": "expresiones/15_E.png",
+    "values": {
+      "jawOpen": 0.32,
+      "mouthWide": 0.7
+    },
+    "camera": "CAM_FACE_E",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "ce761e7e2e3a48bd6a1aea9157a360c2b23683ad4923ec04cae1cf237e34b68e"
+  },
+  {
+    "id": "I",
+    "frame": 351,
+    "file": "expresiones/16_I.png",
+    "values": {
+      "jawOpen": 0.13,
+      "mouthWide": 1
+    },
+    "camera": "CAM_FACE_I",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "5c5ea5ffa8ffdae3c80dc5dd5420455e70bccb43cbb756b38bd182f0f98d0d2b"
+  },
+  {
+    "id": "O",
+    "frame": 361,
+    "file": "expresiones/17_O.png",
+    "values": {
+      "jawOpen": 0.7,
+      "lipFunnel": 1
+    },
+    "camera": "CAM_FACE_O",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "dd8e812e1ff975cf401ca2962e51be004b240af400143017878d25afc5bb4feb",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "U",
+    "frame": 371,
+    "file": "expresiones/18_U.png",
+    "values": {
+      "jawOpen": 0.25,
+      "lipPucker": 1
+    },
+    "camera": "CAM_FACE_U",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "6ca6174d7f9af3a56720fae2573fddaba48effa609bbb628e3e1963460587c43",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "MBP",
+    "frame": 381,
+    "file": "expresiones/19_MBP.png",
+    "values": {
+      "mouthPress": 1.0
+    },
+    "camera": "CAM_FACE_MBP",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "441cf16d8e79a1695bcc5f590231817d61c37bae7574bacc254a9e3a3156100e",
+    "revision": "local_mbp_angry_lashes_tooth_width_contact_polish",
+    "source_model": "Salve_refinado_v02.blend"
+  },
+  {
+    "id": "SILENCE",
+    "frame": 391,
+    "file": "expresiones/20_SILENCE.png",
+    "values": {},
+    "camera": "CAM_FACE_SILENCE",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "eccae3e8a0b77d6e1cfcf998c1165c07bf81b1e1b27d8b86401befd61225c6ae"
+  },
+  {
+    "id": "CONFUSED",
+    "frame": 401,
+    "file": "expresiones/21_CONFUSED.png",
+    "values": {
+      "browInnerUp.L": 0.62,
+      "browDown.R": 0.3,
+      "lipPucker": 0.15
+    },
+    "camera": "CAM_FACE_CONFUSED",
+    "size": [
+      768,
+      768
+    ],
+    "sha256": "19324ef6d58bc223f1205f8250f64605a82f1035d6fb8460d17da0b4a5bf1f67"
+  }
+]

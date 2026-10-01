@@ -1,0 +1,2681 @@
+{
+  "method": "Bone endpoints in armature pose space, FK0 to IK1, exact same frame; no geometry edits",
+  "armature_ik_solver": "LEGACY",
+  "frames": {
+    "1": {
+      "foot.L": {
+        "rest_first_length_m": 0.38126763701438904,
+        "rest_second_length_m": 0.46627357602119446,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": -1.7065441608428955
+        },
+        "fk": {
+          "first_head": [
+            0.08799999952316284,
+            0.0,
+            1.0050370693206787
+          ],
+          "first_tail": [
+            0.07100000232458115,
+            -0.026000000536441803,
+            0.6250370740890503
+          ],
+          "second_head": [
+            0.07100000232458115,
+            -0.026000000536441803,
+            0.6250370740890503
+          ],
+          "second_tail": [
+            0.0560000017285347,
+            0.004999995231628418,
+            0.16003704071044922
+          ],
+          "first_length_m": 0.3812676231975565,
+          "second_length_m": 0.46627355468570597,
+          "joint_gap_m": 0.0,
+          "joint_radius_from_endpoint_axis_m": 0.02836870455766444,
+          "endpoint_distance_from_start_m": 0.8456204943309021,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "first_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ik": {
+          "first_head": [
+            0.08799999952316284,
+            0.0,
+            1.0050370693206787
+          ],
+          "first_tail": [
+            0.07096564769744873,
+            -0.025997158139944077,
+            0.6250383853912354
+          ],
+          "second_head": [
+            0.07096566259860992,
+            -0.025997143238782883,
+            0.6250386238098145
+          ],
+          "second_tail": [
+            0.05599985644221306,
+            0.005000246688723564,
+            0.16003715991973877
+          ],
+          "first_length_m": 0.38126765346413993,
+          "second_length_m": 0.46627370476959634,
+          "joint_gap_m": 2.3934808975769594e-07,
+          "joint_radius_from_endpoint_axis_m": 0.02836914716791102,
+          "endpoint_distance_from_start_m": 0.8456203955956793,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "first_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 0.0,
+          "joint": 3.449322409729196e-05,
+          "endpoint": 3.139261707316585e-07
+        },
+        "iterations_256_error_m": {
+          "chain_start": 0.0,
+          "joint": 3.449322409729196e-05,
+          "endpoint": 3.139261707316585e-07
+        }
+      },
+      "hand.L": {
+        "rest_first_length_m": 0.23307718336582184,
+        "rest_second_length_m": 0.24484486877918243,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 0.513902485370636
+        },
+        "fk": {
+          "first_head": [
+            0.13499999046325684,
+            0.0,
+            1.4450370073318481
+          ],
+          "first_tail": [
+            0.19780780375003815,
+            -0.007975554093718529,
+            1.2207235097885132
+          ],
+          "second_head": [
+            0.19780780375003815,
+            -0.007975541055202484,
+            1.2207235097885132
+          ],
+          "second_tail": [
+            0.2349315583705902,
+            -0.018009033054113388,
+            0.9789174199104309
+          ],
+          "first_length_m": 0.23307719057256854,
+          "second_length_m": 0.2448449099644995,
+          "joint_gap_m": 1.30385160446167e-08,
+          "joint_radius_from_endpoint_axis_m": 0.014412770649188833,
+          "endpoint_distance_from_start_m": 0.4770514778063305,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0,
+            0.9999999403953552,
+            1.0000001192092896
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.000000238418579,
+            1.000000238418579
+          ]
+        },
+        "ik": {
+          "first_head": [
+            0.13499997556209564,
+            -2.760420514391626e-08,
+            1.4450368881225586
+          ],
+          "first_tail": [
+            0.19780969619750977,
+            -0.008015414699912071,
+            1.220725178718567
+          ],
+          "second_head": [
+            0.19780966639518738,
+            -0.008015390485525131,
+            1.2207252979278564
+          ],
+          "second_tail": [
+            0.2349315583705902,
+            -0.018009068444371223,
+            0.9789172410964966
+          ],
+          "first_length_m": 0.23307734526808335,
+          "second_length_m": 0.24484493913133812,
+          "joint_gap_m": 1.252412458808291e-07,
+          "joint_radius_from_endpoint_axis_m": 0.014412812496536224,
+          "endpoint_distance_from_start_m": 0.4770515435116573,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0,
+            0.9999999403953552,
+            1.0000001192092896
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.000000238418579,
+            1.000000238418579
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 1.2326756054601706e-07,
+          "joint": 3.993299353197293e-05,
+          "endpoint": 1.8228245515918356e-07
+        },
+        "iterations_256_error_m": {
+          "chain_start": 1.2326756054601706e-07,
+          "joint": 3.993299353197293e-05,
+          "endpoint": 1.8228245515918356e-07
+        }
+      },
+      "foot.R": {
+        "rest_first_length_m": 0.38126763701438904,
+        "rest_second_length_m": 0.46627357602119446,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": -1.4350484609603882
+        },
+        "fk": {
+          "first_head": [
+            -0.08799999952316284,
+            0.0,
+            1.0050370693206787
+          ],
+          "first_tail": [
+            -0.07100000232458115,
+            -0.026000000536441803,
+            0.6250370740890503
+          ],
+          "second_head": [
+            -0.07100000232458115,
+            -0.026000000536441803,
+            0.6250370740890503
+          ],
+          "second_tail": [
+            -0.0560000017285347,
+            0.004999995231628418,
+            0.16003704071044922
+          ],
+          "first_length_m": 0.3812676231975565,
+          "second_length_m": 0.46627355468570597,
+          "joint_gap_m": 0.0,
+          "joint_radius_from_endpoint_axis_m": 0.02836870455766444,
+          "endpoint_distance_from_start_m": 0.8456204943309021,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "first_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ik": {
+          "first_head": [
+            -0.08799999952316284,
+            0.0,
+            1.0050370693206787
+          ],
+          "first_tail": [
+            -0.07096565514802933,
+            -0.025997158139944077,
+            0.6250383853912354
+          ],
+          "second_head": [
+            -0.07096566259860992,
+            -0.025997143238782883,
+            0.6250386238098145
+          ],
+          "second_tail": [
+            -0.05599985271692276,
+            0.005000252276659012,
+            0.16003715991973877
+          ],
+          "first_length_m": 0.3812676531206352,
+          "second_length_m": 0.46627370526893963,
+          "joint_gap_m": 2.38999946897409e-07,
+          "joint_radius_from_endpoint_axis_m": 0.02836914853043079,
+          "endpoint_distance_from_start_m": 0.8456203957656139,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "first_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 0.0,
+          "joint": 3.449322409729196e-05,
+          "endpoint": 3.2013663170701e-07
+        },
+        "iterations_256_error_m": {
+          "chain_start": 0.0,
+          "joint": 3.449322409729196e-05,
+          "endpoint": 3.2013663170701e-07
+        }
+      },
+      "hand.R": {
+        "rest_first_length_m": 0.23307718336582184,
+        "rest_second_length_m": 0.24484486877918243,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 2.627690076828003
+        },
+        "fk": {
+          "first_head": [
+            -0.13499999046325684,
+            0.0,
+            1.4450370073318481
+          ],
+          "first_tail": [
+            -0.19780780375003815,
+            -0.007975554093718529,
+            1.2207235097885132
+          ],
+          "second_head": [
+            -0.19780780375003815,
+            -0.007975541055202484,
+            1.2207235097885132
+          ],
+          "second_tail": [
+            -0.2349315583705902,
+            -0.018009033054113388,
+            0.9789174199104309
+          ],
+          "first_length_m": 0.23307719057256854,
+          "second_length_m": 0.2448449099644995,
+          "joint_gap_m": 1.30385160446167e-08,
+          "joint_radius_from_endpoint_axis_m": 0.014412770649188833,
+          "endpoint_distance_from_start_m": 0.4770514778063305,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0,
+            0.9999999403953552,
+            1.0000001192092896
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.000000238418579,
+            1.000000238418579
+          ]
+        },
+        "ik": {
+          "first_head": [
+            -0.13499997556209564,
+            -2.760420514391626e-08,
+            1.4450368881225586
+          ],
+          "first_tail": [
+            -0.19780969619750977,
+            -0.008015415631234646,
+            1.220725178718567
+          ],
+          "second_head": [
+            -0.19780966639518738,
+            -0.008015391416847706,
+            1.2207252979278564
+          ],
+          "second_tail": [
+            -0.2349315583705902,
+            -0.018009068444371223,
+            0.9789172410964966
+          ],
+          "first_length_m": 0.2330773452993003,
+          "second_length_m": 0.24484493908676322,
+          "joint_gap_m": 1.252412458808291e-07,
+          "joint_radius_from_endpoint_axis_m": 0.014412812447236842,
+          "endpoint_distance_from_start_m": 0.4770515435116573,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0,
+            0.9999999403953552,
+            1.0000001192092896
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.000000238418579,
+            1.000000238418579
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 1.2326756054601706e-07,
+          "joint": 3.9933923503018576e-05,
+          "endpoint": 1.8228245515918356e-07
+        },
+        "iterations_256_error_m": {
+          "chain_start": 1.2326756054601706e-07,
+          "joint": 3.9933923503018576e-05,
+          "endpoint": 1.8228245515918356e-07
+        }
+      }
+    },
+    "151": {
+      "foot.L": {
+        "rest_first_length_m": 0.38126763701438904,
+        "rest_second_length_m": 0.46627357602119446,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 1.4059597253799438
+        },
+        "fk": {
+          "first_head": [
+            0.08799999952316284,
+            -0.0012489145155996084,
+            0.2056039571762085
+          ],
+          "first_tail": [
+            0.1210416853427887,
+            -0.3496944308280945,
+            0.05441172420978546
+          ],
+          "second_head": [
+            0.12104170024394989,
+            -0.34969452023506165,
+            0.054411716759204865
+          ],
+          "second_tail": [
+            0.10899344086647034,
+            0.11618739366531372,
+            0.06924565136432648
+          ],
+          "first_length_m": 0.3812677674313542,
+          "second_length_m": 0.4662737060803725,
+          "joint_gap_m": 9.094592642585711e-08,
+          "joint_radius_from_endpoint_axis_m": 0.36558169410053426,
+          "endpoint_distance_from_start_m": 0.18117835689983247,
+          "first_basis_translation": [
+            0.0,
+            2.980232238769531e-08,
+            0.0
+          ],
+          "second_basis_translation": [
+            7.450580596923828e-09,
+            8.940696716308594e-08,
+            -4.470348358154297e-08
+          ],
+          "first_basis_scale": [
+            0.999997079372406,
+            0.9999931454658508,
+            0.9999995827674866
+          ],
+          "second_basis_scale": [
+            0.999999463558197,
+            0.9999985098838806,
+            1.0000014305114746
+          ]
+        },
+        "ik": {
+          "first_head": [
+            0.08799999952316284,
+            -0.0012489142827689648,
+            0.2056039422750473
+          ],
+          "first_tail": [
+            0.12713342905044556,
+            -0.34953802824020386,
+            0.05549502372741699
+          ],
+          "second_head": [
+            0.12713344395160675,
+            -0.3495381772518158,
+            0.0554950088262558
+          ],
+          "second_tail": [
+            0.10899238288402557,
+            0.11618682742118835,
+            0.06924568861722946
+          ],
+          "first_length_m": 0.38127341063604897,
+          "second_length_m": 0.4662809900687984,
+          "joint_gap_m": 1.5049435106459375e-07,
+          "joint_radius_from_endpoint_axis_m": 0.3655853500757879,
+          "endpoint_distance_from_start_m": 0.18117783595539141,
+          "first_basis_translation": [
+            0.0,
+            2.980232238769531e-08,
+            0.0
+          ],
+          "second_basis_translation": [
+            7.450580596923828e-09,
+            8.940696716308594e-08,
+            -4.470348358154297e-08
+          ],
+          "first_basis_scale": [
+            0.999997079372406,
+            0.9999931454658508,
+            0.9999995827674866
+          ],
+          "second_basis_scale": [
+            0.999999463558197,
+            0.9999985098838806,
+            1.0000014305114746
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 1.490298007224245e-08,
+          "joint": 0.0061892896110266596,
+          "endpoint": 1.2005611361857461e-06
+        },
+        "iterations_256_error_m": {
+          "chain_start": 1.490298007224245e-08,
+          "joint": 0.0061892896110266596,
+          "endpoint": 1.2005611361857461e-06
+        }
+      },
+      "hand.L": {
+        "rest_first_length_m": 0.23307718336582184,
+        "rest_second_length_m": 0.24484486877918243,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 0.5623838901519775
+        },
+        "fk": {
+          "first_head": [
+            0.13499996066093445,
+            -0.030815977603197098,
+            0.6440976858139038
+          ],
+          "first_tail": [
+            0.13458174467086792,
+            -0.10726058483123779,
+            0.4239135980606079
+          ],
+          "second_head": [
+            0.13458174467086792,
+            -0.1072605773806572,
+            0.4239135682582855
+          ],
+          "second_tail": [
+            0.11177334189414978,
+            -0.1877153068780899,
+            0.1937922090291977
+          ],
+          "first_length_m": 0.23307720987567482,
+          "second_length_m": 0.24484490271364964,
+          "joint_gap_m": 3.0719530773294423e-08,
+          "joint_radius_from_endpoint_axis_m": 0.010924537963122974,
+          "endpoint_distance_from_start_m": 0.47742213214983764,
+          "first_basis_translation": [
+            -2.980232238769531e-08,
+            0.0,
+            -7.450580596923828e-09
+          ],
+          "second_basis_translation": [
+            -1.4901161193847656e-08,
+            2.980232238769531e-08,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0000001192092896,
+            1.0000001192092896,
+            1.000000238418579
+          ],
+          "second_basis_scale": [
+            0.9999998211860657,
+            1.0000001192092896,
+            1.0000001192092896
+          ]
+        },
+        "ik": {
+          "first_head": [
+            0.13499996066093445,
+            -0.0308159738779068,
+            0.6440977454185486
+          ],
+          "first_tail": [
+            0.13458311557769775,
+            -0.10730525106191635,
+            0.4239291250705719
+          ],
+          "second_head": [
+            0.13458310067653656,
+            -0.10730528086423874,
+            0.42392903566360474
+          ],
+          "second_tail": [
+            0.11177337914705276,
+            -0.1877153068780899,
+            0.1937921941280365
+          ],
+          "first_length_m": 0.23307725237226276,
+          "second_length_m": 0.2448448934420708,
+          "joint_gap_m": 9.541398640621973e-08,
+          "joint_radius_from_endpoint_axis_m": 0.010924863076008842,
+          "endpoint_distance_from_start_m": 0.4774222083502957,
+          "first_basis_translation": [
+            -2.980232238769531e-08,
+            0.0,
+            -7.450580596923828e-09
+          ],
+          "second_basis_translation": [
+            -1.4901161193847656e-08,
+            2.980232238769531e-08,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0000001192092896,
+            1.0000001192092896,
+            1.000000238418579
+          ],
+          "second_basis_scale": [
+            0.9999998211860657,
+            1.0000001192092896,
+            1.0000001192092896
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 5.972094663188382e-08,
+          "joint": 4.732315313889715e-05,
+          "endpoint": 4.012260442327338e-08
+        },
+        "iterations_256_error_m": {
+          "chain_start": 5.972094663188382e-08,
+          "joint": 4.732315313889715e-05,
+          "endpoint": 4.012260442327338e-08
+        }
+      },
+      "foot.R": {
+        "rest_first_length_m": 0.38126763701438904,
+        "rest_second_length_m": 0.46627357602119446,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 1.7356330156326294
+        },
+        "fk": {
+          "first_head": [
+            -0.08799999952316284,
+            -0.0012489145155996084,
+            0.2056039571762085
+          ],
+          "first_tail": [
+            -0.1210416853427887,
+            -0.3496944308280945,
+            0.05441172420978546
+          ],
+          "second_head": [
+            -0.12104170024394989,
+            -0.34969452023506165,
+            0.054411716759204865
+          ],
+          "second_tail": [
+            -0.10899344086647034,
+            0.11618739366531372,
+            0.06924565136432648
+          ],
+          "first_length_m": 0.3812677674313542,
+          "second_length_m": 0.4662737060803725,
+          "joint_gap_m": 9.094592642585711e-08,
+          "joint_radius_from_endpoint_axis_m": 0.36558169410053426,
+          "endpoint_distance_from_start_m": 0.18117835689983247,
+          "first_basis_translation": [
+            0.0,
+            2.980232238769531e-08,
+            0.0
+          ],
+          "second_basis_translation": [
+            -7.450580596923828e-09,
+            8.940696716308594e-08,
+            -4.470348358154297e-08
+          ],
+          "first_basis_scale": [
+            0.999997079372406,
+            0.9999931454658508,
+            0.9999995827674866
+          ],
+          "second_basis_scale": [
+            0.999999463558197,
+            0.9999985098838806,
+            1.0000014305114746
+          ]
+        },
+        "ik": {
+          "first_head": [
+            -0.08799999952316284,
+            -0.0012489142827689648,
+            0.2056039422750473
+          ],
+          "first_tail": [
+            -0.1271333396434784,
+            -0.34953805804252625,
+            0.0554950088262558
+          ],
+          "second_head": [
+            -0.1271333545446396,
+            -0.3495381772518158,
+            0.055494993925094604
+          ],
+          "second_tail": [
+            -0.10899239033460617,
+            0.11618685722351074,
+            0.06924566626548767
+          ],
+          "first_length_m": 0.38127342834535766,
+          "second_length_m": 0.4662810180627931,
+          "joint_gap_m": 1.210576058124894e-07,
+          "joint_radius_from_endpoint_axis_m": 0.3655853284221792,
+          "endpoint_distance_from_start_m": 0.18117786768115954,
+          "first_basis_translation": [
+            0.0,
+            2.980232238769531e-08,
+            0.0
+          ],
+          "second_basis_translation": [
+            -7.450580596923828e-09,
+            8.940696716308594e-08,
+            -4.470348358154297e-08
+          ],
+          "first_basis_scale": [
+            0.999997079372406,
+            0.9999931454658508,
+            0.9999995827674866
+          ],
+          "second_basis_scale": [
+            0.999999463558197,
+            0.9999985098838806,
+            1.0000014305114746
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 1.490298007224245e-08,
+          "joint": 0.006189199128032423,
+          "endpoint": 1.1796648041780354e-06
+        },
+        "iterations_256_error_m": {
+          "chain_start": 1.490298007224245e-08,
+          "joint": 0.006189199128032423,
+          "endpoint": 1.1796648041780354e-06
+        }
+      },
+      "hand.R": {
+        "rest_first_length_m": 0.23307718336582184,
+        "rest_second_length_m": 0.24484486877918243,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 2.5792088508605957
+        },
+        "fk": {
+          "first_head": [
+            -0.13499996066093445,
+            -0.030815977603197098,
+            0.6440976858139038
+          ],
+          "first_tail": [
+            -0.13458174467086792,
+            -0.10726058483123779,
+            0.4239135980606079
+          ],
+          "second_head": [
+            -0.13458174467086792,
+            -0.1072605773806572,
+            0.4239135682582855
+          ],
+          "second_tail": [
+            -0.11177334189414978,
+            -0.1877153068780899,
+            0.1937922090291977
+          ],
+          "first_length_m": 0.23307720987567482,
+          "second_length_m": 0.24484490271364964,
+          "joint_gap_m": 3.0719530773294423e-08,
+          "joint_radius_from_endpoint_axis_m": 0.010924537963122974,
+          "endpoint_distance_from_start_m": 0.47742213214983764,
+          "first_basis_translation": [
+            2.980232238769531e-08,
+            0.0,
+            -7.450580596923828e-09
+          ],
+          "second_basis_translation": [
+            1.4901161193847656e-08,
+            2.980232238769531e-08,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0000001192092896,
+            1.0000001192092896,
+            1.000000238418579
+          ],
+          "second_basis_scale": [
+            0.9999998211860657,
+            1.0000001192092896,
+            1.0000001192092896
+          ]
+        },
+        "ik": {
+          "first_head": [
+            -0.13499996066093445,
+            -0.0308159738779068,
+            0.6440977454185486
+          ],
+          "first_tail": [
+            -0.13458311557769775,
+            -0.10730525106191635,
+            0.4239291250705719
+          ],
+          "second_head": [
+            -0.13458310067653656,
+            -0.10730528086423874,
+            0.42392903566360474
+          ],
+          "second_tail": [
+            -0.11177337914705276,
+            -0.1877153068780899,
+            0.1937921941280365
+          ],
+          "first_length_m": 0.23307725237226276,
+          "second_length_m": 0.2448448934420708,
+          "joint_gap_m": 9.541398640621973e-08,
+          "joint_radius_from_endpoint_axis_m": 0.010924863076008842,
+          "endpoint_distance_from_start_m": 0.4774222083502957,
+          "first_basis_translation": [
+            2.980232238769531e-08,
+            0.0,
+            -7.450580596923828e-09
+          ],
+          "second_basis_translation": [
+            1.4901161193847656e-08,
+            2.980232238769531e-08,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0000001192092896,
+            1.0000001192092896,
+            1.000000238418579
+          ],
+          "second_basis_scale": [
+            0.9999998211860657,
+            1.0000001192092896,
+            1.0000001192092896
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 5.972094663188382e-08,
+          "joint": 4.732315313889715e-05,
+          "endpoint": 4.012260442327338e-08
+        },
+        "iterations_256_error_m": {
+          "chain_start": 5.972094663188382e-08,
+          "joint": 4.732315313889715e-05,
+          "endpoint": 4.012260442327338e-08
+        }
+      }
+    },
+    "161": {
+      "foot.L": {
+        "rest_first_length_m": 0.38126763701438904,
+        "rest_second_length_m": 0.46627357602119446,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": -1.609581470489502
+        },
+        "fk": {
+          "first_head": [
+            0.08799999952316284,
+            -0.00840001367032528,
+            0.31178006529808044
+          ],
+          "first_tail": [
+            0.1010097786784172,
+            -0.2886246144771576,
+            0.05357474088668823
+          ],
+          "second_head": [
+            0.1010097861289978,
+            -0.28862467408180237,
+            0.053574685007333755
+          ],
+          "second_tail": [
+            0.08594506978988647,
+            0.1763511598110199,
+            0.08490543812513351
+          ],
+          "first_length_m": 0.3812677095508225,
+          "second_length_m": 0.466273620364969,
+          "joint_gap_m": 8.204100856760606e-08,
+          "joint_radius_from_endpoint_axis_m": 0.3805626277479663,
+          "endpoint_distance_from_start_m": 0.29259068911626324,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            -3.725290298461914e-09
+          ],
+          "second_basis_translation": [
+            7.450580596923828e-09,
+            7.450580596923828e-08,
+            0.0
+          ],
+          "first_basis_scale": [
+            0.9999966621398926,
+            0.9999938011169434,
+            0.9999986290931702
+          ],
+          "second_basis_scale": [
+            0.9999997615814209,
+            0.9999968409538269,
+            1.0000028610229492
+          ]
+        },
+        "ik": {
+          "first_head": [
+            0.08799999952316284,
+            -0.008400015532970428,
+            0.31178009510040283
+          ],
+          "first_tail": [
+            0.07585407793521881,
+            -0.2887747287750244,
+            0.05368936061859131
+          ],
+          "second_head": [
+            0.0758541002869606,
+            -0.2887747883796692,
+            0.05368930101394653
+          ],
+          "second_tail": [
+            0.08594381809234619,
+            0.17634975910186768,
+            0.0849066823720932
+          ],
+          "first_length_m": 0.38127198251499833,
+          "second_length_m": 0.4662801380612469,
+          "joint_gap_m": 8.72068100476237e-08,
+          "joint_radius_from_endpoint_axis_m": 0.38056730977779657,
+          "endpoint_distance_from_start_m": 0.2925888835819224,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            -3.725290298461914e-09
+          ],
+          "second_basis_translation": [
+            7.450580596923828e-09,
+            7.450580596923828e-08,
+            0.0
+          ],
+          "first_basis_scale": [
+            0.9999966621398926,
+            0.9999938011169434,
+            0.9999986290931702
+          ],
+          "second_basis_scale": [
+            0.9999997615814209,
+            0.9999968409538269,
+            1.0000028610229492
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 2.986047331594191e-08,
+          "joint": 0.025156395108851367,
+          "endpoint": 2.253194034733171e-06
+        },
+        "iterations_256_error_m": {
+          "chain_start": 2.986047331594191e-08,
+          "joint": 0.025156395108851367,
+          "endpoint": 2.253194034733171e-06
+        }
+      },
+      "hand.L": {
+        "rest_first_length_m": 0.23307718336582184,
+        "rest_second_length_m": 0.24484486877918243,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 0.9599310755729675
+        },
+        "fk": {
+          "first_head": [
+            0.13499994575977325,
+            -0.37124279141426086,
+            0.48947542905807495
+          ],
+          "first_tail": [
+            0.1965085119009018,
+            -0.37587738037109375,
+            0.2647084593772888
+          ],
+          "second_head": [
+            0.196508526802063,
+            -0.37587741017341614,
+            0.26470842957496643
+          ],
+          "second_tail": [
+            0.2049998939037323,
+            -0.4112429916858673,
+            0.022579938173294067
+          ],
+          "first_length_m": 0.23307718099286862,
+          "second_length_m": 0.2448449148974546,
+          "joint_gap_m": 4.470348358154297e-08,
+          "joint_radius_from_endpoint_axis_m": 0.031287957548201996,
+          "endpoint_distance_from_start_m": 0.4738052399638604,
+          "first_basis_translation": [
+            0.0,
+            -5.960464477539063e-08,
+            -2.980232238769531e-08
+          ],
+          "second_basis_translation": [
+            2.980232238769531e-08,
+            2.980232238769531e-08,
+            -2.980232238769531e-08
+          ],
+          "first_basis_scale": [
+            1.0000001192092896,
+            1.0,
+            0.9999999403953552
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.000000238418579,
+            1.000000238418579
+          ]
+        },
+        "ik": {
+          "first_head": [
+            0.13499994575977325,
+            -0.37124279141426086,
+            0.48947542905807495
+          ],
+          "first_tail": [
+            0.19657842814922333,
+            -0.3760114908218384,
+            0.26473039388656616
+          ],
+          "second_head": [
+            0.1965784728527069,
+            -0.37601152062416077,
+            0.26473039388656616
+          ],
+          "second_tail": [
+            0.20499983429908752,
+            -0.4112430214881897,
+            0.022579938173294067
+          ],
+          "first_length_m": 0.23307720161946432,
+          "second_length_m": 0.24484489412555258,
+          "joint_gap_m": 5.3726900748371916e-08,
+          "joint_radius_from_endpoint_axis_m": 0.0312878529594828,
+          "endpoint_distance_from_start_m": 0.47380523357558496,
+          "first_basis_translation": [
+            0.0,
+            -5.960464477539063e-08,
+            -2.980232238769531e-08
+          ],
+          "second_basis_translation": [
+            2.980232238769531e-08,
+            2.980232238769531e-08,
+            -2.980232238769531e-08
+          ],
+          "first_basis_scale": [
+            1.0000001192092896,
+            1.0,
+            0.9999999403953552
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.000000238418579,
+            1.000000238418579
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 0.0,
+          "joint": 0.00015284140140570414,
+          "endpoint": 6.664001874625056e-08
+        },
+        "iterations_256_error_m": {
+          "chain_start": 0.0,
+          "joint": 0.00015284140140570414,
+          "endpoint": 6.664001874625056e-08
+        }
+      },
+      "foot.R": {
+        "rest_first_length_m": 0.38126763701438904,
+        "rest_second_length_m": 0.46627357602119446,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": -1.5320112705230713
+        },
+        "fk": {
+          "first_head": [
+            -0.08799999952316284,
+            -0.00840001367032528,
+            0.31178006529808044
+          ],
+          "first_tail": [
+            -0.1010097786784172,
+            -0.2886246144771576,
+            0.05357474088668823
+          ],
+          "second_head": [
+            -0.1010097861289978,
+            -0.28862467408180237,
+            0.053574685007333755
+          ],
+          "second_tail": [
+            -0.08594506978988647,
+            0.1763511598110199,
+            0.08490543812513351
+          ],
+          "first_length_m": 0.3812677095508225,
+          "second_length_m": 0.466273620364969,
+          "joint_gap_m": 8.204100856760606e-08,
+          "joint_radius_from_endpoint_axis_m": 0.3805626277479663,
+          "endpoint_distance_from_start_m": 0.29259068911626324,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            -3.725290298461914e-09
+          ],
+          "second_basis_translation": [
+            -7.450580596923828e-09,
+            7.450580596923828e-08,
+            0.0
+          ],
+          "first_basis_scale": [
+            0.9999966621398926,
+            0.9999938011169434,
+            0.9999986290931702
+          ],
+          "second_basis_scale": [
+            0.9999997615814209,
+            0.9999968409538269,
+            1.0000028610229492
+          ]
+        },
+        "ik": {
+          "first_head": [
+            -0.08799999952316284,
+            -0.008400015532970428,
+            0.31178009510040283
+          ],
+          "first_tail": [
+            -0.07585352659225464,
+            -0.288774698972702,
+            0.05368936061859131
+          ],
+          "second_head": [
+            -0.07585354149341583,
+            -0.2887747585773468,
+            0.05368930101394653
+          ],
+          "second_tail": [
+            -0.08594381809234619,
+            0.17634975910186768,
+            0.08490671217441559
+          ],
+          "first_length_m": 0.38127198053032696,
+          "second_length_m": 0.46628012019436615,
+          "joint_gap_m": 8.560065398421926e-08,
+          "joint_radius_from_endpoint_axis_m": 0.38056728821188635,
+          "endpoint_distance_from_start_m": 0.2925888581175889,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            -3.725290298461914e-09
+          ],
+          "second_basis_translation": [
+            -7.450580596923828e-09,
+            7.450580596923828e-08,
+            0.0
+          ],
+          "first_basis_scale": [
+            0.9999966621398926,
+            0.9999938011169434,
+            0.9999986290931702
+          ],
+          "second_basis_scale": [
+            0.9999997615814209,
+            0.9999968409538269,
+            1.0000028610229492
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 2.986047331594191e-08,
+          "joint": 0.02515695371516848,
+          "endpoint": 2.2697873104372153e-06
+        },
+        "iterations_256_error_m": {
+          "chain_start": 2.986047331594191e-08,
+          "joint": 0.02515695371516848,
+          "endpoint": 2.2697873104372153e-06
+        }
+      },
+      "hand.R": {
+        "rest_first_length_m": 0.23307718336582184,
+        "rest_second_length_m": 0.24484486877918243,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 2.181661605834961
+        },
+        "fk": {
+          "first_head": [
+            -0.13499994575977325,
+            -0.37124279141426086,
+            0.48947542905807495
+          ],
+          "first_tail": [
+            -0.1965085119009018,
+            -0.37587738037109375,
+            0.2647084593772888
+          ],
+          "second_head": [
+            -0.196508526802063,
+            -0.37587741017341614,
+            0.26470842957496643
+          ],
+          "second_tail": [
+            -0.2049998939037323,
+            -0.4112429916858673,
+            0.022579938173294067
+          ],
+          "first_length_m": 0.23307718099286862,
+          "second_length_m": 0.2448449148974546,
+          "joint_gap_m": 4.470348358154297e-08,
+          "joint_radius_from_endpoint_axis_m": 0.031287957548201996,
+          "endpoint_distance_from_start_m": 0.4738052399638604,
+          "first_basis_translation": [
+            0.0,
+            -5.960464477539063e-08,
+            -2.980232238769531e-08
+          ],
+          "second_basis_translation": [
+            -2.980232238769531e-08,
+            2.980232238769531e-08,
+            -2.980232238769531e-08
+          ],
+          "first_basis_scale": [
+            1.0000001192092896,
+            1.0,
+            0.9999999403953552
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.000000238418579,
+            1.000000238418579
+          ]
+        },
+        "ik": {
+          "first_head": [
+            -0.13499994575977325,
+            -0.37124279141426086,
+            0.48947542905807495
+          ],
+          "first_tail": [
+            -0.19657842814922333,
+            -0.3760114908218384,
+            0.26473039388656616
+          ],
+          "second_head": [
+            -0.1965784728527069,
+            -0.37601152062416077,
+            0.26473039388656616
+          ],
+          "second_tail": [
+            -0.20499984920024872,
+            -0.4112430214881897,
+            0.022579938173294067
+          ],
+          "first_length_m": 0.23307720161946432,
+          "second_length_m": 0.24484489464559306,
+          "joint_gap_m": 5.3726900748371916e-08,
+          "joint_radius_from_endpoint_axis_m": 0.03128783993673842,
+          "endpoint_distance_from_start_m": 0.473805236032614,
+          "first_basis_translation": [
+            0.0,
+            -5.960464477539063e-08,
+            -2.980232238769531e-08
+          ],
+          "second_basis_translation": [
+            -2.980232238769531e-08,
+            2.980232238769531e-08,
+            -2.980232238769531e-08
+          ],
+          "first_basis_scale": [
+            1.0000001192092896,
+            1.0,
+            0.9999999403953552
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.000000238418579,
+            1.000000238418579
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 0.0,
+          "joint": 0.00015284140140570414,
+          "endpoint": 5.3726900748371916e-08
+        },
+        "iterations_256_error_m": {
+          "chain_start": 0.0,
+          "joint": 0.00015284140140570414,
+          "endpoint": 5.3726900748371916e-08
+        }
+      }
+    },
+    "311": {
+      "foot.L": {
+        "rest_first_length_m": 0.38126763701438904,
+        "rest_second_length_m": 0.46627357602119446,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": -1.7065441608428955
+        },
+        "fk": {
+          "first_head": [
+            0.08799999952316284,
+            0.0,
+            1.0050370693206787
+          ],
+          "first_tail": [
+            0.07100000232458115,
+            -0.026000000536441803,
+            0.6250370740890503
+          ],
+          "second_head": [
+            0.07100000232458115,
+            -0.026000000536441803,
+            0.6250370740890503
+          ],
+          "second_tail": [
+            0.0560000017285347,
+            0.004999995231628418,
+            0.16003704071044922
+          ],
+          "first_length_m": 0.3812676231975565,
+          "second_length_m": 0.46627355468570597,
+          "joint_gap_m": 0.0,
+          "joint_radius_from_endpoint_axis_m": 0.02836870455766444,
+          "endpoint_distance_from_start_m": 0.8456204943309021,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "first_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ik": {
+          "first_head": [
+            0.08799999952316284,
+            0.0,
+            1.0050370693206787
+          ],
+          "first_tail": [
+            0.07096564769744873,
+            -0.025997158139944077,
+            0.6250383853912354
+          ],
+          "second_head": [
+            0.07096566259860992,
+            -0.025997143238782883,
+            0.6250386238098145
+          ],
+          "second_tail": [
+            0.05599985644221306,
+            0.005000246688723564,
+            0.16003715991973877
+          ],
+          "first_length_m": 0.38126765346413993,
+          "second_length_m": 0.46627370476959634,
+          "joint_gap_m": 2.3934808975769594e-07,
+          "joint_radius_from_endpoint_axis_m": 0.02836914716791102,
+          "endpoint_distance_from_start_m": 0.8456203955956793,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "first_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 0.0,
+          "joint": 3.449322409729196e-05,
+          "endpoint": 3.139261707316585e-07
+        },
+        "iterations_256_error_m": {
+          "chain_start": 0.0,
+          "joint": 3.449322409729196e-05,
+          "endpoint": 3.139261707316585e-07
+        }
+      },
+      "hand.L": {
+        "rest_first_length_m": 0.23307718336582184,
+        "rest_second_length_m": 0.24484486877918243,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 0.8241832852363586
+        },
+        "fk": {
+          "first_head": [
+            0.13499999046325684,
+            0.0,
+            1.4450370073318481
+          ],
+          "first_tail": [
+            0.02060726284980774,
+            -0.0642756000161171,
+            1.252402901649475
+          ],
+          "second_head": [
+            0.020607205107808113,
+            -0.06427562981843948,
+            1.2524027824401855
+          ],
+          "second_tail": [
+            -0.2114633470773697,
+            -0.1410307139158249,
+            1.2382267713546753
+          ],
+          "first_length_m": 0.23307712935613323,
+          "second_length_m": 0.2448449387598807,
+          "joint_gap_m": 1.357688169489944e-07,
+          "joint_radius_from_endpoint_axis_m": 0.10686203422194177,
+          "endpoint_distance_from_start_m": 0.4274306612535851,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            1.1920928955078125e-07,
+            0.0
+          ],
+          "first_basis_scale": [
+            0.9999999403953552,
+            0.9999997615814209,
+            0.9999998211860657
+          ],
+          "second_basis_scale": [
+            1.000000238418579,
+            1.0000004768371582,
+            1.0000003576278687
+          ]
+        },
+        "ik": {
+          "first_head": [
+            0.13499997556209564,
+            -2.760420514391626e-08,
+            1.4450368881225586
+          ],
+          "first_tail": [
+            0.02071235328912735,
+            -0.06460299342870712,
+            1.252449870109558
+          ],
+          "second_head": [
+            0.02071227878332138,
+            -0.06460301578044891,
+            1.252449631690979
+          ],
+          "second_tail": [
+            -0.2114633321762085,
+            -0.1410306692123413,
+            1.2382264137268066
+          ],
+          "first_length_m": 0.23307716431911712,
+          "second_length_m": 0.24484485507793796,
+          "joint_gap_m": 2.507870298580354e-07,
+          "joint_radius_from_endpoint_axis_m": 0.10686206585278786,
+          "endpoint_distance_from_start_m": 0.42743075058789126,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            1.1920928955078125e-07,
+            0.0
+          ],
+          "first_basis_scale": [
+            0.9999999403953552,
+            0.9999997615814209,
+            0.9999998211860657
+          ],
+          "second_basis_scale": [
+            1.000000238418579,
+            1.0000004768371582,
+            1.0000003576278687
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 1.2326756054601706e-07,
+          "joint": 0.000347011382468601,
+          "endpoint": 3.607189189466895e-07
+        },
+        "iterations_256_error_m": {
+          "chain_start": 1.2326756054601706e-07,
+          "joint": 0.000347011382468601,
+          "endpoint": 3.607189189466895e-07
+        }
+      },
+      "foot.R": {
+        "rest_first_length_m": 0.38126763701438904,
+        "rest_second_length_m": 0.46627357602119446,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": -1.4350484609603882
+        },
+        "fk": {
+          "first_head": [
+            -0.08799999952316284,
+            0.0,
+            1.0050370693206787
+          ],
+          "first_tail": [
+            -0.07100000232458115,
+            -0.026000000536441803,
+            0.6250370740890503
+          ],
+          "second_head": [
+            -0.07100000232458115,
+            -0.026000000536441803,
+            0.6250370740890503
+          ],
+          "second_tail": [
+            -0.0560000017285347,
+            0.004999995231628418,
+            0.16003704071044922
+          ],
+          "first_length_m": 0.3812676231975565,
+          "second_length_m": 0.46627355468570597,
+          "joint_gap_m": 0.0,
+          "joint_radius_from_endpoint_axis_m": 0.02836870455766444,
+          "endpoint_distance_from_start_m": 0.8456204943309021,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "first_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ik": {
+          "first_head": [
+            -0.08799999952316284,
+            0.0,
+            1.0050370693206787
+          ],
+          "first_tail": [
+            -0.07096565514802933,
+            -0.025997158139944077,
+            0.6250383853912354
+          ],
+          "second_head": [
+            -0.07096566259860992,
+            -0.025997143238782883,
+            0.6250386238098145
+          ],
+          "second_tail": [
+            -0.05599985271692276,
+            0.005000252276659012,
+            0.16003715991973877
+          ],
+          "first_length_m": 0.3812676531206352,
+          "second_length_m": 0.46627370526893963,
+          "joint_gap_m": 2.38999946897409e-07,
+          "joint_radius_from_endpoint_axis_m": 0.02836914853043079,
+          "endpoint_distance_from_start_m": 0.8456203957656139,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "first_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "second_basis_scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 0.0,
+          "joint": 3.449322409729196e-05,
+          "endpoint": 3.2013663170701e-07
+        },
+        "iterations_256_error_m": {
+          "chain_start": 0.0,
+          "joint": 3.449322409729196e-05,
+          "endpoint": 3.2013663170701e-07
+        }
+      },
+      "hand.R": {
+        "rest_first_length_m": 0.23307718336582184,
+        "rest_second_length_m": 0.24484486877918243,
+        "rest_joint_gap_m": 0.0,
+        "first_connected": false,
+        "second_connected": false,
+        "first_inherit_scale": "FULL",
+        "second_inherit_scale": "FULL",
+        "first_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "second_ik_flags": {
+          "lock_ik_x": false,
+          "lock_ik_y": false,
+          "lock_ik_z": false,
+          "use_ik_limit_x": false,
+          "use_ik_limit_y": false,
+          "use_ik_limit_z": false,
+          "ik_stiffness_x": 0.0,
+          "ik_stiffness_y": 0.0,
+          "ik_stiffness_z": 0.0,
+          "ik_stretch": 0.0
+        },
+        "constraint": {
+          "chain_count": 2,
+          "iterations": 96,
+          "use_stretch": false,
+          "use_location": true,
+          "use_rotation": false,
+          "pole_angle": 2.016824960708618
+        },
+        "fk": {
+          "first_head": [
+            -0.13499999046325684,
+            0.0,
+            1.4450370073318481
+          ],
+          "first_tail": [
+            -0.2514631748199463,
+            -0.10603062808513641,
+            1.2732267379760742
+          ],
+          "second_head": [
+            -0.25146326422691345,
+            -0.1060306578874588,
+            1.2732268571853638
+          ],
+          "second_tail": [
+            -0.06845496594905853,
+            -0.05255879834294319,
+            1.426842451095581
+          ],
+          "first_length_m": 0.23307710138574236,
+          "second_length_m": 0.2448449033079816,
+          "joint_gap_m": 1.519626234052415e-07,
+          "joint_radius_from_endpoint_axis_m": 0.23282015359062264,
+          "endpoint_distance_from_start_m": 0.08672779058680184,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            -1.1920928955078125e-07,
+            0.0,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0,
+            0.9999997615814209,
+            0.9999999403953552
+          ],
+          "second_basis_scale": [
+            1.0000004768371582,
+            1.0000005960464478,
+            1.0000004768371582
+          ]
+        },
+        "ik": {
+          "first_head": [
+            -0.13499997556209564,
+            -2.760420514391626e-08,
+            1.4450368881225586
+          ],
+          "first_tail": [
+            -0.25827014446258545,
+            -0.11957568675279617,
+            1.2874579429626465
+          ],
+          "second_head": [
+            -0.2582702338695526,
+            -0.11957574635744095,
+            1.287458062171936
+          ],
+          "second_tail": [
+            -0.06845489144325256,
+            -0.05255879461765289,
+            1.426842212677002
+          ],
+          "first_length_m": 0.23307723124824306,
+          "second_length_m": 0.2448450083858503,
+          "joint_gap_m": 1.6049041769309353e-07,
+          "joint_radius_from_endpoint_axis_m": 0.23282034559919432,
+          "endpoint_distance_from_start_m": 0.08672784243339486,
+          "first_basis_translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "second_basis_translation": [
+            -1.1920928955078125e-07,
+            0.0,
+            1.4901161193847656e-08
+          ],
+          "first_basis_scale": [
+            1.0,
+            0.9999997615814209,
+            0.9999999403953552
+          ],
+          "second_basis_scale": [
+            1.0000004768371582,
+            1.0000005960464478,
+            1.0000004768371582
+          ]
+        },
+        "switch_error_m": {
+          "chain_start": 1.2326756054601706e-07,
+          "joint": 0.020792581865063973,
+          "endpoint": 2.4981675638703983e-07
+        },
+        "iterations_256_error_m": {
+          "chain_start": 1.2326756054601706e-07,
+          "joint": 0.020792581865063973,
+          "endpoint": 2.4981675638703983e-07
+        }
+      }
+    }
+  },
+  "limitations": [
+    "This diagnoses static switching, not deformation or motion continuity.",
+    "Disconnected rest bones are metadata evidence, not by themselves proof of the cause."
+  ],
+  "measurement_stage": "Detailed bone coordinates measured before final root support and palm orientation corrections. Latest static switching errors copied separately from the final saved model report.",
+  "latest_snap_checks": {
+    "stand": {
+      "foot.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.706544,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.513902,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.435048,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.62769,
+        "stretch": false
+      }
+    },
+    "front_three_quarter": {
+      "foot.L": {
+        "joint_switch_error_m": 1.1e-05,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.241123,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.300584,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.000158,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.347782,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.841008,
+        "stretch": false
+      }
+    },
+    "front_opposite": {
+      "foot.L": {
+        "joint_switch_error_m": 0.000158,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.793811,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.300584,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 1.1e-05,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.90047,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.841008,
+        "stretch": false
+      }
+    },
+    "A": {
+      "foot.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.706544,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 4e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.464137,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.435048,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.677455,
+        "stretch": false
+      }
+    },
+    "front_variant": {
+      "foot.L": {
+        "joint_switch_error_m": 1.1e-05,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.241123,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.300584,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.000269,
+        "endpoint_switch_error_m": 3e-06,
+        "pole_angle_rad": -1.357478,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.841008,
+        "stretch": false
+      }
+    },
+    "hair_open": {
+      "foot.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.706544,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 1.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.872665,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.435048,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 1.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.268928,
+        "stretch": false
+      }
+    },
+    "seated": {
+      "foot.L": {
+        "joint_switch_error_m": 0.002309,
+        "endpoint_switch_error_m": 2e-06,
+        "pole_angle_rad": 0.814487,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 0.00022,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.203622,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.001096,
+        "endpoint_switch_error_m": 7e-06,
+        "pole_angle_rad": -1.590189,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4.1e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.617994,
+        "stretch": false
+      }
+    },
+    "crouched": {
+      "foot.L": {
+        "joint_switch_error_m": 0.003157,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": 1.444745,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 2.8e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.814487,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.003157,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": 1.696848,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 2.8e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.327106,
+        "stretch": false
+      }
+    },
+    "kneeling": {
+      "foot.L": {
+        "joint_switch_error_m": 0.006189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": 1.40596,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 4.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.562384,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.006189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": 1.735633,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 4.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.579209,
+        "stretch": false
+      }
+    },
+    "kneeling_variant": {
+      "foot.L": {
+        "joint_switch_error_m": 0.025156,
+        "endpoint_switch_error_m": 2e-06,
+        "pole_angle_rad": -1.609581,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 3.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.950235,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.025157,
+        "endpoint_switch_error_m": 2e-06,
+        "pole_angle_rad": -1.532011,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 3.7e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 2.191358,
+        "stretch": false
+      }
+    },
+    "leaning": {
+      "foot.L": {
+        "joint_switch_error_m": 0.000189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": -1.532011,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 5e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -0.426636,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.000189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": -1.609581,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 5e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -2.714957,
+        "stretch": false
+      }
+    },
+    "leaning_variant": {
+      "foot.L": {
+        "joint_switch_error_m": 0.000189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": -1.532011,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 0.000109,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -0.281192,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 0.000189,
+        "endpoint_switch_error_m": 1e-06,
+        "pole_angle_rad": -1.609581,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 0.000109,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -2.860401,
+        "stretch": false
+      }
+    },
+    "THINK": {
+      "foot.L": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.706544,
+        "stretch": false
+      },
+      "hand.L": {
+        "joint_switch_error_m": 2e-06,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 0.930842,
+        "stretch": false
+      },
+      "foot.R": {
+        "joint_switch_error_m": 3.4e-05,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": -1.435048,
+        "stretch": false
+      },
+      "hand.R": {
+        "joint_switch_error_m": 0.006565,
+        "endpoint_switch_error_m": 0.0,
+        "pole_angle_rad": 1.667759,
+        "stretch": false
+      }
+    }
+  },
+  "current_errors_source": "Salve_poses_contactos_v02.json / ik_snap_checks, after floor_contacts_postface_v02.py and palm_contacts_v02.py",
+  "latest_snap_measurement_stage": "Frame311 measured after evaluated-finger/chin repair; other frames from saved final support/palm repair. Detailed frames diagnosis remains the earlier snapshot."
+}

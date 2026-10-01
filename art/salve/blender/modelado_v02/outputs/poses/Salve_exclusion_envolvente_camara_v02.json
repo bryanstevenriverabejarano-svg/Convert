@@ -1,0 +1,413 @@
+{
+  "reason": "Zero-size evaluated meshes cannot define camera or character bounds",
+  "frames": {
+    "1": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "121": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "11": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "21": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "41": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "31": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "61": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "91": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "151": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "161": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "171": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ],
+    "181": [
+      {
+        "object": "Lagrima.L",
+        "collapsed_world_point": [
+          0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Lagrima.R",
+        "collapsed_world_point": [
+          -0.04600000008940697,
+          -0.03643512725830078,
+          1.5999999046325684
+        ]
+      },
+      {
+        "object": "Dientes_superiores",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5607999563217163
+        ]
+      },
+      {
+        "object": "Lengua",
+        "collapsed_world_point": [
+          0.0,
+          -0.04883675277233124,
+          1.5582000017166138
+        ]
+      }
+    ]
+  }
+}

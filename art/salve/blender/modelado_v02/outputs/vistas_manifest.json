@@ -1,0 +1,462 @@
+[
+  {
+    "index": 1,
+    "id": "front",
+    "frame": 1,
+    "file": "vistas_20/01_front.png",
+    "camera": "CAM_front",
+    "projection": "ORTHO",
+    "azimuth_deg": 0,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.16601564116444192,
+      0.04070719192095831,
+      0.822265609198804,
+      0.9592928082599467
+    ],
+    "reference_sha256": "9065a2fa9da111f7d4db905bc24af4cc1a60f2c23dd8cab846a6951b8ad5ab5e",
+    "render_sha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 2,
+    "id": "front_three_quarter",
+    "frame": 11,
+    "file": "vistas_20/02_front_three_quarter.png",
+    "camera": "CAM_front_three_quarter",
+    "projection": "PERSP",
+    "azimuth_deg": 34,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.19143201431597817,
+      0.012999977295514139,
+      0.775364757457965,
+      0.9869999971695473
+    ],
+    "reference_sha256": "e28ad34b4a36bf1be88a694e8105f39b8a0a803e36d3f099fd561159f61ec93e",
+    "render_sha256": "5839ca7dd914083847067b89f46e670ee351fcc4af292dc8384ecc77aaab2456",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 3,
+    "id": "right",
+    "frame": 1,
+    "file": "vistas_20/03_right.png",
+    "camera": "CAM_right",
+    "projection": "ORTHO",
+    "azimuth_deg": 90,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.40484606885089996,
+      0.012999997964128318,
+      0.7445679946076235,
+      0.986999991059255
+    ],
+    "reference_sha256": "d3c8178d034e6e93f4fc329bb65712dd87ba3cac2e32cbd254bc8fb202fb96b7",
+    "render_sha256": "e9bbe9eea1d6b9fa64c16a2dfbc6fa08a9e20ccfff1509809311e2f1875bbead",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 4,
+    "id": "rear_right",
+    "frame": 1,
+    "file": "vistas_20/04_rear_right.png",
+    "camera": "CAM_rear_right",
+    "projection": "PERSP",
+    "azimuth_deg": 135,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.28906235784464857,
+      0.037602541829011765,
+      0.8007811865135913,
+      0.9637203798276053
+    ],
+    "reference_sha256": "06f29ffd26cbe9d3924c3aa3dde7e7c8324a68aa248fda9a9e1180c6a88d998a",
+    "render_sha256": "a1415f432e48628bd12e3d84feb7aed42959b2f1c7fdd3f6b77b3ae114b4b39e",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 5,
+    "id": "rear",
+    "frame": 1,
+    "file": "vistas_20/05_rear.png",
+    "camera": "CAM_rear",
+    "projection": "ORTHO",
+    "azimuth_deg": 180,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.15234374415592625,
+      0.022253426838513068,
+      0.834960943180065,
+      0.9777465549349037
+    ],
+    "reference_sha256": "5d42fcb1ba3abcec413ec95c10db5e0814a7fa613930a994e4aa301c945a7058",
+    "render_sha256": "5ee3594712520c928d6df6e5a92ef9ca55f4bcd47bbd87e8011be946564e480e",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 6,
+    "id": "rear_three_quarter",
+    "frame": 21,
+    "file": "vistas_20/06_rear_three_quarter.png",
+    "camera": "CAM_rear_three_quarter",
+    "projection": "PERSP",
+    "azimuth_deg": 224,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.19681709955120583,
+      0.013000009989946541,
+      0.7348235386567864,
+      0.9869999939227114
+    ],
+    "reference_sha256": "c78ce6a0d7afaf9ecb1c533eaaee35648874746f3424c34a70693e6e8697d6e6",
+    "render_sha256": "59a4f5b337c400f513ae3aaca3f81a205c097515254f396bd13510f000b6498b",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 7,
+    "id": "left",
+    "frame": 1,
+    "file": "vistas_20/07_left.png",
+    "camera": "CAM_left",
+    "projection": "ORTHO",
+    "azimuth_deg": 270,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.26324450539237654,
+      0.012999997964128318,
+      0.6029664311490999,
+      0.986999991059255
+    ],
+    "reference_sha256": "2f890a5ffe53ca9ecac4abdf7e0dd330eec6dd347afaaab0ae31050f3c8a31a6",
+    "render_sha256": "e12a80f442d2209ba88b14d337ce0850af964d9305fbb13f52298282f51a2c52",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 8,
+    "id": "front_opposite",
+    "frame": 21,
+    "file": "vistas_20/08_front_opposite.png",
+    "camera": "CAM_front_opposite",
+    "projection": "PERSP",
+    "azimuth_deg": 329,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.24147304933141778,
+      0.013000030392921337,
+      0.8317690785506874,
+      0.9869999841503566
+    ],
+    "reference_sha256": "45e9e90d6599f8eaf4b2d073306efec8148cf67f38b699de7a3138faa6f45f3f",
+    "render_sha256": "79b3da658ed5cdd0f3273105d4aad11dd620ab8247e9e8306d365a6fb746f8ef",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 9,
+    "id": "front_variant",
+    "frame": 41,
+    "file": "vistas_20/09_front_variant.png",
+    "camera": "CAM_front_variant",
+    "projection": "PERSP",
+    "azimuth_deg": 24,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.2073902814871915,
+      0.012999976138752187,
+      0.8092112081026113,
+      0.985677089523089
+    ],
+    "reference_sha256": "fe1ff13f2bbc006bbeb31c9e7d89f54e7e107331374f82f60113719f0bc8a0eb",
+    "render_sha256": "bc7ba80e408e739fc4747a8be932e2affdaad2bdc8f86dfd98652e6ad20aa48d",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 10,
+    "id": "above",
+    "frame": 1,
+    "file": "vistas_20/10_above.png",
+    "camera": "CAM_above",
+    "projection": "PERSP",
+    "azimuth_deg": 0,
+    "elevation_deg": 47,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.057793006571838994,
+      0.012999788570276663,
+      0.9431835559471069,
+      0.9870000550341395
+    ],
+    "reference_sha256": "5635662a3c267ad4040b13c2c7c7b9fac46a71277790f269af733d42ddc5500f",
+    "render_sha256": "fc06ff24c01cb8aa059c6822e97dd361745361a8172b20427f693b93b60e9fa2",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 11,
+    "id": "below",
+    "frame": 1,
+    "file": "vistas_20/11_below.png",
+    "camera": "CAM_below",
+    "projection": "PERSP",
+    "azimuth_deg": 0,
+    "elevation_deg": -22,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.14374456132909805,
+      0.012999960634051585,
+      0.8582085635621308,
+      0.9870000026495922
+    ],
+    "reference_sha256": "a23c8599b3190c568cd83f6dcfcc01c6bf7263c93467a259a78cd2a0ef030952",
+    "render_sha256": "35226a981b966cb9272e50f035bb36e46afded87d43678455fded128e1b05f0b",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 12,
+    "id": "a_front",
+    "frame": 31,
+    "file": "vistas_20/12_a_front.png",
+    "camera": "CAM_a_front",
+    "projection": "ORTHO",
+    "azimuth_deg": 0,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.1530571826707843,
+      0.013000009821588873,
+      0.8488959423292157,
+      0.9869999903702293
+    ],
+    "reference_sha256": "5e93415cb864e521b9803af17de85bbccf58dc34595dbe5af7556db8e2e6beb2",
+    "render_sha256": "36bc7d4102761ba26e6f2d8a179a418a15342aa0f08df5a9f6c3cd856fe758d3",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 13,
+    "id": "a_open_hair",
+    "frame": 61,
+    "file": "vistas_20/13_a_open_hair.png",
+    "camera": "CAM_a_open_hair",
+    "projection": "ORTHO",
+    "azimuth_deg": 0,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.04599976579363449,
+      0.014973956989410427,
+      0.9520471092063655,
+      0.9870000303405
+    ],
+    "reference_sha256": "f5109a645ce8e67a8fcc2360d652df6ae94f7b3544031a09886e5e4ead29595b",
+    "render_sha256": "c217d950b43e10530e82e481ec696a94912699d970dfa2adb4b301b571cd6925",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 14,
+    "id": "a_rear",
+    "frame": 31,
+    "file": "vistas_20/14_a_rear.png",
+    "camera": "CAM_a_rear",
+    "projection": "ORTHO",
+    "azimuth_deg": 180,
+    "elevation_deg": 0,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.15348340558302823,
+      0.016927061479196964,
+      0.8465165944169769,
+      0.9869999985463461
+    ],
+    "reference_sha256": "17d4546dd935e0277e3113de4619ccacde34cd42eac377d4d229c3c1ec79b04f",
+    "render_sha256": "40d83704a51f836ca6d512dfaae2c84296113bd60d728000d73c1148367022b6",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 15,
+    "id": "seated",
+    "frame": 91,
+    "file": "vistas_20/15_seated.png",
+    "camera": "CAM_seated",
+    "projection": "PERSP",
+    "azimuth_deg": 8,
+    "elevation_deg": 8,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.01299998811762432,
+      0.13837977347024533,
+      0.9869999335049734,
+      0.8616217040824765
+    ],
+    "reference_sha256": "68d59233dce94ed5dbcbd7b9881a1b4cd87f2331e0592b320609f29b214e63b5",
+    "render_sha256": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 16,
+    "id": "crouched",
+    "frame": 121,
+    "file": "vistas_20/16_crouched.png",
+    "camera": "CAM_crouched",
+    "projection": "PERSP",
+    "azimuth_deg": 40,
+    "elevation_deg": 8,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.0683593057875659,
+      0.1380174969955942,
+      0.9869999689239091,
+      0.8717481231613298
+    ],
+    "reference_sha256": "5966ded2cc3ca82f619b128ea94d24074ae81432d1456f441e7ee7eefdc29ee5",
+    "render_sha256": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 17,
+    "id": "kneeling",
+    "frame": 151,
+    "file": "vistas_20/17_kneeling.png",
+    "camera": "CAM_kneeling",
+    "projection": "PERSP",
+    "azimuth_deg": 32,
+    "elevation_deg": 4,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.012999722853178013,
+      0.1362458524118913,
+      0.9869999194400031,
+      0.8917703016315969
+    ],
+    "reference_sha256": "1ad4fa15517f17c0ff88fc228dbe535ff06869cbbd02010ad63ebf10278f70be",
+    "render_sha256": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 18,
+    "id": "kneeling_variant",
+    "frame": 161,
+    "file": "vistas_20/18_kneeling_variant.png",
+    "camera": "CAM_kneeling_variant",
+    "projection": "PERSP",
+    "azimuth_deg": 64,
+    "elevation_deg": 8,
+    "size": [
+      1374,
+      1145
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.07350787998606795,
+      0.013926840792732603,
+      0.9643376616677842,
+      0.9860958005140185
+    ],
+    "reference_sha256": "184be196d2e997f98214a27c7c9a5b1c3df67d039a445b4a2efca74382a91af6",
+    "render_sha256": "70fcd2c1642df52798417a14113727861a0c1fc6540bc08c018b21b4fbd8555f",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 19,
+    "id": "leaning",
+    "frame": 171,
+    "file": "vistas_20/19_leaning.png",
+    "camera": "CAM_leaning",
+    "projection": "PERSP",
+    "azimuth_deg": 0,
+    "elevation_deg": 4,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.12792970687757507,
+      0.020141188474885507,
+      0.9326171715610727,
+      0.979858941543175
+    ],
+    "reference_sha256": "a64b2e869e28646b88581b673ca3b105f9a3f518424cc8e97c5b461ffc9aeb15",
+    "render_sha256": "80b4ec56df320ccc0f5f76a6ffecc453ce745a3b3121318f021c7ddde728261a",
+    "visual_acceptance": "pending"
+  },
+  {
+    "index": 20,
+    "id": "leaning_variant",
+    "frame": 181,
+    "file": "vistas_20/20_leaning_variant.png",
+    "camera": "CAM_leaning_variant",
+    "projection": "PERSP",
+    "azimuth_deg": 34,
+    "elevation_deg": 6,
+    "size": [
+      1024,
+      1536
+    ],
+    "mesh_bbox_normalized_bottom_left": [
+      0.17600215528045754,
+      0.013000050094017016,
+      0.912865043428606,
+      0.9870000485484095
+    ],
+    "reference_sha256": "f412a20485bc1f4421cd500ee6da085f8960fb9e63d9238d3dccd2868a76c828",
+    "render_sha256": "232cebd51ec81a61ea7003fecfcecda84cc3f19c0400fb5d729f2784bc8b74c4",
+    "visual_acceptance": "pending"
+  }
+]

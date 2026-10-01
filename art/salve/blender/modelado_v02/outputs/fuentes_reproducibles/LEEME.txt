@@ -1,0 +1,57 @@
+FUENTES DEL REFINAMIENTO V02
+
+El archivo Blender entregado contiene la geometría, el rig, las claves y las
+texturas empaquetadas. No necesita ejecutar estos programas para abrirse.
+Son fuentes de trabajo para revisar o reconstruir el avance en Blender 5.2.2.
+Las rutas ROOT/WORK apuntan a este equipo y deben adaptarse al trasladarlas.
+
+Orden de las operaciones sobre una COPIA del modelo anterior:
+1. Seleccionar 04_SALVE_MODELO_3D y reconstruir cuerpo/cabello con body_hair_v02.
+2. Reconstruir el rostro usando face_v02_shape_fix.py, que lee face_v02.py.
+   NO ejecutar face_v02.py solo: el wrapper corrige la captura de formas y
+   el origen de dientes, lengua y lágrimas.
+3. atlas_v02.py: UVAtlas colectiva y tres mapas de materiales. Leer sus
+   argumentos antes de ejecutarlo; utiliza una escena temporal para hornear.
+   repair_atlas_constant_v02.py corrige cobertura de islas pequeñas usando
+   atlas_uv_faces_v02.json. Requiere Python con Pillow y NumPy.
+   reload_atlas_repair_v02.py sustituye los datos empaquetados anteriores.
+4. prepare_salve_ready.py: correctivos corporales, biblioteca de poses,
+   calibración IK, contactos y correcciones estáticas del cabello.
+5. final_polish_v02.py: rostro corregido, revisión visual local, controles,
+   empaquetado y validación numérica de los 21 presets faciales.
+6. floor_contacts_postface_v02.py y palm_contacts_v02.py: corrección final
+   de apoyos y orientación de palmas después de corregir el rostro. Consultar
+   sus informes en poses/. El orden evita usar componentes faciales colapsados
+   como falso mínimo de suelo.
+7. render_v02.py: veinte cámaras, 20 PNG, expresiones y anclajes derivados
+   de las cámaras. Las imágenes nuevas requieren revisión visual independiente.
+8. think_contact_v02.py realiza la primera corrección local de dedos/uñas
+   y contacto de THINK. think_collar_fix_v02.py continúa desde ese resultado:
+   coloca la mano fuera del collar y aparta el mechón de ese gesto.
+   Consultar los informes de contacto, collar y revisión visual en poses/.
+9. Desde el archivo que YA contiene ambas correcciones de THINK, ejecutar
+   finish_static_review_v02.py con --skip-contact. Aplica
+   rerender_face_local_v02.py y face_mbp_seal_v02.py; conserva las cámaras
+   corporales y vuelve a renderizar los 13 retratos afectados.
+   No omitir --skip-contact sobre ese archivo: repetir la primera corrección
+   volvería a colocar la mano en el contacto anterior dentro del collar.
+   Estas operaciones son posteriores al lote completo. Mantener un solo
+   Blender activo durante el render para evitar exceso de memoria.
+10. Intento opcional de limpieza facial, RECHAZADO Y REVERTIDO en esta entrega:
+    face_topology_uv_safe_cleanup_v02.py y face_cleanup_diagnostic_v02.py
+    verifican la conservación de formas, pesos y superficies; la comprobación
+    por cámara se encuentra en face_cleanup_visual_conservation_v02.py.
+    Esta limpieza no forma parte de la reconstrucción aplicada al modelo final.
+    SURPRISED (frame 261) alcanzó 0.0102996826 píxeles de desplazamiento,
+    por encima del límite fijado de 0.01 píxeles. La transacción restauró la
+    malla original sin guardar ni sustituir ninguno de los 41 PNG entregados.
+    No se afirma igualdad de geometría evaluada ni de normales a nivel de bits.
+    El rostro conserva 256 vértices sin aristas ni caras. Su UV cilíndrica
+    conserva 126 componentes fuera de [0,1] y dos caras de área UV nula;
+    el material cutáneo no depende de esa UV. Estos puntos siguen pendientes.
+    Consultar Salve_limpieza_rostroUV_v02.json; no guardar un candidato que
+    incumpla los límites ni utilizar este intento como paso obligatorio.
+
+Los scripts reconstruyen partes y escriben versiones nuevas. Conviene leerlos
+antes de reutilizarlos sobre una escena que ya tenga modificaciones manuales.
+No certifican identidad exacta, topología final ni ausencia de intersecciones.

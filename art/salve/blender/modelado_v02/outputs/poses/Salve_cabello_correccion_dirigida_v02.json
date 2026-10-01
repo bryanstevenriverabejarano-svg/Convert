@@ -1,0 +1,269 @@
+{
+  "frame": 161,
+  "object": "Mechon_largo_07.R",
+  "iterations": 16,
+  "before": {
+    "tested_leaves": 46,
+    "surface_crossings": {
+      "Mechon_largo_07.R": 66
+    },
+    "objects_with_crossings": 1,
+    "hair_minimum_z_m": 0.019971,
+    "leaf_minimum_z_m": {
+      "Mechon_largo_00.L": 0.019971,
+      "Mechon_largo_01.L": 0.02001,
+      "Mechon_largo_02.L": 0.034169,
+      "Mechon_largo_03.L": 0.036951,
+      "Mechon_largo_04.L": 0.03053,
+      "Mechon_largo_05.L": 0.035835,
+      "Mechon_largo_06.L": 0.057716,
+      "Mechon_largo_07.L": 0.020017,
+      "Mechon_largo_08.L": 0.020021,
+      "Mechon_largo_09.L": 0.019999,
+      "Mechon_largo_10.L": 0.019978,
+      "Mechon_largo_11.L": 0.019995,
+      "Mechon_largo_12.L": 0.020026,
+      "Mechon_largo_13.L": 0.020034,
+      "Mechon_largo_14.L": 0.020026,
+      "Mechon_largo_15.L": 0.020022,
+      "Mechon_largo_16.L": 0.020019,
+      "Mechon_largo_17.L": 0.020021,
+      "Mechon_largo_18.L": 0.020036,
+      "Mechon_largo_19.L": 0.020036,
+      "Mechon_rostro_00.L": 0.333211,
+      "Mechon_rostro_01.L": 0.325511,
+      "Mechon_rostro_02.L": 0.31781,
+      "Mechon_largo_00.R": 0.019971,
+      "Mechon_largo_01.R": 0.02001,
+      "Mechon_largo_02.R": 0.034169,
+      "Mechon_largo_03.R": 0.036951,
+      "Mechon_largo_04.R": 0.030529,
+      "Mechon_largo_05.R": 0.035835,
+      "Mechon_largo_06.R": 0.057716,
+      "Mechon_largo_07.R": 0.020015,
+      "Mechon_largo_08.R": 0.020021,
+      "Mechon_largo_09.R": 0.019999,
+      "Mechon_largo_10.R": 0.019978,
+      "Mechon_largo_11.R": 0.019995,
+      "Mechon_largo_12.R": 0.020026,
+      "Mechon_largo_13.R": 0.020034,
+      "Mechon_largo_14.R": 0.020026,
+      "Mechon_largo_15.R": 0.020022,
+      "Mechon_largo_16.R": 0.020018,
+      "Mechon_largo_17.R": 0.020021,
+      "Mechon_largo_18.R": 0.020035,
+      "Mechon_largo_19.R": 0.020036,
+      "Mechon_rostro_00.R": 0.333211,
+      "Mechon_rostro_01.R": 0.325511,
+      "Mechon_rostro_02.R": 0.31781
+    },
+    "floor_penetrating_leaves": {}
+  },
+  "crossing_rows_before": {
+    "object": "Mechon_largo_07.R",
+    "overlap_pairs": 66,
+    "row_assignment_method": "nearest posed base-cage row center to each overlapping subdivided polygon centroid",
+    "rows_with_crossings": {
+      "15": {
+        "row": 15,
+        "pairs": 30,
+        "points_world": [
+          [
+            -0.101717,
+            -0.337798,
+            0.52433
+          ],
+          [
+            -0.100723,
+            -0.338549,
+            0.523583
+          ],
+          [
+            -0.103726,
+            -0.337158,
+            0.525246
+          ],
+          [
+            -0.101717,
+            -0.337798,
+            0.52433
+          ],
+          [
+            -0.103726,
+            -0.337158,
+            0.525246
+          ],
+          [
+            -0.101717,
+            -0.337798,
+            0.52433
+          ]
+        ]
+      },
+      "16": {
+        "row": 16,
+        "pairs": 36,
+        "points_world": [
+          [
+            -0.117206,
+            -0.300561,
+            0.517403
+          ],
+          [
+            -0.115174,
+            -0.301187,
+            0.516425
+          ],
+          [
+            -0.117206,
+            -0.300561,
+            0.517403
+          ],
+          [
+            -0.117206,
+            -0.300561,
+            0.517403
+          ],
+          [
+            -0.117653,
+            -0.304383,
+            0.51501
+          ],
+          [
+            -0.120714,
+            -0.30508,
+            0.515401
+          ]
+        ]
+      }
+    },
+    "crossing_bbox_world": {
+      "min": [
+        -0.12939444184303284,
+        -0.34211891889572144,
+        0.5073724389076233
+      ],
+      "max": [
+        -0.10072287917137146,
+        -0.2671350836753845,
+        0.5252463221549988
+      ]
+    }
+  },
+  "maximum_previous_local_shift_m": 0.16566512680588824,
+  "status": "targeted key retained; visual review still required",
+  "attempt_stats": {
+    "corrected_row_iterations": 127,
+    "maximum_local_shift_m": 0.17118,
+    "key": "PoseClearance_161",
+    "rows": 65,
+    "sides": 12,
+    "detail_lines_followed": 3
+  },
+  "after": {
+    "tested_leaves": 46,
+    "surface_crossings": {},
+    "objects_with_crossings": 0,
+    "hair_minimum_z_m": 0.019971,
+    "leaf_minimum_z_m": {
+      "Mechon_largo_00.L": 0.019971,
+      "Mechon_largo_01.L": 0.02001,
+      "Mechon_largo_02.L": 0.034169,
+      "Mechon_largo_03.L": 0.036951,
+      "Mechon_largo_04.L": 0.03053,
+      "Mechon_largo_05.L": 0.035835,
+      "Mechon_largo_06.L": 0.057716,
+      "Mechon_largo_07.L": 0.020017,
+      "Mechon_largo_08.L": 0.020021,
+      "Mechon_largo_09.L": 0.019999,
+      "Mechon_largo_10.L": 0.019978,
+      "Mechon_largo_11.L": 0.019995,
+      "Mechon_largo_12.L": 0.020026,
+      "Mechon_largo_13.L": 0.020034,
+      "Mechon_largo_14.L": 0.020026,
+      "Mechon_largo_15.L": 0.020022,
+      "Mechon_largo_16.L": 0.020019,
+      "Mechon_largo_17.L": 0.020021,
+      "Mechon_largo_18.L": 0.020036,
+      "Mechon_largo_19.L": 0.020036,
+      "Mechon_rostro_00.L": 0.333211,
+      "Mechon_rostro_01.L": 0.325511,
+      "Mechon_rostro_02.L": 0.31781,
+      "Mechon_largo_00.R": 0.019971,
+      "Mechon_largo_01.R": 0.02001,
+      "Mechon_largo_02.R": 0.034169,
+      "Mechon_largo_03.R": 0.036951,
+      "Mechon_largo_04.R": 0.030529,
+      "Mechon_largo_05.R": 0.035835,
+      "Mechon_largo_06.R": 0.057716,
+      "Mechon_largo_07.R": 0.020015,
+      "Mechon_largo_08.R": 0.020021,
+      "Mechon_largo_09.R": 0.019999,
+      "Mechon_largo_10.R": 0.019978,
+      "Mechon_largo_11.R": 0.019995,
+      "Mechon_largo_12.R": 0.020026,
+      "Mechon_largo_13.R": 0.020034,
+      "Mechon_largo_14.R": 0.020026,
+      "Mechon_largo_15.R": 0.020022,
+      "Mechon_largo_16.R": 0.020018,
+      "Mechon_largo_17.R": 0.020021,
+      "Mechon_largo_18.R": 0.020035,
+      "Mechon_largo_19.R": 0.020036,
+      "Mechon_rostro_00.R": 0.333211,
+      "Mechon_rostro_01.R": 0.325511,
+      "Mechon_rostro_02.R": 0.31781
+    },
+    "floor_penetrating_leaves": {}
+  },
+  "crossing_rows_after": {
+    "object": "Mechon_largo_07.R",
+    "overlap_pairs": 0,
+    "row_assignment_method": "nearest posed base-cage row center to each overlapping subdivided polygon centroid",
+    "rows_with_crossings": {},
+    "crossing_bbox_world": null
+  },
+  "contact_evidence_161": {
+    "minimum_body_z_m": 0.001999,
+    "minimum_all_z_m": 0.001999,
+    "floor_penetration_m": 0,
+    "contact_regions": {
+      "foot.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "hair_body_surface_check": {
+      "method": "evaluated polygon surface BVH overlaps with suit only; excludes scalp/head",
+      "objects": {},
+      "tested": 46,
+      "objects_with_surface_crossings": 0,
+      "limitation": "Enclosed volumes and touching tolerance require separate visual judgement."
+    }
+  }
+}

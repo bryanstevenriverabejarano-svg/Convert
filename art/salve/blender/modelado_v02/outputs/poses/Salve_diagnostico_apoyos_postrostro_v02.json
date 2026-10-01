@@ -1,0 +1,2558 @@
+{
+  "stand": {
+    "frame": 1,
+    "minimum_objects": [
+      {
+        "object": "Suela.L",
+        "min_z": 0.0010000290349125862,
+        "point": [
+          0.05600001662969589,
+          -0.11696399748325348,
+          0.0010000290349125862
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Suela.R",
+        "min_z": 0.0010000290349125862,
+        "point": [
+          -0.05600001662969589,
+          -0.11696399748325348,
+          0.0010000290349125862
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Tacon.L",
+        "min_z": 0.03306625410914421,
+        "point": [
+          0.057442806661129,
+          0.041910722851753235,
+          0.03306625410914421
+        ],
+        "polygons": 984,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Tacon.R",
+        "min_z": 0.03306625410914421,
+        "point": [
+          -0.054557204246520996,
+          0.041910722851753235,
+          0.03306625410914421
+        ],
+        "polygons": 984,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.L",
+        "min_z": 0.047194380313158035,
+        "point": [
+          0.056000005453825,
+          -0.14394611120224,
+          0.047194380313158035
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.L": 0.9997197985649109,
+          "shin.L": 0.00028020713943988085
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.R",
+        "min_z": 0.047194380313158035,
+        "point": [
+          -0.056000012904405594,
+          -0.14394611120224,
+          0.047194380313158035
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.R": 0.9997197985649109,
+          "shin.R": 0.00028020713943988085
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_bota.L",
+        "min_z": 0.0551333986222744,
+        "point": [
+          0.056000009179115295,
+          -0.15302899479866028,
+          0.0551333986222744
+        ],
+        "polygons": 684,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_bota.R",
+        "min_z": 0.0551333986222744,
+        "point": [
+          -0.056000009179115295,
+          -0.15302899479866028,
+          0.0551333986222744
+        ],
+        "polygons": 684,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      }
+    ],
+    "contact_regions": {
+      "foot.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.56067,
+        "sampled_evaluated_vertices": 2385,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.83707,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.56067,
+        "sampled_evaluated_vertices": 2385,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.83788,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "posterior_pelvis_minimum": null
+  },
+  "seated": {
+    "frame": 91,
+    "minimum_objects": [
+      {
+        "object": "Muslo_y_pierna_quad.L",
+        "min_z": 0.0009998083114624023,
+        "point": [
+          0.32579702138900757,
+          -0.27252501249313354,
+          0.0009998083114624023
+        ],
+        "polygons": 9280,
+        "weights": {
+          "thigh.L": 0.2169250249862671,
+          "shin.L": 0.7830749750137329
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Tacon.L",
+        "min_z": 0.007399163208901882,
+        "point": [
+          -0.04119974002242088,
+          -0.4712470769882202,
+          0.007399163208901882
+        ],
+        "polygons": 984,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Guante_dorso.L",
+        "min_z": 0.007404290605336428,
+        "point": [
+          0.30408674478530884,
+          0.11837483197450638,
+          0.007404290605336428
+        ],
+        "polygons": 448,
+        "weights": {
+          "hand.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Salve_Traje_CONTINUO",
+        "min_z": 0.007404446601867676,
+        "point": [
+          -0.008343268185853958,
+          0.04243918135762215,
+          0.007404446601867676
+        ],
+        "polygons": 20608,
+        "weights": {
+          "pelvis": 0.9953150749206543,
+          "spine.01": 0.004684907384216785
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Suela.R",
+        "min_z": 0.007409979589283466,
+        "point": [
+          -0.1429058015346527,
+          -0.7195193767547607,
+          0.007409979589283466
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Led_guante.L",
+        "min_z": 0.00822216272354126,
+        "point": [
+          0.3296833634376526,
+          0.11553364992141724,
+          0.00822216272354126
+        ],
+        "polygons": 4,
+        "weights": {
+          "hand.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Guante_palmar_quad.L",
+        "min_z": 0.00989621877670288,
+        "point": [
+          0.31855911016464233,
+          0.11909490823745728,
+          0.00989621877670288
+        ],
+        "polygons": 1968,
+        "weights": {
+          "hand.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_middle_quad.L",
+        "min_z": 0.015393376350402832,
+        "point": [
+          0.3292716145515442,
+          0.1244325041770935,
+          0.015393376350402832
+        ],
+        "polygons": 1176,
+        "weights": {
+          "middle.01.L": 0.9958258867263794,
+          "middle.02.L": 0.0041740997694432735
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.L",
+        "min_z": 0.0154380202293396,
+        "point": [
+          0.32917165756225586,
+          0.13738477230072021,
+          0.0154380202293396
+        ],
+        "polygons": 1176,
+        "weights": {
+          "index.01.L": 0.9958258271217346,
+          "index.02.L": 0.0041741603054106236
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_thumb_quad.L",
+        "min_z": 0.015483736991882324,
+        "point": [
+          0.3290683329105377,
+          0.15033961832523346,
+          0.015483736991882324
+        ],
+        "polygons": 1176,
+        "weights": {
+          "thumb.01.L": 0.9958258867263794,
+          "thumb.02.L": 0.004174088593572378
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Brazo_quad.L",
+        "min_z": 0.01553875207901001,
+        "point": [
+          0.26033031940460205,
+          0.10399019718170166,
+          0.01553875207901001
+        ],
+        "polygons": 5432,
+        "weights": {
+          "forearm.L": 0.525421142578125,
+          "hand.L": 0.4745788872241974
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_ring_quad.L",
+        "min_z": 0.01601046323776245,
+        "point": [
+          0.3411403000354767,
+          0.11903002858161926,
+          0.01601046323776245
+        ],
+        "polygons": 1176,
+        "weights": {
+          "ring.01.L": 0.9958258271217346,
+          "ring.02.L": 0.0041741495952010155
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_pinky_quad.L",
+        "min_z": 0.0166284441947937,
+        "point": [
+          0.35300537943840027,
+          0.113630011677742,
+          0.0166284441947937
+        ],
+        "polygons": 1176,
+        "weights": {
+          "pinky.01.L": 0.9958258867263794,
+          "pinky.02.L": 0.004174088593572378
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_thumb.L",
+        "min_z": 0.017216980457305908,
+        "point": [
+          0.3854537010192871,
+          0.15694554150104523,
+          0.017216980457305908
+        ],
+        "polygons": 272,
+        "weights": {
+          "thumb.03.L": 0.9054684638977051,
+          "thumb.02.L": 0.09453154355287552
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_index.L",
+        "min_z": 0.017941653728485107,
+        "point": [
+          0.38523995876312256,
+          0.14610391855239868,
+          0.017941653728485107
+        ],
+        "polygons": 272,
+        "weights": {
+          "index.03.L": 0.9054679870605469,
+          "index.02.L": 0.09453204274177551
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_pelvis.L",
+        "min_z": 0.01834803819656372,
+        "point": [
+          0.01194639503955841,
+          -0.06864401698112488,
+          0.01834803819656372
+        ],
+        "polygons": 852,
+        "weights": {
+          "pelvis": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_middle.L",
+        "min_z": 0.01866436004638672,
+        "point": [
+          0.3849332332611084,
+          0.1352502703666687,
+          0.01866436004638672
+        ],
+        "polygons": 272,
+        "weights": {
+          "middle.03.L": 0.9054684638977051,
+          "middle.02.L": 0.09453154355287552
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_ring.L",
+        "min_z": 0.020043134689331055,
+        "point": [
+          0.3958236277103424,
+          0.13159455358982086,
+          0.020043134689331055
+        ],
+        "polygons": 272,
+        "weights": {
+          "ring.02.L": 0.11532187461853027,
+          "ring.03.L": 0.8846781253814697
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_pinky.L",
+        "min_z": 0.02141261100769043,
+        "point": [
+          0.40711772441864014,
+          0.12823638319969177,
+          0.02141261100769043
+        ],
+        "polygons": 272,
+        "weights": {
+          "pinky.02.L": 0.11532187461853027,
+          "pinky.03.L": 0.8846781253814697
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_pelvis.R",
+        "min_z": 0.02392590045928955,
+        "point": [
+          -0.025630921125411987,
+          -0.06856945902109146,
+          0.02392590045928955
+        ],
+        "polygons": 852,
+        "weights": {
+          "pelvis": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Suela.L",
+        "min_z": 0.02502470277249813,
+        "point": [
+          -0.1661011427640915,
+          -0.533697783946991,
+          0.02502470277249813
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_muslo_posterior.L",
+        "min_z": 0.033671021461486816,
+        "point": [
+          0.2784106731414795,
+          -0.10991959273815155,
+          0.033671021461486816
+        ],
+        "polygons": 848,
+        "weights": {
+          "thigh.L": 0.9972044229507446,
+          "shin.L": 0.0027955842670053244
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_muslo_posterior.L",
+        "min_z": 0.03679615259170532,
+        "point": [
+          0.3151801824569702,
+          -0.1597548872232437,
+          0.03679615259170532
+        ],
+        "polygons": 852,
+        "weights": {
+          "thigh.L": 0.9857546091079712,
+          "shin.L": 0.01424537692219019
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Tacon.R",
+        "min_z": 0.03850043565034866,
+        "point": [
+          -0.11533184349536896,
+          -0.5628523230552673,
+          0.03850043565034866
+        ],
+        "polygons": 984,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Muslo_y_pierna_quad.R",
+        "min_z": 0.04257857799530029,
+        "point": [
+          -0.0932367816567421,
+          -0.0031218715012073517,
+          0.04257857799530029
+        ],
+        "polygons": 9280,
+        "weights": {
+          "thigh.R": 0.999988317489624,
+          "shin.R": 1.1679530871333554e-05
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.R",
+        "min_z": 0.053811099380254745,
+        "point": [
+          -0.147294282913208,
+          -0.7458861470222473,
+          0.053811099380254745
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.R": 0.9997197985649109,
+          "shin.R": 0.00028020713943988085
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Espinilla.L",
+        "min_z": 0.05430786684155464,
+        "point": [
+          0.3504461646080017,
+          -0.3260241448879242,
+          0.05430786684155464
+        ],
+        "polygons": 1048,
+        "weights": {
+          "thigh.L": 0.13953927159309387,
+          "shin.L": 0.8604607582092285
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Antebrazo.L",
+        "min_z": 0.06044836714863777,
+        "point": [
+          0.28411048650741577,
+          0.08376243710517883,
+          0.06044836714863777
+        ],
+        "polygons": 648,
+        "weights": {
+          "forearm.L": 0.9922964572906494,
+          "hand.L": 0.007703534793108702
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Antebrazo.L",
+        "min_z": 0.06115514039993286,
+        "point": [
+          0.2832121253013611,
+          0.08409720659255981,
+          0.06115514039993286
+        ],
+        "polygons": 684,
+        "weights": {
+          "forearm.L": 0.9889737963676453,
+          "hand.L": 0.011026162654161453
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_bota.R",
+        "min_z": 0.061763688921928406,
+        "point": [
+          -0.14878007769584656,
+          -0.7547652721405029,
+          0.061763688921928406
+        ],
+        "polygons": 684,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_muslo_posterior.R",
+        "min_z": 0.06263536214828491,
+        "point": [
+          -0.12114405632019043,
+          -0.04783761501312256,
+          0.06263536214828491
+        ],
+        "polygons": 848,
+        "weights": {
+          "thigh.R": 0.9999819993972778,
+          "shin.R": 1.7970867702388205e-05
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_muslo_posterior.R",
+        "min_z": 0.06292283535003662,
+        "point": [
+          -0.12251642346382141,
+          -0.04752998799085617,
+          0.06292283535003662
+        ],
+        "polygons": 852,
+        "weights": {
+          "thigh.R": 0.9999738931655884,
+          "shin.R": 2.614810728118755e-05
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Espinilla.L",
+        "min_z": 0.06758135557174683,
+        "point": [
+          0.35839593410491943,
+          -0.31935715675354004,
+          0.06758135557174683
+        ],
+        "polygons": 1020,
+        "weights": {
+          "shin.L": 0.8886660933494568,
+          "thigh.L": 0.11133391410112381
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.L",
+        "min_z": 0.07784786820411682,
+        "point": [
+          -0.13792939484119415,
+          -0.5196184515953064,
+          0.07784786820411682
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.L": 0.9986515045166016,
+          "shin.L": 0.0013484933879226446
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      }
+    ],
+    "contact_regions": {
+      "foot.L": {
+        "minimum_z_m": 0.0074,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.001,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.0074,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.00741,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.35013,
+        "sampled_evaluated_vertices": 2359,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.11967,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "posterior_pelvis_minimum": 0.007404446601867676
+  },
+  "crouched": {
+    "frame": 121,
+    "minimum_objects": [
+      {
+        "object": "Suela.L",
+        "min_z": 0.026463128626346588,
+        "point": [
+          0.13336116075515747,
+          -0.1455410122871399,
+          0.026463128626346588
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Suela.R",
+        "min_z": 0.026463128626346588,
+        "point": [
+          -0.13336116075515747,
+          -0.1455410122871399,
+          0.026463128626346588
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Tacon.L",
+        "min_z": 0.05817442387342453,
+        "point": [
+          0.11898119747638702,
+          0.012759678065776825,
+          0.05817442387342453
+        ],
+        "polygons": 984,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Tacon.R",
+        "min_z": 0.05817442387342453,
+        "point": [
+          -0.11898119747638702,
+          0.012759678065776825,
+          0.05817442387342453
+        ],
+        "polygons": 984,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.L",
+        "min_z": 0.07269517332315445,
+        "point": [
+          0.13602901995182037,
+          -0.17227016389369965,
+          0.07269517332315445
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.L": 0.9997197985649109,
+          "shin.L": 0.00028020713943988085
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.R",
+        "min_z": 0.07269517332315445,
+        "point": [
+          -0.13602901995182037,
+          -0.17227016389369965,
+          0.07269517332315445
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.R": 0.9997197985649109,
+          "shin.R": 0.00028020713943988085
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      }
+    ],
+    "contact_regions": {
+      "foot.L": {
+        "minimum_z_m": 0.02646,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.49272,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.56028,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.02646,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.49272,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.56028,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "posterior_pelvis_minimum": null
+  },
+  "kneeling": {
+    "frame": 151,
+    "minimum_objects": [
+      {
+        "object": "Panel_Espinilla.R",
+        "min_z": 0.001997541170567274,
+        "point": [
+          -0.13232608139514923,
+          -0.33655330538749695,
+          0.001997541170567274
+        ],
+        "polygons": 1048,
+        "weights": {
+          "thigh.R": 0.2013227492570877,
+          "shin.R": 0.7986772656440735
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Espinilla.L",
+        "min_z": 0.0019981698133051395,
+        "point": [
+          0.132326140999794,
+          -0.3365529179573059,
+          0.0019981698133051395
+        ],
+        "polygons": 1048,
+        "weights": {
+          "thigh.L": 0.2013227492570877,
+          "shin.L": 0.7986772656440735
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.L",
+        "min_z": 0.0020037293434143066,
+        "point": [
+          0.12138484418392181,
+          0.2860223054885864,
+          0.0020037293434143066
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.L": 0.9996966123580933,
+          "shin.L": 0.00030337346834130585
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.R",
+        "min_z": 0.0020037293434143066,
+        "point": [
+          -0.12138483673334122,
+          0.2860223054885864,
+          0.0020037293434143066
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.R": 0.9996966123580933,
+          "shin.R": 0.00030337346834130585
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Muslo_y_pierna_quad.L",
+        "min_z": 0.004276692867279053,
+        "point": [
+          0.1175181046128273,
+          -0.3343255817890167,
+          0.004276692867279053
+        ],
+        "polygons": 9280,
+        "weights": {
+          "thigh.L": 0.1736665517091751,
+          "shin.L": 0.8263334035873413
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Muslo_y_pierna_quad.R",
+        "min_z": 0.004276692867279053,
+        "point": [
+          -0.1175181046128273,
+          -0.3343255817890167,
+          0.004276692867279053
+        ],
+        "polygons": 9280,
+        "weights": {
+          "thigh.R": 0.1736665517091751,
+          "shin.R": 0.8263334035873413
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Espinilla.R",
+        "min_z": 0.0068168044090271,
+        "point": [
+          -0.13434912264347076,
+          -0.3378830552101135,
+          0.0068168044090271
+        ],
+        "polygons": 1020,
+        "weights": {
+          "shin.R": 0.8343023657798767,
+          "thigh.R": 0.1656976193189621
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Espinilla.L",
+        "min_z": 0.006817162036895752,
+        "point": [
+          0.13434912264347076,
+          -0.3378828763961792,
+          0.006817162036895752
+        ],
+        "polygons": 1020,
+        "weights": {
+          "shin.L": 0.8343023657798767,
+          "thigh.L": 0.1656976193189621
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_bota.L",
+        "min_z": 0.00940600037574768,
+        "point": [
+          0.12025830149650574,
+          0.2705203890800476,
+          0.00940600037574768
+        ],
+        "polygons": 684,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_bota.R",
+        "min_z": 0.00940600037574768,
+        "point": [
+          -0.12025830149650574,
+          0.2705203890800476,
+          0.00940600037574768
+        ],
+        "polygons": 684,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Suela.L",
+        "min_z": 0.026459623128175735,
+        "point": [
+          0.12227693200111389,
+          0.2981795072555542,
+          0.026459623128175735
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Suela.R",
+        "min_z": 0.026459623128175735,
+        "point": [
+          -0.12227693200111389,
+          0.2981795072555542,
+          0.026459623128175735
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Tobillo.L",
+        "min_z": 0.03176701068878174,
+        "point": [
+          0.1146429255604744,
+          0.1049775779247284,
+          0.03176701068878174
+        ],
+        "polygons": 684,
+        "weights": {
+          "shin.L": 0.5043027997016907,
+          "foot.L": 0.4956972002983093
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Tobillo.R",
+        "min_z": 0.03176772594451904,
+        "point": [
+          -0.1146429181098938,
+          0.10497726500034332,
+          0.03176772594451904
+        ],
+        "polygons": 684,
+        "weights": {
+          "shin.R": 0.5043027400970459,
+          "foot.R": 0.4956972002983093
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Tobillo.L",
+        "min_z": 0.03817432001233101,
+        "point": [
+          0.11645764857530594,
+          0.07407412678003311,
+          0.03817432001233101
+        ],
+        "polygons": 648,
+        "weights": {
+          "shin.L": 0.758121132850647,
+          "foot.L": 0.24187883734703064
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Tobillo.R",
+        "min_z": 0.03817444294691086,
+        "point": [
+          -0.11645764112472534,
+          0.07407408952713013,
+          0.03817444294691086
+        ],
+        "polygons": 648,
+        "weights": {
+          "shin.R": 0.758121132850647,
+          "foot.R": 0.24187883734703064
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_muslo_posterior.L",
+        "min_z": 0.0459747314453125,
+        "point": [
+          0.12017443776130676,
+          -0.26800236105918884,
+          0.0459747314453125
+        ],
+        "polygons": 848,
+        "weights": {
+          "thigh.L": 0.9655752778053284,
+          "shin.L": 0.03442469984292984
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_muslo_posterior.R",
+        "min_z": 0.04597550630569458,
+        "point": [
+          -0.12017443031072617,
+          -0.26800286769866943,
+          0.04597550630569458
+        ],
+        "polygons": 848,
+        "weights": {
+          "thigh.R": 0.9655752778053284,
+          "shin.R": 0.03442469984292984
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_muslo_posterior.L",
+        "min_z": 0.047837257385253906,
+        "point": [
+          0.12003741413354874,
+          -0.2641741931438446,
+          0.047837257385253906
+        ],
+        "polygons": 852,
+        "weights": {
+          "thigh.L": 0.9616481065750122,
+          "shin.L": 0.03835190460085869
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_muslo_posterior.R",
+        "min_z": 0.04783773422241211,
+        "point": [
+          -0.12003741413354874,
+          -0.2641744315624237,
+          0.04783773422241211
+        ],
+        "polygons": 852,
+        "weights": {
+          "thigh.R": 0.9616481065750122,
+          "shin.R": 0.03835190460085869
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      }
+    ],
+    "contact_regions": {
+      "foot.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.08635,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.08635,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "posterior_pelvis_minimum": null
+  },
+  "kneeling_variant": {
+    "frame": 161,
+    "minimum_objects": [
+      {
+        "object": "Panel_Espinilla.R",
+        "min_z": 0.0019988883286714554,
+        "point": [
+          -0.11115100979804993,
+          -0.2717735469341278,
+          0.0019988883286714554
+        ],
+        "polygons": 1048,
+        "weights": {
+          "thigh.R": 0.2013227492570877,
+          "shin.R": 0.7986772656440735
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Espinilla.L",
+        "min_z": 0.00199957680888474,
+        "point": [
+          0.11115109920501709,
+          -0.27177321910858154,
+          0.00199957680888474
+        ],
+        "polygons": 1048,
+        "weights": {
+          "thigh.L": 0.2013227492570877,
+          "shin.L": 0.7986772656440735
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Guante_dorso.L",
+        "min_z": 0.0020002354867756367,
+        "point": [
+          0.2081160694360733,
+          -0.4448521137237549,
+          0.0020002354867756367
+        ],
+        "polygons": 448,
+        "weights": {
+          "hand.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Guante_dorso.R",
+        "min_z": 0.0020008322317153215,
+        "point": [
+          -0.2081160545349121,
+          -0.4448521137237549,
+          0.0020008322317153215
+        ],
+        "polygons": 448,
+        "weights": {
+          "hand.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.L",
+        "min_z": 0.0020032525062561035,
+        "point": [
+          0.1107577383518219,
+          0.33769071102142334,
+          0.0020032525062561035
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.L": 0.9996966123580933,
+          "shin.L": 0.00030337346834130585
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Bota_quad.R",
+        "min_z": 0.0020032525062561035,
+        "point": [
+          -0.1107577383518219,
+          0.33769071102142334,
+          0.0020032525062561035
+        ],
+        "polygons": 4536,
+        "weights": {
+          "foot.R": 0.9996966123580933,
+          "shin.R": 0.00030337346834130585
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Led_guante.L",
+        "min_z": 0.0028181076049804688,
+        "point": [
+          0.2052748203277588,
+          -0.47044873237609863,
+          0.0028181076049804688
+        ],
+        "polygons": 4,
+        "weights": {
+          "hand.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Led_guante.R",
+        "min_z": 0.0028183460235595703,
+        "point": [
+          -0.20527490973472595,
+          -0.4704486131668091,
+          0.0028183460235595703
+        ],
+        "polygons": 4,
+        "weights": {
+          "hand.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Guante_palmar_quad.R",
+        "min_z": 0.004492044448852539,
+        "point": [
+          -0.20883622765541077,
+          -0.4593244194984436,
+          0.004492044448852539
+        ],
+        "polygons": 1968,
+        "weights": {
+          "hand.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Guante_palmar_quad.L",
+        "min_z": 0.00449216365814209,
+        "point": [
+          0.20883619785308838,
+          -0.4593244791030884,
+          0.00449216365814209
+        ],
+        "polygons": 1968,
+        "weights": {
+          "hand.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Muslo_y_pierna_quad.L",
+        "min_z": 0.004581630229949951,
+        "point": [
+          0.09646916389465332,
+          -0.2701534628868103,
+          0.004581630229949951
+        ],
+        "polygons": 9280,
+        "weights": {
+          "thigh.L": 0.1736665517091751,
+          "shin.L": 0.8263334035873413
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Muslo_y_pierna_quad.R",
+        "min_z": 0.004581630229949951,
+        "point": [
+          -0.09646916389465332,
+          -0.2701534628868103,
+          0.004581630229949951
+        ],
+        "polygons": 9280,
+        "weights": {
+          "thigh.R": 0.1736665517091751,
+          "shin.R": 0.8263334035873413
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Espinilla.R",
+        "min_z": 0.006512641906738281,
+        "point": [
+          -0.11357446014881134,
+          -0.2799643874168396,
+          0.006512641906738281
+        ],
+        "polygons": 1020,
+        "weights": {
+          "thigh.R": 0.19894325733184814,
+          "shin.R": 0.8010567426681519
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Espinilla.L",
+        "min_z": 0.006512939929962158,
+        "point": [
+          0.11357446014881134,
+          -0.2799643278121948,
+          0.006512939929962158
+        ],
+        "polygons": 1020,
+        "weights": {
+          "thigh.L": 0.19894325733184814,
+          "shin.L": 0.8010567426681519
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Brazo_quad.R",
+        "min_z": 0.009143531322479248,
+        "point": [
+          -0.19356141984462738,
+          -0.40287280082702637,
+          0.009143531322479248
+        ],
+        "polygons": 5432,
+        "weights": {
+          "forearm.R": 0.5389354228973389,
+          "hand.R": 0.46106454730033875
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Brazo_quad.L",
+        "min_z": 0.009143590927124023,
+        "point": [
+          0.19356146454811096,
+          -0.402872771024704,
+          0.009143590927124023
+        ],
+        "polygons": 5432,
+        "weights": {
+          "forearm.L": 0.5389354228973389,
+          "hand.L": 0.46106454730033875
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_middle_quad.R",
+        "min_z": 0.00998920202255249,
+        "point": [
+          -0.21417352557182312,
+          -0.470037043094635,
+          0.00998920202255249
+        ],
+        "polygons": 1176,
+        "weights": {
+          "middle.01.R": 0.9958258867263794,
+          "middle.02.R": 0.0041740997694432735
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_middle_quad.L",
+        "min_z": 0.009989261627197266,
+        "point": [
+          0.21417385339736938,
+          -0.470037043094635,
+          0.009989261627197266
+        ],
+        "polygons": 1176,
+        "weights": {
+          "middle.01.L": 0.9958258867263794,
+          "middle.02.L": 0.0041740997694432735
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.L",
+        "min_z": 0.010033786296844482,
+        "point": [
+          0.22712603211402893,
+          -0.46993666887283325,
+          0.010033786296844482
+        ],
+        "polygons": 1176,
+        "weights": {
+          "index.01.L": 0.9958258271217346,
+          "index.02.L": 0.0041741603054106236
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_thumb_quad.L",
+        "min_z": 0.01007932424545288,
+        "point": [
+          0.2400810718536377,
+          -0.4698335528373718,
+          0.01007932424545288
+        ],
+        "polygons": 1176,
+        "weights": {
+          "thumb.01.L": 0.9958258867263794,
+          "thumb.02.L": 0.004174088593572378
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_index_quad.R",
+        "min_z": 0.010093092918395996,
+        "point": [
+          -0.22729969024658203,
+          -0.4700547456741333,
+          0.010093092918395996
+        ],
+        "polygons": 1176,
+        "weights": {
+          "index.01.R": 0.9958258271217346,
+          "index.02.R": 0.0041741603054106236
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_thumb_quad.R",
+        "min_z": 0.010198116302490234,
+        "point": [
+          -0.24042776226997375,
+          -0.47006887197494507,
+          0.010198116302490234
+        ],
+        "polygons": 1176,
+        "weights": {
+          "thumb.01.R": 0.9958258867263794,
+          "thumb.02.R": 0.004174088593572378
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_bota.L",
+        "min_z": 0.010235294699668884,
+        "point": [
+          0.11012410372495651,
+          0.3335157036781311,
+          0.010235294699668884
+        ],
+        "polygons": 684,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_bota.R",
+        "min_z": 0.010235294699668884,
+        "point": [
+          -0.11012409627437592,
+          0.3335157036781311,
+          0.010235294699668884
+        ],
+        "polygons": 684,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_ring_quad.R",
+        "min_z": 0.010547041893005371,
+        "point": [
+          -0.20859777927398682,
+          -0.4817877411842346,
+          0.010547041893005371
+        ],
+        "polygons": 1176,
+        "weights": {
+          "ring.01.R": 0.9958258271217346,
+          "ring.02.R": 0.0041741495952010155
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_ring_quad.L",
+        "min_z": 0.01060628890991211,
+        "point": [
+          0.2087714970111847,
+          -0.4819055199623108,
+          0.01060628890991211
+        ],
+        "polygons": 1176,
+        "weights": {
+          "ring.01.L": 0.9958258271217346,
+          "ring.02.L": 0.0041741495952010155
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_pinky_quad.R",
+        "min_z": 0.011105954647064209,
+        "point": [
+          -0.20302438735961914,
+          -0.4935351610183716,
+          0.011105954647064209
+        ],
+        "polygons": 1176,
+        "weights": {
+          "pinky.01.R": 0.9958258867263794,
+          "pinky.02.R": 0.004174088593572378
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Dedo_pinky_quad.L",
+        "min_z": 0.01122438907623291,
+        "point": [
+          0.2033713161945343,
+          -0.49377065896987915,
+          0.01122438907623291
+        ],
+        "polygons": 1176,
+        "weights": {
+          "pinky.01.L": 0.9958258867263794,
+          "pinky.02.L": 0.004174088593572378
+        },
+        "collections": [
+          {
+            "name": "01_Cuerpo_y_traje",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_thumb.L",
+        "min_z": 0.011812567710876465,
+        "point": [
+          0.24668681621551514,
+          -0.5262188911437988,
+          0.011812567710876465
+        ],
+        "polygons": 272,
+        "weights": {
+          "thumb.03.L": 0.9054684638977051,
+          "thumb.02.L": 0.09453154355287552
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_index.L",
+        "min_z": 0.01253730058670044,
+        "point": [
+          0.23584529757499695,
+          -0.526005208492279,
+          0.01253730058670044
+        ],
+        "polygons": 272,
+        "weights": {
+          "index.03.L": 0.9054679870605469,
+          "index.02.L": 0.09453204274177551
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_pinky.R",
+        "min_z": 0.012839257717132568,
+        "point": [
+          -0.20963037014007568,
+          -0.5499205589294434,
+          0.012839257717132568
+        ],
+        "polygons": 272,
+        "weights": {
+          "pinky.03.R": 0.9054684638977051,
+          "pinky.02.R": 0.09453154355287552
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_ring.R",
+        "min_z": 0.013050496578216553,
+        "point": [
+          -0.2173171043395996,
+          -0.5378560423851013,
+          0.013050496578216553
+        ],
+        "polygons": 272,
+        "weights": {
+          "ring.03.R": 0.9054684638977051,
+          "ring.02.R": 0.09453154355287552
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_middle.R",
+        "min_z": 0.013260066509246826,
+        "point": [
+          -0.22499153017997742,
+          -0.5256983637809753,
+          0.013260066509246826
+        ],
+        "polygons": 272,
+        "weights": {
+          "middle.03.R": 0.9054684638977051,
+          "middle.02.R": 0.09453154355287552
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_middle.L",
+        "min_z": 0.013260185718536377,
+        "point": [
+          0.2249915599822998,
+          -0.5256986021995544,
+          0.013260185718536377
+        ],
+        "polygons": 272,
+        "weights": {
+          "middle.03.L": 0.9054684638977051,
+          "middle.02.L": 0.09453154355287552
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_index.R",
+        "min_z": 0.014125645160675049,
+        "point": [
+          -0.239863783121109,
+          -0.5247379541397095,
+          0.014125645160675049
+        ],
+        "polygons": 272,
+        "weights": {
+          "index.02.R": 0.11532251536846161,
+          "index.03.R": 0.884677529335022
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_ring.L",
+        "min_z": 0.014639079570770264,
+        "point": [
+          0.22133570909500122,
+          -0.5365886688232422,
+          0.014639079570770264
+        ],
+        "polygons": 272,
+        "weights": {
+          "ring.02.L": 0.11532187461853027,
+          "ring.03.L": 0.8846781253814697
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_thumb.R",
+        "min_z": 0.014982283115386963,
+        "point": [
+          -0.2550339996814728,
+          -0.5241811871528625,
+          0.014982283115386963
+        ],
+        "polygons": 272,
+        "weights": {
+          "thumb.02.R": 0.11532187461853027,
+          "thumb.03.R": 0.8846781253814697
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Una_pinky.L",
+        "min_z": 0.016008496284484863,
+        "point": [
+          0.21797776222229004,
+          -0.5478828549385071,
+          0.016008496284484863
+        ],
+        "polygons": 272,
+        "weights": {
+          "pinky.02.L": 0.11532187461853027,
+          "pinky.03.L": 0.8846781253814697
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Suela.L",
+        "min_z": 0.025202903896570206,
+        "point": [
+          0.11295953392982483,
+          0.3519474267959595,
+          0.025202903896570206
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.L": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Suela.R",
+        "min_z": 0.025202903896570206,
+        "point": [
+          -0.11295954138040543,
+          0.3519474267959595,
+          0.025202903896570206
+        ],
+        "polygons": 2080,
+        "weights": {
+          "foot.R": 1.0
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Tobillo.L",
+        "min_z": 0.04778286814689636,
+        "point": [
+          0.09121810644865036,
+          0.16384769976139069,
+          0.04778286814689636
+        ],
+        "polygons": 684,
+        "weights": {
+          "shin.L": 0.5043027997016907,
+          "foot.L": 0.4956972002983093
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Tobillo.R",
+        "min_z": 0.04778354614973068,
+        "point": [
+          -0.09121809154748917,
+          0.16384735703468323,
+          0.04778354614973068
+        ],
+        "polygons": 684,
+        "weights": {
+          "shin.R": 0.5043027400970459,
+          "foot.R": 0.4956972002983093
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Tobillo.R",
+        "min_z": 0.05092906951904297,
+        "point": [
+          -0.09527726471424103,
+          0.05147039517760277,
+          0.05092906951904297
+        ],
+        "polygons": 648,
+        "weights": {
+          "shin.R": 0.9999445080757141,
+          "foot.R": 5.5531560064991936e-05
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Tobillo.L",
+        "min_z": 0.05092913657426834,
+        "point": [
+          0.09527704864740372,
+          0.05147041007876396,
+          0.05092913657426834
+        ],
+        "polygons": 648,
+        "weights": {
+          "shin.L": 0.9999445080757141,
+          "foot.L": 5.5531560064991936e-05
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Antebrazo.R",
+        "min_z": 0.0659293532371521,
+        "point": [
+          -0.20888563990592957,
+          -0.42870205640792847,
+          0.0659293532371521
+        ],
+        "polygons": 648,
+        "weights": {
+          "forearm.R": 0.9922964572906494,
+          "hand.R": 0.007703534793108702
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_Antebrazo.L",
+        "min_z": 0.06592941284179688,
+        "point": [
+          0.20888563990592957,
+          -0.4287024140357971,
+          0.06592941284179688
+        ],
+        "polygons": 648,
+        "weights": {
+          "forearm.L": 0.9922964572906494,
+          "hand.L": 0.007703534793108702
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Antebrazo.R",
+        "min_z": 0.06636953353881836,
+        "point": [
+          -0.2080056369304657,
+          -0.42876189947128296,
+          0.06636953353881836
+        ],
+        "polygons": 684,
+        "weights": {
+          "forearm.R": 0.98897385597229,
+          "hand.R": 0.011026162654161453
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_Antebrazo.L",
+        "min_z": 0.06636965274810791,
+        "point": [
+          0.2080056071281433,
+          -0.42876243591308594,
+          0.06636965274810791
+        ],
+        "polygons": 684,
+        "weights": {
+          "forearm.L": 0.9889737963676453,
+          "hand.L": 0.011026162654161453
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_muslo_posterior.L",
+        "min_z": 0.07200777530670166,
+        "point": [
+          0.10259195417165756,
+          -0.2086043506860733,
+          0.07200777530670166
+        ],
+        "polygons": 848,
+        "weights": {
+          "thigh.L": 0.9655752778053284,
+          "shin.L": 0.03442469984292984
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Panel_muslo_posterior.R",
+        "min_z": 0.07200831174850464,
+        "point": [
+          -0.10259196907281876,
+          -0.20860505104064941,
+          0.07200831174850464
+        ],
+        "polygons": 848,
+        "weights": {
+          "thigh.R": 0.9655752778053284,
+          "shin.R": 0.03442469984292984
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_muslo_posterior.L",
+        "min_z": 0.07426685094833374,
+        "point": [
+          0.1027197614312172,
+          -0.20873583853244781,
+          0.07426685094833374
+        ],
+        "polygons": 852,
+        "weights": {
+          "thigh.L": 0.9526547193527222,
+          "shin.L": 0.04734534025192261
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      },
+      {
+        "object": "Circuito_muslo_posterior.R",
+        "min_z": 0.07426756620407104,
+        "point": [
+          -0.10271976888179779,
+          -0.20873649418354034,
+          0.07426756620407104
+        ],
+        "polygons": 852,
+        "weights": {
+          "thigh.R": 0.9526547193527222,
+          "shin.R": 0.04734534025192261
+        },
+        "collections": [
+          {
+            "name": "04_Tecnologia_y_circuitos",
+            "hide_render": false
+          }
+        ]
+      }
+    ],
+    "contact_regions": {
+      "foot.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.L": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "foot.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 7089,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "knee.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 2352,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      },
+      "hand.R": {
+        "minimum_z_m": 0.002,
+        "sampled_evaluated_vertices": 8233,
+        "method": "evaluated mesh vertices with at least 0.72 weight for region"
+      }
+    },
+    "posterior_pelvis_minimum": null
+  }
+}

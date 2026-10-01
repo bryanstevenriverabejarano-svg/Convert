@@ -1,0 +1,162 @@
+{
+  "front": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+    "reference_sha256": "9065a2fa9da111f7d4db905bc24af4cc1a60f2c23dd8cab846a6951b8ad5ab5e",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Cara mas alargada y mandibula mas triangular; ojos, nariz y labios no equivalentes. Hombros planos y tubulares, manos pequeñas, cabello en abanicos regulares y traje con menos detalle negro/azul."
+  },
+  "front_three_quarter": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "5839ca7dd914083847067b89f46e670ee351fcc4af292dc8384ecc77aaab2456",
+    "reference_sha256": "e28ad34b4a36bf1be88a694e8105f39b8a0a803e36d3f099fd561159f61ec93e",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Las piernas permanecen mas rectas y el contrapposto es menor. Silueta de hombro, profundidad del pecho, dedos y laminas capilares difieren; los auriculares son mas simples."
+  },
+  "right": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "e9bbe9eea1d6b9fa64c16a2dfbc6fa08a9e20ccfff1509809311e2f1875bbead",
+    "reference_sha256": "d3c8178d034e6e93f4fc329bb65712dd87ba3cac2e32cbd254bc8fb202fb96b7",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Nariz/menton y volumen de pecho distintos. Cabello posterior en surcos paralelos rigidos; plataforma, arco y tacon no reproducen la bota original. El tacon no comparte el apoyo delantero."
+  },
+  "rear_right": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "a1415f432e48628bd12e3d84feb7aed42959b2f1c7fdd3f6b77b3ae114b4b39e",
+    "reference_sha256": "06f29ffd26cbe9d3924c3aa3dde7e7c8324a68aa248fda9a9e1180c6a88d998a",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Cabello grueso en bandas, cintura/cadera y articulaciones simplificadas. El dibujo de paneles y circuitos posteriores no coincide con la referencia."
+  },
+  "rear": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "5ee3594712520c928d6df6e5a92ef9ca55f4bcd47bbd87e8011be946564e480e",
+    "reference_sha256": "5d42fcb1ba3abcec413ec95c10db5e0814a7fa613930a994e4aa301c945a7058",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Falta equivalencia del modulo circular y conexiones negras visibles en la espalda. Gluteos y union posterior de muslos quedan simplificados; la abertura del cabello no muestra el detalle original."
+  },
+  "rear_three_quarter": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "59a4f5b337c400f513ae3aaca3f81a205c097515254f396bd13510f000b6498b",
+    "reference_sha256": "c78ce6a0d7afaf9ecb1c533eaaee35648874746f3424c34a70693e6e8697d6e6",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "No se reproduce el giro de cabeza sobre el hombro: el rostro queda oculto. Contrapposto, contorno de cadera, accesorios de muslo y detalles de bota tambien difieren."
+  },
+  "left": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "e12a80f442d2209ba88b14d337ce0850af964d9305fbb13f52298282f51a2c52",
+    "reference_sha256": "2f890a5ffe53ca9ecac4abdf7e0dd330eec6dd347afaaab0ae31050f3c8a31a6",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Perfil facial, profundidad del pecho y gluteos, contorno de pantorrilla y bota distintos. El pelo usa laminas uniformes en lugar de los mechones suaves y variables de la ilustracion."
+  },
+  "front_opposite": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "79b3da658ed5cdd0f3273105d4aad11dd620ab8247e9e8306d365a6fb746f8ef",
+    "reference_sha256": "45e9e90d6599f8eaf4b2d073306efec8148cf67f38b699de7a3138faa6f45f3f",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Balance de pelvis y flexion de rodillas menores que en el original. Gesto, orientacion fina de manos, tamaño de dedos y peinado necesitan refinamiento."
+  },
+  "front_variant": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "bc7ba80e408e739fc4747a8be932e2affdaad2bdc8f86dfd98652e6ad20aa48d",
+    "reference_sha256": "fe1ff13f2bbc006bbeb31c9e7d89f54e7e107331374f82f60113719f0bc8a0eb",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Piernas menos cruzadas y apoyo de peso menos marcado; cabeza y cadera no conservan exactamente el ladeado de la referencia. Traje y pelo siguen simplificados."
+  },
+  "above": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "fc06ff24c01cb8aa059c6822e97dd361745361a8172b20427f693b93b60e9fa2",
+    "reference_sha256": "5635662a3c267ad4040b13c2c7c7b9fac46a71277790f269af733d42ddc5500f",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Perspectiva superior reproducida de forma aproximada. Corona del cabello, hombros, contorno del pecho, ojos y luz facial difieren; no se ha calibrado una focal exacta."
+  },
+  "below": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "35226a981b966cb9272e50f035bb36e46afded87d43678455fded128e1b05f0b",
+    "reference_sha256": "a23c8599b3190c568cd83f6dcfcc01c6bf7263c93467a259a78cd2a0ef030952",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Camara inferior aproximada. Proporciones aparentes, piernas y volumen de punteras no coinciden con la ilustracion; el patron de paneles sigue incompleto."
+  },
+  "a_front": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "36bc7d4102761ba26e6f2d8a179a418a15342aa0f08df5a9f6c3cd856fe758d3",
+    "reference_sha256": "5e93415cb864e521b9803af17de85bbccf58dc34595dbe5af7556db8e2e6beb2",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "A reconocible y simetrica; hombros planos, cuello tubular, manos pequeñas y uniones de traje no reproducen la anatomia/diseño original."
+  },
+  "a_open_hair": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "c217d950b43e10530e82e481ec696a94912699d970dfa2adb4b301b571cd6925",
+    "reference_sha256": "f5109a645ce8e67a8fcc2360d652df6ae94f7b3544031a09886e5e4ead29595b",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Apertura individual de brazos/cabello presente, con brazos menos extendidos y mechones mas rigidos y uniformes. Manos y dedos no equivalentes al original."
+  },
+  "a_rear": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "40d83704a51f836ca6d512dfaae2c84296113bd60d728000d73c1148367022b6",
+    "reference_sha256": "17d4546dd935e0277e3113de4619ccacde34cd42eac377d4d229c3c1ec79b04f",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Postura A posterior reconocible, pero espalda, gluteos, articulaciones, auriculares y patron de circuitos requieren cambios sustanciales."
+  },
+  "seated": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+    "reference_sha256": "68d59233dce94ed5dbcbd7b9881a1b4cd87f2331e0592b320609f29b214e63b5",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Envolvente fantasma de camara corregida. Mano/brazo diagonal, pelvis, dedos y caida del cabello difieren. Se observan deformaciones angulares y separacion de costuras/inserts en el pecho al flexionar; pesos y superficies no estan aprobados."
+  },
+  "crouched": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+    "reference_sha256": "5966ded2cc3ca82f619b128ea94d24074ae81432d1456f441e7ee7eefdc29ee5",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Envolvente fantasma corregida y camara girada para mostrar el ojo lejano. Antebrazos demasiado elevados, flexion y compresion anatomica distintas; pelo rigido separado del suelo y botas sin el apoyo completo original."
+  },
+  "kneeling": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2",
+    "reference_sha256": "1ad4fa15517f17c0ff88fc228dbe535ff06869cbbd02010ad63ebf10278f70be",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Envolvente fantasma corregida. Pose sobre tibias reconocible y apoyos medidos, pero rodillas mas separadas, manos/dedos rectos y postura del rostro distintas; cabello en laminas rigidas."
+  },
+  "kneeling_variant": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "70fcd2c1642df52798417a14113727861a0c1fc6540bc08c018b21b4fbd8555f",
+    "reference_sha256": "184be196d2e997f98214a27c7c9a5b1c3df67d039a445b4a2efca74382a91af6",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Envolvente fantasma corregida; palmas y rodillas medidas. Rostro mas de perfil/cabizbajo que en referencia, curvas de columna/cadera distintas y cabello rigidamente ondulado alrededor del cuerpo."
+  },
+  "leaning": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "80b4ec56df320ccc0f5f76a6ffecc453ce745a3b3121318f021c7ddde728261a",
+    "reference_sha256": "a64b2e869e28646b88581b673ca3b105f9a3f518424cc8e97c5b461ffc9aeb15",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Figura completa encuadrada; falta ladeado/asimetria de cadera y posicion exacta de manos sobre rodillas. Torso, dedos y cabello no equivalentes."
+  },
+  "leaning_variant": {
+    "reviewed": true,
+    "identity_accepted": false,
+    "render_sha256_reviewed": "232cebd51ec81a61ea7003fecfcecda84cc3f19c0400fb5d729f2784bc8b74c4",
+    "reference_sha256": "f412a20485bc1f4421cd500ee6da085f8960fb9e63d9238d3dccd2868a76c828",
+    "method": "Direct visual comparison with original; body views reviewed both individually and in grouped side-by-side sheets",
+    "differences": "Figura completa encuadrada; inclinacion menor y manos mas arriba de los muslos. Hay puntas y tirantes capilares separados detras de cabeza/auricular; el chequeo contra traje no certifica esa region."
+  }
+}

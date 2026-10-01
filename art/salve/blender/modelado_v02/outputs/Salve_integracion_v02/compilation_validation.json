@@ -1,0 +1,50 @@
+{
+  "sourceCommit": "18f999ab76e1256485b750af5a215dd84fde3da9",
+  "appTreeSha": "9bbff424f51814cddc2e37d0eb7cb3b4d27b0c5c",
+  "status": "android_module_compilation_and_targeted_tests_passed",
+  "jdk": "cached JetBrains OpenJDK 21.0.10",
+  "gradle": "9.7.1",
+  "offline": true,
+  "compileTask": ":app:compileDebugJavaWithJavac",
+  "testTask": ":app:testDebugUnitTest",
+  "buildExitCode": 0,
+  "testsPassed": 21,
+  "suites": [
+    {
+      "name": "salve.avatar.AvatarRigTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.517"
+    },
+    {
+      "name": "salve.avatar.CorePoseLandmarksTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005"
+    },
+    {
+      "name": "salve.avatar.CoreRigTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.153"
+    }
+  ],
+  "validationCopy": "work/salve-integration/Convert-validation",
+  "originalCheckoutModified": false,
+  "assetsUsedInRigTests": "new candidate core render rig; AvatarRigTest retains approved legacy non-core fixture",
+  "apkInstalled": false,
+  "published": false,
+  "deviceValidation": "pending",
+  "coreRigTestUsesCandidateAssets": true,
+  "coreRigSha256": "e9c993c34eba5818a978af09c61e0ba413e50d30c71f6382ec8e1b54751044ea",
+  "frontPNGSourceSha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+  "testTaskForcedBy": ":app:cleanTestDebugUnitTest executed before :app:testDebugUnitTest",
+  "latestCompileTask": "UP-TO-DATE with unchanged Java sources; initial full Android compile passed",
+  "initialApprovedAssetTestsPassed": 21
+}

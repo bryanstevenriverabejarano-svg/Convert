@@ -1,0 +1,227 @@
+{
+  "coordinateSystem": "pixels_top_left",
+  "kind": "diagnostic_overlay_copies",
+  "sourcePNGsModified": false,
+  "views": [
+    {
+      "id": "front",
+      "source": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\01_front.png",
+      "sourceSha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+      "reviewCopy": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_front.png",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "visualCheck": "passed",
+      "points": [
+        {
+          "name": "leftEye",
+          "point": [
+            482.84,
+            169.83
+          ]
+        },
+        {
+          "name": "rightEye",
+          "point": [
+            529.16,
+            169.83
+          ]
+        },
+        {
+          "name": "mouth",
+          "point": [
+            506.0,
+            216.15
+          ]
+        },
+        {
+          "name": "headPivot",
+          "point": [
+            506.0,
+            208.17
+          ]
+        },
+        {
+          "name": "bodyPivot",
+          "point": [
+            506.0,
+            695.43
+          ]
+        },
+        {
+          "name": "groundAnchor",
+          "point": [
+            506.0,
+            1474.27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seated",
+      "source": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\15_seated.png",
+      "sourceSha256": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+      "reviewCopy": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_seated.png",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "visualCheck": "passed",
+      "points": [
+        {
+          "name": "leftEye",
+          "point": [
+            472.04,
+            365.99
+          ]
+        },
+        {
+          "name": "rightEye",
+          "point": [
+            534.32,
+            362.07
+          ]
+        },
+        {
+          "name": "mouth",
+          "point": [
+            507.98,
+            426.93
+          ]
+        },
+        {
+          "name": "headPivot",
+          "point": [
+            514.49,
+            412.31
+          ]
+        },
+        {
+          "name": "bodyPivot",
+          "point": [
+            426.18,
+            1028.03
+          ]
+        },
+        {
+          "name": "groundAnchor",
+          "point": [
+            401.25,
+            1327.3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "crouched",
+      "source": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\16_crouched.png",
+      "sourceSha256": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+      "reviewCopy": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_crouched.png",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "visualCheck": "passed",
+      "points": [
+        {
+          "name": "leftEye",
+          "point": [
+            364.71,
+            336.39
+          ]
+        },
+        {
+          "name": "rightEye",
+          "point": [
+            410.59,
+            336.23
+          ]
+        },
+        {
+          "name": "mouth",
+          "point": [
+            387.67,
+            398.91
+          ]
+        },
+        {
+          "name": "headPivot",
+          "point": [
+            422.81,
+            390.9
+          ]
+        },
+        {
+          "name": "bodyPivot",
+          "point": [
+            474.9,
+            986.46
+          ]
+        },
+        {
+          "name": "groundAnchor",
+          "point": [
+            380.03,
+            1327.69
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kneeling",
+      "source": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\vistas_20\\17_kneeling.png",
+      "sourceSha256": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2",
+      "reviewCopy": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\Salve_integracion_v02\\anclajes_kneeling.png",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "visualCheck": "passed",
+      "points": [
+        {
+          "name": "leftEye",
+          "point": [
+            335.36,
+            320.05
+          ]
+        },
+        {
+          "name": "rightEye",
+          "point": [
+            389.42,
+            317.25
+          ]
+        },
+        {
+          "name": "mouth",
+          "point": [
+            366.27,
+            384.98
+          ]
+        },
+        {
+          "name": "headPivot",
+          "point": [
+            397.11,
+            374.05
+          ]
+        },
+        {
+          "name": "bodyPivot",
+          "point": [
+            414.68,
+            1041.53
+          ]
+        },
+        {
+          "name": "groundAnchor",
+          "point": [
+            373.39,
+            1329.68
+          ]
+        }
+      ]
+    }
+  ]
+}

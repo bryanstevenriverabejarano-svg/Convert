@@ -1,0 +1,39 @@
+{
+  "reviewType": "technical_landmark_location_and_iris_center_visibility",
+  "artisticIdentityVerified": false,
+  "runtimeMasksOrDeviceBehaviorVerified": false,
+  "views": {
+    "front": {
+      "sourceSha256": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+      "visualCheck": "passed",
+      "occlusionCheck": "passed",
+      "technicalReviewNote": "Examinado para los dos centros de iris y mouth; no prueba máscaras del runtime ni identidad artística.",
+      "reviewedBy": "integration and root visual inspection",
+      "groundAnchorReview": "projection to z=0 plus clearance; Y about 1–2 px below the lowest visible support"
+    },
+    "seated": {
+      "sourceSha256": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+      "visualCheck": "passed",
+      "occlusionCheck": "passed",
+      "technicalReviewNote": "Examinado para los dos centros de iris y mouth; no prueba máscaras del runtime ni identidad artística.",
+      "reviewedBy": "integration and root visual inspection",
+      "groundAnchorReview": "projection to z=0 plus clearance; Y about 1–2 px below the lowest visible support"
+    },
+    "kneeling": {
+      "sourceSha256": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2",
+      "visualCheck": "passed",
+      "occlusionCheck": "passed",
+      "technicalReviewNote": "Examinado para los dos centros de iris y mouth; no prueba máscaras del runtime ni identidad artística.",
+      "reviewedBy": "integration and root visual inspection",
+      "groundAnchorReview": "projection to z=0 plus clearance; Y about 1–2 px below the lowest visible support"
+    },
+    "crouched": {
+      "sourceSha256": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+      "visualCheck": "passed",
+      "occlusionCheck": "passed",
+      "technicalReviewNote": "Examinado para los dos centros de iris y mouth; no prueba máscaras del runtime ni identidad artística.",
+      "reviewedBy": "integration and root visual inspection",
+      "groundAnchorReview": "projection to z=0 plus clearance; Y about 1–2 px below the lowest visible support"
+    }
+  }
+}

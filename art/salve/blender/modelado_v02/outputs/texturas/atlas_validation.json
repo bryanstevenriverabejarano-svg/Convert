@@ -1,0 +1,2596 @@
+{
+  "scene": "04_SALVE_MODELO_3D",
+  "productionReady": false,
+  "uvLayer": "UVAtlas",
+  "resolution": 2048,
+  "objects": [
+    {
+      "name": "Cuello_y_collar_negro",
+      "vertices": 192,
+      "polygons": 146,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Salve_Traje_CONTINUO",
+      "vertices": 5184,
+      "polygons": 5122,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Muslo_y_pierna_quad.L",
+      "vertices": 2336,
+      "polygons": 2306,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Brazo_quad.L",
+      "vertices": 1372,
+      "polygons": 1346,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Guante_palmar_quad.L",
+      "vertices": 504,
+      "polygons": 482,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_thumb_quad.L",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_index_quad.L",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_middle_quad.L",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_ring_quad.L",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_pinky_quad.L",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Bota_quad.L",
+      "vertices": 1148,
+      "polygons": 1122,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Muslo_y_pierna_quad.R",
+      "vertices": 2336,
+      "polygons": 2306,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Brazo_quad.R",
+      "vertices": 1372,
+      "polygons": 1346,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Guante_palmar_quad.R",
+      "vertices": 504,
+      "polygons": 482,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_thumb_quad.R",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_index_quad.R",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_middle_quad.R",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_ring_quad.R",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Dedo_pinky_quad.R",
+      "vertices": 300,
+      "polygons": 290,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Bota_quad.R",
+      "vertices": 1148,
+      "polygons": 1122,
+      "collections": [
+        "01_Cuerpo_y_traje"
+      ]
+    },
+    {
+      "name": "Cabello_casquete",
+      "vertices": 1088,
+      "polygons": 1024,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_00.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_00_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_00_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_00_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_01.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_01_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_01_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_01_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_02.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_02_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_02_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_02_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_03.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_03_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_03_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_03_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_04.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_04_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_04_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_04_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_05.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_05_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_05_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_05_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_06.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_06_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_06_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_06_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_07.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_07_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_07_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_07_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_08.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_08_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_08_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_08_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_09.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_09_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_09_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_09_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_10.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_10_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_10_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_10_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_11.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_11_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_11_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_11_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_12.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_12_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_12_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_12_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_13.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_13_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_13_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_13_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_14.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_14_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_14_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_14_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_15.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_15_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_15_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_15_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_16.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_16_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_16_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_16_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_17.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_17_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_17_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_17_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_18.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_18_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_18_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_18_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_19.L",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_19_0.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_19_1.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_19_2.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_rostro_00.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_rostro_01.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_rostro_02.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_00.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_00_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_00_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_00_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_01.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_01_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_01_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_01_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_02.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_02_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_02_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_02_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_03.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_03_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_03_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_03_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_04.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_04_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_04_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_04_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_05.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_05_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_05_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_05_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_06.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_06_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_06_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_06_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_07.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_07_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_07_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_07_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_08.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_08_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_08_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_08_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_09.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_09_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_09_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_09_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_10.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_10_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_10_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_10_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_11.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_11_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_11_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_11_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_12.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_12_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_12_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_12_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_13.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_13_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_13_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_13_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_14.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_14_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_14_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_14_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_15.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_15_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_15_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_15_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_16.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_16_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_16_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_16_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_17.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_17_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_17_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_17_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_18.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_18_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_18_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_18_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_largo_19.R",
+      "vertices": 780,
+      "polygons": 770,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_19_0.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_19_1.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_mechon_19_2.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_rostro_00.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_rostro_01.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Mechon_rostro_02.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_00.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_00_0.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_00_1.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_01.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_01_0.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_01_1.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_02.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_02_0.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_02_1.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_03.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_03_0.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_03_1.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_04.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_04_0.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_04_1.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_05.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_05_0.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_05_1.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_06.L",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_06_0.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_06_1.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_00.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_00_0.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_00_1.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_01.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_01_0.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_01_1.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_02.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_02_0.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_02_1.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_03.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_03_0.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_03_1.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_04.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_04_0.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_04_1.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_05.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_05_0.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_05_1.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Flequillo_hoja_06.R",
+      "vertices": 492,
+      "polygons": 482,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_06_0.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Surco_flequillo_06_1.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "03_Cabello"
+      ]
+    },
+    {
+      "name": "Auricular_carcasa.L",
+      "vertices": 610,
+      "polygons": 640,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Aro_ionico_0.L",
+      "vertices": 390,
+      "polygons": 386,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Aro_ionico_1.L",
+      "vertices": 390,
+      "polygons": 386,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Aro_ionico_2.L",
+      "vertices": 390,
+      "polygons": 386,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_disco.L",
+      "vertices": 610,
+      "polygons": 640,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_emblema.L",
+      "vertices": 5,
+      "polygons": 5,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Punta_tecnologica.L",
+      "vertices": 24,
+      "polygons": 18,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Punta_luz.L",
+      "vertices": 18,
+      "polygons": 14,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_carcasa.R",
+      "vertices": 610,
+      "polygons": 640,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Aro_ionico_0.R",
+      "vertices": 390,
+      "polygons": 386,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Aro_ionico_1.R",
+      "vertices": 390,
+      "polygons": 386,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Aro_ionico_2.R",
+      "vertices": 390,
+      "polygons": 386,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_disco.R",
+      "vertices": 610,
+      "polygons": 640,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_emblema.R",
+      "vertices": 5,
+      "polygons": 5,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Punta_tecnologica.R",
+      "vertices": 24,
+      "polygons": 18,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Punta_luz.R",
+      "vertices": 18,
+      "polygons": 14,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_flanco.L",
+      "vertices": 90,
+      "polygons": 72,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_espalda.L",
+      "vertices": 72,
+      "polygons": 56,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_flanco.L",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Costura_pecho.L",
+      "vertices": 258,
+      "polygons": 254,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_pelvis.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_flanco.R",
+      "vertices": 90,
+      "polygons": 72,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_espalda.R",
+      "vertices": 72,
+      "polygons": 56,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_flanco.R",
+      "vertices": 342,
+      "polygons": 338,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Costura_pecho.R",
+      "vertices": 258,
+      "polygons": 254,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_pelvis.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Nucleo_00",
+      "vertices": 5,
+      "polygons": 4,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Nucleo_01",
+      "vertices": 5,
+      "polygons": 4,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Nucleo_02",
+      "vertices": 5,
+      "polygons": 4,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Nucleo_03",
+      "vertices": 5,
+      "polygons": 4,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_thumb.L",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_index.L",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_middle.L",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_ring.L",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_pinky.L",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Tacon.L",
+      "vertices": 252,
+      "polygons": 242,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Suela.L",
+      "vertices": 528,
+      "polygons": 514,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Muslo.L",
+      "vertices": 49,
+      "polygons": 36,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Muslo.L",
+      "vertices": 300,
+      "polygons": 296,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Espinilla.L",
+      "vertices": 42,
+      "polygons": 30,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Espinilla.L",
+      "vertices": 258,
+      "polygons": 254,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Hombro.L",
+      "vertices": 28,
+      "polygons": 18,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Hombro.L",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Antebrazo.L",
+      "vertices": 28,
+      "polygons": 18,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Antebrazo.L",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Tobillo.L",
+      "vertices": 28,
+      "polygons": 18,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Tobillo.L",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Guante_dorso.L",
+      "vertices": 21,
+      "polygons": 12,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Led_guante.L",
+      "vertices": 5,
+      "polygons": 4,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_bota.L",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_collar_v02.L",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_thumb.R",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_index.R",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_middle.R",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_ring.R",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Una_pinky.R",
+      "vertices": 72,
+      "polygons": 66,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Tacon.R",
+      "vertices": 252,
+      "polygons": 242,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Suela.R",
+      "vertices": 528,
+      "polygons": 514,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Muslo.R",
+      "vertices": 49,
+      "polygons": 36,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Muslo.R",
+      "vertices": 300,
+      "polygons": 296,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Espinilla.R",
+      "vertices": 42,
+      "polygons": 30,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Espinilla.R",
+      "vertices": 258,
+      "polygons": 254,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Hombro.R",
+      "vertices": 28,
+      "polygons": 18,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Hombro.R",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Antebrazo.R",
+      "vertices": 28,
+      "polygons": 18,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Antebrazo.R",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_Tobillo.R",
+      "vertices": 28,
+      "polygons": 18,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_Tobillo.R",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Guante_dorso.R",
+      "vertices": 21,
+      "polygons": 12,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Led_guante.R",
+      "vertices": 5,
+      "polygons": 4,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_bota.R",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_collar_v02.R",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_titanio_0.L",
+      "vertices": 2736,
+      "polygons": 2732,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_titanio_1.L",
+      "vertices": 2736,
+      "polygons": 2732,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_titanio_0.R",
+      "vertices": 2736,
+      "polygons": 2732,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Auricular_titanio_1.R",
+      "vertices": 2736,
+      "polygons": 2732,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_muslo_posterior.L",
+      "vertices": 35,
+      "polygons": 24,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_muslo_posterior.L",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_nuca.L",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Panel_muslo_posterior.R",
+      "vertices": 35,
+      "polygons": 24,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_muslo_posterior.R",
+      "vertices": 216,
+      "polygons": 212,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Circuito_nuca.R",
+      "vertices": 174,
+      "polygons": 170,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Costura_coraza.L",
+      "vertices": 2736,
+      "polygons": 2732,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    },
+    {
+      "name": "Costura_coraza.R",
+      "vertices": 2736,
+      "polygons": 2732,
+      "collections": [
+        "04_Tecnologia_y_circuitos"
+      ]
+    }
+  ],
+  "maps": [
+    {
+      "channel": "baseColor",
+      "path": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_baseColor.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "colorSpace": "sRGB",
+      "packed": true,
+      "sha256": "b15eb436c4e83a43d3b8c364fb38fa6ae4ab46265ae2635f5105441387a2f0bb"
+    },
+    {
+      "channel": "roughness",
+      "path": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_roughness.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "colorSpace": "Non-Color",
+      "packed": true,
+      "sha256": "1c7ceabf670ee0b914a8b829da2b83bb401b0684d737017ef3407472309c6395"
+    },
+    {
+      "channel": "metallic",
+      "path": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_metallic.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "colorSpace": "Non-Color",
+      "packed": true,
+      "sha256": "399e15e3703e937c9ea5dddeb634e4afe4af41568512ed5cec25141a74d35276"
+    }
+  ],
+  "materialCopies": [
+    {
+      "original": "Paneles | grafito",
+      "atlas": "AtlasV02_Paneles | grafito"
+    },
+    {
+      "original": "Traje | ceramica perla",
+      "atlas": "AtlasV02_Traje | ceramica perla"
+    },
+    {
+      "original": "Cabello | blanco lavanda",
+      "atlas": "AtlasV02_Cabello | blanco lavanda"
+    },
+    {
+      "original": "Cabello | sombreado de mechon",
+      "atlas": "AtlasV02_Cabello | sombreado de mechon"
+    },
+    {
+      "original": "Circuitos | azul ionico",
+      "atlas": "AtlasV02_Circuitos | azul ionico"
+    },
+    {
+      "original": "Bordes | titanio",
+      "atlas": "AtlasV02_Bordes | titanio"
+    }
+  ],
+  "pending": [
+    "Manual UV seam and texel-density review",
+    "Atlas comparison against original shader appearance",
+    "Deformation and final production-topology validation"
+  ],
+  "packParameters": {
+    "rotate": true,
+    "scale": true,
+    "margin": 0.00390625,
+    "margin_method": "FRACTION",
+    "rotate_method": "CARDINAL",
+    "shape_method": "AABB",
+    "udim_source": "ACTIVE_UDIM"
+  },
+  "bakeGeometry": "isolated static base meshes; modifiers and shape drivers excluded from temporary bake copies",
+  "status": "atlas_baked_and_linked_material_copies",
+  "elapsedSeconds": 937.0,
+  "originalMaterialsPreserved": true,
+  "savedBlend": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\Salve_atlas_geometry.blend",
+  "initialBakeOnly": true,
+  "currentMapHashesAreIn": "atlas_repair_validation.json",
+  "initialMapBackup": "work/atlas_backup_before_raster_v02",
+  "initialBakeVisualCheck": "failed on fringe tips; maps subsequently repaired and frontal GUI verified"
+}

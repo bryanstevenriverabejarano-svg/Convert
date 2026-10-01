@@ -1,0 +1,2038 @@
+{
+  "status": "constant_atlas_rasterized_frontal_gui_and_four_render_views_checked",
+  "productionReady": false,
+  "sourceUV": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\atlas_uv_faces_v02.json",
+  "sourceUVSha256": "f9e358fc93979187d2aeec7f5e2a7289aa39677634ff28d0382b0c7372850531",
+  "size": 2048,
+  "objectGroups": 313,
+  "faces": 135918,
+  "subpixelFaces": 103597,
+  "zeroAreaUVFaces": 0,
+  "supersampling": 4,
+  "dilationRadiusPixels": 8,
+  "originalCoveredPixels": 246955,
+  "coveredAndDilatedPixels": 2563820,
+  "mixedMaterialPixelsAtRasterBoundaries": 0,
+  "originalCoverageOverwrittenByPadding": 0,
+  "islandPaddingPolicy": "nearest source-pixel ownership; existing occupied pixels immutable; no iterative growth",
+  "sourceGeometryUVOrMaterialsModified": false,
+  "maps": [
+    {
+      "channel": "baseColor",
+      "path": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_baseColor.png",
+      "backup": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\atlas_backup_before_raster_v02\\SalveV02_Atlas_baseColor.png",
+      "beforeSha256": "b15eb436c4e83a43d3b8c364fb38fa6ae4ab46265ae2635f5105441387a2f0bb",
+      "colorSpace": "sRGB",
+      "pixelsChanged": 1962755,
+      "initialNearBlackPixelsInsideHairCoverage": 81510,
+      "afterSha256": "f94709af711c3422d63be137aaad6440e895d9c3189a107890059f93aee810f2",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "channel": "roughness",
+      "path": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_roughness.png",
+      "backup": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\atlas_backup_before_raster_v02\\SalveV02_Atlas_roughness.png",
+      "beforeSha256": "1c7ceabf670ee0b914a8b829da2b83bb401b0684d737017ef3407472309c6395",
+      "colorSpace": "Non-Color",
+      "pixelsChanged": 1962755,
+      "afterSha256": "3baf96bdc28cf08e8c79a69a2d85997d1b8b8cbec120ec09b6990156019de2de",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "channel": "metallic",
+      "path": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\outputs\\texturas\\SalveV02_Atlas_metallic.png",
+      "backup": "C:\\Users\\agred\\Documents\\Codex\\2026-09-30\\new-chat-2\\work\\atlas_backup_before_raster_v02\\SalveV02_Atlas_metallic.png",
+      "beforeSha256": "399e15e3703e937c9ea5dddeb634e4afe4af41568512ed5cec25141a74d35276",
+      "colorSpace": "Non-Color",
+      "pixelsChanged": 1962755,
+      "afterSha256": "bffc847f758d14c200b6a05a3d3c7cf1040ec90cb4df631bc48bd9dbce07b944",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "Paneles | grafito",
+      "coveredPixels": 5224,
+      "coveredAndPaddedPixels": 55717,
+      "baseColorSRGB8": [
+        18,
+        24,
+        41
+      ],
+      "roughness8": 51,
+      "metallic8": 184
+    },
+    {
+      "name": "Traje | ceramica perla",
+      "coveredPixels": 25146,
+      "coveredAndPaddedPixels": 105853,
+      "baseColorSRGB8": [
+        245,
+        246,
+        253
+      ],
+      "roughness8": 59,
+      "metallic8": 31
+    },
+    {
+      "name": "Cabello | blanco lavanda",
+      "coveredPixels": 116783,
+      "coveredAndPaddedPixels": 652831,
+      "baseColorSRGB8": [
+        235,
+        237,
+        252
+      ],
+      "roughness8": 84,
+      "metallic8": 8
+    },
+    {
+      "name": "Cabello | sombreado de mechon",
+      "coveredPixels": 94690,
+      "coveredAndPaddedPixels": 1608697,
+      "baseColorSRGB8": [
+        175,
+        182,
+        214
+      ],
+      "roughness8": 115,
+      "metallic8": 5
+    },
+    {
+      "name": "Circuitos | azul ionico",
+      "coveredPixels": 3759,
+      "coveredAndPaddedPixels": 98564,
+      "baseColorSRGB8": [
+        16,
+        85,
+        255
+      ],
+      "roughness8": 56,
+      "metallic8": 89
+    },
+    {
+      "name": "Bordes | titanio",
+      "coveredPixels": 1353,
+      "coveredAndPaddedPixels": 42158,
+      "baseColorSRGB8": [
+        132,
+        149,
+        173
+      ],
+      "roughness8": 64,
+      "metallic8": 217
+    }
+  ],
+  "objects": [
+    {
+      "name": "Cuello_y_collar_negro#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 146,
+      "subpixelFaces": 0
+    },
+    {
+      "name": "Salve_Traje_CONTINUO#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 5122,
+      "subpixelFaces": 2204
+    },
+    {
+      "name": "Muslo_y_pierna_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 2306,
+      "subpixelFaces": 323
+    },
+    {
+      "name": "Brazo_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 1346,
+      "subpixelFaces": 606
+    },
+    {
+      "name": "Guante_palmar_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 482,
+      "subpixelFaces": 480
+    },
+    {
+      "name": "Dedo_thumb_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Dedo_index_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Dedo_middle_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Dedo_ring_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Dedo_pinky_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Bota_quad.L#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 1122,
+      "subpixelFaces": 1106
+    },
+    {
+      "name": "Muslo_y_pierna_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 2306,
+      "subpixelFaces": 323
+    },
+    {
+      "name": "Brazo_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 1346,
+      "subpixelFaces": 606
+    },
+    {
+      "name": "Guante_palmar_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 482,
+      "subpixelFaces": 480
+    },
+    {
+      "name": "Dedo_thumb_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Dedo_index_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Dedo_middle_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Dedo_ring_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Dedo_pinky_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 290,
+      "subpixelFaces": 289
+    },
+    {
+      "name": "Bota_quad.R#0",
+      "sourceMaterial": "Traje | ceramica perla",
+      "faces": 1122,
+      "subpixelFaces": 1106
+    },
+    {
+      "name": "Cabello_casquete#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 1024,
+      "subpixelFaces": 941
+    },
+    {
+      "name": "Mechon_largo_00.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 181
+    },
+    {
+      "name": "Surco_mechon_00_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_00_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_00_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_01.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 199
+    },
+    {
+      "name": "Surco_mechon_01_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_01_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_01_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_02.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 198
+    },
+    {
+      "name": "Surco_mechon_02_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_02_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_02_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_03.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 193
+    },
+    {
+      "name": "Surco_mechon_03_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_03_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_03_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_04.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 190
+    },
+    {
+      "name": "Surco_mechon_04_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_04_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_04_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_05.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 190
+    },
+    {
+      "name": "Surco_mechon_05_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_05_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_05_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_06.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 191
+    },
+    {
+      "name": "Surco_mechon_06_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_06_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_06_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_07.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 205
+    },
+    {
+      "name": "Surco_mechon_07_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_07_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_07_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_08.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 203
+    },
+    {
+      "name": "Surco_mechon_08_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_08_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_08_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_09.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 197
+    },
+    {
+      "name": "Surco_mechon_09_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_09_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_09_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_10.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 193
+    },
+    {
+      "name": "Surco_mechon_10_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_10_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_10_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_11.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 190
+    },
+    {
+      "name": "Surco_mechon_11_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_11_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_11_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_12.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 200
+    },
+    {
+      "name": "Surco_mechon_12_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_12_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_12_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_13.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 209
+    },
+    {
+      "name": "Surco_mechon_13_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_13_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_13_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_14.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 203
+    },
+    {
+      "name": "Surco_mechon_14_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_14_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_14_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_15.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 198
+    },
+    {
+      "name": "Surco_mechon_15_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_15_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_15_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_16.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 197
+    },
+    {
+      "name": "Surco_mechon_16_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_16_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_16_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_17.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 189
+    },
+    {
+      "name": "Surco_mechon_17_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_17_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_17_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_18.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 201
+    },
+    {
+      "name": "Surco_mechon_18_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_18_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_18_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_19.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 209
+    },
+    {
+      "name": "Surco_mechon_19_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_19_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_19_2.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_rostro_00.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 475
+    },
+    {
+      "name": "Mechon_rostro_01.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 476
+    },
+    {
+      "name": "Mechon_rostro_02.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 476
+    },
+    {
+      "name": "Mechon_largo_00.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 181
+    },
+    {
+      "name": "Surco_mechon_00_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_00_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_00_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_01.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 199
+    },
+    {
+      "name": "Surco_mechon_01_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_01_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_01_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_02.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 198
+    },
+    {
+      "name": "Surco_mechon_02_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_02_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_02_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_03.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 193
+    },
+    {
+      "name": "Surco_mechon_03_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_03_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_03_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_04.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 190
+    },
+    {
+      "name": "Surco_mechon_04_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_04_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_04_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_05.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 190
+    },
+    {
+      "name": "Surco_mechon_05_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_05_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_05_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_06.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 191
+    },
+    {
+      "name": "Surco_mechon_06_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_06_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_06_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_07.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 205
+    },
+    {
+      "name": "Surco_mechon_07_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_07_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_07_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_08.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 203
+    },
+    {
+      "name": "Surco_mechon_08_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_08_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_08_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_09.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 197
+    },
+    {
+      "name": "Surco_mechon_09_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_09_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_09_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_10.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 193
+    },
+    {
+      "name": "Surco_mechon_10_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_10_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_10_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_11.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 190
+    },
+    {
+      "name": "Surco_mechon_11_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_11_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_11_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_12.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 200
+    },
+    {
+      "name": "Surco_mechon_12_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_12_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_12_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_13.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 209
+    },
+    {
+      "name": "Surco_mechon_13_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_13_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_13_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_14.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 203
+    },
+    {
+      "name": "Surco_mechon_14_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_14_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_14_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_15.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 198
+    },
+    {
+      "name": "Surco_mechon_15_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_15_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_15_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_16.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 197
+    },
+    {
+      "name": "Surco_mechon_16_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_16_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_16_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_17.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 189
+    },
+    {
+      "name": "Surco_mechon_17_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_17_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_17_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_18.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 201
+    },
+    {
+      "name": "Surco_mechon_18_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_18_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_18_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_largo_19.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 770,
+      "subpixelFaces": 209
+    },
+    {
+      "name": "Surco_mechon_19_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_19_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Surco_mechon_19_2.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Mechon_rostro_00.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 475
+    },
+    {
+      "name": "Mechon_rostro_01.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 476
+    },
+    {
+      "name": "Mechon_rostro_02.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 476
+    },
+    {
+      "name": "Flequillo_hoja_00.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_00_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_00_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_01.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_01_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_01_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_02.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_02_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_02_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_03.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_03_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_03_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_04.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_04_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_04_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_05.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_05_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_05_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_06.L#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_06_0.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_06_1.L#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_00.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_00_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_00_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_01.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_01_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_01_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_02.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_02_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_02_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_03.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_03_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_03_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_04.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_04_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_04_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_05.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_05_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_05_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Flequillo_hoja_06.R#0",
+      "sourceMaterial": "Cabello | blanco lavanda",
+      "faces": 482,
+      "subpixelFaces": 482
+    },
+    {
+      "name": "Surco_flequillo_06_0.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Surco_flequillo_06_1.R#0",
+      "sourceMaterial": "Cabello | sombreado de mechon",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Auricular_carcasa.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 640,
+      "subpixelFaces": 616
+    },
+    {
+      "name": "Aro_ionico_0.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 386,
+      "subpixelFaces": 386
+    },
+    {
+      "name": "Aro_ionico_1.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 386,
+      "subpixelFaces": 386
+    },
+    {
+      "name": "Aro_ionico_2.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 386,
+      "subpixelFaces": 386
+    },
+    {
+      "name": "Auricular_disco.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 640,
+      "subpixelFaces": 640
+    },
+    {
+      "name": "Auricular_emblema.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 5,
+      "subpixelFaces": 2
+    },
+    {
+      "name": "Punta_tecnologica.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 18,
+      "subpixelFaces": 1
+    },
+    {
+      "name": "Punta_luz.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 14,
+      "subpixelFaces": 14
+    },
+    {
+      "name": "Auricular_carcasa.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 640,
+      "subpixelFaces": 616
+    },
+    {
+      "name": "Aro_ionico_0.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 386,
+      "subpixelFaces": 386
+    },
+    {
+      "name": "Aro_ionico_1.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 386,
+      "subpixelFaces": 386
+    },
+    {
+      "name": "Aro_ionico_2.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 386,
+      "subpixelFaces": 386
+    },
+    {
+      "name": "Auricular_disco.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 640,
+      "subpixelFaces": 640
+    },
+    {
+      "name": "Auricular_emblema.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 5,
+      "subpixelFaces": 2
+    },
+    {
+      "name": "Punta_tecnologica.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 18,
+      "subpixelFaces": 1
+    },
+    {
+      "name": "Punta_luz.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 14,
+      "subpixelFaces": 14
+    },
+    {
+      "name": "Panel_flanco.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 72,
+      "subpixelFaces": 6
+    },
+    {
+      "name": "Panel_espalda.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 56,
+      "subpixelFaces": 8
+    },
+    {
+      "name": "Circuito_flanco.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Costura_pecho.L#0",
+      "sourceMaterial": "Bordes | titanio",
+      "faces": 254,
+      "subpixelFaces": 254
+    },
+    {
+      "name": "Circuito_pelvis.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Panel_flanco.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 72,
+      "subpixelFaces": 6
+    },
+    {
+      "name": "Panel_espalda.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 56,
+      "subpixelFaces": 8
+    },
+    {
+      "name": "Circuito_flanco.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 338,
+      "subpixelFaces": 338
+    },
+    {
+      "name": "Costura_pecho.R#0",
+      "sourceMaterial": "Bordes | titanio",
+      "faces": 254,
+      "subpixelFaces": 254
+    },
+    {
+      "name": "Circuito_pelvis.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Nucleo_00#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 4,
+      "subpixelFaces": 2
+    },
+    {
+      "name": "Nucleo_01#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 4,
+      "subpixelFaces": 4
+    },
+    {
+      "name": "Nucleo_02#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 4,
+      "subpixelFaces": 2
+    },
+    {
+      "name": "Nucleo_03#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 4,
+      "subpixelFaces": 4
+    },
+    {
+      "name": "Una_thumb.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Una_index.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Una_middle.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Una_ring.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Una_pinky.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Tacon.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 242,
+      "subpixelFaces": 240
+    },
+    {
+      "name": "Suela.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 514,
+      "subpixelFaces": 449
+    },
+    {
+      "name": "Panel_Muslo.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 36,
+      "subpixelFaces": 0
+    },
+    {
+      "name": "Circuito_Muslo.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 296,
+      "subpixelFaces": 296
+    },
+    {
+      "name": "Panel_Espinilla.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 30,
+      "subpixelFaces": 3
+    },
+    {
+      "name": "Circuito_Espinilla.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 254,
+      "subpixelFaces": 254
+    },
+    {
+      "name": "Panel_Hombro.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 18,
+      "subpixelFaces": 6
+    },
+    {
+      "name": "Circuito_Hombro.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Panel_Antebrazo.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 18,
+      "subpixelFaces": 12
+    },
+    {
+      "name": "Circuito_Antebrazo.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Panel_Tobillo.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 18,
+      "subpixelFaces": 4
+    },
+    {
+      "name": "Circuito_Tobillo.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Guante_dorso.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 12,
+      "subpixelFaces": 0
+    },
+    {
+      "name": "Led_guante.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 4,
+      "subpixelFaces": 4
+    },
+    {
+      "name": "Circuito_bota.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Circuito_collar_v02.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Una_thumb.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Una_index.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Una_middle.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Una_ring.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Una_pinky.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 66,
+      "subpixelFaces": 66
+    },
+    {
+      "name": "Tacon.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 242,
+      "subpixelFaces": 240
+    },
+    {
+      "name": "Suela.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 514,
+      "subpixelFaces": 449
+    },
+    {
+      "name": "Panel_Muslo.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 36,
+      "subpixelFaces": 0
+    },
+    {
+      "name": "Circuito_Muslo.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 296,
+      "subpixelFaces": 296
+    },
+    {
+      "name": "Panel_Espinilla.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 30,
+      "subpixelFaces": 3
+    },
+    {
+      "name": "Circuito_Espinilla.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 254,
+      "subpixelFaces": 254
+    },
+    {
+      "name": "Panel_Hombro.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 18,
+      "subpixelFaces": 6
+    },
+    {
+      "name": "Circuito_Hombro.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Panel_Antebrazo.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 18,
+      "subpixelFaces": 12
+    },
+    {
+      "name": "Circuito_Antebrazo.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Panel_Tobillo.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 18,
+      "subpixelFaces": 4
+    },
+    {
+      "name": "Circuito_Tobillo.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Guante_dorso.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 12,
+      "subpixelFaces": 0
+    },
+    {
+      "name": "Led_guante.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 4,
+      "subpixelFaces": 4
+    },
+    {
+      "name": "Circuito_bota.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Circuito_collar_v02.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Auricular_titanio_0.L#0",
+      "sourceMaterial": "Bordes | titanio",
+      "faces": 2732,
+      "subpixelFaces": 2732
+    },
+    {
+      "name": "Auricular_titanio_1.L#0",
+      "sourceMaterial": "Bordes | titanio",
+      "faces": 2732,
+      "subpixelFaces": 2732
+    },
+    {
+      "name": "Auricular_titanio_0.R#0",
+      "sourceMaterial": "Bordes | titanio",
+      "faces": 2732,
+      "subpixelFaces": 2732
+    },
+    {
+      "name": "Auricular_titanio_1.R#0",
+      "sourceMaterial": "Bordes | titanio",
+      "faces": 2732,
+      "subpixelFaces": 2732
+    },
+    {
+      "name": "Panel_muslo_posterior.L#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 24,
+      "subpixelFaces": 0
+    },
+    {
+      "name": "Circuito_muslo_posterior.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Circuito_nuca.L#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Panel_muslo_posterior.R#0",
+      "sourceMaterial": "Paneles | grafito",
+      "faces": 24,
+      "subpixelFaces": 0
+    },
+    {
+      "name": "Circuito_muslo_posterior.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 212,
+      "subpixelFaces": 212
+    },
+    {
+      "name": "Circuito_nuca.R#0",
+      "sourceMaterial": "Circuitos | azul ionico",
+      "faces": 170,
+      "subpixelFaces": 170
+    },
+    {
+      "name": "Costura_coraza.L#0",
+      "sourceMaterial": "Bordes | titanio",
+      "faces": 2732,
+      "subpixelFaces": 2732
+    },
+    {
+      "name": "Costura_coraza.R#0",
+      "sourceMaterial": "Bordes | titanio",
+      "faces": 2732,
+      "subpixelFaces": 2732
+    }
+  ],
+  "method": "UV polygon ownership raster at 4x (configured supersampling), dominant full-color texels, sRGB encoding for linear baseColor, linear bytes for scalar maps",
+  "verifiedVisualCause": false,
+  "visualCheck": "pending",
+  "pending": [
+    "Review UV density/seams and production deformation separately",
+    "Review remaining views/material details and production UV density"
+  ],
+  "elapsedSeconds": 8.14,
+  "frontal_gui_verified": true,
+  "render_verification": "checked in front, seated, crouched40deg and kneeling; previous black fringe-tip triangles not observed",
+  "blendImageRefresh": "new image datablocks loaded from corrected PNG, user_remap and pack verified by root in GUI",
+  "guiObservation": "Black triangles on fringe tips disappeared with AtlasV02 restored; frontal result matched original hair shader",
+  "frontal_render_verified": true,
+  "renderProof": {
+    "front": "2647c3bb93171d98c8c1bb1b810477f391e50b0f567193fb2526ebff1b07eb26",
+    "seated": "ae78730aa5587eb66a4eaed4d8217f338f2fe180db122823bb439cd8b7941899",
+    "crouched": "05b26ba199c23b457b097525462c589877bc115566ec0c013ea0488d30bd4642",
+    "kneeling": "4b844a8dc224fa86317b88531c7932f1c4e2c6f1696df9cf86d8d646f1ae5bb2"
+  },
+  "renderReviewScope": "integration inspected diagnostic copies of exact SHA-bound PNG; no full production or identity certification",
+  "finalBlendPackedMapsVerified": true,
+  "finalBlendSha256": "f8e173939563bfaf2384d2aa5d3506cd5ab4d570a5f6d3ff390bb81da43832b7",
+  "finalBlendAudit": "Salve_auditoria_blend_v02.json"
+}
