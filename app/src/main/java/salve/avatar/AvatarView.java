@@ -35,7 +35,7 @@ public final class AvatarView extends FrameLayout {
     private boolean attached, enabled = true, immersive, overlay, ready, failed, polling;
     private long loadStarted;
     private Runnable frameListener;
-    private final Runnable changed = this::refresh;
+    private final Runnable changed = this::onStateChanged;
     private final Runnable frame = new Runnable() {
         @Override public void run() {
             if (!active()) return;
@@ -124,6 +124,12 @@ public final class AvatarView extends FrameLayout {
         // The supplied model only has the original Núcleo suit. Keep existing explicit wardrobe choices.
         return "core".equals(design.template) && design.palette == AvatarDesignSpec.Palette.ORIGINAL
                 && design.pattern == AvatarDesignSpec.Pattern.NONE && store.state().getPose() != AvatarState.Pose.SLEEPING;
+    }
+    private void onStateChanged() {
+        // Preserve the existing wardrobe contract even when the 2D fallback has not been created yet.
+        if (AvatarBodyCue.referenceFor(store.state().getPose()) != null
+                && !"core".equals(wardrobe.selected().template)) store.change(AvatarState::wake);
+        refresh();
     }
     private void refresh() {
         if (store == null || status == null) return; // Framework visibility callbacks can precede field initialization.
