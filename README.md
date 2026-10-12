@@ -9,11 +9,17 @@ Salve prioriza Dolphin 3.0 Llama 3.2 3B Q4_K_M (2,02 GB), con llama.cpp para
 Android. Gemma solo se prepara tras un fallo de Dolphin y se reutiliza si ya está
 descargado. Consulta [instalación, límites y pruebas](docs/dolphin-android.md).
 
+## Apariencia de Salve
+
+La nueva base utiliza sprites realistas transparentes, con vistas, caminata y baile.
+El visor y las entregas 3D anteriores se retiran del árbol actual.
+Consulta [alcance y validación del avatar 2D](docs/SALVE_AVATAR_2D.md).
+
 ## Instalar desde el móvil
 
 En una ejecución correcta de **Actions → Android tests and APK**, descarga el
 artefacto `salve-preview-arm64-…`, extrae el ZIP y abre `app-preview.apk`.
-Aparecerá como **Salve 3D (prueba)**, con identificador `com.salve.app.preview`.
+Aparecerá como **Salve (prueba)**, con identificador `com.salve.app.preview`.
 
 Esta copia puede convivir con Salve (`com.salve.app`) aunque las APK estén firmadas
 con certificados distintos. Tiene recuerdos, ajustes y modelos descargados propios;
@@ -36,7 +42,7 @@ clave privada en este repositorio.
 Cada ZIP incluye la huella de la APK (`.sha256`), la información pública del
 certificado (`.signing.txt`) y la identidad del paquete (`.badging.txt`).
 CI verifica ambas variantes, su firma, arquitectura ARM64, bibliotecas de 16 KB
-y el modelo 3D empaquetado. La prueba de instalación en un teléfono sigue siendo
+y los sprites transparentes empaquetados. La prueba de instalación en un teléfono sigue siendo
 una comprobación aparte.
 
 ## Preparar el Android SDK

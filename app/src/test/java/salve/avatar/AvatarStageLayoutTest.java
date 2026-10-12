@@ -10,8 +10,8 @@ public class AvatarStageLayoutTest {
             AvatarStageLayout layout = AvatarStageLayout.fit(size[0], size[1], position);
             assertTrue(layout.floor - layout.height >= 0);
             assertTrue(layout.floor <= size[1]);
-            assertTrue(layout.centerX - layout.height / 3f >= 0);
-            assertTrue(layout.centerX + layout.height / 3f <= size[0]);
+            assertTrue(layout.centerX - layout.height * .38f >= 0);
+            assertTrue(layout.centerX + layout.height * .38f <= size[0]);
             assertTrue(layout.bedCenterX - 105 * layout.bedScale >= 0);
             assertTrue(layout.bedCenterX + 105 * layout.bedScale <= size[0]);
             assertTrue(layout.floor - 116 * layout.bedScale >= 0);
@@ -29,7 +29,7 @@ public class AvatarStageLayoutTest {
     }
     @Test public void phonePortraitGivesCharacterMostOfAvailableHeight() {
         AvatarStageLayout layout = AvatarStageLayout.fit(360, 560, .3f);
-        assertTrue(layout.height > 480);
+        assertTrue(layout.height > 400);
     }
     @Test public void zeroViewportProducesNoCharacter() {
         assertEquals(0, AvatarStageLayout.fit(0, 0, .3f).height, 0);

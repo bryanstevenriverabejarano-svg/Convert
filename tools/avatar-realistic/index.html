@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Salve · revisión 2D</title>
+<style>body{margin:0;background:#0b121f;color:#e7efff;font:16px system-ui}main{max-width:1040px;margin:auto;padding:22px}h1{font-size:25px;margin:0 0 5px}p{color:#adbbcc;margin:5px 0 20px}nav{display:flex;flex-wrap:wrap;gap:8px}button{border:1px solid #31546b;background:#172e42;border-radius:18px;padding:9px 16px;color:#eef8ff;cursor:pointer}button.on{background:#086374}canvas{width:100%;height:auto;aspect-ratio:1000/620;display:block;margin-top:18px;background:radial-gradient(ellipse at bottom,#253951,#0c1420 70%);border-radius:20px}label{display:inline-flex;gap:8px;align-items:center;margin:12px 12px 0 0}small{color:#94a8bd}</style>
+<main><h1>Salve · nueva base 2D</h1><p>Vista previa de los recursos reales. Caminar y bailar utilizan ocho fotogramas; los gestos son poses.</p><nav id="controls"></nav><canvas id="stage" width="1000" height="620"></canvas><label><input id="light" type="checkbox">Fondo claro</label><label><input id="pause" type="checkbox">Pausar</label><p><small>Comprobación de arte y encuadre. No sustituye la prueba de la APK en Android.</small></p></main>
+<script>
+const root='../../app/src/main/assets/avatar/realistic/';
+const c=document.querySelector('canvas'),ctx=c.getContext('2d');let mode='base',paused=false,clock=0,previous=0;
+const choices={base:'Base',walk:'Caminar',dance:'Bailar',views:'Girar',seated:'Sentarse',kneeling:'Arrodillarse',crouched:'Agacharse',wave:'Saludar',explain:'Conversar',listen:'Escuchar'};
+for(const [id,label] of Object.entries(choices)){const b=document.createElement('button');b.textContent=label;b.dataset.mode=id;b.onclick=()=>{mode=id;clock=0;document.querySelectorAll('button').forEach(e=>e.classList.toggle('on',e===b))};document.querySelector('nav').append(b)}document.querySelector('button').classList.add('on');
+document.querySelector('#light').onchange=e=>c.style.background=e.target.checked?'#ebeff3':'';
+document.querySelector('#pause').onchange=e=>paused=e.target.checked;
+window.ready=(async()=>{const manifest=await fetch(root+'manifest.json').then(r=>r.json());const images={};await Promise.all(Object.keys(manifest.sheets).map(async name=>{const im=new Image();im.src=root+name+'.png';await im.decode();images[name]=im}));
+function draw(ms){const dt=previous?Math.min((ms-previous)/1000,.1):0;previous=ms;if(!paused)clock+=dt;ctx.clearRect(0,0,c.width,c.height);let name=mode,index=0,scale=1,flip=false,x=c.width/2;
+if(mode==='walk'){const f=(clock*.15)%2;flip=f>1;x=200+600*(flip?2-f:f);index=Math.floor(clock*10)%8;scale=.94}
+else if(mode==='dance')index=Math.floor(clock*6)%8;else if(mode==='views')index=Math.floor(clock*1.2)%8;
+else if(!['base'].includes(mode)){name='poses';index={seated:0,kneeling:1,crouched:2,wave:4,explain:5,listen:6}[mode];scale={seated:.72,kneeling:.67,crouched:.62}[mode]||1}
+const [l,t,r,b]=manifest.sheets[name].frames[index];let h=540*scale*(b-t)/manifest.sheets[name].frameHeights[index],w=h*(r-l)/(b-t);if(w>540*.76){h*=540*.76/w;w=540*.76}ctx.save();ctx.translate(x,595);if(flip)ctx.scale(-1,1);ctx.drawImage(images[name],l,t,r-l,b-t,-w/2,-h,w,h);ctx.restore();window.lastFrame={name,index};requestAnimationFrame(draw)}requestAnimationFrame(draw);return true})();
+</script></html>

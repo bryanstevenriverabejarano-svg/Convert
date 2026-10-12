@@ -27,7 +27,7 @@ jobs:
           - variant: preview
             task_suffix: Preview
             package_id: com.salve.app.preview
-            label: Salve 3D (prueba)
+            label: Salve (prueba)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
@@ -62,14 +62,11 @@ jobs:
           python3 -m unittest discover -s scripts -p 'test_*.py' -v
           bash scripts/test-research-kernel.sh
 
-      - name: Verify offline Salve 3D and real model animations
-        timeout-minutes: 5
+      - name: Verify transparent Salve sprites and body animation
         run: |
-          npm ci --prefix tools/avatar3d --ignore-scripts
-          node tools/avatar3d/node_modules/playwright/cli.js install --with-deps chromium
-          npm run build --prefix tools/avatar3d
-          git diff --exit-code -- app/src/main/assets/avatar3d/viewer.js app/src/main/assets/avatar3d/viewer.js.LEGAL.txt
-          npm test --prefix tools/avatar3d
+          python3 -m pip install 'Pillow==11.3.0'
+          python3 scripts/verify_salve_sprites.py
+          bash scripts/test-salve-sprites.sh
 
       - name: Prepare Android SDK 36 and Build Tools 36.0.0
         timeout-minutes: 10
@@ -116,9 +113,11 @@ jobs:
           print(f"Verified install identity: {package.group(1)} ({label.group(1)})")
           with zipfile.ZipFile("app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk") as apk:
               names = set(apk.namelist())
-              model = apk.read("assets/avatar3d/SALVE_Animada.glb")
-          assert hashlib.sha256(model).hexdigest() == "420693a1d473ad27342ad1080f564f16a51c8f76a747cd88dc37c110a0650d63", "Packaged Salve 3D model differs from the reviewed GLB"
-          assert {"assets/avatar3d/index.html", "assets/avatar3d/viewer.js"} <= names, "Missing offline 3D viewer"
+              for name in ("base", "views", "walk", "dance", "poses"):
+                  asset = "avatar/realistic/" + name + ".png"
+                  assert apk.read("assets/" + asset) == Path("app/src/main/assets/" + asset).read_bytes(), asset
+              assert apk.read("assets/avatar/realistic/manifest.json") == Path("app/src/main/assets/avatar/realistic/manifest.json").read_bytes()
+          assert not any(name.startswith("assets/avatar3d/") or name.endswith(".glb") for name in names), "Retired 3D assets remain in APK"
           abis = {name.split("/")[1] for name in names if name.startswith("lib/") and name.endswith(".so")}
           assert abis == {"arm64-v8a"}, f"Unexpected APK ABIs: {abis}"
           assert "lib/arm64-v8a/libsalve_llama.so" in names, "Missing GGUF runtime"
@@ -142,7 +141,6 @@ jobs:
             build/autonomy-evaluation/
             build/autonomy-generalization/
             build/native-alignment-${{ matrix.variant }}.json
-            build/avatar3d-review/
             app/schemas/
           if-no-files-found: warn
           retention-days: 14
