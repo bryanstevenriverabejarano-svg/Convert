@@ -15,7 +15,19 @@ concurrency:
 
 jobs:
   android:
-    name: Tests and debug APK (ARM64)
+    name: Tests and ${{ matrix.variant }} APK (ARM64)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: debug
+            task_suffix: Debug
+            package_id: com.salve.app
+            label: Salve
+          - variant: preview
+            task_suffix: Preview
+            package_id: com.salve.app.preview
+            label: Salve 3D (prueba)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
@@ -70,7 +82,7 @@ jobs:
         run: >-
           bash ./gradlew --no-daemon --stacktrace --console=plain --max-workers=2
           --init-script scripts/android-arm64.init.gradle
-          :app:testDebugUnitTest :app:assembleDebug
+          :app:test${{ matrix.task_suffix }}UnitTest :app:assemble${{ matrix.task_suffix }}
 
       - name: Execute 104 autonomous tool challenges in four rounds
         timeout-minutes: 5
@@ -80,15 +92,29 @@ jobs:
         timeout-minutes: 5
         run: python3 scripts/evaluate_autonomy_generalization.py --output build/autonomy-generalization
 
-      - name: Verify APK signature and record checksum
+      - name: Verify APK identity, signature and checksum
+        env:
+          EXPECTED_PACKAGE: ${{ matrix.package_id }}
+          EXPECTED_LABEL: ${{ matrix.label }}
         run: |
-          apk_path=app/build/outputs/apk/debug/app-debug.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk_path"
+          apk_path=app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk_path" | tee "$apk_path.signing.txt"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$apk_path" > "$apk_path.badging.txt"
           sha256sum "$apk_path" > "$apk_path.sha256"
           python3 - <<'PYTHON'
           import hashlib
+          import os
+          from pathlib import Path
+          import re
           import zipfile
-          with zipfile.ZipFile("app/build/outputs/apk/debug/app-debug.apk") as apk:
+          apk_path = Path("app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk")
+          badging = Path(str(apk_path) + ".badging.txt").read_text()
+          package = re.search(r"^package: name='([^']+)'", badging, re.MULTILINE)
+          label = re.search(r"^application-label:'([^']+)'", badging, re.MULTILINE)
+          assert package and package.group(1) == os.environ["EXPECTED_PACKAGE"], badging
+          assert label and label.group(1) == os.environ["EXPECTED_LABEL"], badging
+          print(f"Verified install identity: {package.group(1)} ({label.group(1)})")
+          with zipfile.ZipFile("app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk") as apk:
               names = set(apk.namelist())
               model = apk.read("assets/avatar3d/SALVE_Animada.glb")
           assert hashlib.sha256(model).hexdigest() == "420693a1d473ad27342ad1080f564f16a51c8f76a747cd88dc37c110a0650d63", "Packaged Salve 3D model differs from the reviewed GLB"
@@ -101,33 +127,35 @@ jobs:
 
       - name: Verify every native library supports 16 KB pages
         run: |
-          python3 scripts/check_android_native_alignment.py app/build/outputs/apk/debug/app-debug.apk --report build/native-alignment.json
-          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk
+          python3 scripts/check_android_native_alignment.py app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk --report build/native-alignment-${{ matrix.variant }}.json
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk
 
       - name: Upload test reports
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: android-test-reports-${{ github.sha }}
+          name: android-${{ matrix.variant }}-test-reports-${{ github.sha }}
           path: |
-            app/build/reports/tests/testDebugUnitTest/
-            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/test${{ matrix.task_suffix }}UnitTest/
+            app/build/test-results/test${{ matrix.task_suffix }}UnitTest/
             build/reports/problems/
             build/autonomy-evaluation/
             build/autonomy-generalization/
-            build/native-alignment.json
+            build/native-alignment-${{ matrix.variant }}.json
             build/avatar3d-review/
             app/schemas/
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Upload tested debug APK
+      - name: Upload tested ${{ matrix.variant }} APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: salve-debug-arm64-${{ github.sha }}
+          name: salve-${{ matrix.variant }}-arm64-${{ github.sha }}
           path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/debug/app-debug.apk.sha256
+            app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk
+            app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk.sha256
+            app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk.signing.txt
+            app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk.badging.txt
           if-no-files-found: error
           compression-level: 0
           retention-days: 14

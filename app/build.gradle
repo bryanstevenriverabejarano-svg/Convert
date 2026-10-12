@@ -51,6 +51,13 @@ android {
     }
 
     buildTypes {
+        // A separate install preserves an existing Salve signed on another machine.
+        preview {
+            initWith debug
+            applicationIdSuffix ".preview"
+            versionNameSuffix "-preview"
+            matchingFallbacks = ['debug']
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
