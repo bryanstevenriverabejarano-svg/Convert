@@ -53,6 +53,41 @@ public class RoomAgentStoreTest {
         assertEquals(0, db.recuerdoDao().perfiles().size());
         assertEquals(0, db.recuerdoDao().buscarIndice("\"salve\"", true, 4).size());
     }
+    @Test public void restoredSubmissionIsIdempotentEvenAfterCompletionAndReopeningDatabase() {
+        String id = java.util.UUID.randomUUID().toString();
+        AgentRun first = store.createWithId(id, "Recuerda el origen de Salve", false, "", now);
+        execute(first.id, model(), tools("SUCCESS"));
+        db.close(); open();
+        AgentRun retry = store.createWithId(id, first.goal, false, "https://new.example.org", now + 1000);
+        assertEquals("SUCCEEDED", retry.status); assertEquals("", retry.bridge);
+        assertEquals(1, store.recent().size()); assertEquals(1, memories());
+        assertEquals(3, retry.modelCalls); assertEquals(1, retry.observations.size());
+        assertThrows(IllegalArgumentException.class, () -> store.createWithId(id, "Objetivo distinto", false, "", now));
+        assertThrows(IllegalArgumentException.class, () -> store.createWithId(id, first.goal, true, "", now));
+    }
+    @Test public void retryDoesNotConsumeAnotherPendingSlot() {
+        AgentRun first = create();
+        for (int i = 1; i < 20; i++) create();
+        assertEquals(first.id, store.createWithId(first.id, first.goal, false, "", now).id);
+        assertEquals(20, store.pending().size());
+        assertThrows(IllegalArgumentException.class, this::create);
+    }
+    @Test public void restartedInferenceReceivesSavedOutlineAndRemainingBudgets() {
+        AgentRun r = create(); AgentRun claimed = store.claim(r.id, "old", now);
+        claimed.outline.add("Consultar el registro original"); claimed.modelCalls = 2;
+        claimed.observations.add(new AgentRun.Observation("existing", "memory.lookup", "SUCCESS", "Registro de 2025"));
+        assertTrue(store.save(claimed, now)); store.release(r.id, "old", now);
+        db.close(); open();
+        AtomicInteger calls = new AtomicInteger();
+        AgentRun done = execute(r.id, p -> {
+            JsonObject data = JsonParser.parseString(p.substring(p.indexOf("DATOS=") + 6)).getAsJsonObject();
+            assertEquals("Consultar el registro original", data.getAsJsonArray("plan_actual").get(0).getAsString());
+            assertEquals(7, data.get("herramientas_restantes").getAsInt());
+            assertEquals(10 - calls.getAndIncrement(), data.get("inferencias_restantes").getAsInt());
+            return model().generate(p);
+        }, tools("SUCCESS"));
+        assertEquals("SUCCEEDED", done.status); assertEquals(1, done.observations.size());
+    }
     @Test public void partialEvidenceCannotBecomeFullSuccessByModelVote() {
         assertEquals("PARTIAL", execute(create().id, model(), tools("PARTIAL")).status); assertEquals(1, memories());
     }
@@ -150,6 +185,7 @@ public class RoomAgentStoreTest {
     }
     @Test public void smallFallbackContextStillProducesCompleteJsonWithinBudget() {
         AgentRun r = create(); AgentRun claimed = store.claim(r.id, "old", now);
+        for (int i = 0; i < 6; i++) claimed.outline.add("\"\\\n".repeat(50));
         for (int i = 0; i < 8; i++) claimed.observations.add(new AgentRun.Observation("12345678-1234-1234-1234-1234567890a" + i, "memory.lookup", "SUCCESS", "\"\\\n".repeat(1900)));
         assertTrue(store.save(claimed, now)); store.release(r.id, "old", now);
         AgentEngine.Model small = new AgentEngine.Model() {

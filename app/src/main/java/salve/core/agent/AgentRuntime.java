@@ -29,6 +29,20 @@ public final class AgentRuntime {
         return instance;
     }
     private String bridge() { ToolBridgeConfig config = ToolBridgeConfig.load(app); return config == null ? "" : config.endpoint; }
+    // These methods touch Room and must be called away from the UI thread.
+    public List<AgentRun> recentPlans() { return store.recent(); }
+    public boolean paused() { return store.paused(); }
+    public AgentRun createPlan(String requestId, String goal) {
+        AgentRun run = store.createWithId(requestId, goal, false, bridge(), System.currentTimeMillis());
+        if (!store.paused() && !run.terminal()) schedule(run, false);
+        return run;
+    }
+    public boolean cancelPlan(String id) { return store.cancel(id, System.currentTimeMillis()); }
+    public boolean resumePlan(String id) {
+        boolean resumed = store.resume(id, System.currentTimeMillis());
+        if (resumed) recover(true);
+        return resumed;
+    }
     public void pause(boolean paused) { store.pause(paused, System.currentTimeMillis()); if (!paused) recover(true); }
     public void recover() { recover(false); }
     private void recover(boolean append) {

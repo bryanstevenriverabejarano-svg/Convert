@@ -85,6 +85,14 @@ public class MainActivity extends AppCompatActivity {
 
     private final java.util.concurrent.ExecutorService inferenceChecks =
             java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final ActivityResultLauncher<Intent> plansLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() != RESULT_OK || result.getData() == null || this.motorConversacional == null) return;
+                String id = result.getData().getStringExtra(AgentPlansActivity.EXTRA_PLAN_ID);
+                if (id == null || !id.matches("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")) return;
+                this.stageController.showChat(false);
+                procesarMensajeUsuario("resultado plan " + id, false);
+            });
     private PCloudOAuth pCloudOAuth;
     private String visualQuestion;
     private boolean visualLocalOnly;
@@ -1577,7 +1585,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaModeloPrincipal(); break;
                         case 1:
@@ -1606,6 +1614,7 @@ public class MainActivity extends AppCompatActivity {
                         case 11: mostrarRegistroModelos(); break;
                         case 12: mostrarPCloud(); break;
                         case 13: mostrarFotosGuardadas(); break;
+                        case 14: plansLauncher.launch(new Intent(this, AgentPlansActivity.class)); break;
                         default: break;
                     }
                 })

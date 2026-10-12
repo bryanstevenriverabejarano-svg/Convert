@@ -174,6 +174,17 @@ public final class AgentEngine {
         o.addProperty("objetivo", run.goal);
         if (reviewing) o.addProperty("respuesta", run.answer);
         o.addProperty("correccion", bounded(run.feedback, 160));
+        o.addProperty("herramientas_restantes", Math.max(0, MAX_STEPS - run.observations.size()));
+        o.addProperty("inferencias_restantes", Math.max(0, MAX_MODEL_CALLS - run.modelCalls));
+        com.google.gson.JsonArray outline = new com.google.gson.JsonArray();
+        // Leave room for the original goal and evidence even with a small local context.
+        int outlineBudget = Math.min(500, Math.max(0, (limit - o.toString().length() - 128) / 4));
+        for (String step : run.outline) {
+            int cost = new Gson().toJson(step).length() + 1;
+            if (cost > outlineBudget) break;
+            outline.add(step); outlineBudget -= cost;
+        }
+        o.add("plan_actual", outline);
         // The full journal is durable. Only bounded excerpts enter a small on-device context.
         o.addProperty("extractos", true);
         com.google.gson.JsonArray observations = new com.google.gson.JsonArray();
