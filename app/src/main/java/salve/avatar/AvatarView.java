@@ -1,41 +1,49 @@
 package salve.avatar;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
+import android.net.Uri;
 import android.os.SystemClock;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
 import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
+import android.webkit.RenderProcessGoneDetail;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.TextView;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Collections;
 
-/** Shared room/overlay host for the approved illustrated character and its local motion rig. */
-public final class AvatarView extends View {
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final IllustratedAvatarRenderer portrait;
-    private final IllustratedBedRenderer bed;
-    private final CorePoseRenderer poses;
-    private final AvatarMotionController motion = AvatarMotionController.get();
+/** Shared 3D host for the conversation, room and floating companion. All content is bundled. */
+public final class AvatarView extends FrameLayout {
+    private static final String ORIGIN = "https://appassets.androidplatform.net";
+    private static final String PAGE = ORIGIN + "/avatar3d/index.html";
     private final AvatarStore store;
     private final AvatarWardrobeStore wardrobe;
-    private static final AvatarLocomotion locomotion = new AvatarLocomotion();
-    private final GestureDetector stageGestures;
-    private boolean immersive;
-    private boolean overlay, animationEnabled = true, attached;
+    private final AvatarMotionController motion = AvatarMotionController.get();
+    private final GestureDetector gestures;
+    private final TextView status;
+    private WebView web;
+    private IllustratedAvatarView fallback;
+    private boolean attached, enabled = true, immersive, overlay, ready, failed, polling;
+    private long loadStarted;
     private Runnable frameListener;
-    private float phase;
-    private final Runnable changed = () -> { normalizePoseForWardrobe(); updateDescription(); invalidate(); };
+    private final Runnable changed = this::refresh;
     private final Runnable frame = new Runnable() {
         @Override public void run() {
-            if (!attached || !animationEnabled || !isShown() || getWindowVisibility() != VISIBLE) return;
+            if (!active()) return;
             long now = SystemClock.uptimeMillis();
             store.advance(now);
-            locomotion.advance(now,store.state().getX(),store.state().getPose()==AvatarState.Pose.WALKING);
             motion.advance(now);
-            phase = (now % 60000L) / 1000f;
             if (frameListener != null) frameListener.run();
-            invalidate();
+            refresh();
             postDelayed(this, 33);
         }
     };
@@ -45,177 +53,168 @@ public final class AvatarView extends View {
         super(context, attrs);
         store = AvatarStore.get(context);
         wardrobe = AvatarWardrobeStore.get(context);
-        portrait = new IllustratedAvatarRenderer(context);
-        bed = new IllustratedBedRenderer(context);
-        poses = new CorePoseRenderer(context, changed);
-        stageGestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+        status = new TextView(context);
+        status.setText("Cargando a Salve en 3D…");
+        status.setTextColor(Color.rgb(165, 225, 235));
+        status.setGravity(android.view.Gravity.CENTER);
+        status.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        addView(status, new LayoutParams(-1, -1));
+        gestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent event) { return true; }
             @Override public boolean onDoubleTap(MotionEvent event) { performClick(); return true; }
             @Override public void onLongPress(MotionEvent event) { performLongClick(); }
         });
         setFocusable(true);
         setClickable(true);
-        updateDescription();
     }
-    public void setImmersiveMode(boolean value) { immersive = value; updateDescription(); invalidate(); }
-    public void setOverlayMode(boolean value) { overlay = value; invalidate(); }
-    public void setFrameListener(Runnable listener) { frameListener = listener; }
-    public void setAnimationEnabled(boolean value) { animationEnabled = value; restartFrames(); }
-    private void restartFrames() {
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void createRenderer() {
+        if (web != null || failed || !attached) return;
+        try {
+            WebView next = new WebView(getContext());
+            web = next;
+            next.setBackgroundColor(Color.TRANSPARENT);
+            next.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+            WebSettings settings = next.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setAllowFileAccess(false);
+            settings.setAllowContentAccess(false);
+            settings.setAllowFileAccessFromFileURLs(false);
+            settings.setAllowUniversalAccessFromFileURLs(false);
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+            settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+            settings.setDomStorageEnabled(false);
+            settings.setMediaPlaybackRequiresUserGesture(true);
+            next.setWebViewClient(new WebViewClient() {
+                @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return true; }
+                @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                    // Exact allowlist: no network fallback, file access, chat text or JavaScript interface.
+                    Uri uri = request.getUrl();
+                    String path = uri.getPath();
+                    if ("GET".equals(request.getMethod()) && "https".equals(uri.getScheme())
+                            && "appassets.androidplatform.net".equals(uri.getHost()) && uri.getPort() == -1
+                            && uri.getQuery() == null && Avatar3dState.allowedAsset(path)) {
+                        try {
+                            String mime = path.endsWith(".html") ? "text/html" : path.endsWith(".js")
+                                    ? "text/javascript" : "model/gltf-binary";
+                            return new WebResourceResponse(mime, path.endsWith(".glb") ? null : "UTF-8",
+                                    200, "OK", Collections.singletonMap("Cache-Control", "no-store"),
+                                    getContext().getAssets().open(path.substring(1)));
+                        } catch (IOException missing) { /* The page reports failure and keeps a visible fallback. */ }
+                    }
+                    return new WebResourceResponse("text/plain", "UTF-8", 403, "Forbidden",
+                            Collections.emptyMap(), new ByteArrayInputStream(new byte[0]));
+                }
+                @Override public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                    if (web == view) failRenderer();
+                    return true;
+                }
+            });
+            next.setVisibility(INVISIBLE);
+            addView(next, 0, new LayoutParams(-1, -1));
+            loadStarted = SystemClock.uptimeMillis();
+            next.loadUrl(PAGE);
+        } catch (RuntimeException unavailable) { failRenderer(); }
+    }
+
+    private boolean active() { return attached && enabled && isShown() && getWindowVisibility() == VISIBLE; }
+    private boolean use3d() {
+        AvatarDesignSpec design = wardrobe.selected();
+        // The supplied model only has the original Núcleo suit. Keep existing explicit wardrobe choices.
+        return "core".equals(design.template) && design.palette == AvatarDesignSpec.Palette.ORIGINAL
+                && design.pattern == AvatarDesignSpec.Pattern.NONE && store.state().getPose() != AvatarState.Pose.SLEEPING;
+    }
+    private void refresh() {
+        if (store == null || status == null) return; // Framework visibility callbacks can precede field initialization.
+        boolean want = use3d() && !failed;
+        if (want && active()) createRenderer();
+        if (web != null && want && active() && !polling) {
+            polling = true;
+            WebView current = web;
+            String script = "window.Salve3D ? window.Salve3D.update("
+                    + Avatar3dState.encode(store.state(), motion.snapshot(), overlay) + ") : 'loading'";
+            current.evaluateJavascript(script, result -> {
+                if (web != current) return;
+                polling = false;
+                if ("\"error\"".equals(result)) failRenderer();
+                else if ("\"ready\"".equals(result) && !ready) { ready = true; refresh(); }
+                else if (!ready && active() && SystemClock.uptimeMillis() - loadStarted > 60000) failRenderer();
+            });
+        }
+        boolean show = want && ready;
+        if (web != null) {
+            web.setVisibility(show ? VISIBLE : INVISIBLE);
+            if (!want || !active()) {
+                web.evaluateJavascript("window.Salve3D && window.Salve3D.pause()", null);
+                web.onPause();
+            } else web.onResume();
+        }
+        boolean legacy = !want;
+        if (legacy && fallback == null) {
+            fallback = new IllustratedAvatarView(getContext());
+            fallback.setImmersiveMode(immersive);
+            fallback.setOverlayMode(overlay);
+            fallback.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            addView(fallback, 0, new LayoutParams(-1, -1));
+        }
+        if (fallback != null) {
+            fallback.setVisibility(legacy ? VISIBLE : GONE);
+            // Only change this when the state changes; restarting its timer on every frame would starve it.
+            if (legacy != fallback.isActivated()) {
+                fallback.setActivated(legacy);
+                fallback.setAnimationEnabled(legacy && active());
+            }
+        }
+        status.setVisibility(!show && !legacy ? VISIBLE : GONE);
+        String description = "Salve, " + AvatarBodyCue.label(store.state().getPose())
+                + (show ? ", avatar 3D. " : legacy ? ", avatar ilustrado. " : ", cargando 3D. ")
+                + (motion.snapshot().speaking ? "Hablando. " : motion.snapshot().listening ? "Escuchando. " : "")
+                + (immersive ? "Doble toque para conversar; mantén pulsado para opciones." : "");
+        if (!description.contentEquals(getContentDescription() == null ? "" : getContentDescription())) setContentDescription(description);
+    }
+    private void failRenderer() {
+        failed = true;
+        releaseRenderer();
+        refresh();
+        announceForAccessibility("No se pudo cargar el 3D. Salve continúa en modo ilustrado.");
+    }
+    private void releaseRenderer() {
+        WebView previous = web;
+        web = null; ready = false; polling = false;
+        if (previous != null) { removeView(previous); previous.destroy(); }
+    }
+    private void restart() {
         if (frame == null) return;
         removeCallbacks(frame);
-        if (attached && animationEnabled && isShown() && getWindowVisibility() == VISIBLE) post(frame);
+        if (fallback != null) fallback.setAnimationEnabled(active() && fallback.getVisibility() == VISIBLE);
+        if (active()) post(frame);
+        else if (web != null) { web.evaluateJavascript("window.Salve3D && window.Salve3D.pause()", null); web.onPause(); }
     }
+    public void setImmersiveMode(boolean value) { immersive = value; if (fallback != null) fallback.setImmersiveMode(value); refresh(); }
+    public void setOverlayMode(boolean value) { overlay = value; if (fallback != null) fallback.setOverlayMode(value); refresh(); }
+    public void setFrameListener(Runnable listener) { frameListener = listener; }
+    public void setAnimationEnabled(boolean value) { enabled = value; restart(); }
     @Override protected void onAttachedToWindow() {
-        super.onAttachedToWindow(); attached = true; store.addListener(changed); motion.addListener(changed);
-        wardrobe.addListener(changed);portrait.addListener(changed);poses.attach();restartFrames();
+        super.onAttachedToWindow(); attached = true;
+        store.addListener(changed); wardrobe.addListener(changed); motion.addListener(changed); restart();
     }
     @Override protected void onDetachedFromWindow() {
-        attached = false; removeCallbacks(frame); store.removeListener(changed); motion.removeListener(changed);
-        wardrobe.removeListener(changed);portrait.removeListener(changed);poses.detach();store.save();
-        super.onDetachedFromWindow();
+        attached = false; removeCallbacks(frame);
+        store.removeListener(changed); wardrobe.removeListener(changed); motion.removeListener(changed);
+        releaseRenderer(); store.save(); super.onDetachedFromWindow();
     }
-    @Override protected void onVisibilityChanged(View changedView, int visibility) {
-        super.onVisibilityChanged(changedView, visibility); restartFrames();
-    }
-    @Override protected void onWindowVisibilityChanged(int visibility) {
-        super.onWindowVisibilityChanged(visibility); restartFrames();
-    }
-    private void updateDescription() {
-        AvatarState s = store.state();
-        setContentDescription("Salve, " + AvatarBodyCue.label(s.getPose())
-                + (immersive ? ". Doble toque para conversar; mantén pulsado para opciones. " : ", avatar ilustrado. ")
-                + (motion.snapshot().speaking ? "Hablando." : motion.snapshot().listening ? "Escuchando." : ""));
-    }
-    private void normalizePoseForWardrobe() {
-        if (wardrobe != null && store != null && AvatarBodyCue.referenceFor(store.state().getPose()) != null
-                && !"core".equals(wardrobe.selected().template)) store.change(AvatarState::wake);
-    }
+    @Override protected void onVisibilityChanged(View changedView, int visibility) { super.onVisibilityChanged(changedView, visibility); restart(); }
+    @Override protected void onWindowVisibilityChanged(int visibility) { super.onWindowVisibilityChanged(visibility); restart(); }
+    @Override public boolean onInterceptTouchEvent(MotionEvent event) { return true; }
     @Override public boolean onTouchEvent(MotionEvent event) {
         if (overlay) return super.onTouchEvent(event);
-        if (immersive) {
-            stageGestures.onTouchEvent(event);
-            return true;
-        }
+        if (immersive) { gestures.onTouchEvent(event); return true; }
         if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-            // A host screen may use the character as the entry point to the room.
-            if (hasOnClickListeners()) { performClick(); return true; }
-            float scale = Math.min(getWidth() / 320f, getHeight() / 280f);
-            float left = (getWidth() - 320f * scale) / 2f;
-            float target = ((event.getX() - left) / Math.max(.001f, scale) - 78f) / 164f;
-            store.change(s -> s.walkTo(target));
-            performClick(); return true;
+            if (!hasOnClickListeners()) store.change(s -> s.walkTo(event.getX() / Math.max(1f, getWidth())));
+            performClick();
         }
         return true;
     }
     @Override public boolean performClick() { super.performClick(); return true; }
-
-    @Override protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        AvatarState s = store.state();
-        portrait.selectWardrobe(wardrobe.selected());
-        AvatarMotion.Snapshot expression = motion.snapshot();
-        if (immersive && !overlay) { drawStage(canvas, s, expression); return; }
-        float worldWidth = overlay ? 220f : 320f;
-        float scale = Math.min(getWidth() / worldWidth, getHeight() / 280f);
-        canvas.save();
-        canvas.translate((getWidth() - worldWidth * scale) / 2f, (getHeight() - 280f * scale) / 2f);
-        canvas.scale(scale, scale);
-        if (!overlay) drawRoom(canvas);
-        float floor = 252f;
-        float bedX = overlay ? 110f : 206f;
-        if (s.hasBed()) bed.draw(canvas, bedX, floor, false);
-        if (s.getPose() == AvatarState.Pose.SLEEPING) {
-            canvas.save();
-            canvas.translate(bedX + 90f, floor - 41f);
-            canvas.rotate(-90f);
-            drawPortrait(canvas, expression, 171f, 0, true);
-            canvas.restore();
-            bed.draw(canvas, bedX, floor, true);
-            text(canvas, "z", bedX + 48, floor - 72 - (float) Math.sin(phase) * 3, 15, 0xFFA8DADD);
-            text(canvas, "z", bedX + 61, floor - 90, 11, 0xFFA8DADD);
-        } else {
-            float x = overlay ? 110f : 78f + s.getX() * 164f;
-            float stride = locomotion.stride();
-            canvas.save();
-            canvas.translate(x, floor - locomotion.lift() * .7f);
-            // A frontal drawing keeps its actual handedness; direction is scene movement, not a flip.
-            drawPortrait(canvas, expression, overlay ? 244f : 226f, stride, false);
-            canvas.restore();
-        }
-        canvas.restore();
-    }
-    private void drawStage(Canvas canvas, AvatarState state, AvatarMotion.Snapshot expression) {
-        AvatarStageLayout layout = AvatarStageLayout.fit(getWidth(), getHeight(), state.getX());
-        if (layout.height <= 0) return;
-        boolean sleeping = state.getPose() == AvatarState.Pose.SLEEPING;
-        if (state.hasBed()) {
-            canvas.save();
-            canvas.translate(layout.bedCenterX, layout.bedFloor(getHeight(), sleeping));
-            canvas.scale(layout.bedScale, layout.bedScale);
-            bed.draw(canvas, 0, 0, false);
-            if (sleeping) {
-                canvas.save(); canvas.translate(90, -41); canvas.rotate(-90);
-                drawPortrait(canvas, expression, 171, 0, true);
-                canvas.restore();
-                bed.draw(canvas, 0, 0, true);
-                text(canvas, "z", 48, -72 - (float) Math.sin(phase) * 3, 15, 0xFFA8DADD);
-                text(canvas, "z", 61, -90, 11, 0xFFA8DADD);
-            }
-            canvas.restore();
-        }
-        if (!sleeping) {
-            // A quiet contact shadow replaces the permanent room furniture.
-            float radius = layout.height * .14f;
-            oval(canvas, layout.centerX - radius, layout.floor - 6,
-                    layout.centerX + radius, layout.floor + 2, 0x28000000);
-            canvas.save();
-            canvas.translate(layout.centerX, layout.floor - locomotion.lift() * layout.height / 330f);
-            drawPortrait(canvas, expression, layout.height, locomotion.stride(), false);
-            canvas.restore();
-        }
-    }
-
-    private void drawPortrait(Canvas canvas, AvatarMotion.Snapshot expression, float height, float stride, boolean sleeping) {
-        AvatarState.Pose body = store.state().getPose();
-        String id = sleeping ? null : AvatarBodyCue.referenceFor(body);
-        // These original pose views belong to the core suit only. Never silently change clothing.
-        if (!"core".equals(wardrobe.selected().template)) id = null;
-        poses.select(id);
-        if (id != null && poses.draw(canvas, id, expression, height)) return;
-        canvas.save();
-        if (!sleeping && AvatarBodyCue.isDance(body)) {
-            float tempo = body == AvatarState.Pose.DANCE_POP ? 5.8f : 3.6f;
-            canvas.rotate((float)Math.sin(phase * tempo) * 2.3f, 0, -height * .42f);
-            stride = (float)Math.sin(phase * tempo) * .6f;
-        }
-        canvas.translate(-height / 3f, -height);
-        canvas.scale(height / 1536f, height / 1536f);
-        portrait.draw(canvas, expression, stride, sleeping);
-        canvas.restore();
-    }
-    private void drawRoom(Canvas c) {
-        rounded(c, 0, 0, 320, 280, 22, 0xFF151E30);
-        rounded(c, 24, 25, 118, 132, 18, 0xFF25374B);
-        rounded(c, 30, 31, 112, 126, 14, 0xFF0E1629);
-        circle(c, 89, 54, 13, 0xFFEEE3B2);
-        circle(c, 95, 49, 12, 0xFF0E1629);
-        circle(c, 49, 58, 1.5f, Color.WHITE); circle(c, 74, 92, 1.5f, Color.WHITE);
-        line(c, 71, 30, 71, 126, 3, 0xFF314C5F);
-        line(c, 30, 81, 112, 81, 3, 0xFF314C5F);
-        rounded(c, 0, 226, 320, 280, 20, 0xFF202C3F);
-        oval(c, 35, 233, 290, 268, 0xFF304859);
-        rounded(c, 255, 100, 291, 145, 9, 0xFFBFA885);
-        line(c, 273, 115, 273, 73, 3, 0xFF80B8A0);
-        oval(c, 250, 75, 274, 92, 0xFF67A394);
-        oval(c, 272, 63, 294, 81, 0xFF88BBA1);
-    }
-    private void color(int color) { paint.setColor(color); paint.setStyle(Paint.Style.FILL); }
-    private void rounded(Canvas c,float l,float t,float r,float b,float radius,int color) { color(color); c.drawRoundRect(l,t,r,b,radius,radius,paint); }
-    private void oval(Canvas c,float l,float t,float r,float b,int color) { color(color); c.drawOval(l,t,r,b,paint); }
-    private void circle(Canvas c,float x,float y,float radius,int color) { color(color); c.drawCircle(x,y,radius,paint); }
-    private void line(Canvas c,float x,float y,float xx,float yy,float width,int color) {
-        color(color); paint.setStrokeWidth(width); paint.setStrokeCap(Paint.Cap.ROUND); c.drawLine(x,y,xx,yy,paint);
-    }
-    private void text(Canvas c,String value,float x,float y,float size,int color) { color(color); paint.setTextSize(size); c.drawText(value,x,y,paint); }
 }

@@ -50,6 +50,15 @@ jobs:
           python3 -m unittest discover -s scripts -p 'test_*.py' -v
           bash scripts/test-research-kernel.sh
 
+      - name: Verify offline Salve 3D and real model animations
+        timeout-minutes: 5
+        run: |
+          npm ci --prefix tools/avatar3d --ignore-scripts
+          node tools/avatar3d/node_modules/playwright/cli.js install --with-deps chromium
+          npm run build --prefix tools/avatar3d
+          git diff --exit-code -- app/src/main/assets/avatar3d/viewer.js app/src/main/assets/avatar3d/viewer.js.LEGAL.txt
+          npm test --prefix tools/avatar3d
+
       - name: Prepare Android SDK 36 and Build Tools 36.0.0
         timeout-minutes: 10
         run: bash scripts/setup-android-sdk.sh
@@ -103,6 +112,7 @@ jobs:
             build/autonomy-evaluation/
             build/autonomy-generalization/
             build/native-alignment.json
+            build/avatar3d-review/
             app/schemas/
           if-no-files-found: warn
           retention-days: 14

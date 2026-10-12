@@ -1,0 +1,10 @@
+{
+  "name": "salve-offline-3d-renderer",
+  "private": true,
+  "scripts": {
+    "build": "esbuild viewer.js --bundle --minify --target=chrome90 --format=iife --outfile=../../app/src/main/assets/avatar3d/viewer.js --legal-comments=external",
+    "test": "node test-viewer.cjs"
+  },
+  "dependencies": { "three": "0.170.0" },
+  "devDependencies": { "esbuild": "0.25.0", "playwright": "1.51.1" }
+}
