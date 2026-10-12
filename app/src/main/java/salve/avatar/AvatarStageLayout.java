@@ -11,7 +11,8 @@ public final class AvatarStageLayout {
 
     /** Lift the sleeping scene toward the center instead of leaving it at the bottom of a tall phone. */
     public float bedFloor(float availableHeight, boolean sleeping) {
-        float base = sleeping ? availableHeight * .55f + 40 * bedScale : floor - 10 * bedScale;
+        // Center the sleeping bounds (-100..8) independently of the standing sprite height.
+        float base = sleeping ? availableHeight * .50f + 46 * bedScale : floor - 10 * bedScale;
         return Math.max(100 * bedScale, Math.min(availableHeight - 8 * bedScale, base));
     }
 
