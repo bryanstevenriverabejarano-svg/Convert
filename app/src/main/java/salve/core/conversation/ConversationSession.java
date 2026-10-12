@@ -11,8 +11,8 @@ import java.util.Objects;
 /**
  * Memoria de corto plazo de una conversación.
  *
- * No se persiste: evita convertir automáticamente cada frase en un recuerdo a
- * largo plazo. La persistencia selectiva pertenece al futuro MemoryService.
+ * El checkpoint opcional conserva el hilo, separado de hechos de perfil y recuerdos.
+ * Restaurar mensajes nunca ejecuta órdenes ni reactiva ubicación o autorizaciones.
  */
 public final class ConversationSession {
     private static final int DEFAULT_MAX_MESSAGES = 16;
@@ -24,10 +24,35 @@ public final class ConversationSession {
     private int contentChars;
     private final Deque<ChatMessage> messages = new ArrayDeque<>();
     private SessionLocation location;
+    private FileConversationStore persistence;
+    private boolean loaded;
+    private boolean closed;
 
     public ConversationSession() {
         this(DEFAULT_MAX_MESSAGES);
     }
+
+    public ConversationSession(FileConversationStore persistence) {
+        this();
+        this.persistence = Objects.requireNonNull(persistence, "persistence");
+    }
+
+    /** Invoke on the conversation executor before accepting turns. */
+    public synchronized void loadSaved() {
+        if (loaded || closed) return;
+        loaded = true;
+        if (persistence != null) {
+            for (ChatMessage message : persistence.load()) {
+                append(message.getRole(), message.getContent(), message.getTimestamp());
+            }
+        }
+    }
+
+    public synchronized String persistenceWarning() {
+        return persistence == null ? "" : persistence.warning();
+    }
+
+    public synchronized void close() { closed = true; }
 
     public ConversationSession(int maxMessages) {
         this(maxMessages, DEFAULT_MAX_CHARS);
@@ -48,6 +73,8 @@ public final class ConversationSession {
     }
 
     public synchronized void addUser(String content) {
+        loadSaved();
+        if (closed) return;
         if (location != null && location.isDeniedBy(content)) location = null;
         SessionLocation declared = SessionLocation.fromUser(content, clock.millis());
         if (declared != null) location = declared;
@@ -59,12 +86,19 @@ public final class ConversationSession {
     }
 
     private void add(ChatMessage.Role role, String content) {
+        loadSaved();
+        if (closed) return;
+        append(role, content, clock.millis());
+        if (persistence != null) persistence.save(snapshot());
+    }
+
+    private void append(ChatMessage.Role role, String content, long timestamp) {
         if (content == null || content.trim().isEmpty()) return;
         if (content.length() > maxChars) {
             String marker = "\n[Contenido truncado por el límite de contexto]";
             content = content.substring(0, maxChars - marker.length()) + marker;
         }
-        messages.addLast(new ChatMessage(role, content, clock.millis()));
+        messages.addLast(new ChatMessage(role, content, timestamp));
         contentChars += content.length();
         while (messages.size() > maxMessages || contentChars > maxChars) {
             contentChars -= messages.removeFirst().getContent().length();
@@ -72,14 +106,17 @@ public final class ConversationSession {
     }
 
     public synchronized List<ChatMessage> snapshot() {
+        loadSaved();
         return Collections.unmodifiableList(new ArrayList<>(messages));
     }
 
     public synchronized boolean hasPriorContext() {
+        loadSaved();
         return !messages.isEmpty();
     }
 
     public synchronized String asPromptTranscript() {
+        loadSaved();
         StringBuilder out = new StringBuilder();
         for (ChatMessage message : messages) {
             out.append(message.getRole() == ChatMessage.Role.USER ? "USUARIO: " : "SALVE: ")
@@ -101,8 +138,11 @@ public final class ConversationSession {
     }
 
     public synchronized void clear() {
+        loadSaved();
+        if (closed) return;
         messages.clear();
         contentChars = 0;
         location = null;
+        if (persistence != null) persistence.save(snapshot());
     }
 }

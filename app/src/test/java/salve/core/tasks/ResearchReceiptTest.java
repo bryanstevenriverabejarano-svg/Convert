@@ -4,6 +4,27 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ResearchReceiptTest {
+    @Test public void conversationalResultRetainsSourcesWithoutInventingAModelSynthesis() {
+        salve.core.research.PublicResearchCoordinator coordinator = new salve.core.research.PublicResearchCoordinator(
+                (query, stopped) -> new salve.core.WikipediaResearchClient.ResearchBatch(
+                        salve.core.WikipediaResearchClient.Status.COMPLETE,
+                        java.util.Collections.singletonList(new salve.core.WikipediaResearchClient.Page(
+                                "https://example.org/topic", "Texto recuperado")), 0), null, 10500);
+        ResearchReceipt receipt = ResearchReceipt.fromResult(coordinator.run("tema", () -> false), null);
+        assertNotNull(receipt);
+        assertEquals("SOURCES_ONLY", receipt.status);
+        assertEquals("https://example.org/topic", receipt.sources.get(0).url);
+        assertTrue(receipt.answer.contains("Texto recuperado"));
+        assertTrue(receipt.providers.isEmpty());
+        assertNull(ResearchReceipt.fromResult(coordinator.run("tema", () -> true), null));
+    }
+
+    @Test public void resultWithoutSourcesNeverCreatesAReceipt() {
+        salve.core.research.PublicResearchCoordinator coordinator = new salve.core.research.PublicResearchCoordinator(
+                (query, stopped) -> new salve.core.WikipediaResearchClient.ResearchBatch(
+                        salve.core.WikipediaResearchClient.Status.EMPTY, java.util.Collections.emptyList(), 0), null, 10500);
+        assertNull(ResearchReceipt.fromResult(coordinator.run("tema", () -> false), null));
+    }
     public static ResearchReceipt evidence() {
         ResearchReceipt receipt = new ResearchReceipt(); receipt.status = "ANSWERED";
         receipt.answer = "Información recuperada [1].\n[1] https://example.org/topic";

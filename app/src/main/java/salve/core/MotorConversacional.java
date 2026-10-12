@@ -240,7 +240,9 @@ public class MotorConversacional {
         return !closed && (owner == null || liveVoiceChannel.owns(owner));
     }
     private final ExecutorService conversationExecutor = Executors.newSingleThreadExecutor();
-    private final ConversationSession conversationSession = new ConversationSession();
+    private final ConversationSession conversationSession;
+    private final salve.data.tasks.RoomConversationResearchStore conversationResearch;
+    private String lastCheckpointWarning = "";
     private final VisualMemoryRepository visualMemories;
     // Metadata only; a separate bitmap is opened and released for each inference.
     private volatile VisualMemoryRecord activePhoto;
@@ -288,6 +290,11 @@ public class MotorConversacional {
 
     public MotorConversacional(Context context, MemoriaEmocional memoria, DiarioSecreto diario) {
         this.context  = context;
+        this.conversationSession = new ConversationSession(new salve.core.conversation.FileConversationStore(
+                new java.io.File(context.getNoBackupFilesDir(), "conversation/recent.bin")));
+        this.conversationResearch = new salve.data.tasks.RoomConversationResearchStore(
+                salve.data.db.MemoriaDatabase.getInstance(context),
+                () -> salve.data.sync.CloudSyncManager.isEnabled(context));
         this.visualMemories = new VisualMemoryRepository(context);
         this.goalAutonomy = GoalAutonomyRuntime.get(context);
         this.autonomousTools = AutonomousToolRuntime.get(context);
@@ -345,6 +352,7 @@ public class MotorConversacional {
                 applyConfiguredVoice();
             }
         }));
+        conversationExecutor.execute(conversationSession::loadSaved);
     }
 
     public void procesarEntrada(String entrada, boolean entradaPorVoz) {
@@ -531,6 +539,10 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        String checkpointWarning = conversationSession.persistenceWarning();
+        if (!checkpointWarning.isEmpty() && !checkpointWarning.equals(lastCheckpointWarning))
+            deliverResponse(checkpointWarning, AvatarMotionProtocol.parse(""), false, true, true);
+        lastCheckpointWarning = checkpointWarning;
         salve.core.agent.AgentCommand agentCommand = salve.core.agent.AgentCommand.parse(entrada);
         if (agentCommand != null) {
             String response;
@@ -600,6 +612,21 @@ public class MotorConversacional {
         }
         if (ModelRuntimeInfo.isStatusQuestion(entrada)) {
             hablar(getModelStatusDescription());
+            return;
+        }
+        if (salve.core.research.ResearchRecallCommand.matches(entrada)) {
+            conversationSession.addUser(entrada);
+            researchConversation.clear();
+            String response;
+            try {
+                salve.data.db.RecuerdoEntity saved = conversationResearch.latest();
+                response = saved == null ? "Todavía no tengo una búsqueda conversacional guardada."
+                        : "Búsqueda guardada el " + java.time.Instant.ofEpochMilli(saved.timestamp)
+                        + " (no es una consulta web nueva):\n" + saved.frase;
+            } catch (RuntimeException unavailable) {
+                response = "No pude leer la búsqueda guardada; esto no significa que no exista.";
+            }
+            deliverResponse(response, AvatarMotionProtocol.parse(""), true);
             return;
         }
         long turnStartedAtNanos = System.nanoTime();
@@ -989,7 +1016,7 @@ public class MotorConversacional {
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
         // Legacy explicit search aliases also produce a completed tool reply, never a promise.
         if (intent.type == IntentType.BUSCAR_WEB) {
-            hablar(manejarBuscarWeb(intent));
+            deliverResponse(manejarBuscarWeb(intent), AvatarMotionProtocol.parse(""), true);
             return;
         }
         ReasoningPlan reasoningPlan = ReasoningPlanner.plan(
@@ -1430,9 +1457,9 @@ public class MotorConversacional {
 
     private void responderInvestigacionPublica(salve.core.research.ResearchConversation.Route route) {
         if (route.kind == salve.core.research.ResearchConversation.Kind.SEARCH) {
-            hablar(ejecutarInvestigacionPublica(route.question));
+            deliverResponse(ejecutarInvestigacionPublica(route.question), AvatarMotionProtocol.parse(""), true);
         } else {
-            hablar(route.text);
+            deliverResponse(route.text, AvatarMotionProtocol.parse(""), true);
         }
     }
 
@@ -1443,6 +1470,7 @@ public class MotorConversacional {
     }
 
     private String ejecutarInvestigacionPublica(String question) {
+        String turnId = java.util.UUID.randomUUID().toString();
         WikipediaResearchClient reader = new WikipediaResearchClient();
         int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
         salve.core.research.PublicResearchCoordinator.Result result =
@@ -1453,7 +1481,21 @@ public class MotorConversacional {
                                 () -> generarRespuestaConversacionalLocal(prompt)), budget)
                         .runConversation(question, () -> closed || !isVoiceContextCurrent());
         String answer = result.toConversationText();
-        if (!closed && isVoiceContextCurrent()) researchConversation.complete(question, answer);
+        if (!closed && isVoiceContextCurrent()) {
+            try {
+                salve.core.tasks.ResearchReceipt receipt = salve.core.tasks.ResearchReceipt.fromResult(result, null);
+                if (receipt != null && conversationResearch.archive(turnId, question, receipt,
+                        System.currentTimeMillis(), () -> closed || !isVoiceContextCurrent())) {
+                    if (salve.data.sync.CloudSyncManager.isEnabled(context)) {
+                        try { salve.data.sync.SyncWorker.enqueueWhenOnline(context); }
+                        catch (RuntimeException pending) { /* The transaction already retains the outbox. */ }
+                    }
+                }
+            } catch (RuntimeException failed) {
+                answer += "\nNo pude guardar esta investigación en la memoria; el resultado sigue disponible en este chat.";
+            }
+            researchConversation.complete(question, answer);
+        }
         Log.i(TAG, "public_research status=" + result.status + " searches=" + result.searches
                 + " sources=" + result.sources.size());
         // Record/display the actual tool result; never send it back through the proposal parser.
@@ -1815,6 +1857,7 @@ public class MotorConversacional {
 
     public synchronized void shutdown() {
         closed = true;
+        conversationSession.close();
         activePhoto = null;
         photoListener = null;
         conversationForeground = false;
@@ -2151,8 +2194,12 @@ public class MotorConversacional {
     }
 
     public void reiniciarContextoLLM() {
-        limpiarContextoConversacional();
-        hablar("He reiniciado el contexto de conversación a corto plazo.");
+        try { conversationExecutor.execute(() -> {
+            if (closed) return;
+            limpiarContextoConversacional();
+            deliverResponse("He reiniciado el contexto de conversación a corto plazo.",
+                    AvatarMotionProtocol.parse(""), false, true, true);
+        }); } catch (java.util.concurrent.RejectedExecutionException ignored) { }
     }
 
     private void limpiarContextoConversacional() {
@@ -2221,6 +2268,8 @@ public class MotorConversacional {
         MemoryForgetRequest request = pending.getRequest();
         boolean deleted = memoria.eliminarDatoPerfil(request.getCategory());
         if (deleted) {
+            // The short-term checkpoint must not reintroduce a profile fact just forgotten.
+            limpiarContextoConversacional();
             hablar("He borrado " + request.getDescription() + " de la memoria de perfil.");
         } else {
             hablar("No encontré un dato de perfil etiquetado como " + request.getDescription() + ". No he borrado otros recuerdos.");
