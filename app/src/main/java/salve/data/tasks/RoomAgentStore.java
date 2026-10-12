@@ -9,6 +9,7 @@ import java.util.function.BooleanSupplier;
 import salve.core.agent.AgentEngine;
 import salve.core.agent.AgentPolicy;
 import salve.core.agent.AgentRun;
+import salve.core.agent.AgentExperience;
 import salve.data.db.*;
 import salve.data.sync.CloudMemoryImporter;
 
@@ -38,6 +39,7 @@ public final class RoomAgentStore implements AgentEngine.Store {
             dao.prune();
             AgentRun run = new AgentRun(); run.id = id; run.goal = goal.trim();
             run.codeAllowed = code; run.bridge = bridge == null ? "" : bridge; run.createdAt = run.updatedAt = now;
+            run.experience = AgentExperience.contextFor(run, recent(), now);
             AgentRunEntity row = new AgentRunEntity(); row.id = run.id; row.createdAt = row.updatedAt = now; row.journal = run.encode();
             dao.insert(row); return run;
         });
@@ -60,7 +62,10 @@ public final class RoomAgentStore implements AgentEngine.Store {
     public boolean resume(String id, long now) {
         return db.runInTransaction(() -> {
             if (dao.resume(id, now) != 1) return false;
-            AgentRun run = get(id); run.attempts = 0; dao.resetJournal(id, run.encode()); return true;
+            AgentRun run = get(id); run.attempts = 0; run.error = "";
+            // A user may have fixed connectivity/configuration. Only failed-call retry markers reset.
+            for (AgentRun.Observation observation : run.observations) if (!observation.useful()) observation.fingerprint = null;
+            dao.resetJournal(id, run.encode()); return true;
         });
     }
     public List<AgentRun> recent() { List<AgentRun> result = new ArrayList<>(); for (AgentRunEntity row : dao.recent(50)) result.add(snapshot(row)); return result; }

@@ -87,8 +87,16 @@ public class AgentPlansActivityTest {
         button(screen, "Pausar planes y búsquedas").performClick(); drain(); assertTrue(paused);
         button(screen, "Reanudar planes y búsquedas").performClick(); drain(); assertFalse(paused);
         run.status = "PARTIAL"; run.answer = "Registro de 2025; falta confirmar la fecha.";
+        run.skippedRepeats = 2;
+        AgentRun previous = new AgentRun(); previous.id = "old-plan"; previous.goal = run.goal;
+        previous.status = "SUCCEEDED"; previous.updatedAt = 100;
+        previous.observations.add(new AgentRun.Observation("receipt", "memory.lookup", "SUCCESS", "2025"));
+        run.experience = salve.core.agent.AgentExperience.contextFor(run, java.util.Collections.singletonList(previous), 100);
         controller.pause().resume(); drain();
         assertTrue(text(screen, "revisión incompleta"));
+        assertTrue(text(screen, "Llamadas repetidas evitadas: 2"));
+        assertTrue(text(screen, "Experiencia disponible de 1"));
+        assertTrue(text(screen, "old-plan"));
         button(screen, "Llevar resultado al chat").performClick();
         assertEquals(android.app.Activity.RESULT_OK, Shadows.shadowOf(screen).getResultCode());
         assertEquals(run.id, Shadows.shadowOf(screen).getResultIntent().getStringExtra(AgentPlansActivity.EXTRA_PLAN_ID));
