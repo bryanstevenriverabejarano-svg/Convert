@@ -41,6 +41,9 @@ public final class CloudSyncManager {
     public static void configurePCloud(Context ctx, String accessToken, String apiHost) {
         PCloudProvider.configureOAuth(ctx, accessToken, apiHost);
     }
+    public static void configurePCloud(Context ctx, String accessToken, String apiHost, java.util.function.BooleanSupplier cancelled) {
+        PCloudProvider.configureOAuth(ctx, accessToken, apiHost, cancelled);
+    }
 
     public static boolean isPCloudConfigured(Context ctx) {
         return ctx != null && new PCloudProvider(ctx).isConfigured();
@@ -50,7 +53,7 @@ public final class CloudSyncManager {
         if (ctx == null) return;
         ctx.getSharedPreferences(PRIVACY_PREFS, Context.MODE_PRIVATE).edit()
                 .putBoolean(CLOUD_SYNC_ENABLED, enabled).apply();
-        if (enabled) SyncWorker.enqueueWhenOnline(ctx.getApplicationContext());
+        if (enabled) requestRestore(ctx);
     }
 
     public static void enqueue(Context ctx, String jsonPayload) {
@@ -118,10 +121,13 @@ public final class CloudSyncManager {
         if (!provider.isConfigured()) return 0;
 
         int sent = 0;
+        long deadline = android.os.SystemClock.elapsedRealtime() + 60000L;
         try {
             SyncEventDao dao = MemoriaDatabase.getInstance(ctx).syncEventDao();
             List<SyncEventEntity> batch = dao.getPending(maxBatch);
             for (SyncEventEntity e : batch) {
+                if (!isEnabled(ctx) || Thread.currentThread().isInterrupted()
+                        || android.os.SystemClock.elapsedRealtime() >= deadline) break;
                 String path = ROOT + "/events/" + e.createdAt + "-" + e.id + ".json";
                 if (uploadPhotoAttachment(ctx, provider, e.payload) && provider.uploadJson(path, e.payload)) {
                     dao.markSynced(e.id);
@@ -195,6 +201,12 @@ public final class CloudSyncManager {
                 && ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE).getBoolean("complete", false);
     }
 
+    public static void requestRestore(Context ctx) {
+        if (!isEnabled(ctx) || !isPCloudConfigured(ctx)) return;
+        restoreStatus(ctx, "Recuperación de pCloud solicitada; esperando conexión o el lote en curso.", false);
+        SyncWorker.enqueueWhenOnline(ctx.getApplicationContext());
+    }
+
     private static void restoreStatus(Context ctx, String status, boolean complete) {
         ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE).edit()
                 .putString("status", status).putBoolean("complete", complete).apply();
@@ -261,7 +273,8 @@ public final class CloudSyncManager {
                         : pending + " pendientes; " + errors + " sin descargar; " + invalid + " no legibles. La historia puede estar incompleta."), complete);
                 return new RestoreBatch(restored, errors > 0, pending > 0);
             } catch (Exception failure) {
-                restoreStatus(ctx, "No pude recuperar pCloud. Revisa la conexión y la cuenta; los recuerdos locales se conservan.", false);
+                restoreStatus(ctx, "No pude recuperar pCloud. " + PCloudProvider.safeFailure(failure)
+                        + " Los recuerdos locales se conservan.", false);
                 return new RestoreBatch(restored, true);
             }
         }
@@ -330,6 +343,10 @@ public final class CloudSyncManager {
         }
         for (MemorySyncStateEntity deletion : MemoriaDatabase.getInstance(ctx).memorySyncStateDao().deletedProfiles())
             enqueueProfileDeletion(ctx, deletion.key.substring("profile:".length()), deletion.updatedAt);
+    }
+
+    public static boolean enqueueExistingMemories(Context ctx) {
+        return isEnabled(ctx) && MemoryCloudBackfill.enqueueBatch(MemoriaDatabase.getInstance(ctx), 200, () -> isEnabled(ctx));
     }
 
     /** Restore graph/index/viewer plus event journal from pCloud. */

@@ -6,6 +6,14 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 public class PCloudProviderTest {
+    @Test public void expiredAuthorizationAndAccessDenialHaveUsefulNonSecretDiagnostics() {
+        for (int code : new int[]{1000,2000,2003,4000}) {
+            com.google.gson.JsonObject response=new com.google.gson.JsonObject(); response.addProperty("result",code);
+            java.io.IOException failure=org.junit.Assert.assertThrows(java.io.IOException.class,()->PCloudProvider.requireOk(response));
+            String message=PCloudProvider.safeFailure(failure);
+            assertTrue(message.contains(code==2003?"denegó":code==4000?"limitado":"Vuelve a conectar"));
+        }
+    }
     @Test public void listsNamesOrPathsWithoutEscapingRequestedFolder() {
         com.google.gson.JsonArray entries = com.google.gson.JsonParser.parseString(
                 "[{\"name\":\"one.json\",\"isfolder\":false},{\"path\":\"/Salve/events/two.json\"},"

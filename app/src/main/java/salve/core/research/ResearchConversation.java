@@ -22,8 +22,6 @@ public final class ResearchConversation {
             + "(?:(?:puedes|podrias|quiero que|necesito que|te pido que)\\s+)?"
             + "(?:busca(?:r|s|me|lo|lo de nuevo|s otra vez)?|busques|investiga(?:r|s)?|investigues|"
             + "(?:haz|hacer|hagas|realiza|realizar|realices)\\s+(?:(?:una|la)\\s+)?busqueda)\\b\\s*(.*)$");
-    private static final Pattern DEFINITION = Pattern.compile(
-            "^(?:que (?:es|significa)|quien es|significado de)\\s+(.+)$");
     private static final Pattern CONFIRM = Pattern.compile(
             "^(?:si(?:[, ]+(?:por favor|adelante|hazlo|busca(?:lo)?))?|te lo confirmo|confirmo|"
             + "adelante|hazlo|me parece bien|vale|de acuerdo|tienes mi permiso|te autorizo)$");
@@ -80,10 +78,8 @@ public final class ResearchConversation {
         String text = normalize(input);
         // Negation and discussion of someone else's request never authorize a read.
         Matcher request = REQUEST.matcher(text);
-        Matcher definition = DEFINITION.matcher(text);
         String topic;
         if (request.matches()) topic = request.group(1);
-        else if (definition.matches()) topic = text;
         else return null;
         topic = topic.replaceFirst("^(?:en (?:internet|la web|wikipedia)|por internet)\\s*", "")
                 .replaceFirst("^(?:sobre|acerca de)\\s+", "")
@@ -96,7 +92,7 @@ public final class ResearchConversation {
 
     public static String lookupQuery(String question) {
         if (question.contains("://")) return limit(question, 2048);
-        String query = resolveName(question).replaceFirst("^(?:que (?:es|significa)|quien es|(?:el )?significado de)\\s+", "")
+        String query = resolveName(salve.core.web.SearchEngine.cleanQuery(question)).replaceFirst("^(?:que (?:es|significa)|quien es|(?:el )?significado de)\\s+", "")
                 .replaceFirst("^(?:el |la )?(?:nombre|palabra|termino)\\s+", "");
         return limit(query.trim(), 256);
     }

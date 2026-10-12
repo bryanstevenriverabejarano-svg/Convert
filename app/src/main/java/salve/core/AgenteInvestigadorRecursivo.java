@@ -26,7 +26,7 @@ public class AgenteInvestigadorRecursivo {
         motor.hablar("Voy a consultar fuentes públicas y resumir lo que encuentre. Te mostraré las referencias y los límites de la consulta.");
         ColamensajesCognitivos.getInstance().enviarAsincronico(
                 ColamensajesCognitivos.Prioridad.CONVERSACION, "InvestigacionPublica", () -> {
-                    WikipediaResearchClient reader = new WikipediaResearchClient();
+                    WikipediaResearchClient reader = motor.researchReader(question);
                     PublicResearchCoordinator.ModelProvider provider = llm == null ? null : (phase, prompt) ->
                             llm.generateResult(prompt, phase == PublicResearchCoordinator.Phase.PLAN
                                     ? SalveLLM.Role.PLANIFICADOR : SalveLLM.Role.SINTETIZADOR);

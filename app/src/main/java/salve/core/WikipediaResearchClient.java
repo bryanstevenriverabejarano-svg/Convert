@@ -25,6 +25,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 /** Real bounded HTTPS text reader. It does not render JavaScript or operate a browser DOM. */
 public class WikipediaResearchClient {
@@ -41,14 +44,22 @@ public class WikipediaResearchClient {
         public final Status status;
         public final List<Page> pages;
         public final int failures;
+        public final String diagnostic;
         public ResearchBatch(Status status, List<Page> pages, int failures) {
+            this(status, pages, failures, "");
+        }
+        public ResearchBatch(Status status, List<Page> pages, int failures, String diagnostic) {
             if (status == null || pages == null || pages.size() > MAX_PAGES || failures < 0)
                 throw new IllegalArgumentException("Informe de lectura inválido");
             this.status = status;
             this.pages = Collections.unmodifiableList(new ArrayList<>(pages));
             this.failures = failures;
+            this.diagnostic = diagnostic == null ? "" : diagnostic;
         }
     }
+
+    /** Package-private transport seam for deterministic HTTP integration tests. */
+    WikipediaResearchClient(OkHttpClient client) { this.client = client; }
 
     public WikipediaResearchClient() {
         client = new OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS)
@@ -79,6 +90,7 @@ public class WikipediaResearchClient {
     public ResearchBatch researchResult(String question, BooleanSupplier stopped) {
         List<Page> pages = new ArrayList<>();
         int failures = 0;
+        String diagnostic = "";
         long deadline = System.nanoTime() + REQUEST_BUDGET_NANOS;
         try {
             check(stopped, deadline);
@@ -87,24 +99,28 @@ public class WikipediaResearchClient {
             List<String> urls = extractUrls(question);
             if (urls.isEmpty() && Pattern.compile("https?://", Pattern.CASE_INSENSITIVE).matcher(question).find())
                 return new ResearchBatch(Status.ERROR, pages, 1);
-            if (urls.isEmpty()) urls = discoverOnWikipedia(question, stopped, deadline);
+            if (urls.isEmpty()) {
+                pages.addAll(searchWikipedia(question, stopped, deadline));
+                check(stopped, deadline);
+                return new ResearchBatch(pages.isEmpty() ? Status.EMPTY : Status.COMPLETE, pages, 0);
+            }
             for (String url : urls) {
                 check(stopped, deadline);
                 if (pages.size() == MAX_PAGES) break;
                 try { pages.add(fetch(url, stopped, deadline)); }
                 catch (BudgetExceeded timeout) { throw timeout; }
-                catch (IOException unavailable) { failures++; }
+                catch (IOException unavailable) { failures++; diagnostic = failureReason(unavailable); }
             }
             check(stopped, deadline);
             Status status = pages.isEmpty() ? failures == 0 ? Status.EMPTY : Status.ERROR
                     : failures == 0 ? Status.COMPLETE : Status.PARTIAL;
-            return new ResearchBatch(status, pages, failures);
+            return new ResearchBatch(status, pages, failures, diagnostic);
         } catch (CancellationException cancelled) {
             return new ResearchBatch(Status.CANCELLED, pages, failures);
         } catch (BudgetExceeded exhausted) {
-            return new ResearchBatch(Status.BUDGET_EXHAUSTED, pages, failures);
+            return new ResearchBatch(Status.BUDGET_EXHAUSTED, pages, failures, "Se agotó el tiempo de lectura web.");
         } catch (IOException | IllegalArgumentException unavailable) {
-            return new ResearchBatch(pages.isEmpty() ? Status.ERROR : Status.PARTIAL, pages, failures + 1);
+            return new ResearchBatch(pages.isEmpty() ? Status.ERROR : Status.PARTIAL, pages, failures + 1, failureReason(unavailable));
         }
     }
 
@@ -120,20 +136,55 @@ public class WikipediaResearchClient {
     }
 
     protected List<String> discoverOnWikipedia(String query) throws IOException {
-        return discoverOnWikipedia(query, () -> false, System.nanoTime() + REQUEST_BUDGET_NANOS);
+        List<String> urls = new ArrayList<>();
+        for (Page page : searchWikipedia(query, () -> false, System.nanoTime() + REQUEST_BUDGET_NANOS)) urls.add(page.url);
+        return urls;
     }
 
-    private List<String> discoverOnWikipedia(String query, BooleanSupplier stopped, long deadline) throws IOException {
+    private List<Page> searchWikipedia(String query, BooleanSupplier stopped, long deadline) throws IOException {
         String cleanQuery = query == null ? "" : query.replaceAll("https://\\S+", " ").trim();
         if (cleanQuery.isEmpty()) return Collections.emptyList();
         String encoded = URLEncoder.encode(cleanQuery, StandardCharsets.UTF_8.name());
-        Page response = fetch("https://es.wikipedia.org/w/api.php?action=opensearch&limit=3&namespace=0&format=json&search=" + encoded,
-                stopped, deadline);
-        Matcher matcher = Pattern.compile("https:(?:\\\\/|/){2}es\\.wikipedia\\.org(?:\\\\/|/)wiki(?:\\\\/|/)[^\"\\s]+")
-                .matcher(response.text);
-        List<String> urls = new ArrayList<>();
-        while (matcher.find() && urls.size() < MAX_PAGES) urls.add(matcher.group().replace("\\/", "/"));
-        return urls;
+        // Search full text, not only title prefixes. Read complete JSON before limiting each extract.
+        Page response = fetch("https://es.wikipedia.org/w/api.php?action=query&generator=search&gsrnamespace=0"
+                + "&gsrlimit=3&prop=extracts%7Cinfo&inprop=url&exintro=1&explaintext=1&exchars=1800"
+                + "&format=json&formatversion=2&gsrsearch=" + encoded, stopped, deadline, 1);
+        return wikipediaPages(response.text, response.statusCode, response.bodyBytes);
+    }
+
+    static List<Page> wikipediaPages(String json, int status, int bytes) throws IOException {
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            if (root.has("error")) throw new ReadFailure("Wikipedia rechazó la consulta.");
+            if (!root.has("query")) {
+                if (root.has("batchcomplete")) return Collections.emptyList();
+                throw new ReadFailure("Wikipedia devolvió una respuesta incompleta.");
+            }
+            List<JsonObject> entries = new ArrayList<>();
+            for (JsonElement item : root.getAsJsonObject("query").getAsJsonArray("pages")) entries.add(item.getAsJsonObject());
+            entries.sort(java.util.Comparator.comparingInt(p -> p.has("index") ? p.get("index").getAsInt() : Integer.MAX_VALUE));
+            List<Page> result = new ArrayList<>();
+            for (JsonObject p : entries) {
+                if (p.has("missing") || !p.has("extract") || !p.has("fullurl")) continue;
+                String url = p.get("fullurl").getAsString(), excerpt = p.get("extract").getAsString().trim();
+                if (excerpt.isEmpty() || !NetworkResourcePolicy.validateKnowledgeUrl(url).allowed
+                        || !"es.wikipedia.org".equalsIgnoreCase(URI.create(url).getHost())) continue;
+                result.add(new Page(url, excerpt.substring(0, Math.min(MAX_EXTRACT_CHARS, excerpt.length())),
+                        status, bytes, p.has("title") ? p.get("title").getAsString() : ""));
+                if (result.size() == MAX_PAGES) break;
+            }
+            return result;
+        } catch (RuntimeException malformed) { throw new ReadFailure("Wikipedia devolvió un formato de respuesta no válido."); }
+    }
+
+    private static final class ReadFailure extends IOException { ReadFailure(String message) { super(message); } }
+    private static String failureReason(Exception failure) {
+        if (failure instanceof ReadFailure) return failure.getMessage();
+        if (failure instanceof UnknownHostException) return "No se pudo resolver el servidor público; revisa la conexión o el DNS.";
+        if (failure instanceof java.net.SocketTimeoutException || failure instanceof java.io.InterruptedIOException)
+            return "El servidor público no respondió a tiempo.";
+        if (failure instanceof javax.net.ssl.SSLException) return "No se pudo establecer una conexión HTTPS válida.";
+        return "No se pudo completar la conexión con la fuente pública.";
     }
 
     public Page fetch(String requestedUrl) throws IOException {
@@ -145,13 +196,22 @@ public class WikipediaResearchClient {
     }
 
     private Page fetch(String requestedUrl, BooleanSupplier stopped, long deadline) throws IOException {
+        return fetch(requestedUrl, stopped, deadline, 0);
+    }
+    protected Page readDocument(String url, BooleanSupplier stopped, long deadline) throws IOException {
+        return fetch(url, stopped, deadline, 2);
+    }
+    protected Page readPage(String url, BooleanSupplier stopped, long deadline) throws IOException {
+        return fetch(url, stopped, deadline, 0);
+    }
+    private Page fetch(String requestedUrl, BooleanSupplier stopped, long deadline, int documentType) throws IOException {
         String current = requestedUrl;
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             check(stopped, deadline);
             NetworkResourcePolicy.Validation validation = NetworkResourcePolicy.validateKnowledgeUrl(current);
             if (!validation.allowed) throw new IOException(validation.reason);
             Request request = new Request.Builder().url(validation.normalizedUrl)
-                    .header("User-Agent", "Salve/1.0 (+lector de conocimiento)").get().build();
+                    .header("User-Agent", "Salve/1.1 (https://github.com/bryanstevenriverabejarano-svg/Convert)").get().build();
             Call call = client.newCall(request);
             call.timeout().timeout(Math.max(1L, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             try (Response response = call.execute()) {
@@ -163,10 +223,11 @@ public class WikipediaResearchClient {
                     current = URI.create(validation.normalizedUrl).resolve(location).toString();
                     continue;
                 }
-                if (!response.isSuccessful()) throw new IOException("Respuesta HTTP " + status);
+                if (!response.isSuccessful()) throw new ReadFailure("La fuente pública devolvió HTTP " + status + ".");
                 ResponseBody body = response.body();
                 String type = response.header("Content-Type", "").toLowerCase(Locale.ROOT);
-                if (body == null || !(type.startsWith("text/") || type.startsWith("application/json")))
+                if (documentType == 1 && !type.startsWith("application/json")) throw new ReadFailure("Wikipedia no devolvió datos JSON.");
+                if (body == null || !(type.startsWith("text/") || type.startsWith("application/json") || type.startsWith("application/xml")))
                     throw new IOException("Tipo de contenido no permitido");
                 if (body.contentLength() > NetworkResourcePolicy.MAX_KNOWLEDGE_BYTES)
                     throw new IOException("Respuesta demasiado grande");
@@ -178,7 +239,7 @@ public class WikipediaResearchClient {
                 String pageTitle = type.startsWith("text/html") && title.find()
                         ? extractText(title.group(1), "text/html") : "";
                 if (pageTitle.length() > 200) pageTitle = pageTitle.substring(0, 200);
-                Page page = new Page(validation.normalizedUrl, extractText(raw, type), status, bodyBytes.length, pageTitle);
+                Page page = new Page(validation.normalizedUrl, documentType > 0 ? raw : extractText(raw, type), status, bodyBytes.length, pageTitle);
                 if (type.startsWith("text/html")) page.links.addAll(extractLinks(raw, validation.normalizedUrl));
                 return page;
             } finally { call.cancel(); }
@@ -211,6 +272,8 @@ public class WikipediaResearchClient {
     static String extractText(String raw, String contentType) {
         String text = raw;
         if (!contentType.toLowerCase(Locale.ROOT).startsWith("application/json")) {
+            Matcher main = Pattern.compile("(?is)<(?:main|article)\\b[^>]*>(.*?)</(?:main|article)\\s*>").matcher(text);
+            if (main.find()) text = main.group(1);
             text = text.replaceAll("(?is)<(script|style|noscript)\\b[^>]*>.*?(?:</\\1\\s*>|\\z)", " ")
                     .replaceAll("(?s)<!--.*?-->", " ").replaceAll("(?s)<[^>]+>", " ");
         }

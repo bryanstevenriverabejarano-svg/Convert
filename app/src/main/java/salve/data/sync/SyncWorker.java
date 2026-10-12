@@ -31,17 +31,21 @@ public class SyncWorker extends Worker {
     @Override
     public Result doWork() {
         try {
+            if (!CloudSyncManager.isEnabled(getApplicationContext()) || !CloudSyncManager.isPCloudConfigured(getApplicationContext()))
+                return Result.success();
             CloudSyncManager.indexLocalJournal(getApplicationContext());
+            // Recover history before a slow upload queue consumes the whole worker window.
+            CloudSyncManager.RestoreBatch restored = CloudSyncManager.restoreMemoryBatch(getApplicationContext(), 200);
+            boolean memoriesPending = CloudSyncManager.enqueueExistingMemories(getApplicationContext());
             CloudSyncManager.enqueueExistingProfiles(getApplicationContext());
             CloudSyncManager.enqueueArchivedPhotos(getApplicationContext());
-            int enviados = CloudSyncManager.flush(getApplicationContext(), 50);
+            int enviados = CloudSyncManager.flush(getApplicationContext(), 10);
             Log.d(TAG, "Flush completado. Enviados=" + enviados);
-            CloudSyncManager.RestoreBatch restored = CloudSyncManager.restoreMemoryBatch(getApplicationContext(), 200);
             boolean outboxPending = CloudSyncManager.hasPending(getApplicationContext());
             // Backoff is for network failures. Successful history pages continue immediately,
             // otherwise thousands of old memories would take days as retry delays grow.
             if (restored.retry || (outboxPending && enviados == 0)) return Result.retry();
-            if (restored.more || outboxPending) enqueueNextBatch(getApplicationContext());
+            if (restored.more || outboxPending || memoriesPending) enqueueNextBatch(getApplicationContext());
             return Result.success();
         } catch (Exception e) {
             Log.e(TAG, "Error durante flush", e);

@@ -539,6 +539,23 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        salve.core.memory.CloudMemoryCommand.Action cloudCommand = salve.core.memory.CloudMemoryCommand.parse(entrada);
+        if (cloudCommand != null) {
+            String status;
+            if (cloudCommand == salve.core.memory.CloudMemoryCommand.Action.RESTORE) {
+                if (!salve.data.sync.CloudSyncManager.isPCloudConfigured(context))
+                    status = "Conecta tu cuenta en IA y cámara → Nube pCloud. Los recuerdos de este móvil se conservan.";
+                else if (!salve.data.sync.CloudSyncManager.isEnabled(context))
+                    status = "La sincronización está pausada. Puedes reactivarla en IA y cámara → Nube pCloud → Sincronizar ahora.";
+                else {
+                    salve.data.sync.CloudSyncManager.requestRestore(context);
+                    status = "Recuperación de recuerdos solicitada; continuará cuando haya conexión. Consulta ‘estado de tus recuerdos’ para ver el resultado. "
+                            + salve.data.sync.CloudSyncManager.memoryStatus(context);
+                }
+            } else status = salve.data.sync.CloudSyncManager.memoryStatus(context);
+            deliverResponse(status, AvatarMotionProtocol.parse(""), false, true, true);
+            return;
+        }
         String checkpointWarning = conversationSession.persistenceWarning();
         if (!checkpointWarning.isEmpty() && !checkpointWarning.equals(lastCheckpointWarning))
             deliverResponse(checkpointWarning, AvatarMotionProtocol.parse(""), false, true, true);
@@ -1469,9 +1486,11 @@ public class MotorConversacional {
                 ? "¿Qué tema quieres que busque?" : ejecutarInvestigacionPublica(question);
     }
 
+    WikipediaResearchClient researchReader(String question) { return new WebResearchClient(context, question); }
+
     private String ejecutarInvestigacionPublica(String question) {
         String turnId = java.util.UUID.randomUUID().toString();
-        WikipediaResearchClient reader = new WikipediaResearchClient();
+        WikipediaResearchClient reader = researchReader(question);
         int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
         salve.core.research.PublicResearchCoordinator.Result result =
                 new salve.core.research.PublicResearchCoordinator(reader::researchResult,
