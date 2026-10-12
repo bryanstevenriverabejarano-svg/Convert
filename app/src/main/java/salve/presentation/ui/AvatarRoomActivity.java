@@ -79,7 +79,7 @@ public final class AvatarRoomActivity extends Activity {
         row(root, "Sentarse", () -> body(AvatarBodyCue.SIT), "De rodillas", () -> body(AvatarBodyCue.KNEEL));
         row(root, "Cuclillas", () -> body(AvatarBodyCue.CROUCH), "De pie", () -> body(AvatarBodyCue.STAND));
         row(root, "Baile pop", () -> body(AvatarBodyCue.DANCE_POP), "Baile urbano", () -> body(AvatarBodyCue.DANCE_URBAN));
-        root.addView(label("Las posturas usan las vistas del traje Núcleo. El baile es un movimiento suave de la ilustración; el modelo 3D todavía está pendiente.", 14, 0xFFB3C5D1));
+        root.addView(label("Núcleo se muestra en 3D con sus animaciones. Los dos botones de baile usan por ahora el mismo baile suave. Otros trajes y el descanso en la cama conservan sus ilustraciones.", 14, 0xFFB3C5D1));
         row(root, "Caminar", () -> store.change(s -> s.walkTo(s.getX() > .5f ? .08f : .92f)),
                 "Detenerse", () -> store.change(AvatarState::wake));
         row(root, "Crear cama", () -> store.change(AvatarState::createBed), "Acostarse", () -> {
@@ -98,7 +98,7 @@ public final class AvatarRoomActivity extends Activity {
         root.addView(label("Vestuario", 19, Color.WHITE));
         root.addView(label("Crea diseños con las prendas ilustradas disponibles, colores y patrones. Salve conserva su rostro y guarda cada diseño en el armario.", 14, 0xFFB3C5D1));
         button(root, "Diseñar una prenda", this::createDesign);
-        button(root, "Núcleo · nueva base", () -> wardrobe.wearTemplate("core", this::toast));
+        button(root, "Núcleo · modelo 3D", () -> wardrobe.wearTemplate("core", this::toast));
         row(root, "Kuro", () -> wardrobe.wearTemplate("kuro", this::toast),
                 "Shiro", () -> wardrobe.wearTemplate("shiro", this::toast));
         row(root, "Vestido original", () -> wardrobe.wearTemplate("original_dress", this::toast),
