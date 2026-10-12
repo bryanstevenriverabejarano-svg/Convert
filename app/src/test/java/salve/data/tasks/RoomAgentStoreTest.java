@@ -108,7 +108,8 @@ public class RoomAgentStoreTest {
             public String capabilities(AgentRun r) { return "none"; }
             public AgentRun.Observation execute(AgentRun r, AgentRun.Pending p, java.util.function.BooleanSupplier stop) { throw new AssertionError("Must not execute"); }
         });
-        assertEquals(8, r.observations.size()); assertEquals("BLOCKED", r.observations.get(0).status); assertEquals("PARTIAL", r.status);
+        assertEquals(1, r.observations.size()); assertEquals("BLOCKED", r.observations.get(0).status); assertEquals("PARTIAL", r.status);
+        assertEquals(11, r.skippedRepeats); assertEquals(1, db.agentDao().stat("code.python").failures);
     }
     @Test public void restartReusesPendingCallIdAndPersistedObservation() {
         AgentRun r = create(); r = store.claim(r.id, "old", now);
@@ -202,6 +203,66 @@ public class RoomAgentStoreTest {
         };
         assertEquals("BLOCKED", execute(r.id, small, tools("SUCCESS")).status);
         assertEquals(0, memories()); assertEquals(1800, store.get(r.id).goal.length());
+    }
+    @Test public void experienceSurvivesReopenAndActuallyEntersTheNextLocalInference() {
+        AgentRun first = create(); execute(first.id, model(), tools("SUCCESS"));
+        AgentRun next = create(); assertFalse(next.experience.isEmpty());
+        String saved = next.experience; db.close(); open();
+        assertEquals(saved, store.get(next.id).experience);
+        AgentRun done = execute(next.id, p -> {
+            JsonObject data = JsonParser.parseString(p.substring(p.indexOf("DATOS=") + 6)).getAsJsonObject();
+            assertTrue(data.has("experiencia_operativa"));
+            assertEquals(first.id, data.getAsJsonObject("experiencia_operativa").getAsJsonArray("planes").get(0).getAsString());
+            return model().generate(p);
+        }, tools("SUCCESS"));
+        assertEquals("SUCCEEDED", done.status);
+        assertEquals("", store.create(first.goal, true, "", now).experience);
+    }
+    @Test public void repeatedSuccessfulCallReusesEvidenceWithoutExecutionOrInflatedStatistics() {
+        AgentRun r = create(); AtomicInteger calls = new AtomicInteger(), executions = new AtomicInteger();
+        AgentRun done = execute(r.id, p -> {
+            if (calls.getAndIncrement() < 2) return response("{\"tool\":\"memory.lookup\",\"input\":\"origen\"}");
+            return model().generate(p);
+        }, new AgentEngine.Tools() {
+            public String capabilities(AgentRun r) { return "memory.lookup"; }
+            public AgentRun.Observation execute(AgentRun r, AgentRun.Pending call, java.util.function.BooleanSupplier stopped) {
+                executions.incrementAndGet();
+                AgentRun.Observation o = new AgentRun.Observation("forged-id", "web.read", "SUCCESS", "2025");
+                o.fingerprint = "forged"; return o;
+            }
+        });
+        assertEquals("SUCCEEDED", done.status); assertEquals(1, executions.get()); assertEquals(1, done.observations.size());
+        assertEquals(1, done.skippedRepeats); assertEquals(1, db.agentDao().stat("memory.lookup").successes);
+        assertEquals(AgentExperience.fingerprint("memory.lookup", "origen"), done.observations.get(0).fingerprint);
+        assertEquals(1, memories());
+    }
+    @Test public void transientFailureIsRetriedOnceAndThenChangesAreRequested() {
+        AgentRun done = execute(create().id, p -> response("{\"tool\":\"memory.lookup\",\"input\":\"origen\"}"), tools("ERROR"));
+        assertEquals("PARTIAL", done.status); assertEquals(2, done.observations.size());
+        assertEquals(10, done.skippedRepeats); assertEquals(2, db.agentDao().stat("memory.lookup").failures);
+        assertEquals(0, memories());
+    }
+    @Test public void interruptionDoesNotForgetDuplicateGuardButExplicitResumeAllowsFailedRetry() {
+        AgentRun r = create(); AgentRun claimed = store.claim(r.id, "old", now);
+        AgentRun.Observation success = new AgentRun.Observation("one", "memory.lookup", "SUCCESS", "2025");
+        success.fingerprint = AgentExperience.fingerprint("memory.lookup", "origen"); claimed.observations.add(success);
+        claimed.pending = new AgentRun.Pending("next", "memory.lookup", "origen");
+        assertTrue(store.save(claimed, now)); store.release(r.id, "old", now); db.close(); open();
+        AgentRun done = execute(r.id, model(), new AgentEngine.Tools() {
+            public String capabilities(AgentRun r) { return "memory.lookup"; }
+            public AgentRun.Observation execute(AgentRun r, AgentRun.Pending call, java.util.function.BooleanSupplier stopped) {
+                throw new AssertionError("A saved successful request must not execute again after restart");
+            }
+        });
+        assertEquals("SUCCEEDED", done.status); assertEquals(1, done.skippedRepeats);
+        AgentRun retry = create(); claimed = store.claim(retry.id, "owner", now);
+        claimed.observations.add(success);
+        AgentRun.Observation failure = new AgentRun.Observation("failed", "web.search", "ERROR", "offline");
+        failure.fingerprint = AgentExperience.fingerprint("web.search", retry.goal); claimed.observations.add(failure);
+        claimed.error = "offline"; assertTrue(store.save(claimed, now)); assertTrue(store.cancel(retry.id, now));
+        assertTrue(store.resume(retry.id, now)); AgentRun resumed = store.get(retry.id);
+        assertNull(resumed.observations.get(1).fingerprint); assertEquals(success.fingerprint, resumed.observations.get(0).fingerprint);
+        assertEquals("", resumed.error); assertFalse(resumed.codeAllowed);
     }
     @Test public void localOnlyResultsDoNotEnterCloudOutbox() {
         sync = false; execute(create().id, model(), tools("SUCCESS")); assertEquals(1, memories()); assertTrue(db.syncEventDao().getPending(10).isEmpty());

@@ -183,6 +183,8 @@ public class AgentPlansActivity extends Activity {
         text(detail, status(run.status) + " · " + run.id.substring(0, 8), 16, MUTED);
         text(detail, run.observations.size() + "/" + AgentEngine.MAX_STEPS + " intentos de herramientas · "
                 + run.modelCalls + "/" + AgentEngine.MAX_MODEL_CALLS + " consultas al modelo", 14, MUTED);
+        if (run.skippedRepeats > 0) text(detail, "Llamadas repetidas evitadas: " + run.skippedRepeats, 15, MUTED);
+        if (!run.experience.isEmpty()) text(detail, salve.core.agent.AgentExperience.describe(run.experience), 15, MUTED);
         if (run.pending != null) text(detail, "Pendiente: " + run.pending.tool, 16, MUTED);
         if (!run.outline.isEmpty()) text(detail, "Pasos propuestos\n• " + String.join("\n• ", run.outline), 16, INK);
         if (!run.answer.isEmpty()) {

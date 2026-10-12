@@ -8,9 +8,11 @@ import java.util.List;
 public final class AgentRun {
     public int version = 1;
     public String id, goal, owner = "", status = "QUEUED", bridge = "", error = "", answer = "", feedback = "";
+    public String experience = "";
     public boolean codeAllowed;
     public long createdAt, updatedAt, leaseUntil;
     public int modelCalls, revisions, attempts;
+    public int skippedRepeats;
     public List<String> outline = new ArrayList<>(), evidence = new ArrayList<>(), providers = new ArrayList<>();
     public List<Observation> observations = new ArrayList<>();
     public Pending pending;
@@ -20,6 +22,7 @@ public final class AgentRun {
     }
     public static final class Observation {
         public String id, tool, status, text;
+        public String fingerprint;
         public long elapsedMs;
         public List<String> sources = new ArrayList<>(), links = new ArrayList<>();
         public Observation(String id, String tool, String status, String text) {
@@ -40,6 +43,8 @@ public final class AgentRun {
                 || run.observations == null || run.observations.size() > AgentEngine.MAX_STEPS
                 || run.outline == null || run.evidence == null || run.providers == null
                 || run.owner == null || run.bridge == null || run.error == null || run.answer == null || run.feedback == null
+                || !AgentExperience.valid(run.experience) || run.codeAllowed && !run.experience.isEmpty()
+                || run.skippedRepeats < 0 || run.skippedRepeats > 32
                 || run.goal.length() > 2048 || run.id.length() > 60 || run.answer.length() > 2500
                 || run.outline.size() > 6 || run.evidence.size() > 8 || run.providers.size() > AgentEngine.MAX_MODEL_CALLS
                 || run.attempts < 0 || run.attempts > 8
@@ -56,6 +61,9 @@ public final class AgentRun {
                     || o.id.length() > 60 || o.tool.length() > 40 || o.text.length() > 6000
                     || o.sources == null || o.sources.size() > 6 || o.links == null || o.links.size() > 12)
                 throw new IllegalArgumentException("Invalid observation");
+            // Journals written before operational learning have no fingerprint.
+            if (o.fingerprint != null && !o.fingerprint.isEmpty() && !o.fingerprint.matches("[a-f0-9]{64}"))
+                throw new IllegalArgumentException("Invalid tool fingerprint");
             for (String url : o.sources) if (url == null || url.length() > 500) throw new IllegalArgumentException("Invalid source");
             for (String url : o.links) if (url == null || url.length() > 500) throw new IllegalArgumentException("Invalid link");
         }

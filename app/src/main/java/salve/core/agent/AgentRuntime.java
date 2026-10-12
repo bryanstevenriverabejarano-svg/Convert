@@ -140,6 +140,8 @@ public final class AgentRuntime {
     }
     private String describe(AgentRun run) {
         StringBuilder text = new StringBuilder("Plan ").append(shortId(run.id)).append(" · ").append(run.status).append('\n');
+        if (!run.experience.isEmpty()) text.append(AgentExperience.describe(run.experience)).append('\n');
+        if (run.skippedRepeats > 0) text.append("Llamadas repetidas evitadas: ").append(run.skippedRepeats).append('\n');
         if (!run.outline.isEmpty()) text.append("Plan actual: ").append(String.join(" → ", run.outline)).append('\n');
         for (AgentRun.Observation o : run.observations) text.append(o.tool).append(" · ").append(o.status).append(" · ")
                 .append(o.text.substring(0, Math.min(run.answer.isEmpty() ? 700 : 120, o.text.length()))).append('\n');
