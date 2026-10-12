@@ -35,6 +35,7 @@ const server = http.createServer((req, res) => {
     assert.equal((await inspect()).bones, 81);
     assert.equal((await inspect()).clips.length, 10);
     async function publish(state, milliseconds = 300) {
+      const before = (await inspect()).frames;
       await page.evaluate(s => {
         clearInterval(window.pump);
         window.visualState = s;
@@ -42,6 +43,10 @@ const server = http.createServer((req, res) => {
         window.pump = setInterval(() => window.Salve3D.update(window.visualState), 33);
       }, state);
       await page.waitForTimeout(milliseconds);
+      // A software GPU on shared CI may need more than 300 ms for its next frame.
+      // Assert only after this state has actually been rendered; keep a bounded deadline.
+      for (let i = 0; i < 100 && (await inspect()).frames <= before; i++) await page.waitForTimeout(100);
+      assert.ok((await inspect()).frames > before, 'native state must produce a rendered frame');
     }
     await publish({ pose: 'IDLE', x: .5, blink: 0 });
     assert.equal((await inspect()).clip, 'Idle_Breathe');
