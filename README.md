@@ -1,7 +1,17 @@
-# MLC-LLM Android
+# Salve para Android
 
 > La arquitectura, los límites de autonomía y la hoja de ruta de evolución segura de
 > Salve se documentan en [GOBERNANZA_Y_EVOLUCION.md](GOBERNANZA_Y_EVOLUCION.md).
+
+## Continuidad y aprendizaje desde búsquedas
+
+Salve conserva el contexto reciente del chat al cerrar y abrir la aplicación. Las
+búsquedas conversacionales con fuentes se archivan en su memoria indexada, igual
+que las investigaciones persistentes. **«Mi última búsqueda»** recupera el resultado
+guardado sin volver a consultar internet. La sincronización utiliza únicamente la
+configuración de nube que ya esté habilitada.
+
+Consulta [funcionamiento, límites y pruebas de continuidad](docs/CONTINUIDAD_Y_APRENDIZAJE.md).
 
 ## Modelo local principal
 

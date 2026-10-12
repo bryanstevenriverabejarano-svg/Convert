@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 import salve.core.NetworkResourcePolicy;
+import salve.core.research.PublicResearchCoordinator;
 
 /** Evidence checkpoint, distinct from autobiographical facts and executable instructions. */
 public final class ResearchReceipt {
@@ -11,6 +12,20 @@ public final class ResearchReceipt {
     public String status, answer;
     public List<Source> sources = new ArrayList<>();
     public List<String> providers = new ArrayList<>();
+    /** Failed/cancelled reads never become learned facts; usable extracts keep their partial status. */
+    public static ResearchReceipt fromResult(PublicResearchCoordinator.Result result, List<String> providers) {
+        if (result == null || result.sources.isEmpty() || result.status == PublicResearchCoordinator.Status.CANCELLED)
+            return null;
+        ResearchReceipt receipt = new ResearchReceipt();
+        receipt.status = result.status == PublicResearchCoordinator.Status.ANSWERED ? "ANSWERED"
+                : result.status == PublicResearchCoordinator.Status.PARTIAL ? "PARTIAL" : "SOURCES_ONLY";
+        receipt.answer = result.toConversationText();
+        if (providers != null) receipt.providers.addAll(providers);
+        for (PublicResearchCoordinator.Source source : result.sources)
+            receipt.sources.add(new Source(source.url, source.excerpt));
+        receipt.validate();
+        return receipt;
+    }
     public static final class Source {
         public String url, excerpt;
         public Source(String url, String excerpt) { this.url = url; this.excerpt = excerpt; }
