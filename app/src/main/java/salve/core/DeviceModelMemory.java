@@ -28,7 +28,24 @@ public final class DeviceModelMemory {
         if (id == null) return; // imported models have no known budget
         ModelMemoryPolicy.Snapshot ram = read(context);
         if (!ModelMemoryPolicy.canLoad(id, ram, loaded))
-            throw new ModelMemoryPolicy.PressureException("RAM insuficiente para " + id + ". " + describe(ram));
+            throw new ModelMemoryPolicy.PressureException(explain(id, ram, loaded));
+    }
+    public static int contextFor(Context context, String path, boolean loaded) {
+        String id = LocalModelPolicy.idForPath(path);
+        if (id == null) return GgufContextPolicy.STANDARD;
+        ModelMemoryPolicy.Snapshot ram = read(context);
+        int tokens = ModelMemoryPolicy.selectContext(id, ram, loaded);
+        if (tokens == 0) throw new ModelMemoryPolicy.PressureException(explain(id, ram, loaded));
+        return tokens;
+    }
+    public static String explain(String id, ModelMemoryPolicy.Snapshot ram, boolean loaded) {
+        boolean dolphin = LocalModelPolicy.PRIMARY.equals(id) || LocalModelPolicy.LIGHT.equals(id);
+        int smallest = dolphin ? GgufContextPolicy.COMPACT : GgufContextPolicy.STANDARD;
+        return (ram.known() ? "RAM insuficiente para " : "No se pudo comprobar la RAM para ") + id + ". " + describe(ram)
+                + String.format(Locale.getDefault(), ". Estimación mínima %s: %.2f GiB (%scon reserva para Android).",
+                loaded ? "adicional con los pesos cargados" : "para iniciar",
+                ModelMemoryPolicy.required(id, loaded, ram.threshold, smallest) / (double)(1024 * ModelMemoryPolicy.MIB),
+                dolphin ? "contexto 2048, " : "");
     }
     /** llama.cpp invokes this on native threads. Throttle Android queries and latch pressure. */
     public static final class Watch implements BooleanSupplier {

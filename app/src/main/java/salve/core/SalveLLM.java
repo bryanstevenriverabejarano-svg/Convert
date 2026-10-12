@@ -64,6 +64,7 @@ public class SalveLLM {
     private String modelLib;    // nombre de la librería del modelo (solo MLC)
     private volatile boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
     private volatile boolean isGguf = false;
+    private volatile int ggufContextTokens = GgufContextPolicy.STANDARD;
     private boolean activationInProgress;
     private boolean fallbackRequested;
     private volatile long selectionVersion;
@@ -132,6 +133,7 @@ public class SalveLLM {
     private void reloadModelInfo(String path, String visionPath) throws Exception {
         visionModel = path != null && path.equals(visionPath);
         isGguf = false;
+        ggufContextTokens = GgufContextPolicy.STANDARD;
 
         if (path == null || path.trim().isEmpty()) {
             throw new IllegalStateException(
@@ -269,16 +271,18 @@ public class SalveLLM {
             throw new IllegalStateException("initEngineIfNeeded sin modelo válido.");
         }
 
-        DeviceModelMemory.require(appContext, modelPath, false);
+        if (isGguf) ggufContextTokens = DeviceModelMemory.contextFor(appContext, modelPath, false);
+        else DeviceModelMemory.require(appContext, modelPath, false);
         publishStatus("cargando");
         if (isGguf) {
             boolean large = LocalModelPolicy.isLarge(modelPath);
             DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
             if (large) markLargeOperation(true);
-            try { GgufLlm.init(modelPath, large ? watch : installationCancelled); }
+            try { GgufLlm.init(modelPath, watch); }
             catch (java.util.concurrent.CancellationException e) {
-                if (large && watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
-                    throw new ModelMemoryPolicy.PressureException("Memoria baja durante la carga del 8B");
+                if (watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
+                    throw new ModelMemoryPolicy.PressureException("Memoria baja durante la carga de " + ModelRuntimeInfo.name(modelPath)
+                            + ". " + getMemoryDescription());
                 throw e;
             } finally { if (large) markLargeOperation(false); }
             engineInitialized = GgufLlm.isInitialized();
@@ -334,23 +338,26 @@ public class SalveLLM {
         if (!modelAvailable) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
                 "No hay un modelo local configurado y válido", 0L);
         try {
-            if (LocalModelPolicy.isLarge(modelPath) && engineInitialized)
-                DeviceModelMemory.require(appContext, modelPath, true);
             initEngineIfNeeded();
             String decorated = decoratePrompt(prompt, role);
             String identity = ModelRuntimeInfo.context(modelPath);
             String text;
             if (isGguf) {
+                ggufContextTokens = Math.min(ggufContextTokens, DeviceModelMemory.contextFor(appContext, modelPath, true));
                 boolean large = LocalModelPolicy.isLarge(modelPath);
                 DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
                 if (large) markLargeOperation(true);
                 try { text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
-                        large ? watch : installationCancelled); }
+                        ggufContextTokens, watch); }
                 catch (java.util.concurrent.CancellationException e) {
-                    if (large && watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
-                        throw new ModelMemoryPolicy.PressureException("Memoria baja durante la respuesta del 8B");
+                    if (watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
+                        throw new ModelMemoryPolicy.PressureException("Memoria baja durante la respuesta de " + ModelRuntimeInfo.name(modelPath)
+                                + ". " + getMemoryDescription());
                     throw e;
-                } finally { if (large) markLargeOperation(false); }
+                } finally {
+                    ggufContextTokens = Math.min(ggufContextTokens, GgufLlm.getContextTokens());
+                    if (large) markLargeOperation(false);
+                }
             } else text = isLiteRT ? LiteRTLlm.generate(identity + decorated) : BasicLocalLlm.chatSinglePrompt(identity + decorated);
             long latency = (System.nanoTime() - start) / 1_000_000L;
             if (text == null || text.trim().isEmpty()) {
@@ -365,6 +372,8 @@ public class SalveLLM {
             return ModelResult.failure(ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
         } catch (IllegalArgumentException e) {
             // Invalid/oversized input is not a broken model and must not download a fallback.
+            lastErrorMessage = e.getMessage();
+            publishStatus("entrada rechazada; revisa el tamaño del mensaje");
             return ModelResult.failure(ModelResult.Status.ERROR, e.getMessage(), 0L);
         } catch (Exception | LinkageError | OutOfMemoryError e) {
             recordInference(ModelCatalog.Capability.TEXT, false);
@@ -455,7 +464,10 @@ public class SalveLLM {
         return false;
     }
 
-    private void publishStatus(String phase) { runtimeStatus = ModelRuntimeInfo.name(modelPath) + " · " + phase; }
+    private void publishStatus(String phase) {
+        runtimeStatus = ModelRuntimeInfo.name(modelPath) + " · " + phase
+                + (isGguf && engineInitialized ? " · contexto " + ggufContextTokens + " tokens" : "");
+    }
     public String getStatusDescription() {
         String reason = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(LocalModelPolicy.REASON_KEY, "");
@@ -463,6 +475,27 @@ public class SalveLLM {
     }
     public String getCompactStatus() { return runtimeStatus; }
     public String getMemoryDescription() { return DeviceModelMemory.describe(DeviceModelMemory.read(appContext)); }
+    /** Checks before transferring gigabytes. Activation checks again after releasing the previous engine. */
+    public synchronized void checkModelPreparation(String id) {
+        ModelMemoryPolicy.Snapshot ram = DeviceModelMemory.read(appContext);
+        if (!ModelMemoryPolicy.canPrepare(id, ram, engineInitialized))
+            throw new ModelMemoryPolicy.PressureException(DeviceModelMemory.explain(id, ram, false));
+    }
+    public String getDiagnosticDescription() {
+        ModelMemoryPolicy.Snapshot ram = DeviceModelMemory.read(appContext);
+        StringBuilder report = new StringBuilder(getStatusDescription()).append('\n').append(DeviceModelMemory.describe(ram));
+        String id = LocalModelPolicy.idForPath(modelPath);
+        if (id != null) {
+            report.append(String.format(java.util.Locale.getDefault(), "\nRAM estimada para iniciar: %.2f GiB%s.",
+                    ModelMemoryPolicy.required(id, false, ram.threshold) / (double)(1024 * ModelMemoryPolicy.MIB),
+                    isGguf ? " con contexto de 4096 tokens" : ""));
+            if (isGguf) report.append(String.format(java.util.Locale.getDefault(), " Con 2048: %.2f GiB.",
+                    ModelMemoryPolicy.required(id, false, ram.threshold, GgufContextPolicy.COMPACT) / (double)(1024 * ModelMemoryPolicy.MIB)));
+        }
+        String error = lastErrorMessage;
+        if (error != null && !error.isEmpty()) report.append("\nÚltimo fallo: ").append(error);
+        return report.append("\nEl tamaño del archivo y el contexto en tokens no son la RAM disponible.").toString();
+    }
 
     public boolean isLocalOnly() {
         return appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_LOCAL_ONLY, false);
@@ -616,7 +649,12 @@ public class SalveLLM {
     /** Conservative character budget; the runtime tokenizer remains authoritative. */
     public int getConversationPromptBudgetChars() {
         String path = modelPath;
-        if (isGguf) return 7000;
+        if (isGguf) {
+            String id = LocalModelPolicy.idForPath(path);
+            int forecast = id == null ? ggufContextTokens
+                    : ModelMemoryPolicy.selectContext(id, DeviceModelMemory.read(appContext), engineInitialized);
+            return GgufContextPolicy.promptBudget(forecast == 0 ? GgufContextPolicy.COMPACT : Math.min(ggufContextTokens, forecast));
+        }
         return isLiteRT && path != null && path.toLowerCase(java.util.Locale.ROOT).endsWith(".task")
                 ? 3200 : 10500;
     }

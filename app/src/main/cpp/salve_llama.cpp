@@ -11,6 +11,9 @@
 namespace {
 using Clock = std::chrono::steady_clock;
 struct Cancelled : std::runtime_error { Cancelled() : runtime_error("Turno cancelado") {} };
+struct ContextAllocationFailure : std::runtime_error {
+    ContextAllocationFailure() : runtime_error("No se pudo reservar memoria para el contexto GGUF") {}
+};
 
 // CPU abort callbacks can run on a native worker: never share a JNIEnv across threads.
 struct Request {
@@ -90,8 +93,9 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
-        JNIEnv *env, jclass, jlong handle, jbyteArray input, jbyteArray systemInput, jobject cancelled) {
+        JNIEnv *env, jclass, jlong handle, jbyteArray input, jbyteArray systemInput, jint contextSize, jobject cancelled) {
     try {
+        if (contextSize != 4096 && contextSize != 2048) throw std::invalid_argument("Contexto GGUF no admitido");
         auto *model = reinterpret_cast<llama_model *>(handle);
         Request request(env, cancelled);
         request.check();
@@ -110,7 +114,8 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         std::vector<char> formatted(length + 1);
         length = llama_chat_apply_template(chatTemplate, messages, 2, true, formatted.data(), formatted.size());
         int count = -llama_tokenize(vocab, formatted.data(), length, nullptr, 0, true, true);
-        constexpr int contextSize = 4096, outputTokens = 512, batchSize = 256;
+        constexpr int outputTokens = 512;
+        const int batchSize = contextSize == 2048 ? 128 : 256;
         if (count <= 0 || count > contextSize - outputTokens)
             throw std::invalid_argument("El mensaje supera el contexto local; acórtalo e inténtalo de nuevo");
         std::vector<llama_token> tokens(count);
@@ -125,7 +130,8 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         params.abort_callback = Request::abort;
         params.abort_callback_data = &request;
         std::unique_ptr<llama_context, decltype(&llama_free)> ctx(llama_init_from_model(model, params), llama_free);
-        if (!ctx) throw std::runtime_error("Memoria insuficiente para el contexto GGUF");
+        request.check();
+        if (!ctx) throw ContextAllocationFailure();
         auto decode = [&](llama_token *data, int size) {
             request.check();
             int status = llama_decode(ctx.get(), llama_batch_get_one(data, size));
@@ -159,6 +165,7 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         if (result) env->SetByteArrayRegion(result, 0, output.size(), reinterpret_cast<const jbyte *>(output.data()));
         return result;
     } catch (const Cancelled &e) { error(env, "java/util/concurrent/CancellationException", e); }
+      catch (const ContextAllocationFailure &e) { error(env, "salve/core/GgufContextPolicy$AllocationException", e); }
       catch (const std::invalid_argument &e) { error(env, "java/lang/IllegalArgumentException", e); }
       catch (const std::exception &e) { error(env, "java/lang/IllegalStateException", e); }
     return nullptr;
