@@ -9,6 +9,36 @@ Salve prioriza Dolphin 3.0 Llama 3.2 3B Q4_K_M (2,02 GB), con llama.cpp para
 Android. Gemma solo se prepara tras un fallo de Dolphin y se reutiliza si ya está
 descargado. Consulta [instalación, límites y pruebas](docs/dolphin-android.md).
 
+## Instalar desde el móvil
+
+En una ejecución correcta de **Actions → Android tests and APK**, descarga el
+artefacto `salve-preview-arm64-…`, extrae el ZIP y abre `app-preview.apk`.
+Aparecerá como **Salve 3D (prueba)**, con identificador `com.salve.app.preview`.
+
+Esta copia puede convivir con Salve (`com.salve.app`) aunque las APK estén firmadas
+con certificados distintos. Tiene recuerdos, ajustes y modelos descargados propios;
+no migra automáticamente los datos de la instalación anterior. No es necesario
+desinstalar Salve ni borrar sus datos para probarla.
+
+El artefacto `salve-debug-arm64-…` conserva el identificador original. Para usarlo
+como actualización de una instalación existente, necesita el mismo certificado
+de firma que esa instalación (además de una versión compatible). **«Aplicación no
+instalada» es un aviso genérico**, no una confirmación del motivo.
+
+Estas APK de CI usan la clave de depuración del runner. El certificado puede
+cambiar entre ejecuciones, incluso para la copia de prueba. No se garantiza
+actualizar una APK de otra ejecución: para distribuir actualizaciones hay que
+configurar una clave persistente mediante almacenamiento privado de secretos.
+Para actualizar la Salve instalada desde Android Studio sin perder sus datos,
+hay que recuperar su clave original. No publiques ningún `debug.keystore` o
+clave privada en este repositorio.
+
+Cada ZIP incluye la huella de la APK (`.sha256`), la información pública del
+certificado (`.signing.txt`) y la identidad del paquete (`.badging.txt`).
+CI verifica ambas variantes, su firma, arquitectura ARM64, bibliotecas de 16 KB
+y el modelo 3D empaquetado. La prueba de instalación en un teléfono sigue siendo
+una comprobación aparte.
+
 ## Preparar el Android SDK
 
 El proyecto compila con Android API 36. En Linux se puede instalar y configurar el
