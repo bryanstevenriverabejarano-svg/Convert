@@ -1,6 +1,6 @@
 package salve.avatar;
 
-/** Pixel geometry for the full-screen stage; keeps the entire 2:3 artwork inside its viewport. */
+/** Pixel geometry for the full-screen stage, including wide dance and walk sprites. */
 public final class AvatarStageLayout {
     public final float height, centerX, floor, bedScale, bedCenterX;
 
@@ -11,14 +11,15 @@ public final class AvatarStageLayout {
 
     /** Lift the sleeping scene toward the center instead of leaving it at the bottom of a tall phone. */
     public float bedFloor(float availableHeight, boolean sleeping) {
-        float base = sleeping ? availableHeight * .55f + 40 * bedScale : floor - 10 * bedScale;
+        // Center the sleeping bounds (-100..8) independently of the standing sprite height.
+        float base = sleeping ? availableHeight * .50f + 46 * bedScale : floor - 10 * bedScale;
         return Math.max(100 * bedScale, Math.min(availableHeight - 8 * bedScale, base));
     }
 
     public static AvatarStageLayout fit(float width, float availableHeight, float position) {
         width = Math.max(0, width); availableHeight = Math.max(0, availableHeight);
-        float height = Math.min(availableHeight * .94f, width * 1.38f);
-        float halfWidth = height / 3f;
+        float height = Math.min(availableHeight * .94f, width * 1.20f);
+        float halfWidth = height * .38f;
         float margin = width * .025f;
         float travel = Math.max(0, width - 2 * (halfWidth + margin));
         float x = halfWidth + margin + travel * Math.max(0, Math.min(1, position));

@@ -149,35 +149,3 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.3.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
 }
-
-// Package the reviewed PR #114 GLB as a generated asset of each Android variant.
-// AGP wires the producing task into asset merging through the public Variant API.
-abstract class PrepareSalve3dAssets extends DefaultTask {
-    @InputFile
-    @PathSensitive(PathSensitivity.NONE)
-    abstract RegularFileProperty getModelFile()
-
-    @OutputDirectory
-    abstract DirectoryProperty getOutputDirectory()
-
-    @TaskAction
-    void prepareAssets() {
-        def model = modelFile.get().asFile
-        if (java.security.MessageDigest.getInstance('SHA-256').digest(model.bytes).encodeHex().toString()
-                != '420693a1d473ad27342ad1080f564f16a51c8f76a747cd88dc37c110a0650d63') {
-            throw new GradleException('El modelo Salve 3D no coincide con la entrega revisada del PR #114.')
-        }
-        def target = outputDirectory.file('avatar3d/SALVE_Animada.glb').get().asFile.toPath()
-        java.nio.file.Files.createDirectories(target.parent)
-        java.nio.file.Files.copy(model.toPath(), target, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-    }
-}
-
-androidComponents {
-    onVariants(selector().all()) { variant ->
-        def prepareSalve3d = tasks.register("prepare${variant.name.capitalize()}Salve3d", PrepareSalve3dAssets) {
-            modelFile.set(rootProject.layout.projectDirectory.file('art/salve/cabello-cerrado-animada-v2/SALVE_Animada.glb'))
-        }
-        variant.sources.assets.addGeneratedSourceDirectory(prepareSalve3d, { task -> task.outputDirectory })
-    }
-}

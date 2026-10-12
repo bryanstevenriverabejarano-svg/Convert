@@ -11,11 +11,12 @@ import android.view.GestureDetector;
 import android.view.View;
 
 /** Shared room/overlay host for the approved illustrated character and its local motion rig. */
-final class IllustratedAvatarView extends View {
+class IllustratedAvatarView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final IllustratedAvatarRenderer portrait;
     private final IllustratedBedRenderer bed;
     private final CorePoseRenderer poses;
+    private final RealisticSpriteRenderer realistic;
     private final AvatarMotionController motion = AvatarMotionController.get();
     private final AvatarStore store;
     private final AvatarWardrobeStore wardrobe;
@@ -48,6 +49,7 @@ final class IllustratedAvatarView extends View {
         portrait = new IllustratedAvatarRenderer(context);
         bed = new IllustratedBedRenderer(context);
         poses = new CorePoseRenderer(context, changed);
+        realistic = new RealisticSpriteRenderer(context);
         stageGestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent event) { return true; }
             @Override public boolean onDoubleTap(MotionEvent event) { performClick(); return true; }
@@ -68,11 +70,11 @@ final class IllustratedAvatarView extends View {
     }
     @Override protected void onAttachedToWindow() {
         super.onAttachedToWindow(); attached = true; store.addListener(changed); motion.addListener(changed);
-        wardrobe.addListener(changed);portrait.addListener(changed);poses.attach();restartFrames();
+        wardrobe.addListener(changed);portrait.addListener(changed);poses.attach();realistic.addListener(changed);restartFrames();
     }
     @Override protected void onDetachedFromWindow() {
         attached = false; removeCallbacks(frame); store.removeListener(changed); motion.removeListener(changed);
-        wardrobe.removeListener(changed);portrait.removeListener(changed);poses.detach();store.save();
+        wardrobe.removeListener(changed);portrait.removeListener(changed);poses.detach();realistic.removeListener(changed);store.save();
         super.onDetachedFromWindow();
     }
     @Override protected void onVisibilityChanged(View changedView, int visibility) {
@@ -102,7 +104,7 @@ final class IllustratedAvatarView extends View {
             if (hasOnClickListeners()) { performClick(); return true; }
             float scale = Math.min(getWidth() / 320f, getHeight() / 280f);
             float left = (getWidth() - 320f * scale) / 2f;
-            float target = ((event.getX() - left) / Math.max(.001f, scale) - 78f) / 164f;
+            float target = ((event.getX() - left) / Math.max(.001f, scale) - 88f) / 144f;
             store.change(s -> s.walkTo(target));
             performClick(); return true;
         }
@@ -135,7 +137,7 @@ final class IllustratedAvatarView extends View {
             text(canvas, "z", bedX + 48, floor - 72 - (float) Math.sin(phase) * 3, 15, 0xFFA8DADD);
             text(canvas, "z", bedX + 61, floor - 90, 11, 0xFFA8DADD);
         } else {
-            float x = overlay ? 110f : 78f + s.getX() * 164f;
+            float x = overlay ? 110f : 88f + s.getX() * 144f;
             float stride = locomotion.stride();
             canvas.save();
             canvas.translate(x, floor - locomotion.lift() * .7f);
@@ -178,6 +180,12 @@ final class IllustratedAvatarView extends View {
 
     private void drawPortrait(Canvas canvas, AvatarMotion.Snapshot expression, float height, float stride, boolean sleeping) {
         AvatarState.Pose body = store.state().getPose();
+        AvatarDesignSpec design = wardrobe.selected();
+        if (RealisticSpriteRenderer.supports(design)
+                && realistic.draw(canvas, store.state(), expression, height, locomotion.phase(), phase, sleeping)) {
+            poses.select(null);
+            return;
+        }
         String id = sleeping ? null : AvatarBodyCue.referenceFor(body);
         // These original pose views belong to the core suit only. Never silently change clothing.
         if (!"core".equals(wardrobe.selected().template)) id = null;
