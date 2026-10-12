@@ -39,7 +39,7 @@ public final class RoomAgentStore implements AgentEngine.Store {
             dao.prune();
             AgentRun run = new AgentRun(); run.id = id; run.goal = goal.trim();
             run.codeAllowed = code; run.bridge = bridge == null ? "" : bridge; run.createdAt = run.updatedAt = now;
-            run.experience = AgentExperience.contextFor(run, recent(), now);
+            run.experience = AgentExperience.contextFor(run, learningHistory(), now);
             AgentRunEntity row = new AgentRunEntity(); row.id = run.id; row.createdAt = row.updatedAt = now; row.journal = run.encode();
             dao.insert(row); return run;
         });
@@ -69,6 +69,15 @@ public final class RoomAgentStore implements AgentEngine.Store {
         });
     }
     public List<AgentRun> recent() { List<AgentRun> result = new ArrayList<>(); for (AgentRunEntity row : dao.recent(50)) result.add(snapshot(row)); return result; }
+    private List<AgentRun> learningHistory() {
+        List<AgentRun> result = new ArrayList<>();
+        // Historical context is optional. Keep corrupt records intact, but do not let one poison a new plan.
+        for (AgentRunEntity row : dao.recent(50)) {
+            try { result.add(snapshot(row)); }
+            catch (IllegalArgumentException | com.google.gson.JsonParseException corruptJournal) { }
+        }
+        return result;
+    }
     public List<AgentRun> pending() { List<AgentRun> result = new ArrayList<>(); for (AgentRunEntity row : dao.pending()) result.add(snapshot(row)); return result; }
     @Override public AgentRun claim(String id, String owner, long now) {
         return db.runInTransaction(() -> {
