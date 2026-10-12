@@ -218,6 +218,14 @@ public class RoomAgentStoreTest {
         assertEquals("SUCCEEDED", done.status);
         assertEquals("", store.create(first.goal, true, "", now).experience);
     }
+    @Test public void corruptHistoricalJournalDoesNotPreventNewPlanOrDestroyValidExperience() {
+        AgentRun first = create(); execute(first.id, model(), tools("SUCCESS"));
+        AgentRunEntity bad = new AgentRunEntity(); bad.id = "damaged-history"; bad.status = "SUCCEEDED";
+        bad.createdAt = bad.updatedAt = now; bad.journal = "{broken"; db.agentDao().insert(bad);
+        AgentRun next = create(); assertFalse(next.experience.isEmpty());
+        assertTrue(next.experience.contains(first.id)); assertFalse(next.experience.contains(bad.id));
+        assertEquals("{broken", db.agentDao().get(bad.id).journal);
+    }
     @Test public void repeatedSuccessfulCallReusesEvidenceWithoutExecutionOrInflatedStatistics() {
         AgentRun r = create(); AtomicInteger calls = new AtomicInteger(), executions = new AtomicInteger();
         AgentRun done = execute(r.id, p -> {
