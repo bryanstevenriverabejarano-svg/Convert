@@ -6,7 +6,8 @@ const clamp = (n, low, high, fallback = 0) => Number.isFinite(n) ? Math.max(low,
 const POSES = new Set(['IDLE', 'WALKING', 'SEATED', 'KNEELING', 'CROUCHED', 'DANCE_POP', 'DANCE_URBAN']);
 const EXPRESSIONS = new Set(['NEUTRAL', 'WARM', 'CURIOUS', 'CONCERNED', 'SAD', 'ANGRY', 'SURPRISED', 'SHY']);
 const GESTURES = new Set(['NONE', 'WAVE', 'NOD', 'SHAKE', 'EXPLAIN', 'THINK', 'CELEBRATE', 'LAUGH', 'CRY', 'STARTLE']);
-let state = { pose: 'IDLE', gesture: 'NONE', expression: 'NEUTRAL', x: .3, mouth: 0, blink: 0 };
+// The first render happens before Android publishes state. Use the same finite defaults.
+let state = clean();
 let status = 'loading', running = false, raf = 0, lastFrame = 0, lastInput = 0;
 let renderer, scene, camera, rig, model, mixer, head, headBase;
 let current, currentName = '', actions = {}, faces = [], bed;
@@ -55,7 +56,9 @@ function selectClip() {
 function applyFace() {
     const values = {
         JawOpen: state.speaking || state.gesture === 'LAUGH' ? state.mouth : 0,
-        Blink: state.blink,
+        // Leave the upper lid slightly relaxed instead of the export's fully open stare.
+        // A complete native blink must still close the eyes fully.
+        Blink: .08 + .92 * state.blink,
         Smile: ['WARM', 'SHY'].includes(state.expression) || state.gesture === 'LAUGH' ? .5 : 0,
         MouthFrown: ['SAD', 'CONCERNED'].includes(state.expression) ? .45 : 0,
         BrowUp: ['CURIOUS', 'SURPRISED'].includes(state.expression) ? .45 : 0,
@@ -68,6 +71,39 @@ function applyFace() {
             if (index !== undefined) mesh.morphTargetInfluences[index] = value;
         }
     }
+}
+
+function prepareAppearance() {
+    const matte = new Set(['Salve_Suit', 'Salve_Reconstructed_Pearl', 'Salve_Hair',
+        'Salve_Hair_Interior', 'Salve_Glove_White', 'Salve_Face', 'SALVE_FacePatch_Skin',
+        'Salve_Skull_Skin', 'SALVE_Sclera']);
+    model.traverse(object => {
+        if (!object.isMesh) return;
+        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+            // Preserve the authored textures/vertex colors, especially the reconstructed face.
+            // These surfaces are pearl, skin and hair, rather than polished metal.
+            if (matte.has(material.name)) {
+                material.metalness = 0;
+                material.roughness = .9;
+                if ('clearcoat' in material) material.clearcoat = 0;
+            }
+            if (material.name === 'SALVE_Iris_Azure_Cyan_v2') material.emissiveIntensity = .22;
+        }
+        // Relax only the lower back-hair flare. Keep the fringe, face, body, skin weights
+        // and original GLB untouched; all reviewed clips continue to drive this mesh.
+        if (object.name.startsWith('Salve_Hair') && !object.morphTargetDictionary) {
+            object.geometry = object.geometry.clone();
+            const position = object.geometry.attributes.position;
+            for (let i = 0; i < position.count; i++) {
+                const lowerHair = THREE.MathUtils.smoothstep(1.3 - position.getY(i), 0, .8);
+                position.setX(i, position.getX(i) * (1 - .18 * lowerHair));
+            }
+            position.needsUpdate = true;
+            object.geometry.computeVertexNormals();
+            object.geometry.computeBoundingBox();
+            object.geometry.computeBoundingSphere();
+        }
+    });
 }
 function resize() {
     if (!renderer || !camera) return;
@@ -149,21 +185,23 @@ async function init() {
     renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
     renderer.setClearColor(0, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1;
     document.body.appendChild(renderer.domElement);
     renderer.domElement.addEventListener('webglcontextlost', event => { event.preventDefault(); fail('context lost'); });
     scene = new THREE.Scene();
     camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .01, 20);
-    scene.add(new THREE.HemisphereLight(0xdfeeff, 0x5e6276, 2.3));
-    const key = new THREE.DirectionalLight(0xfff4ed, 2.5); key.position.set(2, 3, 4); scene.add(key);
-    const rim = new THREE.DirectionalLight(0x78dfff, 1.2); rim.position.set(-2, 2, -2); scene.add(rim);
+    // Broad neutral fill keeps the painted face readable on the dark Android stage.
+    scene.add(new THREE.AmbientLight(0xffffff, 2.4));
+    const key = new THREE.DirectionalLight(0xfff6f0, .9); key.position.set(-1, 2, 5); scene.add(key);
+    const fill = new THREE.DirectionalLight(0xeaf3ff, .3); fill.position.set(2, 1, 3); scene.add(fill);
     let resourceError = null;
     const manager = new THREE.LoadingManager();
     manager.onError = url => { resourceError = url; };
     const gltf = await new GLTFLoader(manager).loadAsync('./SALVE_Animada.glb');
     if (resourceError) throw new Error('Missing embedded texture: ' + resourceError);
     model = gltf.scene;
+    prepareAppearance();
     rig = new THREE.Group(); rig.add(model); scene.add(rig);
     model.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(model);

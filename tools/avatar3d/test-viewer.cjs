@@ -32,6 +32,8 @@ const server = http.createServer((req, res) => {
     }
     const inspect = () => page.evaluate(() => window.Salve3D.inspect());
     assert.equal((await inspect()).status, 'ready');
+    assert.ok((await inspect()).head.every(Number.isFinite), 'first frame before native input must have a valid head');
+    await page.addStyleTag({ content: 'body { background: #112130; }' });
     assert.equal((await inspect()).bones, 81);
     assert.equal((await inspect()).clips.length, 10);
     async function publish(state, milliseconds = 300) {
