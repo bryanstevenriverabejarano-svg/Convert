@@ -1762,8 +1762,10 @@ public class MainActivity extends AppCompatActivity {
                         + "se activará después de verificar el archivo y probar una respuesta. "
                         + (entry.supportsVision ? "El catálogo declara soporte de fotos; su ejecución se comprueba al analizar una imagen."
                                 : "Se guardan Dolphin 8B (4,92 GB) y el respaldo 3B (2,02 GB): unos 6,94 GB en total. "
-                                + "Salve mide la RAM antes de cargar y pasa al 3B si hace falta. Gemma solo se prepara si tampoco funciona el 3B. "
-                                + "Ambos Dolphin procesan texto. Los archivos existentes se verifican y reutilizan."))
+                                + "Salve comprueba la RAM antes de descargar y al cargar. Puede reducir el contexto de 4096 a 2048 tokens o pasar al 3B; "
+                                + "si no hay otro motor cargado y el 8B no cabe, omite su descarga. Gemma solo se prepara si tampoco funciona el 3B. "
+                                + "Ambos Dolphin procesan texto. Los archivos existentes se verifican y reutilizan.")
+                        + "\n\n" + SalveLLM.getInstance(this).getMemoryDescription())
                 .setPositiveButton("Descargar por Wi-Fi", (d, which) -> iniciarDescargaModelos())
                 .setNeutralButton("Usar datos móviles", (d, which) -> {
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, true).apply();
@@ -1783,6 +1785,7 @@ public class MainActivity extends AppCompatActivity {
             ModelCatalog.RuntimeSnapshot snapshot = SalveLLM.getInstance(this).getModelSnapshot();
             Map<String, Set<ModelCatalog.Capability>> verified = new java.util.HashMap<>();
             StringBuilder description = new StringBuilder();
+            description.append(SalveLLM.getInstance(this).getDiagnosticDescription()).append("\n\n");
             for (ModelCatalog.Entry entry : catalog.getEntries()) {
                 File artifact = new File(ModelStore.dir(this), entry.filename);
                 if (artifact.getAbsolutePath().equals(snapshot.path)) verified.put(entry.id, snapshot.verifiedCapabilities);
@@ -1901,9 +1904,10 @@ public class MainActivity extends AppCompatActivity {
             } catch (RuntimeException e) {
                 result = ModelResult.failure(ModelResult.Status.ERROR, "No se pudo ejecutar la prueba", 0L);
             }
-            String report = result.isSuccess()
+            String response = result.isSuccess()
                     ? "El modelo devolvió texto en " + result.getLatencyMillis() + " ms:\n\n" + result.getText()
                     : "No se verificó la inferencia: " + result.getStatus() + "\n" + result.getError();
+            String report = response + (local ? "\n\n" + SalveLLM.getInstance(getApplicationContext()).getDiagnosticDescription() : "");
             runOnUiThread(() -> { if (!isFinishing() && !isDestroyed() && status.isShowing()) status.setMessage(report); });
         });
     }

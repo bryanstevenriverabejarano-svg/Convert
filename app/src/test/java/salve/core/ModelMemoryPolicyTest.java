@@ -37,4 +37,29 @@ public class ModelMemoryPolicyTest {
         assertEquals(ModelMemoryPolicy.LARGE_WEIGHTS + 1024 * ModelMemoryPolicy.MIB + threshold,
                 ModelMemoryPolicy.required(LocalModelPolicy.PRIMARY, false, threshold));
     }
+    @Test public void compactContextIsChosenOnlyInTheNarrowSupportedMemoryBand() {
+        for (String id : new String[]{LocalModelPolicy.PRIMARY, LocalModelPolicy.LIGHT}) {
+            long compact = ModelMemoryPolicy.required(id, false, 0, 2048);
+            long standard = ModelMemoryPolicy.required(id, false, 0, 4096);
+            assertTrue(compact < standard);
+            assertEquals(0, ModelMemoryPolicy.selectContext(id, ram(compact - 1, false), false));
+            assertEquals(2048, ModelMemoryPolicy.selectContext(id, ram(compact, false), false));
+            assertEquals(2048, ModelMemoryPolicy.selectContext(id, ram(standard - 1, false), false));
+            assertEquals(4096, ModelMemoryPolicy.selectContext(id, ram(standard, false), false));
+            assertEquals(0, ModelMemoryPolicy.selectContext(id, ram(standard, true), false));
+        }
+    }
+    @Test public void shrinkingContextDoesNotPretendEightBWeightsFitFourGiB() {
+        assertEquals(0, ModelMemoryPolicy.selectContext(LocalModelPolicy.PRIMARY, ram(4L * 1024 * ModelMemoryPolicy.MIB, false), false));
+        assertEquals(4096, ModelMemoryPolicy.selectContext(LocalModelPolicy.LIGHT, ram(4L * 1024 * ModelMemoryPolicy.MIB, false), false));
+        assertEquals(2048, ModelMemoryPolicy.selectContext(LocalModelPolicy.PRIMARY, ram(1600 * ModelMemoryPolicy.MIB, false), true));
+    }
+    @Test public void preparationDoesNotChargeAResidentEngineTwiceButActivationStillChecksRam() {
+        ModelMemoryPolicy.Snapshot current = ram(3L * 1024 * ModelMemoryPolicy.MIB, false);
+        assertTrue(ModelMemoryPolicy.canPrepare(LocalModelPolicy.PRIMARY, current, true));
+        assertFalse(ModelMemoryPolicy.canPrepare(LocalModelPolicy.PRIMARY, current, false));
+        assertEquals(0, ModelMemoryPolicy.selectContext(LocalModelPolicy.PRIMARY, current, false));
+        assertEquals(ModelMemoryPolicy.required(LocalModelPolicy.FALLBACK, false, 0, 4096),
+                ModelMemoryPolicy.required(LocalModelPolicy.FALLBACK, false, 0, 2048));
+    }
 }

@@ -26,6 +26,19 @@ class LocalModelPolicyTest {
         assertEquals(LocalModelPolicy.PRIMARY, failed)
         assertEquals(listOf(LocalModelPolicy.PRIMARY, LocalModelPolicy.LIGHT), calls)
     }
+    @Test fun preflightSkipsLargeTransferAndPreservesFallbackOrder() = runBlocking {
+        val fetched = mutableListOf<String>()
+        val failed = mutableListOf<String>()
+        val ram = ModelMemoryPolicy.Snapshot(4L * 1024 * ModelMemoryPolicy.MIB, 12L * 1024 * ModelMemoryPolicy.MIB, 0, false)
+        val ready = LocalModelPolicy.prepare(attempt = { id ->
+            if (!ModelMemoryPolicy.canPrepare(id, ram, false)) throw ModelMemoryPolicy.PressureException("No cabe antes de descargar")
+            fetched += id
+            id
+        }, onFailure = { id, _ -> failed += id })
+        assertEquals(LocalModelPolicy.LIGHT, ready)
+        assertEquals(listOf(LocalModelPolicy.LIGHT), fetched)
+        assertEquals(listOf(LocalModelPolicy.PRIMARY), failed)
+    }
     @Test fun gemmaIsLastAndThereAreNoLoops() = runBlocking {
         val calls = mutableListOf<String>()
         try {

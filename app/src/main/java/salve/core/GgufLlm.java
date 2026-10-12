@@ -8,6 +8,7 @@ public final class GgufLlm {
     private static boolean libraryLoaded;
     private static long model;
     private static String loadedPath;
+    private static int contextTokens = GgufContextPolicy.STANDARD;
     private GgufLlm() { }
 
     public static synchronized void init(String path, BooleanSupplier cancelled) {
@@ -27,9 +28,17 @@ public final class GgufLlm {
     }
 
     public static synchronized String generate(String prompt, String system, BooleanSupplier cancelled) {
+        return generate(prompt, system, GgufContextPolicy.STANDARD, cancelled);
+    }
+    public static synchronized String generate(String prompt, String system, int requestedContext, BooleanSupplier cancelled) {
         if (model == 0) throw new IllegalStateException("GGUF no está inicializado");
-        byte[] result = infer(model, prompt.getBytes(StandardCharsets.UTF_8), system.getBytes(StandardCharsets.UTF_8), cancellation(cancelled));
-        return new String(result, StandardCharsets.UTF_8).trim();
+        BooleanSupplier stop = cancellation(cancelled);
+        byte[] input = prompt.getBytes(StandardCharsets.UTF_8), identity = system.getBytes(StandardCharsets.UTF_8);
+        GgufContextPolicy.Generation result = GgufContextPolicy.generate(requestedContext, selected -> {
+            contextTokens = selected;
+            return new String(infer(model, input, identity, selected, stop), StandardCharsets.UTF_8).trim();
+        }, stop);
+        return result.text;
     }
 
     private static BooleanSupplier cancellation(BooleanSupplier requested) {
@@ -38,12 +47,14 @@ public final class GgufLlm {
     }
 
     public static synchronized boolean isInitialized() { return model != 0; }
+    public static synchronized int getContextTokens() { return contextTokens; }
     public static synchronized void reset() {
         if (model != 0) release(model);
         model = 0;
         loadedPath = null;
+        contextTokens = GgufContextPolicy.STANDARD;
     }
     private static native long load(byte[] path, BooleanSupplier cancelled);
-    private static native byte[] infer(long model, byte[] prompt, byte[] system, BooleanSupplier cancelled);
+    private static native byte[] infer(long model, byte[] prompt, byte[] system, int contextTokens, BooleanSupplier cancelled);
     private static native void release(long model);
 }

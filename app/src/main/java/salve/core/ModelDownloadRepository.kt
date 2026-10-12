@@ -42,6 +42,8 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
                 selectionBeforeAttempt = engine.selectionVersion
                 if (id != LocalModelPolicy.PRIMARY && !LocalModelPolicy.fallbackAllowed(id, engine.pendingFallbackFrom))
                     throw LocalModelPolicy.SupersededFallbackException()
+                emit(ModelDownloadEvent.Status("Comprobando RAM antes de descargar $id…", 0))
+                engine.checkModelPreparation(id)
                 val event = fetch(id)
                 emit(ModelDownloadEvent.Status("Midiendo RAM, cargando $id y comprobando una respuesta…", 99))
                 val result = runInterruptible(Dispatchers.IO) {
