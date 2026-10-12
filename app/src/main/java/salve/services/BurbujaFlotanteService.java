@@ -98,7 +98,8 @@ public final class BurbujaFlotanteService extends Service {
                         salve.avatar.AvatarMotion.Gesture.WAVE, salve.avatar.AvatarMotion.Expression.WARM),
                 "…", "Abrir habitación y gestos", this::openRoom);
         params = new WindowManager.LayoutParams(dp(190), dp(274), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
         bounds(); setPositionFromState(); installDrag();
