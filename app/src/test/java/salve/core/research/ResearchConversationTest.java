@@ -13,6 +13,17 @@ public class ResearchConversationTest {
     }
     private ChatMessage user(String text) { return new ChatMessage(ChatMessage.Role.USER, text, 0); }
 
+    @Test public void ordinaryQuestionsStayWithTheConversationModel() {
+        for (String input : new String[]{"Que es la colada?", "¿Qué significa tu nombre?", "¿Quién es mi hermano?", "qué es la fotosíntesis"})
+            assertEquals(input, ResearchConversation.Kind.NONE, route(input).kind);
+    }
+    @Test public void namedSearchEngineIsPreservedButNotPartOfLookupTerms() {
+        ResearchConversation.Route result = route("Busca en Google qué es la colada");
+        assertEquals(ResearchConversation.Kind.SEARCH, result.kind);
+        assertEquals("google", salve.core.web.SearchEngine.explicitEngine(result.question));
+        assertEquals("la colada", ResearchConversation.lookupQuery(result.question));
+    }
+
     @Test public void directAndPoliteRequestsStartSearchWithoutApproval() {
         for (String input : new String[] {"Busca en internet el significado de tu nombre Salve",
                 "¿Puedes buscar el significado de tu nombre?", "Quiero que busques el significado de tu nombre",

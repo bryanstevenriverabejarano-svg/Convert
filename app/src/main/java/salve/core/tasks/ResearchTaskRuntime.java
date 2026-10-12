@@ -116,7 +116,7 @@ public final class ResearchTaskRuntime {
         SalveLLM llm = SalveLLM.getInstance(app);
         ResearchReceipt receipt = new ResearchReceipt();
         PublicResearchCoordinator.Result result = new PublicResearchCoordinator(
-                new WikipediaResearchClient()::researchResult,
+                new salve.core.WebResearchClient(app, question)::researchResult,
                 (phase, prompt) -> {
                     if (stopped.getAsBoolean()) return ModelResult.failure(ModelResult.Status.CANCELLED, "Interrumpido", 0);
                     ModelResult generated = llm.generateResult(prompt, SalveLLM.Role.EVALUADOR);

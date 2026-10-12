@@ -193,10 +193,11 @@ public class PublicResearchCoordinatorTest {
     @Test public void conversationalNetworkFailureIsReportedWithoutFuturePromises() {
         PublicResearchCoordinator.Result result = new PublicResearchCoordinator((query, stop) ->
                 new WikipediaResearchClient.ResearchBatch(WikipediaResearchClient.Status.ERROR,
-                        Collections.emptyList(), 1), null, 3200)
+                        Collections.emptyList(), 1, "La fuente pública devolvió HTTP 429."), null, 3200)
                 .runConversation("Salve", () -> false);
         assertEquals(PublicResearchCoordinator.Status.FETCH_FAILED, result.status);
-        assertTrue(result.toConversationText().contains("consulta web falló"));
+        assertTrue(result.toConversationText().contains("No pude consultar las fuentes web"));
+        assertTrue(result.toConversationText().contains("HTTP 429"));
         assertEquals(1, result.searches);
     }
 

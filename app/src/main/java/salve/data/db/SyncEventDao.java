@@ -13,7 +13,7 @@ public interface SyncEventDao {
     long insert(SyncEventEntity e);
 
     /** Pending outbox entries. tries=-1 means synchronized and retained in the local journal. */
-    @Query("SELECT * FROM sync_events WHERE tries >= 0 AND tries < 20 ORDER BY createdAt ASC LIMIT :limit")
+    @Query("SELECT * FROM sync_events WHERE tries >= 0 ORDER BY tries ASC, createdAt ASC LIMIT :limit")
     List<SyncEventEntity> getPending(int limit);
 
     @Query("SELECT * FROM sync_events ORDER BY createdAt DESC LIMIT :n")

@@ -43,11 +43,13 @@ public final class PublicResearchCoordinator {
         public final List<Source> sources;
         public final List<String> decisions;
         public final int searches, modelCalls;
+        public final String diagnostic;
         private Result(Status status, String answer, Run run) {
             this.status = status; this.answer = answer;
             sources = Collections.unmodifiableList(new ArrayList<>(run.sources.values()));
             decisions = Collections.unmodifiableList(new ArrayList<>(run.decisions));
             searches = run.searches; modelCalls = run.modelCalls;
+            diagnostic = run.diagnostic;
         }
         public String toUserText() {
             String text;
@@ -56,12 +58,16 @@ public final class PublicResearchCoordinator {
                 case PARTIAL: text = answer + "\nLa consulta fue parcial; no agoté todas las fuentes."; break;
                 case SOURCES_ONLY: text = "He obtenido fuentes públicas; no se ejecutó una síntesis del modelo."; break;
                 case NO_SOURCES: text = "La búsqueda no devolvió fuentes utilizables."; break;
-                case FETCH_FAILED: text = "La consulta web falló; eso no significa que la información no exista."; break;
+                case FETCH_FAILED: text = "No pude consultar las fuentes web. " + (diagnostic.isEmpty()
+                        ? "Comprueba la conexión e inténtalo de nuevo." : diagnostic)
+                        + " No he obtenido información para responder con fuentes."; break;
                 case MODEL_FAILED: text = "No pude completar la investigación con el modelo. Las fuentes consultadas se conservan en este resultado."; break;
                 case INVALID_MODEL_REPLY: text = "La respuesta del modelo no respetó el formato o citó fuentes no recuperadas; no la presento como conclusión."; break;
                 case CANCELLED: text = "Investigación cancelada."; break;
-                default: text = "Se alcanzó el límite de lectura de esta investigación."; break;
+                default: text = "Se alcanzó el límite de lectura de esta investigación. " + diagnostic; break;
             }
+            if (!diagnostic.isEmpty() && (status == Status.ANSWERED || status == Status.PARTIAL || status == Status.SOURCES_ONLY))
+                text += "\n" + diagnostic;
             if (!sources.isEmpty()) {
                 StringBuilder out = new StringBuilder(text).append("\nFuentes consultadas:");
                 for (Source source : sources) out.append("\n[").append(source.id).append("] ").append(source.url);
@@ -153,6 +159,7 @@ public final class PublicResearchCoordinator {
                 WikipediaResearchClient.ResearchBatch batch = sources.read(query, stopped);
                 check(stopped);
                 if (batch == null) return new Result(Status.FETCH_FAILED, "", run);
+                run.diagnostic = batch.diagnostic;
                 for (WikipediaResearchClient.Page page : batch.pages) {
                     if (page == null || page.url == null || page.url.length() > 500 || page.text == null
                             || page.text.trim().isEmpty() || !NetworkResourcePolicy.validateKnowledgeUrl(page.url).allowed) {
@@ -286,6 +293,7 @@ public final class PublicResearchCoordinator {
         final List<String> decisions = new ArrayList<>();
         final Set<Integer> visibleSourceIds = new HashSet<>();
         int searches, modelCalls;
+        String diagnostic = "";
     }
 }
 

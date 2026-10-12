@@ -9,18 +9,19 @@ import salve.data.db.MemoriaDatabase;
 /** Typed executors. The only local writes are the journal and the final memory transaction. */
 public final class AndroidAgentTools implements AgentEngine.Tools {
     private final Context app;
-    private final WikipediaResearchClient web = new WikipediaResearchClient();
+    private final WikipediaResearchClient web;
     private final ConversationMemoryGrounding memory;
     private final java.util.function.Supplier<String> statistics;
     public AndroidAgentTools(Context context, java.util.function.Supplier<String> statistics) {
         app = context.getApplicationContext(); this.statistics = statistics;
+        web = new salve.core.WebResearchClient(app);
         MemoriaDatabase db = MemoriaDatabase.getInstance(app);
         memory = new ConversationMemoryGrounding(db.recuerdoDao(), db.knowledgeNodeDao(), db.knowledgeRelationDao());
     }
     @Override public String capabilities(AgentRun run) {
         String metrics = statistics.get();
         return "memory.lookup: " + (run.codeAllowed ? "no autorizada" : "memoria local")
-                + "; web.search: objetivo literal, Wikipedia/puente; web.read/api.get: URL pública autorizada; "
+                + "; web.search: objetivo literal, buscador configurado/puente; web.read/api.get: URL pública autorizada; "
                 + "browser.render: " + (run.bridge.isEmpty() ? "sin configurar" : "puente configurado, disponibilidad por comprobar")
                 + "; code.python: " + (run.codeAllowed && !run.bridge.isEmpty() ? "autorizado, requiere sandbox disponible" : "no disponible")
                 + ". Contadores observados (no prueban verdad): " + metrics.substring(0, Math.min(280, metrics.length()));
@@ -48,9 +49,9 @@ public final class AndroidAgentTools implements AgentEngine.Tools {
         AgentRun.Observation observation = new AgentRun.Observation(call.id, call.tool, "SUCCESS", "");
         if (call.tool.equals("web.search")) {
             WikipediaResearchClient.ResearchBatch batch = web.researchResult(call.input, stopped);
-            if (batch.pages.isEmpty()) return new AgentRun.Observation(call.id, call.tool, "ERROR", "No se recuperaron fuentes públicas.");
+            if (batch.pages.isEmpty()) return new AgentRun.Observation(call.id, call.tool, "ERROR", "No se recuperaron fuentes públicas. " + batch.diagnostic);
             observation.status = batch.status == WikipediaResearchClient.Status.COMPLETE ? "SUCCESS" : "PARTIAL";
-            StringBuilder text = new StringBuilder("Descubrimiento público mediante Wikipedia/URLs explícitas:\n");
+            StringBuilder text = new StringBuilder("Descubrimiento público y páginas leídas: " + batch.diagnostic + "\n");
             for (WikipediaResearchClient.Page page : batch.pages) {
                 if (page.text.length() >= WikipediaResearchClient.MAX_EXTRACT_CHARS) observation.status = "PARTIAL";
                 observation.sources.add(page.url);

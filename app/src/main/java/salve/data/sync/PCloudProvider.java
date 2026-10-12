@@ -35,6 +35,8 @@ public final class PCloudProvider implements CloudProvider {
                 .connectTimeout(20, TimeUnit.SECONDS)
                 .readTimeout(40, TimeUnit.SECONDS)
                 .writeTimeout(40, TimeUnit.SECONDS)
+                .callTimeout(45, TimeUnit.SECONDS)
+                .followRedirects(false).followSslRedirects(false)
                 .build();
     }
 
@@ -45,7 +47,48 @@ public final class PCloudProvider implements CloudProvider {
 
     /** Called by the OAuth completion flow; token is encrypted locally and never belongs in source control. */
     public static void configureOAuth(Context context, String accessToken, String apiHost) {
+        configureOAuth(context, accessToken, apiHost, () -> false);
+    }
+    public static void configureOAuth(Context context, String accessToken, String apiHost, java.util.function.BooleanSupplier cancelled) {
+        try { new PCloudProvider(context).checkConnection(new Credentials(accessToken, PCloudCredentialStore.normalizeHost(apiHost))); }
+        catch (java.io.IOException failure) { throw new IllegalStateException(safeFailure(failure)); }
+        if (cancelled.getAsBoolean()) throw new java.util.concurrent.CancellationException();
         PCloudCredentialStore.save(context, accessToken, apiHost);
+    }
+
+    /** Authenticated read; a stored token alone is not a successful connection check. */
+    public String checkConnection() throws java.io.IOException {
+        return checkConnection(credentials());
+    }
+    private String checkConnection(Credentials c) throws java.io.IOException {
+        if (c == null) throw new ApiFailure("No hay una autorización legible. Vuelve a conectar pCloud.");
+        try {
+            JsonObject response = json(new Request.Builder().url(api(c, "userinfo"))
+                    .header("Authorization", "Bearer " + c.token).get().build(), c);
+            requireOk(response);
+            return "Conexión autenticada con pCloud comprobada. "
+                    + (c.host.equals("eapi.pcloud.com") ? "Región europea." : "Región de Estados Unidos.")
+                    + " Esta prueba verifica el acceso a la cuenta; la recuperación de recuerdos se muestra por separado.";
+        } catch (java.io.IOException failure) { throw failure; }
+        catch (Exception failure) { throw new ApiFailure("La respuesta de pCloud no es válida."); }
+    }
+
+    static final class ApiFailure extends java.io.IOException { ApiFailure(String message) { super(message); } }
+    static void requireOk(JsonObject response) throws java.io.IOException {
+        if (response == null || !response.has("result")) throw new ApiFailure("pCloud devolvió una respuesta incompleta.");
+        int code = response.get("result").getAsInt();
+        if (code == 0) return;
+        if (code == 1000 || code == 2000) throw new ApiFailure("La autorización de pCloud no es válida o ha caducado. Vuelve a conectar la cuenta.");
+        if (code == 2003) throw new ApiFailure("pCloud denegó el acceso a la carpeta de recuerdos.");
+        if (code == 4000) throw new ApiFailure("pCloud ha limitado temporalmente las conexiones. Inténtalo más tarde.");
+        throw new ApiFailure("pCloud devolvió el error " + code + ".");
+    }
+    public static String safeFailure(Exception failure) {
+        if (failure instanceof ApiFailure) return failure.getMessage();
+        if (failure instanceof java.net.SocketTimeoutException || failure instanceof java.io.InterruptedIOException)
+            return "pCloud no respondió a tiempo.";
+        if (failure instanceof java.net.UnknownHostException) return "No se pudo resolver el servidor de pCloud; revisa Internet o el DNS.";
+        return "No se pudo completar la conexión con pCloud. Revisa Internet y comprueba la cuenta desde Nube pCloud.";
     }
 
     @Override
@@ -120,6 +163,7 @@ public final class PCloudProvider implements CloudProvider {
             JsonObject result = json(authenticatedGet(c, "listfolder", "path", normalized), c);
             if (result != null && result.has("result") && result.get("result").getAsInt() == 2005)
                 return Collections.emptyList();
+            requireOk(result);
             if (!ok(result) || !result.has("metadata") || !result.getAsJsonObject("metadata").has("contents"))
                 throw new java.io.IOException("No se pudo consultar pCloud; revisa la conexión y la cuenta");
             return filePaths(normalized, result.getAsJsonObject("metadata").getAsJsonArray("contents"));
@@ -214,7 +258,8 @@ public final class PCloudProvider implements CloudProvider {
 
     private JsonObject json(Request request, Credentials c) throws Exception {
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) return new JsonObject();
+            if (!response.isSuccessful()) throw new ApiFailure("pCloud devolvió HTTP " + response.code() + ".");
+            if (response.body() == null) throw new ApiFailure("pCloud devolvió una respuesta vacía.");
             String text = response.body().string();
             return JsonParser.parseString(text).getAsJsonObject();
         }

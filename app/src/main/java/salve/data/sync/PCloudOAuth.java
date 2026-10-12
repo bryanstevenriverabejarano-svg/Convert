@@ -76,7 +76,7 @@ public final class PCloudOAuth {
                             if (expected.equals(values.get("state")) && "bearer".equalsIgnoreCase(values.get("token_type"))
                                     && values.get("access_token") != null && !values.get("access_token").isEmpty()
                                     && values.get("hostname") != null) {
-                                CloudSyncManager.configurePCloud(context, values.get("access_token"), values.get("hostname"));
+                                CloudSyncManager.configurePCloud(context, values.get("access_token"), values.get("hostname"), () -> cancelled);
                                 CloudSyncManager.setEnabled(context, true);
                                 error = null;
                                 html = "Salve ya está conectada con pCloud. Puedes volver a la app.";
@@ -93,7 +93,7 @@ public final class PCloudOAuth {
                     }
                 }
             } catch (Exception e) {
-                if (!cancelled) error = "No se completó la conexión con pCloud";
+                if (!cancelled) error = e instanceof IllegalStateException ? e.getMessage() : "No se completó la conexión con pCloud";
             } finally {
                 if (!cancelled) result.complete(error);
             }

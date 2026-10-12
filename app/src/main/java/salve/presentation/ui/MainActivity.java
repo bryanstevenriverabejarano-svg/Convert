@@ -1585,7 +1585,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaModeloPrincipal(); break;
                         case 1:
@@ -1615,6 +1615,7 @@ public class MainActivity extends AppCompatActivity {
                         case 12: mostrarPCloud(); break;
                         case 13: mostrarFotosGuardadas(); break;
                         case 14: plansLauncher.launch(new Intent(this, AgentPlansActivity.class)); break;
+                        case 15: mostrarBuscadoresWeb(); break;
                         default: break;
                     }
                 })
@@ -1625,10 +1626,43 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton("Cerrar", null).show();
     }
 
+    private void mostrarBuscadoresWeb() {
+        salve.core.web.SearchEngine current = salve.core.web.WebSearchSettings.load(this, "");
+        new AlertDialog.Builder(this).setTitle("Buscadores web")
+                .setMessage("Buscador: " + current.id + "\n\n" + salve.core.web.WebSearchSettings.diagnostic(this)
+                        + "\n\nPuedes decir ‘Busca en Google…’, ‘Busca en Bing…’ o ‘Busca en DuckDuckGo…’. "
+                        + "Salve lee resultados públicos. Las páginas que exigen JavaScript, consentimiento o CAPTCHA pueden necesitar el navegador.")
+                .setPositiveButton("Elegir buscador", (d, w) -> new AlertDialog.Builder(this).setTitle("Elegir buscador")
+                        .setItems(salve.core.web.SearchEngine.LABELS, (dialog, index) -> {
+                            String id = salve.core.web.SearchEngine.IDS[index];
+                            if (!id.equals("custom")) {
+                                salve.core.web.WebSearchSettings.save(this, id, ""); mostrarBuscadoresWeb();
+                            } else {
+                                android.widget.EditText input = new android.widget.EditText(this);
+                                input.setSingleLine(true); input.setHint("https://buscador.com/search?q={query}");
+                                if (current.id.equals("custom")) input.setText(current.template);
+                                AlertDialog editor = new AlertDialog.Builder(this).setTitle("Otro buscador").setView(input)
+                                        .setPositiveButton("Guardar", null).setNegativeButton("Cancelar", null).create();
+                                editor.setOnShowListener(v -> editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
+                                    try {
+                                        salve.core.web.WebSearchSettings.save(this, "custom", input.getText().toString().trim());
+                                        editor.dismiss(); mostrarBuscadoresWeb();
+                                    } catch (IllegalArgumentException invalid) { input.setError(invalid.getMessage()); }
+                                })); editor.show();
+                            }
+                        }).setNegativeButton("Cerrar", null).show())
+                .setNeutralButton("Abrir última búsqueda", (d, w) -> {
+                    String url = salve.core.web.WebSearchSettings.lastUrl(this);
+                    if (!salve.core.NetworkResourcePolicy.validateKnowledgeUrl(url).allowed) return;
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
+                    catch (RuntimeException missing) { Toast.makeText(this, "No hay un navegador disponible", Toast.LENGTH_LONG).show(); }
+                }).setNegativeButton("Cerrar", null).show();
+    }
+
     private void mostrarPCloud() {
         boolean connected = CloudSyncManager.isPCloudConfigured(this);
         new AlertDialog.Builder(this).setTitle("Memoria en pCloud")
-                .setMessage(connected ? "Cuenta conectada. Sincronización: "
+                .setMessage(connected ? "Autorización guardada. Sincronización: "
                         + (CloudSyncManager.isEnabled(this) ? "activa" : "pausada") + "\n\n" + CloudSyncManager.memoryStatus(this)
                         : "Cuenta sin conectar. Primero registra en pCloud esta Redirect URI:\n"
                         + PCloudOAuth.REDIRECT_URI + "\nDespués pulsa Conectar y autoriza Salve en el navegador.")
@@ -1640,7 +1674,33 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNeutralButton(connected ? "Pausar" : "Cerrar", (d, w) -> {
                     if (connected) CloudSyncManager.setEnabled(this, false);
-                }).setNegativeButton("Cancelar", null).show();
+                }).setNegativeButton(connected ? "Comprobar conexión" : "Cancelar",
+                        (d, w) -> { if (connected) comprobarPCloud(); }).show();
+    }
+
+    private void comprobarPCloud() {
+        AlertDialog status = new AlertDialog.Builder(this).setTitle("Comprobar pCloud")
+                .setMessage("Comprobando el acceso real a la cuenta…").setPositiveButton("Sincronizar", null)
+                .setNegativeButton("Cerrar", null).show();
+        status.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+        new Thread(() -> {
+            String result;
+            boolean success;
+            try { result = new salve.data.sync.PCloudProvider(getApplicationContext()).checkConnection(); success = true; }
+            catch (Exception failure) { result = salve.data.sync.PCloudProvider.safeFailure(failure); success = false; }
+            String report = result + "\n\n" + CloudSyncManager.memoryStatus(getApplicationContext());
+            boolean verified = success;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed() || !status.isShowing()) return;
+                status.setMessage(report);
+                status.getButton(AlertDialog.BUTTON_POSITIVE).setText(verified ? "Sincronizar" : "Volver a conectar");
+                status.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                status.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                    status.dismiss();
+                    if (verified) CloudSyncManager.setEnabled(this, true); else conectarPCloud();
+                });
+            });
+        }, "salve-pcloud-check").start();
     }
 
     private void conectarPCloud() {
