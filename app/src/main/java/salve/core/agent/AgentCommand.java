@@ -18,6 +18,9 @@ public final class AgentCommand {
     public static AgentCommand parse(String input) {
         if (input == null || input.length() > 2400) return null;
         String original = Normalizer.normalize(input.trim(), Normalizer.Form.NFC);
+        Matcher objective = Pattern.compile("^(?:salve[, ]+)?(?:trabaja en (?:este|el) objetivo|planifica y ejecuta)\\s*:\\s*(\\S.*)$",
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL).matcher(original);
+        if (objective.matches()) return command(Action.CREATE, objective.group(1).trim());
         String plain = Normalizer.normalize(original, Normalizer.Form.NFD).replaceAll("\\p{M}+", "").toLowerCase(Locale.ROOT);
         Matcher create = Pattern.compile("^(?:salve[, ]+)?resuelve (y recuerda|con codigo)\\s*:\\s*(.+)$", Pattern.DOTALL).matcher(plain);
         if (create.matches()) return new AgentCommand(Action.CREATE, original.substring(create.start(2)).trim(), "", create.group(1).equals("con codigo"), 0);

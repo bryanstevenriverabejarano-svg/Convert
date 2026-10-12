@@ -21,11 +21,22 @@ public final class RoomAgentStore implements AgentEngine.Store {
         this.db = db; this.dao = db.agentDao(); this.syncEnabled = syncEnabled;
     }
     public AgentRun create(String goal, boolean code, String bridge, long now) {
+        return createWithId(UUID.randomUUID().toString(), goal, code, bridge, now);
+    }
+    /** A restored screen can retry the same request without creating another plan. */
+    public AgentRun createWithId(String id, String goal, boolean code, String bridge, long now) {
+        if (id == null || !UUID.fromString(id).toString().equals(id)) throw new IllegalArgumentException("Identificador de plan inválido.");
         if (goal == null || goal.trim().isEmpty() || goal.length() > 2048) throw new IllegalArgumentException("Indica un objetivo de hasta 2048 caracteres.");
         return db.runInTransaction(() -> {
+            AgentRun existing = get(id);
+            if (existing != null) {
+                if (!existing.goal.equals(goal.trim()) || existing.codeAllowed != code)
+                    throw new IllegalArgumentException("Ese envío ya contiene otro objetivo. Revisa el plan guardado.");
+                return existing; // Preserve the original endpoint, grants, progress and terminal state.
+            }
             if (dao.pendingCount() >= 20) throw new IllegalArgumentException("Hay 20 planes pendientes; termina o cancela alguno.");
             dao.prune();
-            AgentRun run = new AgentRun(); run.id = UUID.randomUUID().toString(); run.goal = goal.trim();
+            AgentRun run = new AgentRun(); run.id = id; run.goal = goal.trim();
             run.codeAllowed = code; run.bridge = bridge == null ? "" : bridge; run.createdAt = run.updatedAt = now;
             AgentRunEntity row = new AgentRunEntity(); row.id = run.id; row.createdAt = row.updatedAt = now; row.journal = run.encode();
             dao.insert(row); return run;
