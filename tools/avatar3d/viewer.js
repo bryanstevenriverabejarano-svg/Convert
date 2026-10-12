@@ -80,14 +80,18 @@ function prepareAppearance() {
     model.traverse(object => {
         if (!object.isMesh) return;
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-            // Preserve the authored textures/vertex colors, especially the reconstructed face.
-            // These surfaces are pearl, skin and hair, rather than polished metal.
+            // Keep embedded maps, but restore the pearl shell's specular finish for a studio-like render.
             if (matte.has(material.name)) {
-                material.metalness = 0;
-                material.roughness = .9;
-                if ('clearcoat' in material) material.clearcoat = 0;
+                const reflective = material.name === 'Salve_Suit' || material.name === 'Salve_Reconstructed_Pearl';
+                const hair = material.name.includes('Hair');
+                material.metalness = reflective ? .12 : 0;
+                material.roughness = reflective ? .42 : hair ? .52
+                    : material.name === 'SALVE_Sclera' ? .28
+                    : material.name === 'Salve_Glove_White' ? .46 : .72;
+                if ('clearcoat' in material) material.clearcoat = reflective ? .22 : hair ? .12
+                    : material.name === 'Salve_Glove_White' ? .1 : 0;
             }
-            if (material.name === 'SALVE_Iris_Azure_Cyan_v2') material.emissiveIntensity = .22;
+            if (material.name === 'SALVE_Iris_Azure_Cyan_v2') material.emissiveIntensity = .55;
         }
         // Relax only the lower back-hair flare. Keep the fringe, face, body, skin weights
         // and original GLB untouched; all reviewed clips continue to drive this mesh.
@@ -109,14 +113,14 @@ function resize() {
     if (!renderer || !camera) return;
     const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight), aspect = w / h;
     // Fit the full hair silhouette, with room for hands and lateral travel even in portrait/overlay.
-    worldHeight = Math.max(modelHeight * 1.17, modelWidth * 1.4 / aspect);
+    worldHeight = Math.max(modelHeight * 1.08, modelWidth * 1.22 / aspect);
     camera.left = -worldHeight * aspect / 2;
     camera.right = worldHeight * aspect / 2;
     camera.top = worldHeight / 2; camera.bottom = -worldHeight / 2;
     camera.position.set(0, modelHeight * .48, 4);
     camera.lookAt(0, modelHeight * .48, 0);
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     renderer.setSize(w, h, false);
 }
 function position() {
@@ -192,9 +196,10 @@ async function init() {
     scene = new THREE.Scene();
     camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .01, 20);
     // Broad neutral fill keeps the painted face readable on the dark Android stage.
-    scene.add(new THREE.AmbientLight(0xffffff, 2.4));
-    const key = new THREE.DirectionalLight(0xfff6f0, .9); key.position.set(-1, 2, 5); scene.add(key);
-    const fill = new THREE.DirectionalLight(0xeaf3ff, .3); fill.position.set(2, 1, 3); scene.add(fill);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.35));
+    const key = new THREE.DirectionalLight(0xfff6f0, 1.15); key.position.set(-1, 2, 5); scene.add(key);
+    const fill = new THREE.DirectionalLight(0xeaf3ff, .55); fill.position.set(2, 1, 3); scene.add(fill);
+    const rim = new THREE.DirectionalLight(0x4b8dff, .6); rim.position.set(-2, 1, -4); scene.add(rim);
     let resourceError = null;
     const manager = new THREE.LoadingManager();
     manager.onError = url => { resourceError = url; };
