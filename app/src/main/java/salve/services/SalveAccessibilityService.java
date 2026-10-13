@@ -611,7 +611,8 @@ public class SalveAccessibilityService extends AccessibilityService {
     }
 
     public synchronized boolean ejecutarAccionGlobal(int action) {
-        if (!canAct() || (action != GLOBAL_ACTION_HOME && action != GLOBAL_ACTION_BACK)) return false;
+        if (!canAct() || (action != GLOBAL_ACTION_HOME && action != GLOBAL_ACTION_BACK
+                && action != GLOBAL_ACTION_RECENTS)) return false;
         invalidateSnapshot();
         try { return performGlobalAction(action); }
         catch (RuntimeException exception) { return false; }
