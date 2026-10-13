@@ -1160,6 +1160,26 @@ public class MotorConversacional {
     }
 
     private boolean procesarControlExplicito(String original) {
+        salve.core.devicecontrol.MobileCommand mobile = salve.core.devicecontrol.MobileCommand.parse(original);
+        if (mobile != null) {
+            postConversationTask(() -> {
+                if (closed) return;
+                Intent panel = new Intent(context, salve.presentation.ui.DeviceControlActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (mobile.type == salve.core.devicecontrol.MobileCommand.Type.WHATSAPP) {
+                    panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PHONE, mobile.draft.getPhone())
+                            .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_MESSAGE, mobile.draft.getMessage());
+                } else {
+                    panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PANEL, true)
+                            .putExtra(salve.services.MobileWorkspaceService.QUERY, mobile.query);
+                }
+                try {
+                    context.startActivity(panel);
+                    hablar(mobile.draft == null ? "Abro el panel flotante de Salve. Si Android lo pide, activa Mostrar sobre otras apps."
+                            : "He preparado el borrador. Revisa el número y el texto antes de abrirlo en WhatsApp; todavía no se ha enviado.");
+                } catch (RuntimeException unavailable) { hablar("No pude abrir el panel móvil. Puedes abrirlo desde Mi móvil."); }
+            });
+            return true;
+        }
         salve.core.tools.AssistantControlCommand command = salve.core.tools.AssistantControlCommand.parse(original);
         if (command == null) return false;
         switch (command.type) {

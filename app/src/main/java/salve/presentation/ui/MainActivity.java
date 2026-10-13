@@ -1654,8 +1654,15 @@ public class MainActivity extends AppCompatActivity {
                 .setNeutralButton("Abrir última búsqueda", (d, w) -> {
                     String url = salve.core.web.WebSearchSettings.lastUrl(this);
                     if (!salve.core.NetworkResourcePolicy.validateKnowledgeUrl(url).allowed) return;
-                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
-                    catch (RuntimeException missing) { Toast.makeText(this, "No hay un navegador disponible", Toast.LENGTH_LONG).show(); }
+                    new AlertDialog.Builder(this).setTitle("Ver la búsqueda")
+                            .setItems(new String[]{"Mini ventana de Salve", "Navegador del móvil"}, (choice, index) -> {
+                                try {
+                                    if (index == 0) startActivity(new Intent(this, DeviceControlActivity.class)
+                                            .putExtra(DeviceControlActivity.EXTRA_PANEL, true)
+                                            .putExtra(salve.services.MobileWorkspaceService.QUERY, url));
+                                    else startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                                } catch (RuntimeException missing) { Toast.makeText(this, "No pude abrir la búsqueda", Toast.LENGTH_LONG).show(); }
+                            }).setNegativeButton("Cancelar", null).show();
                 }).setNegativeButton("Cerrar", null).show();
     }
 

@@ -118,6 +118,14 @@
             tools:node="merge" />
 
         <service
+            android:name="salve.services.MobileWorkspaceService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-started floating browser and reviewed device controls, with visible foreground notification and stop action" />
+        </service>
+
+        <service
             android:name="salve.services.BurbujaFlotanteService"
             android:enabled="true"
             android:exported="false"

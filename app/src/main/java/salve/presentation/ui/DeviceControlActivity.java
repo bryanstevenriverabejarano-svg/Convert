@@ -39,6 +39,7 @@ import salve.devices.BluetoothInspector;
 import salve.devices.LocalServiceBrowser;
 import salve.devices.WhatsAppDraft;
 import salve.services.SalveAccessibilityService;
+import salve.services.MobileWorkspaceService;
 
 /** Visible, user-operated access to Android actions and compatible nearby device services. */
 public final class DeviceControlActivity extends Activity {
@@ -54,6 +55,11 @@ public final class DeviceControlActivity extends Activity {
     private BluetoothInspector bluetooth;
     private LocalServiceBrowser localBrowser;
     private boolean visible;
+    private boolean waitingOverlay;
+    private String pendingSearch = "";
+    public static final String EXTRA_PANEL = "open_mobile_panel";
+    public static final String EXTRA_PHONE = "whatsapp_phone";
+    public static final String EXTRA_MESSAGE = "whatsapp_message";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -66,7 +72,12 @@ public final class DeviceControlActivity extends Activity {
         setContentView(scroll);
 
         title("Móvil y dispositivos");
-        text("Abre aplicaciones, prepara mensajes y consulta dispositivos compatibles. Las conexiones comienzan al elegir una acción aquí y se cierran al salir.");
+        text("Abre aplicaciones, prepara mensajes y consulta dispositivos compatibles. Las consultas Bluetooth y Wi-Fi se cierran al salir; el panel flotante continúa hasta que lo cierres.");
+        section("Panel flotante de Salve");
+        text("Una mini ventana para buscar en la web, leer la pantalla y revisar acciones sobre la app abierta. Puedes moverla, minimizarla, pausarla y cerrarla. Necesita Mostrar sobre otras apps.");
+        button("Abrir panel flotante", () -> openWorkspace(""));
+        button("Ver última búsqueda en mini ventana", () -> openWorkspace(salve.core.web.WebSearchSettings.lastUrl(this)));
+        button("Cerrar panel flotante", () -> stopService(new Intent(this, MobileWorkspaceService.class)));
         section("Aplicaciones y mensajes");
         button("Abrir una aplicación", this::chooseApp);
         button("Preparar borrador en WhatsApp", this::composeWhatsApp);
@@ -136,6 +147,33 @@ public final class DeviceControlActivity extends Activity {
                 }
             }
         });
+        if (state != null) {
+            waitingOverlay = state.getBoolean("waiting_overlay");
+            pendingSearch = state.getString("pending_search", "");
+        } else if (getIntent().getBooleanExtra(EXTRA_PANEL, false)) {
+            openWorkspace(getIntent().getStringExtra(MobileWorkspaceService.QUERY));
+        } else if (getIntent().hasExtra(EXTRA_PHONE)) {
+            try { chooseWhatsApp(WhatsAppDraft.create(getIntent().getStringExtra(EXTRA_PHONE), getIntent().getStringExtra(EXTRA_MESSAGE))); }
+            catch (IllegalArgumentException invalid) { appStatus.setText(invalid.getMessage()); }
+        }
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putBoolean("waiting_overlay", waitingOverlay); state.putString("pending_search", pendingSearch);
+    }
+
+    private void openWorkspace(String search) {
+        pendingSearch = search == null ? "" : search;
+        if (!Settings.canDrawOverlays(this)) {
+            waitingOverlay = true;
+            try { startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))); }
+            catch (RuntimeException unavailable) { waitingOverlay = false; appStatus.setText("Abre Ajustes → Aplicaciones → Acceso especial → Mostrar sobre otras apps y activa Salve."); }
+            return;
+        }
+        waitingOverlay = false;
+        appStatus.setText(MobileWorkspaceService.open(this, pendingSearch) ? "Panel solicitado. La notificación permite cerrarlo en cualquier momento."
+                : "Android no permitió abrir el panel flotante. Revisa el permiso Mostrar sobre otras apps.");
     }
 
     @Override protected void onResume() {
@@ -143,6 +181,7 @@ public final class DeviceControlActivity extends Activity {
         visible = true;
         updateScreenStatus();
         networkStatus.setText(new GestorConectividad(this).analizarEntorno());
+        if (waitingOverlay && Settings.canDrawOverlays(this)) openWorkspace(pendingSearch);
     }
 
     @Override protected void onStop() {
