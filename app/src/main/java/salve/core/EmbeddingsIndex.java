@@ -64,16 +64,27 @@ public class EmbeddingsIndex implements AutoCloseable {
         Map<String, OnnxTensor> inputs = new HashMap<>();
         inputs.put("input_ids", inputIds);
         inputs.put("attention_mask", attMask);
+        // Los modelos tipo BERT (gte-small incluido) exigen token_type_ids. Sin esta entrada,
+        // ONNX Runtime rechaza la ejecución y ningún embedding llegaba a calcularse.
+        OnnxTensor typeIds = null;
+        if (session.getInputNames().contains("token_type_ids")) {
+            typeIds = OnnxTensor.createTensor(env, LongBuffer.allocate(maxLen), shape);
+            inputs.put("token_type_ids", typeIds);
+        }
 
         try (OrtSession.Result r = session.run(inputs)) {
-            float[] vec = extract(r);
+            float[] vec = extract(r, ids);
             l2norm(vec);
             return vec;
+        } finally {
+            inputIds.close();
+            attMask.close();
+            if (typeIds != null) typeIds.close();
         }
     }
 
     // Extrae el vector embebido de la salida de la red.
-    private float[] extract(OrtSession.Result r) throws Exception {
+    private float[] extract(OrtSession.Result r, int[] ids) throws Exception {
         String[] names = new String[]{"sentence_embedding", "pooled_output", "last_hidden_state"};
         for (String name : names) {
             try {
@@ -90,7 +101,10 @@ public class EmbeddingsIndex implements AutoCloseable {
                     float[][][] arr = (float[][][]) v.getValue();
                     float[] mean = new float[dim];
                     int count = 0;
+                    // Media solo sobre tokens reales: promediar el relleno (PAD) aplana
+                    // todos los vectores hacia el mismo punto y destruye la similitud.
                     for (int t = 0; t < arr[0].length; t++) {
+                        if (t < ids.length && ids[t] == 0) continue;
                         for (int h = 0; h < dim; h++) {
                             mean[h] += arr[0][t][h];
                         }

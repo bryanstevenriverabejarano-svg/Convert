@@ -260,6 +260,14 @@ public class MotorConversacional {
     private final DeviceClockContext deviceClock = new DeviceClockContext();
     private final salve.core.finance.PersonalBudgetService personalBudget;
     private final GoalAutonomyRuntime goalAutonomy;
+    private volatile MindRuntime mindRuntime;
+
+    /** Mente persistente (modelo de sí misma, memoria semántica, sorpresa). Carga diferida fuera del constructor. */
+    private MindRuntime mind() {
+        MindRuntime value = mindRuntime;
+        if (value == null) mindRuntime = value = MindRuntime.get(context);
+        return value;
+    }
     private final AutonomousToolRuntime autonomousTools;
     private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
     private static final long MEMORY_DELETION_TTL_MS = 2 * 60 * 1000L;
@@ -635,6 +643,13 @@ public class MotorConversacional {
             deliverResponse(motion.text, motion, false, true, true);
             return;
         }
+        String mindResponse = mind().handleCommand(entrada);
+        if (mindResponse != null) {
+            deliverResponse(mindResponse, AvatarMotionProtocol.parse(""), false, true, true);
+            return;
+        }
+        // Compara esta intervención con lo que Salve había anticipado (señal de sorpresa).
+        mind().observeUserInput(entrada);
         if (ModelRuntimeInfo.isStatusQuestion(entrada)) {
             hablar(getModelStatusDescription());
             return;
@@ -1060,6 +1075,7 @@ public class MotorConversacional {
                         Arrays.asList("hecho_usuario", "declaracion_directa"));
             }
         }
+        mind().indexNewMemoriesAsync();
         String resumenAccion = procesarIntencion(intent, entrada, emocionDetectada);
 
         if (diario != null) {
@@ -1080,7 +1096,7 @@ public class MotorConversacional {
             TurnQualityAssessment quality = ConversationQualityEvaluator.evaluate(answer, false,
                     !answer.equals(directAnswer), false, false,
                     (System.nanoTime() - turnStartedAtNanos) / 1_000_000L);
-            responderYRegistrarCalidad(entrada, answer, quality, AvatarMotionProtocol.parse(""));
+            responderYRegistrarCalidad(entrada, answer, quality, AvatarMotionProtocol.parse(""), entradaPorVoz);
             return;
         }
 
@@ -1139,7 +1155,7 @@ public class MotorConversacional {
         long latencyMillis = (System.nanoTime() - turnStartedAtNanos) / 1_000_000L;
         TurnQualityAssessment assessment = ConversationQualityEvaluator.evaluate(
                 respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
-        responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse);
+        responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse, entradaPorVoz);
     }
 
     private boolean procesarProtocolosEspeciales(String input, String original) {
@@ -1400,8 +1416,8 @@ public class MotorConversacional {
                 + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(canAnalyzePhoto(activePhoto)));
         return CognitiveTurn.run((results, repair, remaining) -> {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
-            String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), memory, details,
-                    conversationSession.snapshot(), tools, results, repair, remaining, budget);
+            String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1400),
+                    memory, details, conversationSession.snapshot(), tools, results, repair, remaining, budget);
             return generateWithConversationPhoto(prompt);
         }, tools, () -> closed || !isVoiceContextCurrent());
     }
@@ -1991,10 +2007,14 @@ public class MotorConversacional {
     }
 
     private void responderYRegistrarCalidad(String entrada, String respuesta,
-                                            TurnQualityAssessment assessment, AvatarMotionProtocol.Result motion) {
+                                            TurnQualityAssessment assessment, AvatarMotionProtocol.Result motion,
+                                            boolean entradaPorVoz) {
         hablarPreparado(respuesta, motion);
         mensajesEnSesion++;
-        identidad.integrarExperiencia("conversacion", entrada, 0.7f, Arrays.asList("empatia"));
+        // Solo se cuenta la experiencia; los rasgos ya no se inflan por volumen de mensajes.
+        identidad.integrarExperiencia("conversacion", entrada, 0.7f, null);
+        // Anticipa la siguiente intervención para medir sorpresa. En voz se omite: la latencia manda.
+        mind().predictNextAsync(entrada, respuesta, entradaPorVoz || liveVoiceTurn.get() != null);
         Log.i(TAG, assessment.toMetricsLog());
         if (diario != null && !assessment.passed()) {
             diario.escribirAutoCritica(assessment.toMetricsLog());

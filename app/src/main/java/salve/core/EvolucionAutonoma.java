@@ -26,7 +26,8 @@ public class EvolucionAutonoma {
     /** Clases protegidas que NO se pueden modificar autonomamente. */
     private static final Set<String> CLASES_PROTEGIDAS = new HashSet<>(Arrays.asList(
             "IdentidadNucleo",
-            "CicloConciencia",
+            "MindRuntime",
+            "SelfModelJournal",
             "SalveLLM",
             "BasicLocalLlm",
             "MemoriaDatabase",

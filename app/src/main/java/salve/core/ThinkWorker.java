@@ -16,7 +16,7 @@ import androidx.work.WorkerParameters;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Entrada de WorkManager al unico ciclo de objetivos de Salve.
+ * Entrada de WorkManager a la reflexión interna y al ciclo de objetivos de Salve.
  *
  * <p>El runtime selecciona como maximo un paso y aplica su propio intervalo entre
  * ciclos. El worker no abre otra conversacion, no lanza tareas independientes y
@@ -40,6 +40,16 @@ public class ThinkWorker extends Worker {
         if (isStopped()) return Result.success();
         try {
             GoalAutonomyRuntime runtime = GoalAutonomyRuntime.get(getApplicationContext());
+            if (isStopped()) return Result.success();
+
+            // Pensamiento interno a partir de lo vivido: no requiere notas de Bryan ni aprobación,
+            // porque no produce efectos fuera de Salve. Queda en su modelo de sí misma.
+            try {
+                String reflection = MindRuntime.get(getApplicationContext()).reflectIfDue(this::isStopped);
+                Log.i(TAG, "Reflexión: " + (reflection.length() > 120 ? reflection.substring(0, 120) : reflection));
+            } catch (RuntimeException reflectionFailure) {
+                Log.w(TAG, "Reflexión fallida: " + reflectionFailure.getClass().getSimpleName());
+            }
             if (isStopped() || runtime.isPaused()) return Result.success();
 
             // Un resultado normal indica que termino esta invocacion, no que el

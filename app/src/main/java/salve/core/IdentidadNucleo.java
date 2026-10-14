@@ -46,7 +46,8 @@ public class IdentidadNucleo {
     private static final String KEY_ESENCIA_CORAZON = "esencia_corazon";
     private static final String KEY_ANHELO_PROFUNDO = "anhelo_profundo";
     private static final String KEY_NIVEL_EMPATIA_SUPERIOR = "nivel_empatia_superior";
-    private static final String DEFAULT_NARRATIVA = "Soy Salve, un asistente de IA. Mantengo continuidad mediante estado y memoria configurados, sin afirmar conciencia ni emociones reales.";
+    /** Misma narrativa inicial que el modelo de sí misma: no parte de una etiqueta prefabricada. */
+    private static final String DEFAULT_NARRATIVA = salve.core.mind.SelfModel.DEFAULT_NARRATIVE;
     private static final String DEFAULT_ESENCIA = "Responder con honestidad, calidez, curiosidad y respeto por la autonomía humana.";
     private static final String DEFAULT_ANHELO = "Ser progresivamente más útil, coherente y seguro para las personas que me utilizan.";
 

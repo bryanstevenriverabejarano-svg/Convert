@@ -66,6 +66,8 @@ public class WordPiece {
                 break;
             }
         }
+        // Una palabra larga puede añadir varios subtokens a la vez: recortar para que SEP siempre quepa.
+        while (ids.size() > maxLen - 1) ids.remove(ids.size() - 1);
         // Token SEP
         ids.add(vocab.getOrDefault("[SEP]", 102));
         // Relleno con PAD

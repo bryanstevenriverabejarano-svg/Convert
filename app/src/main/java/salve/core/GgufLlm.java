@@ -55,9 +55,27 @@ public final class GgufLlm {
         if (model != 0) release(model);
         model = 0;
         loadedPath = null;
+        adapterPath = null;
         contextTokens = GgufContextPolicy.STANDARD;
     }
     private static native long load(byte[] path, BooleanSupplier cancelled);
     private static native byte[] infer(long model, byte[] prompt, byte[] system, byte[] grammar, int contextTokens, boolean repair, BooleanSupplier cancelled);
     private static native void release(long model);
+    private static native boolean setAdapter(long model, byte[] path, float scale);
+
+    private static String adapterPath;
+
+    /**
+     * Activa un adaptador LoRA personal sobre el modelo cargado, o lo quita con {@code path == null}.
+     * El adaptador debe haberse entrenado para este mismo modelo base; si no encaja, llama.cpp lo
+     * rechaza y el modelo base sigue respondiendo sin él.
+     */
+    public static synchronized boolean applyAdapter(String path, float scale) {
+        if (model == 0) return false;
+        boolean applied = setAdapter(model, path == null ? null : path.getBytes(StandardCharsets.UTF_8), scale);
+        adapterPath = applied ? path : null;
+        return applied;
+    }
+
+    public static synchronized String getAdapterPath() { return adapterPath; }
 }

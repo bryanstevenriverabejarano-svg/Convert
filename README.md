@@ -3,6 +3,13 @@
 > La arquitectura, los límites de autonomía y la hoja de ruta de evolución segura de
 > Salve se documentan en [GOBERNANZA_Y_EVOLUCION.md](GOBERNANZA_Y_EVOLUCION.md).
 
+## Mente persistente
+
+Salve mantiene un modelo de sí misma con fuentes (narrativa, creencias, preguntas abiertas y
+pensamientos), sueña cada noche para consolidar recuerdos, reflexiona sobre lo vivido entre
+conversaciones y lo retoma en cada turno. Di «tu mente» para verlo. Arquitectura, límites
+medidos y evaluación en [MENTE_PERSISTENTE.md](docs/MENTE_PERSISTENTE.md).
+
 ## Continuidad y aprendizaje desde búsquedas
 
 Salve conserva el contexto reciente del chat al cerrar y abrir la aplicación. Las
