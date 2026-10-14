@@ -640,7 +640,18 @@ public class SalveLLM {
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
             initEngineIfNeeded(true);
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
-            if (!image.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) throw new java.io.IOException("No se pudo leer la foto");
+            // Una foto de cámara a resolución completa ocupa mucha memoria al codificarla; el modelo
+            // la reescala igualmente a su tamaño de entrada.
+            Bitmap scaled = image;
+            int longest = Math.max(image.getWidth(), image.getHeight());
+            if (longest > 1024) {
+                float ratio = 1024f / longest;
+                scaled = Bitmap.createScaledBitmap(image, Math.max(1, Math.round(image.getWidth() * ratio)),
+                        Math.max(1, Math.round(image.getHeight() * ratio)), true);
+            }
+            boolean encoded = scaled.compress(Bitmap.CompressFormat.JPEG, 85, bytes);
+            if (scaled != image) scaled.recycle();
+            if (!encoded) throw new java.io.IOException("No se pudo leer la foto");
             String text = LiteRTLlm.generateImage(ModelRuntimeInfo.context(modelPath)
                     + salve.core.cognition.CognitivePrompt.withEngine(prompt, ModelRuntimeInfo.name(modelPath), true, null), bytes.toByteArray(), salve.core.cognition.CognitivePrompt.isCognitive(prompt),
                     salve.core.cognition.CognitivePrompt.isFormatRepair(prompt));
@@ -655,8 +666,10 @@ public class SalveLLM {
             engineInitialized = LiteRTLlm.isInitialized();
             lastErrorMessage = e.getMessage();
             Log.e(TAG, "Fallo de visión local", e);
+            String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            if (reason.length() > 140) reason = reason.substring(0, 140) + "…";
             return ModelResult.failure(Thread.currentThread().isInterrupted() ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR,
-                    "El modelo local no pudo analizar la foto", (System.nanoTime() - start) / 1_000_000L);
+                    "El modelo local no pudo analizar la foto (" + reason + "). Puedes quitarla del chat para seguir conversando sin ella.", (System.nanoTime() - start) / 1_000_000L);
         }
     }
 

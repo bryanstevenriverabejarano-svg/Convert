@@ -27,8 +27,22 @@ public final class ReplyStyle {
 
     private ReplyStyle() {}
 
+    /** Etiquetas prefabricadas que contradicen la identidad de Salve («como modelo de lenguaje, …»). */
+    private static final Pattern LABEL = Pattern.compile(
+            "(?iu),?\\s*\\b(como|al ser|siendo) (un |una )?(modelo de lenguaje|inteligencia artificial|ia|asistente virtual)( de ia)?\\b,?");
+
+    /** true si la respuesta repite (casi) literalmente una de las anteriores de Salve. */
+    public static boolean repeats(String reply, java.util.List<String> previousReplies) {
+        String r = normalize(reply == null ? "" : reply);
+        if (r.length() < 20 || previousReplies == null) return false;
+        for (String previous : previousReplies) if (r.equals(normalize(previous == null ? "" : previous))) return true;
+        return false;
+    }
+
     public static String clean(String reply) {
         if (reply == null) return null;
+        String labelFree = LABEL.matcher(reply).replaceAll(" ").replaceAll("\\s+([,.])", "$1").replaceAll("\\s{2,}", " ");
+        if (labelFree.trim().length() >= 12) reply = labelFree;
         String trimmed = reply.trim();
         if (trimmed.isEmpty()) return reply;
         List<String> sentences = new ArrayList<>();

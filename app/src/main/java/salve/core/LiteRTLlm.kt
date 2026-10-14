@@ -58,22 +58,34 @@ object LiteRTLlm {
             backendName = "MediaPipe (.task)"
         } else {
             require(modelPath.endsWith(".litertlm", ignoreCase = true)) { "Formato local no compatible" }
-            fun load(backend: Backend): Engine {
+            fun load(backend: Backend, vision: Backend?): Engine {
                 val candidate = Engine(EngineConfig(modelPath = modelPath, backend = backend,
-                    visionBackend = if (withVision) Backend.GPU() else null,
+                    visionBackend = vision,
                     maxNumTokens = 4096, maxNumImages = 1, cacheDir = context.cacheDir.absolutePath))
                 try { candidate.initialize(); return candidate }
                 catch (error: Exception) { runCatching { candidate.close() }; throw error }
                 catch (error: LinkageError) { runCatching { candidate.close() }; throw error }
             }
-            try {
-                engine = load(Backend.GPU())
-                backendName = "LiteRT-LM GPU"
-            } catch (error: Exception) {
-                Log.w(TAG, "GPU no disponible; probando CPU", error)
-                engine = load(Backend.CPU(threadCount = 4))
-                backendName = "LiteRT-LM CPU"
+            // La visión por GPU no está disponible en todos los móviles; antes solo se intentaba
+            // GPU y la foto fallaba sin alternativa. Se prueba también el codificador visual en CPU.
+            val attempts = mutableListOf<Triple<String, () -> Backend, (() -> Backend)?>>(
+                Triple("LiteRT-LM GPU", { Backend.GPU() }, if (withVision) ({ Backend.GPU() }) else null))
+            if (withVision) attempts += Triple("LiteRT-LM GPU · visión CPU", { Backend.GPU() }, { Backend.CPU(threadCount = 4) })
+            attempts += Triple("LiteRT-LM CPU", { Backend.CPU(threadCount = 4) },
+                if (withVision) ({ Backend.CPU(threadCount = 4) }) else null)
+            var lastError: Throwable? = null
+            for ((name, text, vision) in attempts) {
+                try {
+                    engine = load(text(), vision?.invoke())
+                    backendName = name
+                    lastError = null
+                    break
+                } catch (error: Exception) {
+                    Log.w(TAG, "$name no disponible", error)
+                    lastError = error
+                }
             }
+            lastError?.let { throw it }
         }
         loadedPath = modelPath
         visionEnabled = withVision
