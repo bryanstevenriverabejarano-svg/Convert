@@ -1390,6 +1390,20 @@ public class MemoriaEmocional {
         });
     }
 
+    /** Ordered Room/outbox receipt, not a claim that remote synchronization succeeded. */
+    public boolean confirmarPersistenciaPendiente() {
+        try {
+            memoryWriteExecutor.awaitReady(3, TimeUnit.SECONDS);
+            return true;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception unconfirmed) {
+            Log.w(TAG, "Persistencia de memoria sin confirmar");
+            return false;
+        }
+    }
+
     private RecuerdoEntity crearRecuerdoEntity(Recuerdo recuerdo) {
         RecuerdoEntity entity = new RecuerdoEntity();
         entity.frase = recuerdo.getTexto(codificador);

@@ -33,6 +33,19 @@ public class ConversationMemoryGroundingTest {
         assertEquals(0, store.graphReads);
     }
 
+    @Test public void compactEvidenceKeepsProvenanceAndCloudUncertainty() {
+        Store store = new Store();
+        store.record(3, 1000, "Dato documentado", "[]");
+        ConversationMemoryGrounding.Result result = store.service().retrieve("Tu primer recuerdo")
+                .withCloudStatus("restauración pendiente", false);
+        assertFalse(result.getDataContext().contains("MEMORIA CONSULTADA:"));
+        assertTrue(result.getDataContext().contains("recuerdos:3"));
+        assertTrue(result.getDataContext().contains("fecha_registro"));
+        assertTrue(result.getDataContext().contains("Dato documentado"));
+        assertTrue(result.getDataContext().contains("restauración pendiente"));
+        assertEquals(ConversationMemoryGrounding.Status.PARTIAL, result.getStatus());
+    }
+
     @Test public void timestampTiesHaveDeterministicIdOrder() {
         Store store = new Store();
         store.record(7, 1000, "Segundo", "[]");

@@ -46,6 +46,8 @@ public final class GeminiProtocol {
         body.add("contents", contents);
         JsonObject config = new JsonObject();
         config.addProperty("maxOutputTokens", 4096);
+        // JSON mode assists generation; CognitiveReply still validates every field and tool.
+        if (salve.core.cognition.CognitivePrompt.isCognitive(prompt)) config.addProperty("responseMimeType", "application/json");
         body.add("generationConfig", config);
         return body.toString();
     }

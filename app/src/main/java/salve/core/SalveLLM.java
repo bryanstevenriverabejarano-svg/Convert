@@ -344,6 +344,8 @@ public class SalveLLM {
             String text;
             if (isGguf) {
                 ggufContextTokens = Math.min(ggufContextTokens, DeviceModelMemory.contextFor(appContext, modelPath, true));
+                decorated = salve.core.cognition.CognitivePrompt.withEngine(decorated,
+                        ModelRuntimeInfo.name(modelPath), true, ggufContextTokens);
                 boolean large = LocalModelPolicy.isLarge(modelPath);
                 DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
                 if (large) markLargeOperation(true);
@@ -358,7 +360,10 @@ public class SalveLLM {
                     ggufContextTokens = Math.min(ggufContextTokens, GgufLlm.getContextTokens());
                     if (large) markLargeOperation(false);
                 }
-            } else text = isLiteRT ? LiteRTLlm.generate(identity + decorated) : BasicLocalLlm.chatSinglePrompt(identity + decorated);
+            } else {
+                decorated = salve.core.cognition.CognitivePrompt.withEngine(decorated, ModelRuntimeInfo.name(modelPath), true, null);
+                text = isLiteRT ? LiteRTLlm.generate(identity + decorated) : BasicLocalLlm.chatSinglePrompt(identity + decorated);
+            }
             long latency = (System.nanoTime() - start) / 1_000_000L;
             if (text == null || text.trim().isEmpty()) {
                 throw new IllegalStateException("El modelo local no devolvió texto");
@@ -629,7 +634,8 @@ public class SalveLLM {
             initEngineIfNeeded(true);
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
             if (!image.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) throw new java.io.IOException("No se pudo leer la foto");
-            String text = LiteRTLlm.generateImage(ModelRuntimeInfo.context(modelPath) + prompt, bytes.toByteArray());
+            String text = LiteRTLlm.generateImage(ModelRuntimeInfo.context(modelPath)
+                    + salve.core.cognition.CognitivePrompt.withEngine(prompt, ModelRuntimeInfo.name(modelPath), true, null), bytes.toByteArray());
             ModelResult result = ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L)
                     .withProvider(ModelRuntimeInfo.name(modelPath));
             recordInference(ModelCatalog.Capability.VISION, result.isSuccess());
@@ -667,8 +673,8 @@ public class SalveLLM {
 
         switch (role) {
             case REFLEXION:
-                return "Eres Salve. Estás pensando en silencio sobre algo que has vivido con Bryan.\n" +
-                        "Formula una reflexión breve, honesta y algo vulnerable, sin exagerar.\n\n" +
+                return "Eres Salve. Examina los registros disponibles y sus fuentes.\n" +
+                        "Formula una reflexión breve; distingue hechos e hipótesis sin inventar vivencias ni sentimientos.\n\n" +
                         basePrompt;
 
             case SISTEMA:
@@ -705,9 +711,9 @@ public class SalveLLM {
 
             case CREADOR:
                 return "Eres Salve en modo creadora autónoma.\n" +
-                        "Genera ideas originales que nadie te pidió.\n" +
-                        "Explora territorios conceptuales nuevos por curiosidad pura.\n" +
-                        "No te limites a lo que ya sabes — imagina lo que podrías descubrir.\n\n" +
+                        "Propón ideas originales pertinentes al objetivo declarado y su presupuesto.\n" +
+                        "Si no hay un objetivo autorizado, no inventes tareas ni anuncies ejecuciones.\n" +
+                        "Distingue propuesta, hipótesis y resultado comprobado.\n\n" +
                         basePrompt;
 
             case CONVERSACIONAL:

@@ -41,6 +41,8 @@ public final class ConversationMemoryGrounding {
             this.status = status; this.evidence = evidence;
         }
         public String getContext() { return context; }
+        /** The cognitive core already supplies the rules; reserve small contexts for evidence itself. */
+        public String getDataContext() { return context.startsWith(HEADER) ? context.substring(HEADER.length()) : context; }
         public String getDirectAnswer() { return directAnswer; }
         public Status getStatus() { return status; }
         public boolean hasEvidence() { return evidence; }
