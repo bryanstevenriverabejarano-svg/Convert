@@ -52,7 +52,8 @@ object LiteRTLlm {
         if (modelPath.endsWith(".task", ignoreCase = true)) {
             check(!withVision) { "El modelo .task importado solo admite texto" }
             legacy = LlmInference.createFromOptions(context,
-                LlmInference.LlmInferenceOptions.builder().setModelPath(modelPath).setMaxTokens(1024).build())
+                LlmInference.LlmInferenceOptions.builder().setModelPath(modelPath).setMaxTokens(1024)
+                    .setTemperature(0.3f).build())
             backendName = "MediaPipe (.task)"
         } else {
             require(modelPath.endsWith(".litertlm", ignoreCase = true)) { "Formato local no compatible" }
@@ -101,7 +102,7 @@ object LiteRTLlm {
     @JvmStatic @JvmOverloads
     fun conversationConfig(structured: Boolean, repair: Boolean = false): ConversationConfig = ConversationConfig(
         automaticToolCalling = false,
-        samplerConfig = SamplerConfig(topK = 40, topP = 0.9, temperature = 0.6),
+        samplerConfig = SamplerConfig(topK = 40, topP = 0.9, temperature = 0.3),
         maxOutputToken = if (repair) 256 else 512, thinkingConfig = ThinkingConfig(enableThinking = false),
         extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured)
 

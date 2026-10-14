@@ -11,6 +11,8 @@ class StructuredLocalOutputTest {
         val config = LiteRTLlm.conversationConfig(true)
         assertTrue(config.enableResponseFormat)
         assertFalse(config.automaticToolCalling)
+        assertEquals(0.3, config.samplerConfig!!.temperature, 0.000001)
+        assertEquals(0.9, config.samplerConfig!!.topP, 0.000001)
         val format = LiteRTLlm.responseFormat(true)!!
         assertEquals(ResponseFormat.Type.JSON_OBJECT, format.type)
         assertEquals(CognitiveOutputConstraints.jsonSchema(), format.schemaOrPattern)
