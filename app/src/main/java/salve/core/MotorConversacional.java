@@ -261,6 +261,8 @@ public class MotorConversacional {
     private final salve.core.finance.PersonalBudgetService personalBudget;
     private final GoalAutonomyRuntime goalAutonomy;
     private volatile MindRuntime mindRuntime;
+    /** Permiso explícito de Bryan para enviar la foto activa a Gemini una sola vez. */
+    private volatile boolean cloudPhotoOnce;
 
     /** Mente persistente (modelo de sí misma, memoria semántica, sorpresa). Carga diferida fuera del constructor. */
     private MindRuntime mind() {
@@ -568,9 +570,14 @@ public class MotorConversacional {
                     status = "Recuperación de recuerdos solicitada; continuará cuando haya conexión. Consulta ‘estado de tus recuerdos’ para ver el resultado. "
                             + salve.data.sync.CloudSyncManager.memoryStatus(context);
                 }
+            } else if (cloudCommand == salve.core.memory.CloudMemoryCommand.Action.ASK) {
+                status = cloudMemoryAnswer();
             } else status = salve.data.sync.CloudSyncManager.memoryStatus(context);
-            deliverResponse(status, AvatarMotionProtocol.parse(""), false, true, true);
-            return;
+            // Con la nube ya recuperada, la pregunta sigue el camino normal de la memoria.
+            if (status != null) {
+                deliverResponse(status, AvatarMotionProtocol.parse(""), false, true, true);
+                return;
+            }
         }
         String checkpointWarning = conversationSession.persistenceWarning();
         if (!checkpointWarning.isEmpty() && !checkpointWarning.equals(lastCheckpointWarning))
@@ -647,6 +654,16 @@ public class MotorConversacional {
         if (mindResponse != null) {
             deliverResponse(mindResponse, AvatarMotionProtocol.parse(""), false, true, true);
             return;
+        }
+        String modelSwitch = cambioDeModelo(entrada);
+        if (modelSwitch != null) { hablar(modelSwitch); return; }
+        if (pideFotoEnLaNube(entrada)) {
+            if (activePhoto == null) { hablar("No hay ninguna foto en el chat. Añade una y vuelve a pedírmelo."); return; }
+            if (!gemini.isAvailable()) {
+                hablar("Gemini no está configurado en esta instalación. Añade tu clave en IA y cámara para analizar fotos en la nube.");
+                return;
+            }
+            cloudPhotoOnce = true;
         }
         // Compara esta intervención con lo que Salve había anticipado (señal de sorpresa).
         mind().observeUserInput(entrada);
@@ -1131,7 +1148,9 @@ public class MotorConversacional {
         ModelResult inference = cognitive.result;
         fallbackUsed = !inference.isSuccess();
         respuesta = inference.isSuccess() ? inference.getText()
-                : (resumenAccion == null ? "" : resumenAccion + "\n") + modelFailureMessage(inference);
+                : (resumenAccion == null ? "" : resumenAccion + "\n") + modelFailureMessage(inference)
+                + (activePhoto != null && gemini.isAvailable()
+                    ? " Si quieres, di «analízala en la nube» y la enviaré a Gemini solo esta vez." : "");
         // A respond.message is inert display text, including any quoted JSON or avatar tags.
         AvatarMotionProtocol.Result visualResponse = AvatarMotionProtocol.parse("");
         if (respuesta.isEmpty()) {
@@ -1342,6 +1361,59 @@ public class MotorConversacional {
         } catch (RuntimeException e) {
             hablar("No guardé la receta: " + e.getMessage() + ". Describe la app y el contenido que quieres usar.");
         }
+    }
+
+    /** null si la nube está conectada y recuperada; si no, explica qué memoria hay realmente. */
+    private String cloudMemoryAnswer() {
+        String since = "";
+        try {
+            salve.data.db.RecuerdoEntity first = salve.data.db.MemoriaDatabase.getInstance(context).recuerdoDao().primerRecuerdo();
+            if (first != null) since = " desde el " + new java.text.SimpleDateFormat("d/M/yyyy HH:mm", new Locale("es", "ES"))
+                    .format(new java.util.Date(first.timestamp));
+        } catch (RuntimeException ignored) { }
+        if (!salve.data.sync.CloudSyncManager.isPCloudConfigured(context))
+            return "En esta instalación pCloud no está conectada, así que no puedo leer los recuerdos de la nube: solo tengo los guardados aquí"
+                    + since + ". Conéctala en IA y cámara → Nube pCloud y di «recupera tus recuerdos».";
+        if (!salve.data.sync.CloudSyncManager.isEnabled(context))
+            return "pCloud está conectada pero la sincronización está en pausa; solo consulto lo guardado aquí" + since
+                    + ". Reactívala en IA y cámara → Nube pCloud y di «recupera tus recuerdos».";
+        if (!salve.data.sync.CloudSyncManager.memoryRestoreComplete(context)) {
+            salve.data.sync.CloudSyncManager.requestRestore(context);
+            return "Todavía no he terminado de recuperar tus recuerdos de pCloud, así que mi recuerdo más antiguo aquí puede no ser el real. "
+                    + salve.data.sync.CloudSyncManager.memoryStatus(context);
+        }
+        return null;
+    }
+
+    /** «Descarga Gemma 4 E4B» / «vuelve a Gemma 4 E2B»: cambio explícito de modelo local. */
+    private String cambioDeModelo(String input) {
+        String t = java.text.Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+        if (t.matches("(salve )?(descarga|instala|cambia a|usa|pasa a|activa) (el modelo )?gemma 4 e4b( por favor)?")) {
+            java.io.File existing = new java.io.File(ModelStore.dir(context), "gemma-4-E4B-it-2eee7ac.litertlm");
+            salve.work.ModelDownloadWorker.enqueueOptional(context, LocalModelPolicy.GEMMA_E4B);
+            return existing.isFile()
+                    ? "Voy a activar Gemma 4 E4B y comprobar que responde. Si no cabe en la RAM, vuelvo al modelo actual."
+                    : "Descargaré Gemma 4 E4B (3,4 GiB) cuando haya Wi-Fi, lo verificaré y lo activaré. Razona y ve mejor que E2B, "
+                    + "pero necesita más RAM: si no cabe al cargarlo, conservo el modelo actual. Verás el progreso en la notificación.";
+        }
+        if (t.matches("(salve )?(vuelve a|cambia a|usa|pasa a|activa) (el modelo )?gemma 4 e2b( por favor)?")) {
+            java.io.File e2b = new java.io.File(ModelStore.dir(context), "gemma-4-E2B-it-6e5c4f1.litertlm");
+            if (!e2b.isFile()) return "No tengo Gemma 4 E2B descargado en esta instalación.";
+            new Thread(() -> {
+                ModelResult result = SalveLLM.getInstance(context).activateDownloadedModel(e2b.getAbsolutePath(), true, () -> false);
+                hablar(result.isSuccess() ? "Vuelvo a usar Gemma 4 E2B." : "No pude activar Gemma 4 E2B: " + result.getError());
+            }, "salve-model-switch").start();
+            return "Cambiando a Gemma 4 E2B…";
+        }
+        return null;
+    }
+
+    private static boolean pideFotoEnLaNube(String input) {
+        String t = java.text.Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+        return t.matches("(salve )?(analiza(la)?|mira(la)?|revisa(la)?|procesa(la)?|usa gemini|usa la nube)( la foto| esta foto| esa foto)?( en| con| para| desde)? ?(la nube|gemini|esta foto|la foto)?( por favor)?")
+                && t.matches(".*\\b(nube|gemini)\\b.*");
     }
 
     private java.util.List<String> recentAssistantReplies(int max) {
@@ -1756,7 +1828,9 @@ public class MotorConversacional {
 
     private ModelResult generateWithConversationPhoto(String prompt) {
         VisualMemoryRecord photo = activePhoto;
-        boolean localOnly = (llm != null && llm.isLocalOnly()) || (photo != null && photo.localOnly);
+        boolean cloudOnce = cloudPhotoOnce && photo != null;
+        cloudPhotoOnce = false;
+        boolean localOnly = !cloudOnce && ((llm != null && llm.isLocalOnly()) || (photo != null && photo.localOnly));
         if (photo == null || !canAnalyzePhoto(photo)) return ConversationModelRouter.generate(false, localOnly, false,
                 gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
                 () -> generarRespuestaConversacionalLocal(prompt));

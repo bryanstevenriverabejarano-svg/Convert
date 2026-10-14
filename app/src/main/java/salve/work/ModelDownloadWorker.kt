@@ -31,6 +31,8 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         try {
             ensureNotificationChannel()
             setForeground(createForegroundInfo("Preparando la descarga…"))
+            val optionalId = inputData.getString(KEY_OPTIONAL_ID)
+            if (optionalId != null) return prepareOptional(optionalId)
             val jsonBytes = withContext(Dispatchers.IO) {
                 applicationContext.assets.open("config/models.json").use { it.readBytes() }
             }
@@ -62,6 +64,46 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         val errorMessage = failure ?: if (ready == null) "No se confirmó la activación del modelo" else null
         return if (errorMessage != null) Result.failure(workDataOf(KEY_STATUS to "error", KEY_MESSAGE to errorMessage))
             else Result.success(workDataOf(KEY_STATUS to "ready", KEY_MESSAGE to listOfNotNull(ready, notice).joinToString("\n")))
+    }
+
+    /**
+     * Modelo opcional (fuera de la escalera automática), p. ej. Gemma 4 E4B: descarga fijada por
+     * SHA-256 y activación con una respuesta real. Si no carga (RAM) o no responde, SalveLLM
+     * restaura el modelo anterior.
+     */
+    private suspend fun prepareOptional(id: String): Result {
+        return try {
+            val jsonBytes = withContext(Dispatchers.IO) {
+                applicationContext.assets.open("config/models_optional.json").use { it.readBytes() }
+            }
+            var completed: salve.core.ModelDownloader.DownloadEvent.Completed? = null
+            salve.core.ModelDownloader().downloadSelected(applicationContext, jsonBytes.inputStream(), id).collect { event ->
+                when (event) {
+                    is salve.core.ModelDownloader.DownloadEvent.Progress -> updateProgress(
+                        ((event.bytes * 100) / event.totalBytes).toInt().coerceIn(0, 98),
+                        "${event.id}: ${event.bytes / 1_000_000} / ${event.totalBytes / 1_000_000} MB")
+                    is salve.core.ModelDownloader.DownloadEvent.Verifying -> updateProgress(99, "Verificando ${event.id}…")
+                    is salve.core.ModelDownloader.DownloadEvent.Completed -> completed = event
+                    is salve.core.ModelDownloader.DownloadEvent.Error -> throw event.error
+                    else -> Unit
+                }
+            }
+            val file = completed ?: throw java.io.IOException("No se confirmó el archivo de $id")
+            updateProgress(99, "Cargando $id y comprobando una respuesta…")
+            val result = withContext(Dispatchers.IO) {
+                salve.core.SalveLLM.getInstance(applicationContext)
+                    .activateDownloadedModel(file.file.absolutePath, file.supportsVision) { isStopped }
+            }
+            if (result.isSuccess) Result.success(workDataOf(KEY_STATUS to "ready",
+                KEY_MESSAGE to "$id activo. " + salve.core.SalveLLM.getInstance(applicationContext).statusDescription))
+            else Result.failure(workDataOf(KEY_STATUS to "error",
+                KEY_MESSAGE to "$id descargado pero no se pudo activar; se conserva el modelo anterior. ${result.error ?: ""}"))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            android.util.Log.e("ModelDownloadWorker", "Modelo opcional fallido", error)
+            Result.failure(workDataOf(KEY_STATUS to "error", KEY_MESSAGE to (error.message ?: "No se pudo preparar $id")))
+        }
     }
 
     private suspend fun updateProgress(percent: Int, message: String) {
@@ -100,6 +142,16 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         const val KEY_MESSAGE = "message"
         const val KEY_STATUS = "status"
         private const val KEY_FALLBACK = "fallback_only"
+        private const val KEY_OPTIONAL_ID = "optional_model_id"
+
+        /** Descarga y activa un modelo de config/models_optional.json (solo Wi-Fi). */
+        @JvmStatic fun enqueueOptional(context: Context, id: String) {
+            val work = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
+                .setInputData(workDataOf(KEY_OPTIONAL_ID to id))
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED)
+                    .setRequiresStorageNotLow(true).build()).build()
+            WorkManager.getInstance(context).enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.KEEP, work)
+        }
         private const val CHANNEL_ID = "model_download_channel"
         private const val NOTIFICATION_ID = 2001
 

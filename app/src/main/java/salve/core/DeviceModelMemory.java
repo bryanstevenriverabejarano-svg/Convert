@@ -30,6 +30,31 @@ public final class DeviceModelMemory {
         if (!ModelMemoryPolicy.canLoad(id, ram, loaded))
             throw new ModelMemoryPolicy.PressureException(explain(id, ram, loaded));
     }
+    /**
+     * Contexto de LiteRT-LM que cabe ahora. Lanza {@link ModelMemoryPolicy.PressureException} con
+     * explicación si no cabe ni el estándar. Para modelos importados sin presupuesto conocido: 4.096.
+     */
+    public static int liteRtContextFor(Context context, String path, boolean weightsResident, boolean vision) {
+        String id = LocalModelPolicy.idForPath(path);
+        if (id == null) return ModelMemoryPolicy.LITERT_STANDARD;
+        ModelMemoryPolicy.Snapshot ram = read(context);
+        int tokens = ModelMemoryPolicy.selectLiteRtContext(id, ram, weightsResident, vision);
+        if (tokens == 0) throw new ModelMemoryPolicy.PressureException((ram.known() ? "RAM insuficiente para " : "No se pudo comprobar la RAM para ")
+                + id + (vision ? " con visión" : "") + ". " + describe(ram) + String.format(Locale.getDefault(),
+                ". Estimación mínima %s: %.2f GiB (con reserva para Android).",
+                weightsResident ? "adicional con el modelo ya cargado" : "para iniciar",
+                ModelMemoryPolicy.requiredLiteRt(id, weightsResident, ram.threshold, vision, ModelMemoryPolicy.LITERT_STANDARD)
+                        / (double) (1024 * ModelMemoryPolicy.MIB)));
+        return tokens;
+    }
+
+    /** true si cabe el modelo con visión (para cargarla de antemano y no recargar al llegar una foto). */
+    public static boolean fitsLiteRtVision(Context context, String path, boolean weightsResident) {
+        String id = LocalModelPolicy.idForPath(path);
+        if (id == null) return false;
+        return ModelMemoryPolicy.selectLiteRtContext(id, read(context), weightsResident, true) != 0;
+    }
+
     public static int contextFor(Context context, String path, boolean loaded) {
         String id = LocalModelPolicy.idForPath(path);
         if (id == null) return GgufContextPolicy.STANDARD;

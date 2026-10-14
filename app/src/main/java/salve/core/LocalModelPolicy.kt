@@ -9,6 +9,8 @@ object LocalModelPolicy {
     const val PRIMARY = "Dolphin 3.0 Llama 3.1 8B"
     const val LIGHT = "Dolphin 3.0 Llama 3.2 3B"
     const val FALLBACK = "Gemma 4 E2B"
+    /** Opcional, fuera de la escalera automática: mejor razonamiento y visión, más RAM (3,66 GB). */
+    const val GEMMA_E4B = "Gemma 4 E4B"
     const val FAILURE_KEY = "dolphin_failure" // preserved for upgrades from the 3B-only app
     const val LARGE_FAILURE_KEY = "dolphin_8b_failure"
     const val PENDING_KEY = "local_fallback_from"
@@ -22,6 +24,7 @@ object LocalModelPolicy {
             "Dolphin3.0-Llama3.1-8B-Q4_K_M-fd2736a.gguf" -> PRIMARY
             "Dolphin3.0-Llama3.2-3B-Q4_K_M-ac6b1ee.gguf" -> LIGHT
             "gemma-4-E2B-it-6e5c4f1.litertlm" -> FALLBACK
+            "gemma-4-E4B-it-2eee7ac.litertlm" -> GEMMA_E4B
             else -> null
         }
     }
