@@ -10,6 +10,8 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
+import com.google.ai.edge.litertlm.ResponseFormat
+import salve.core.cognition.CognitiveOutputConstraints
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.ai.edge.litertlm.ThinkingConfig
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
@@ -77,17 +79,17 @@ object LiteRTLlm {
         Log.i(TAG, "runtime=$backendName vision=$visionEnabled")
     }
 
-    @JvmStatic @Synchronized
-    fun generate(prompt: String): String {
+    @JvmStatic @JvmOverloads @Synchronized
+    fun generate(prompt: String, structured: Boolean = false, repair: Boolean = false): String {
         check(initialized) { "El modelo local no está inicializado" }
         legacy?.let { return it.generateResponse(prompt) }
-        return respond(Contents.of(prompt))
+        return respond(Contents.of(prompt), structured, repair)
     }
 
-    @JvmStatic @Synchronized
-    fun generateImage(prompt: String, jpeg: ByteArray): String {
+    @JvmStatic @JvmOverloads @Synchronized
+    fun generateImage(prompt: String, jpeg: ByteArray, structured: Boolean = false, repair: Boolean = false): String {
         check(initialized && visionEnabled && engine != null) { "No hay un motor visual local cargado" }
-        return respond(Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt)))
+        return respond(Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt)), structured, repair)
     }
 
     /** Read text only. Private channels and tool arguments never enter chat or TTS. */
@@ -95,13 +97,23 @@ object LiteRTLlm {
     fun publicText(message: Message): String = message.contents.contents
         .filterIsInstance<Content.Text>().joinToString("") { it.text }
 
-    private fun respond(contents: Contents): String {
+    // Kept independently testable: both initialization AND each send must opt into constraints.
+    @JvmStatic @JvmOverloads
+    fun conversationConfig(structured: Boolean, repair: Boolean = false): ConversationConfig = ConversationConfig(
+        automaticToolCalling = false,
+        samplerConfig = SamplerConfig(topK = 40, topP = 0.9, temperature = 0.6),
+        maxOutputToken = if (repair) 256 else 512, thinkingConfig = ThinkingConfig(enableThinking = false),
+        extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured)
+
+    @JvmStatic
+    fun responseFormat(structured: Boolean): ResponseFormat? =
+        if (structured) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
+
+    private fun respond(contents: Contents, structured: Boolean, repair: Boolean): String {
         val activeEngine = checkNotNull(engine) { "El runtime LiteRT-LM no está cargado" }
-        // The application already supplies bounded conversation history. Do not duplicate it in a second session.
-        val config = ConversationConfig(automaticToolCalling = false,
-            samplerConfig = SamplerConfig(topK = 40, topP = 0.9, temperature = 0.6),
-            maxOutputToken = 512, thinkingConfig = ThinkingConfig(enableThinking = false),
-            extraContext = mapOf("enable_thinking" to false))
+        // The application supplies the history; do not keep a second session or execute native tool calls.
+        val config = conversationConfig(structured, repair)
+        val format = responseFormat(structured)
         activeEngine.createConversation(config).use { conversation ->
             val done = CountDownLatch(1)
             val error = AtomicReference<Throwable?>()
@@ -115,9 +127,9 @@ object LiteRTLlm {
                 }
                 override fun onDone() { done.countDown() }
                 override fun onError(throwable: Throwable) { error.set(throwable); done.countDown() }
-            })
+            }, responseFormat = format)
             try {
-                if (!done.await(90, TimeUnit.SECONDS)) {
+                if (!done.await(if (repair) 30 else 90, TimeUnit.SECONDS)) {
                     conversation.cancelProcess()
                     throw java.util.concurrent.TimeoutException("El modelo local agotó el tiempo de respuesta")
                 }

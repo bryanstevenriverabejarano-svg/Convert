@@ -34,9 +34,12 @@ public final class GgufLlm {
         if (model == 0) throw new IllegalStateException("GGUF no está inicializado");
         BooleanSupplier stop = cancellation(cancelled);
         byte[] input = prompt.getBytes(StandardCharsets.UTF_8), identity = system.getBytes(StandardCharsets.UTF_8);
+        byte[] grammar = salve.core.cognition.CognitivePrompt.isCognitive(prompt)
+                ? salve.core.cognition.CognitiveOutputConstraints.gbnf().getBytes(StandardCharsets.UTF_8) : new byte[0];
         GgufContextPolicy.Generation result = GgufContextPolicy.generate(requestedContext, selected -> {
             contextTokens = selected;
-            return new String(infer(model, input, identity, selected, stop), StandardCharsets.UTF_8).trim();
+            return new String(infer(model, input, identity, grammar, selected,
+                    salve.core.cognition.CognitivePrompt.isFormatRepair(prompt), stop), StandardCharsets.UTF_8).trim();
         }, stop);
         return result.text;
     }
@@ -55,6 +58,6 @@ public final class GgufLlm {
         contextTokens = GgufContextPolicy.STANDARD;
     }
     private static native long load(byte[] path, BooleanSupplier cancelled);
-    private static native byte[] infer(long model, byte[] prompt, byte[] system, int contextTokens, BooleanSupplier cancelled);
+    private static native byte[] infer(long model, byte[] prompt, byte[] system, byte[] grammar, int contextTokens, boolean repair, BooleanSupplier cancelled);
     private static native void release(long model);
 }

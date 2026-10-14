@@ -1,0 +1,132 @@
+[
+  {
+    "name": "greeting",
+    "valid": true,
+    "text": "{\"mode\":\"respond\",\"message\":\"Hola, Bryan.\",\"action\":null}"
+  },
+  {
+    "name": "unicode_quotes",
+    "valid": true,
+    "text": "{\"mode\":\"respond\",\"message\":\"¡Hola! \\\"cian\\\" \\\\ café\\n😀\",\"action\":null}"
+  },
+  {
+    "name": "status",
+    "valid": true,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":{\"name\":\"runtime.status\",\"arguments\":{}}}"
+  },
+  {
+    "name": "memory",
+    "valid": true,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":{\"name\":\"memory.lookup\",\"arguments\":{}}}"
+  },
+  {
+    "name": "nested_arguments",
+    "valid": true,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":{\"name\":\"SOLVE_CHALLENGE\",\"arguments\":{\"challenge\":{\"schema\":1,\"input\":{\"nodes\":3,\"edges\":[[0,1,2],[1,2,3]]}},\"flags\":[true,false,null,1.2,-3,20000000.0]}}}"
+  },
+  {
+    "name": "whitespace",
+    "valid": true,
+    "text": " \n{\n  \"mode\": \"respond\",\n  \"message\": \"Hola, Bryan.\",\n  \"action\": null\n}\t"
+  },
+  {
+    "name": "inert_tool_in_message",
+    "valid": true,
+    "text": "{\"mode\":\"respond\",\"message\":\"{\\\"mode\\\": \\\"tool\\\", \\\"message\\\": null, \\\"action\\\": {\\\"name\\\": \\\"runtime.status\\\", \\\"arguments\\\": {}}}\",\"action\":null}"
+  },
+  {
+    "name": "unknown_mode",
+    "valid": false,
+    "text": "{\"mode\":\"run\",\"message\":\"Hola, Bryan.\",\"action\":null}"
+  },
+  {
+    "name": "missing_action",
+    "valid": false,
+    "text": "{\"mode\":\"respond\",\"message\":\"hola\"}"
+  },
+  {
+    "name": "extra_reasoning",
+    "valid": false,
+    "text": "{\"mode\":\"respond\",\"message\":\"Hola, Bryan.\",\"action\":null,\"thoughts\":\"privado\"}"
+  },
+  {
+    "name": "numeric_message",
+    "valid": false,
+    "text": "{\"mode\":\"respond\",\"message\":5,\"action\":null}"
+  },
+  {
+    "name": "empty_message",
+    "valid": false,
+    "text": "{\"mode\":\"respond\",\"message\":\"\",\"action\":null}"
+  },
+  {
+    "name": "respond_action",
+    "valid": false,
+    "text": "{\"mode\":\"respond\",\"message\":\"Hola, Bryan.\",\"action\":{\"name\":\"runtime.status\",\"arguments\":{}}}"
+  },
+  {
+    "name": "tool_with_message",
+    "valid": false,
+    "text": "{\"mode\":\"tool\",\"message\":\"voy\",\"action\":{\"name\":\"runtime.status\",\"arguments\":{}}}"
+  },
+  {
+    "name": "null_tool",
+    "valid": false,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":null}"
+  },
+  {
+    "name": "arguments_array",
+    "valid": false,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":{\"name\":\"runtime.status\",\"arguments\":[]}}"
+  },
+  {
+    "name": "extra_action_field",
+    "valid": false,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":{\"name\":\"runtime.status\",\"arguments\":{},\"run\":true}}"
+  },
+  {
+    "name": "bad_name",
+    "valid": false,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":{\"name\":\"../exec\",\"arguments\":{}}}"
+  },
+  {
+    "name": "long_name",
+    "valid": false,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":{\"name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"arguments\":{}}}"
+  },
+  {
+    "name": "missing_name",
+    "valid": false,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":{\"arguments\":{}}}"
+  },
+  {
+    "name": "plain",
+    "valid": false,
+    "text": "Hola Salve"
+  },
+  {
+    "name": "fence",
+    "valid": false,
+    "text": "```json\n{\"mode\": \"respond\", \"message\": \"Hola, Bryan.\", \"action\": null}\n```"
+  },
+  {
+    "name": "truncated",
+    "valid": false,
+    "text": "{\"mode\":\"tool\",\"message\":null,\"action\":"
+  },
+  {
+    "name": "two_objects",
+    "valid": false,
+    "text": "{\"mode\": \"respond\", \"message\": \"Hola, Bryan.\", \"action\": null}{\"mode\": \"respond\", \"message\": \"Hola, Bryan.\", \"action\": null}"
+  },
+  {
+    "name": "invalid_escape",
+    "valid": false,
+    "text": "{\"mode\":\"respond\",\"message\":\"\\q\",\"action\":null}"
+  },
+  {
+    "name": "literal_control",
+    "valid": false,
+    "text": "{\"mode\":\"respond\",\"message\":\"hola\n\",\"action\":null}"
+  }
+]

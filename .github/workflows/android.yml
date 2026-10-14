@@ -81,6 +81,13 @@ jobs:
           --init-script scripts/android-arm64.init.gradle
           :app:test${{ matrix.task_suffix }}UnitTest :app:assemble${{ matrix.task_suffix }}
 
+      - name: Compile opt-in real device inference tests
+        if: matrix.variant == 'debug'
+        run: >-
+          bash ./gradlew --no-daemon --console=plain --max-workers=2
+          --init-script scripts/android-arm64.init.gradle
+          :app:assembleDebugAndroidTest
+
       - name: Execute 104 autonomous tool challenges in four rounds
         timeout-minutes: 5
         run: python3 scripts/run_autonomous_tool_evaluation.py --output build/autonomy-evaluation
@@ -117,6 +124,9 @@ jobs:
                   asset = "avatar/realistic/" + name + ".png"
                   assert apk.read("assets/" + asset) == Path("app/src/main/assets/" + asset).read_bytes(), asset
               assert apk.read("assets/avatar/realistic/manifest.json") == Path("app/src/main/assets/avatar/realistic/manifest.json").read_bytes()
+              for constraint in ("cognitive_reply.schema.json", "cognitive_reply.gbnf"):
+                  resource = "salve/" + constraint
+                  assert apk.read(resource) == Path("app/src/main/resources/" + resource).read_bytes(), resource
           assert not any(name.startswith("assets/avatar3d/") or name.endswith(".glb") for name in names), "Retired 3D assets remain in APK"
           abis = {name.split("/")[1] for name in names if name.startswith("lib/") and name.endswith(".so")}
           assert abis == {"arm64-v8a"}, f"Unexpected APK ABIs: {abis}"
@@ -175,3 +185,21 @@ jobs:
         env:
           SALVE_RUN_AGENT_DOCKER: '1'
         run: python3 -m unittest discover -s scripts -p test_agent_bridge.py -v
+
+  cognitive-constraints:
+    name: JSON Schema and native GBNF contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - name: Build the pinned native grammar validator
+        run: |
+          cmake -S scripts/cognitive-grammar -B build/cognitive-grammar -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/cognitive-grammar --target salve-grammar-check --parallel 2
+      - name: Validate both formats against accepted and rejected outputs
+        run: |
+          python3 -m pip install 'jsonschema==4.25.1'
+          python3 scripts/check_cognitive_constraints.py --validator build/cognitive-grammar/salve-grammar-check

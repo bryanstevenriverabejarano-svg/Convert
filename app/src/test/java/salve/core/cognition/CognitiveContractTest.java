@@ -62,7 +62,7 @@ public class CognitiveContractTest {
         CognitiveTurn.Outcome result = CognitiveTurn.run((r,f,n)-> {
             assertEquals(calls.get() > 0, f);
             assertEquals(0,r.size()); calls.incrementAndGet();
-            return ModelResult.success("texto inválido",0);
+            return ModelResult.success("{\"mode\":\"tool\",\"action\":",0);
         },Collections.emptyMap(),()->false);
         assertEquals(2,calls.get()); assertFalse(result.result.isSuccess());
     }
@@ -156,7 +156,7 @@ public class CognitiveContractTest {
         tools.put("runtime.status",new CognitiveTurn.Tool("{}",a->{executions.incrementAndGet();return new CognitiveTurn.Receipt("estado");}));
         CognitiveTurn.Outcome result=CognitiveTurn.run((r,f,n)->{
             int call=calls.getAndIncrement();
-            return ModelResult.success(call==0?"malformed":call==1?TOOL:call==2?TOOL.replace("memory.lookup","runtime.status"):ANSWER,0);
+            return ModelResult.success(call==0?"{\"mode\":\"tool\",\"action\":":call==1?TOOL:call==2?TOOL.replace("memory.lookup","runtime.status"):ANSWER,0);
         },tools,()->false);
         assertTrue(result.result.isSuccess());assertEquals(4,calls.get());assertEquals(2,executions.get());
     }

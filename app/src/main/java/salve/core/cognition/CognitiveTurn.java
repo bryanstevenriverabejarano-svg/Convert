@@ -49,9 +49,12 @@ public final class CognitiveTurn {
             if (cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()) return stopped(ModelResult.Status.CANCELLED, "Turno cancelado", receipts);
             if (!last.isSuccess()) return new Outcome(last, false);
             CognitiveReply reply;
-            try { reply = CognitiveReply.parse(last.getText()); }
+            try { reply = CognitiveReply.parseForConversation(last.getText()); }
             catch (IllegalArgumentException invalid) {
-                if (repaired) return stopped(ModelResult.Status.ERROR, "El modelo no respetó el contrato JSON tras una corrección. No ejecuté esa salida", receipts);
+                if (!CognitiveReply.isToolAttempt(last.getText())) return stopped(ModelResult.Status.ERROR,
+                        "La respuesta llegó vacía o incompleta; no recibí texto público utilizable", receipts);
+                if (repaired) return stopped(ModelResult.Status.ERROR,
+                        "No pude validar la acción propuesta. No ejecuté esa acción", receipts);
                 repaired = true; repair = true; continue;
             }
             repair = false;

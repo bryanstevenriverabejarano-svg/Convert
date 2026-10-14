@@ -30,6 +30,15 @@ public final class CognitivePrompt {
     private CognitivePrompt() { }
     public static boolean isCognitive(String prompt) { return prompt != null && prompt.startsWith(PREFIX); }
 
+    /** Read only the controller-owned JSON record, never a matching phrase inside USER_INPUT. */
+    public static boolean isFormatRepair(String prompt) {
+        if (!isCognitive(prompt)) return false;
+        try {
+            JsonObject data = AutonomousToolCommand.parseObject(prompt.substring(prompt.lastIndexOf('\n') + 1));
+            return data.getAsJsonObject("TASK_STATE").get("format_repair").getAsBoolean();
+        } catch (RuntimeException invalid) { return false; }
+    }
+
     /** Bound metadata before inference; omitted tools are also removed from the executable map. */
     public static Map<String, CognitiveTurn.Tool> limitTools(Map<String, CognitiveTurn.Tool> available) {
         Map<String, CognitiveTurn.Tool> selected = new java.util.LinkedHashMap<>();

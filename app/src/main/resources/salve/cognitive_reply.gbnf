@@ -1,0 +1,14 @@
+# Salve envelope: one response OR one proposed tool. Controller authorizes tools.
+root ::= ws (respond | tool) ws
+respond ::= "{" ws "\"mode\"" ws ":" ws "\"respond\"" ws "," ws "\"message\"" ws ":" ws nonempty-string ws "," ws "\"action\"" ws ":" ws "null" ws "}"
+tool ::= "{" ws "\"mode\"" ws ":" ws "\"tool\"" ws "," ws "\"message\"" ws ":" ws "null" ws "," ws "\"action\"" ws ":" ws action ws "}"
+action ::= "{" ws "\"name\"" ws ":" ws tool-name ws "," ws "\"arguments\"" ws ":" ws object ws "}"
+tool-name ::= "\"" [A-Za-z] [A-Za-z0-9_.]{0,63} "\""
+object ::= "{" ws (string ws ":" ws value (ws "," ws string ws ":" ws value)*)? ws "}"
+array ::= "[" ws (value (ws "," ws value)*)? ws "]"
+value ::= object | array | string | number | "true" | "false" | "null"
+string ::= "\"" char* "\""
+nonempty-string ::= "\"" char+ "\""
+char ::= [^"\\\x00-\x1f] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F]{4})
+number ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? ([eE] [+-]? [0-9]+)?
+ws ::= [ \t\n\r]*
