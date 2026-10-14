@@ -674,6 +674,13 @@ public class MotorConversacional {
         if (recalled != null) setActivePhoto(recalled);
         boolean hasPriorContext = conversationSession.hasPriorContext() || activePhoto != null;
         conversationSession.addUser(entrada);
+        // «¿Sabes quién soy?» se responde con la memoria del perfil, no con el modelo: los modelos
+        // pequeños confunden la pregunta con «¿quién eres?» y hablan de sí mismos.
+        String userIdentity = mind().userIdentityAnswer(entrada);
+        if (userIdentity != null) {
+            deliverResponse(userIdentity, AvatarMotionProtocol.parse(""), true, true, false);
+            return;
+        }
         salve.core.research.ResearchConversation.Route researchRoute =
                 researchConversation.route(entrada, conversationSession.snapshot());
 
@@ -1068,6 +1075,10 @@ public class MotorConversacional {
                 + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext();
         if (intent.type != IntentType.GUARDAR_RECUERDO) {
             MemoryProfileFact profileFact = MemoryWritePolicy.extractProfileFact(entrada);
+            if (!entrada.trim().endsWith("?") && salve.core.mind.Interlocutor.declaresCreator(entrada)) {
+                // Declarado, no verificado: se guarda como presentación del usuario.
+                memoria.guardarDatoPerfil(entrada.trim(), "relation");
+            }
             if (profileFact != null) {
                 memoria.guardarDatoPerfil(profileFact.getStatement(), profileFact.getCategory());
             } else if (MemoryWritePolicy.shouldPersist(entrada)) {
@@ -1124,6 +1135,9 @@ public class MotorConversacional {
         if (!inference.isSuccess() && avatarSession != null) {
             AvatarMotionController.get().error(avatarSession, currentAvatarTurn());
         }
+
+        // Muletillas que el modelo pequeño repite aunque el prompt las prohíba.
+        if (inference.isSuccess()) respuesta = salve.core.conversation.ReplyStyle.clean(respuesta);
 
         // 🟡 3. FRENO DE ALUCINACIONES
         if (respuesta.contains("USUARIO:") || respuesta.contains("Bryan:")) {

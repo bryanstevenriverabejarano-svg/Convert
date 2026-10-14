@@ -18,6 +18,7 @@ import salve.core.memory.MemoryProvenance;
 import salve.core.memory.MemoryVectorStore;
 import salve.core.mind.DreamCycle;
 import salve.core.mind.EmbeddingCalibration;
+import salve.core.mind.Interlocutor;
 import salve.core.mind.Episode;
 import salve.core.mind.MindCommand;
 import salve.core.mind.MindFileStore;
@@ -92,10 +93,45 @@ public final class MindRuntime {
 
     public SelfModelJournal journal() { return journal; }
 
-    /** Texto del yo persistente para el prompt de cada turno. */
+    /** Capacidades que existen de verdad en esta app; evita que el modelo describa las de un chatbot genérico. */
+    static final String CAPABILITIES = "Capacidades reales: conversar con el modelo local; guardar datos que me cuentas "
+            + "y buscarlos en mi memoria; consolidar recuerdos al dormir y pensar entre conversaciones; investigar en "
+            + "Wikipedia o en URLs que me des; analizar fotos si el modelo tiene visión; controlar apps del móvil y crear "
+            + "rutinas solo con tu aprobación; presupuesto personal; voz. Órdenes: «tu mente», «sueña ahora».";
+
+    /**
+     * Texto para el prompt de cada turno: con quién habla, qué puede hacer de verdad y su yo
+     * persistente (narrativa, creencias, preguntas y pensamientos).
+     */
     public String selfModelForPrompt(int maxChars) {
-        try { return journal.render(maxChars); }
-        catch (RuntimeException failure) { return ""; }
+        try {
+            String head = Interlocutor.promptLine(interlocutor()) + "\n" + CAPABILITIES + "\n";
+            return head + journal.render(Math.max(120, maxChars - head.length()));
+        } catch (RuntimeException failure) { return ""; }
+    }
+
+    /** Lo que consta del usuario: nombre declarado y si se presentó como creador. */
+    public Interlocutor.Known interlocutor() {
+        try {
+            RecuerdoEntity name = memories.ultimoPorEtiqueta("profile:name");
+            RecuerdoEntity relation = memories.ultimoPorEtiqueta("profile:relation");
+            boolean creator = (relation != null && Interlocutor.declaresCreator(relation.frase))
+                    || (name != null && Interlocutor.declaresCreator(name.frase));
+            return new Interlocutor.Known(name == null ? null : Interlocutor.extractName(name.frase),
+                    name == null ? null : Episode.memoryId(name.id), creator);
+        } catch (RuntimeException unavailable) {
+            return new Interlocutor.Known(null, null, false);
+        }
+    }
+
+    /** Respuesta directa a «¿sabes quién soy?», o null si la entrada no pregunta eso. */
+    public String userIdentityAnswer(String input) {
+        if (!Interlocutor.asksWhoUserIs(input)) return null;
+        List<salve.core.mind.SelfModel.Belief> aboutUser = new ArrayList<>();
+        for (salve.core.mind.SelfModel.Belief b : journal.beliefs())
+            if (salve.core.mind.SelfModel.ABOUT_BRYAN.equals(b.about) && b.contradictions.isEmpty()) aboutUser.add(b);
+        aboutUser.sort((a, b) -> Double.compare(b.confidence, a.confidence));
+        return Interlocutor.answer(interlocutor(), "Bryan", aboutUser);
     }
 
     // ── Órdenes de Bryan ────────────────────────────────────────────────────────
