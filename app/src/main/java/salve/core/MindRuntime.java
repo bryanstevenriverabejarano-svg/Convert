@@ -105,7 +105,10 @@ public final class MindRuntime {
      */
     public String selfModelForPrompt(int maxChars) {
         try {
-            String head = Interlocutor.promptLine(interlocutor()) + "\n" + CAPABILITIES + "\n";
+            List<String> family = familyFacts();
+            String head = Interlocutor.promptLine(interlocutor()) + "\n"
+                    + (family.isEmpty() ? "" : "Familia del interlocutor (dicho por él): " + String.join(" ", family) + "\n")
+                    + CAPABILITIES + "\n";
             return head + journal.render(Math.max(120, maxChars - head.length()));
         } catch (RuntimeException failure) { return ""; }
     }
@@ -122,6 +125,23 @@ public final class MindRuntime {
         } catch (RuntimeException unavailable) {
             return new Interlocutor.Known(null, null, false);
         }
+    }
+
+    /** Frases de familia guardadas («Mi hermana se llama Ana.»). */
+    public List<String> familyFacts() {
+        List<String> out = new ArrayList<>();
+        try {
+            List<RecuerdoEntity> rows = memories.perfiles();
+            if (rows != null) for (RecuerdoEntity r : rows)
+                if (r.etiquetas != null && r.etiquetas.contains("profile:family_") && r.frase != null) out.add(r.frase.trim());
+        } catch (RuntimeException ignored) { }
+        return out;
+    }
+
+    /** Respuesta directa a «¿quién es mi familia?», «¿cómo se llama mi madre?», o null. */
+    public String familyAnswer(String input) {
+        if (!salve.core.mind.FamilyFacts.asksAboutFamily(input)) return null;
+        return salve.core.mind.FamilyFacts.answer(input, familyFacts());
     }
 
     /** Respuesta directa a «¿sabes quién soy?», o null si la entrada no pregunta eso. */

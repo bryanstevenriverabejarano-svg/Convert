@@ -677,6 +677,7 @@ public class MotorConversacional {
         // «¿Sabes quién soy?» se responde con la memoria del perfil, no con el modelo: los modelos
         // pequeños confunden la pregunta con «¿quién eres?» y hablan de sí mismos.
         String userIdentity = mind().userIdentityAnswer(entrada);
+        if (userIdentity == null) userIdentity = mind().familyAnswer(entrada);
         if (userIdentity != null) {
             deliverResponse(userIdentity, AvatarMotionProtocol.parse(""), true, true, false);
             return;
@@ -1085,6 +1086,12 @@ public class MotorConversacional {
                 memoria.guardarRecuerdo(entrada, emocionDetectada, 7,
                         Arrays.asList("hecho_usuario", "declaracion_directa"));
             }
+            String learned = aprenderDatosPersonales(entrada, profileFact);
+            if (learned != null) {
+                mind().indexNewMemoriesAsync();
+                deliverResponse(learned, AvatarMotionProtocol.parse(""), true, true, false);
+                return;
+            }
         }
         mind().indexNewMemoriesAsync();
         String resumenAccion = procesarIntencion(intent, entrada, emocionDetectada);
@@ -1136,6 +1143,16 @@ public class MotorConversacional {
             AvatarMotionController.get().error(avatarSession, currentAvatarTurn());
         }
 
+        // Una respuesta idéntica a otra anterior suele significar que el modelo ignoró el mensaje
+        // nuevo («Es un placer conocerte…» dos veces). Se reintenta una vez avisándolo.
+        if (inference.isSuccess() && salve.core.conversation.ReplyStyle.repeats(respuesta, recentAssistantReplies(3))) {
+            CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext
+                            + " | EVITA_REPETIR: tu última respuesta fue idéntica a una anterior; responde de forma distinta y concreta al mensaje actual.",
+                    resumenAccion, entradaPorVoz, evidence, false);
+            if (retry.handedOff) return;
+            if (retry.result.isSuccess() && !salve.core.conversation.ReplyStyle.repeats(retry.result.getText(), recentAssistantReplies(3)))
+                respuesta = retry.result.getText();
+        }
         // Muletillas que el modelo pequeño repite aunque el prompt las prohíba.
         if (inference.isSuccess()) respuesta = salve.core.conversation.ReplyStyle.clean(respuesta);
 
@@ -1327,6 +1344,14 @@ public class MotorConversacional {
         }
     }
 
+    private java.util.List<String> recentAssistantReplies(int max) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        java.util.List<salve.core.conversation.ChatMessage> history = conversationSession.snapshot();
+        for (int i = history.size() - 1; i >= 0 && out.size() < max; i--)
+            if (history.get(i).getRole() == salve.core.conversation.ChatMessage.Role.ASSISTANT) out.add(history.get(i).getContent());
+        return out;
+    }
+
     private boolean esBucleRepetitivo(String texto) {
         if (texto == null || texto.length() < 100) return false;
         String[] palabras = texto.toLowerCase().replaceAll("[^a-záéíóúñ]", " ").split("\\s+");
@@ -1430,6 +1455,8 @@ public class MotorConversacional {
                 + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(canAnalyzePhoto(activePhoto)));
         return CognitiveTurn.run((results, repair, remaining) -> {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
+            // Con foto, la imagen ocupa contexto (Gemma 4: 4.096 tokens con entrada, imagen y salida).
+            if (activePhoto != null && canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
             String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1400),
                     memory, details, conversationSession.snapshot(), tools, results, repair, remaining, budget);
             return generateWithConversationPhoto(prompt);
@@ -2018,6 +2045,38 @@ public class MotorConversacional {
             tts.stop();
             tts.shutdown();
         }
+    }
+
+    /**
+     * Guarda nombre y familia aunque no vayan al principio de la frase («Jajaja sí, soy Bryan»,
+     * «Bueno sí, me llamo Bryan…», «mi hermana se llama Ana»). Devuelve un acuse breve cuando el
+     * mensaje es solo una presentación; si trae además una petición, devuelve null y responde el modelo.
+     */
+    private String aprenderDatosPersonales(String entrada, MemoryProfileFact profileFact) {
+        if (entrada == null || entrada.trim().endsWith("?")) return null;
+        salve.core.mind.Interlocutor.Known before = mind().interlocutor();
+        String name = salve.core.mind.Interlocutor.extractName(entrada);
+        boolean nameIsNew = name != null && !name.equalsIgnoreCase(before.name == null ? "" : before.name);
+        if (nameIsNew && (profileFact == null || !"name".equals(profileFact.getCategory())))
+            memoria.guardarDatoPerfil("Me llamo " + name + ".", "name");
+        java.util.List<salve.core.mind.FamilyFacts.Member> family = salve.core.mind.FamilyFacts.parse(entrada);
+        for (salve.core.mind.FamilyFacts.Member member : family) memoria.guardarDatoPerfil(member.statement(), member.category());
+        if (!nameIsNew && family.isEmpty()) return null;
+        if (entrada.trim().split("\\s+").length > 16) return null;
+        StringBuilder ack = new StringBuilder();
+        if (nameIsNew) {
+            boolean creator = before.declaredCreator || salve.core.mind.Interlocutor.declaresCreator(entrada);
+            ack.append(before.name == null ? "Anotado: te llamas " + name : "Actualizo tu nombre: ahora te llamas " + name)
+                    .append(creator ? " y te presentaste como mi creador" : "").append('.');
+        }
+        if (!family.isEmpty()) {
+            java.util.List<String> parts = new java.util.ArrayList<>();
+            for (salve.core.mind.FamilyFacts.Member member : family)
+                parts.add(member.statement().replaceFirst("^Mi ", "tu ").replaceAll("[.]$", ""));
+            ack.append(ack.length() == 0 ? "Anotado: " : " También anoto: ").append(String.join("; ", parts)).append('.');
+        }
+        ack.append(" Lo recordaré en las próximas conversaciones.");
+        return ack.toString();
     }
 
     private void responderYRegistrarCalidad(String entrada, String respuesta,

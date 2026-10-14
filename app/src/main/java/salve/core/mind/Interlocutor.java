@@ -26,7 +26,8 @@ public final class Interlocutor {
     private static final Pattern SOY_NAME = Pattern.compile(
             "\\b[Ss]oy\\s+(\\p{Lu}[\\p{L}'\\-]*(?:\\s+\\p{Lu}[\\p{L}'\\-]*){0,3})");
     private static final Pattern STOP_WORDS = Pattern.compile(
-            "\\s+(?:y|e|pero|que|porque|aunque|tu|tú|el|la|de|del|a|tu creador|creador)\\b.*$",
+            "\\s+(?:y|e|pero|que|porque|aunque|tu|tú|te|me|el|la|de|del|a|en|con|para|por|como|soy|estoy|vivo|tengo|quiero|"
+                    + "trabajo|ya|si|sí|no|tu creador|creador)\\b.*$",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern CREATOR = Pattern.compile(
             "\\b(soy tu creador|soy quien te creo|soy quien te ha creado|yo te cree|te cree yo|soy tu programador|soy tu desarrollador)\\b");
