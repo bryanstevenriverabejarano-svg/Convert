@@ -146,6 +146,10 @@ public class MemoriaEmocional {
         reflexionDao = database.reflexionDao();
         conversationMemory = new ConversationMemoryGrounding(recuerdoDao,
                 database.knowledgeNodeDao(), database.knowledgeRelationDao());
+        // Búsqueda por significado; se resuelve en cada consulta para no cargar nada aquí.
+        final Context mindContext = context.getApplicationContext();
+        conversationMemory.setSemanticRecall((query, limit) ->
+                salve.core.MindRuntime.get(mindContext).semanticRecall().nearestMemoryIds(query, limit));
         memoryWriteExecutor.execute(() -> CloudSyncManager.indexLocalJournal(context));
 
         // ⚠️ GrafoConocimientoVivo lanza Exception en su constructor.
@@ -746,6 +750,7 @@ public class MemoriaEmocional {
                     db.memorySyncStateDao().put(salve.data.db.MemorySyncStateEntity.of(etiqueta, deletionTime, true));
                     CloudSyncManager.enqueueProfileDeletion(context, categoria.trim().toLowerCase(Locale.ROOT), deletionTime);
                 });
+                salve.core.MindRuntime.get(context).pruneDeletedMemoriesAsync();
                 return removedFromMemory || removed[0] > 0;
             }).get(3, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -814,48 +819,22 @@ public class MemoriaEmocional {
     // ============================================================
     public void cicloDeSueno() {
         Log.d("Salve", "Iniciando ciclo de sueño...");
-
-        // ===== NUBE: inicio ciclo sueño =====
         CloudLogger.log("sleep_cycle_begin", "Inicio de ciclo de sueño");
 
-        conectarRecuerdosSimilares();
+        // Mantenimiento de la caché en RAM.
         organizarRecuerdos();
         limpiarRecuerdosDuplicados();
-        generarReflexionesSilenciosas();
-        String narrativa = generarNarrativaCreativaNocturna();
         prepararRevisionSemanalCreativa();
 
-        Log.d("Salve", "Ciclo de sueño clásico completo.");
-
-        // ===== v3: Reorganización neural durante el sueño =====
-        // CognitiveCore replays memorias a través de LiquidNeuralLayer,
-        // consolida pesos, y poda conexiones débiles (olvido selectivo).
-        try {
-            salve.core.cognitive.CognitiveCore core =
-                    salve.core.cognitive.CognitiveCore.getInstance(context);
-            core.setMode(salve.core.cognitive.ThoughtStream.Mode.SUENO);
-            core.dreamCycle();        // Replay de memorias + pensamiento de sueño
-            core.consolidateWeights(); // Guardar pesos actualizados
-            Log.d("Salve", "CognitiveCore dream cycle completado en cicloDeSueno");
-        } catch (Exception e) {
-            Log.w("Salve", "CognitiveCore dream cycle falló (no fatal, sueño clásico ya hecho)", e);
-        }
+        // La consolidación real (creencias con fuentes, contradicciones, preguntas abiertas e
+        // índice semántico) la hace DreamWorker con el modelo local. Antes aquí se copiaban
+        // recuerdos al azar como "reflexiones", se enlazaban por la primera palabra y se
+        // reproducía ruido aleatorio en CognitiveCore: nada de eso producía conocimiento.
+        salve.work.DreamWorker.enqueueNow(context);
 
         new Thread(this::insertarReflexionesDB).start();
-
-        // ===== NUBE: fin ciclo sueño con pequeño resumen =====
-        try {
-            int totalRecuerdos = recuerdos.size();
-            int totalReflexiones = reflexiones.size();
-            String resumen = "Fin ciclo sueño | recuerdos=" + totalRecuerdos
-                    + " | reflexiones=" + totalReflexiones;
-            CloudLogger.log("sleep_cycle_end", resumen);
-            if (narrativa != null) {
-                CloudLogger.log("sleep_cycle_story", narrativa);
-            }
-        } catch (Exception ignore) {
-            CloudLogger.log("sleep_cycle_end", "Fin de ciclo de sueño");
-        }
+        CloudLogger.log("sleep_cycle_end", "Fin ciclo sueño | recuerdos=" + recuerdos.size()
+                + " | reflexiones=" + reflexiones.size());
     }
 
     // ============================================================
@@ -942,7 +921,7 @@ public class MemoriaEmocional {
     /**
      * Devuelve los N recuerdos más recientes en formato texto legible.
      *
-     * Usado por BucleCognitivoAutonomo para construir la observación de estado
+     * Usado por ciclos internos de MindRuntime para construir la observación de estado
      * que Salve usa para generarse preguntas propias durante el sueño.
      *
      * @param n Número máximo de recuerdos a devolver (los más recientes primero)
@@ -973,7 +952,7 @@ public class MemoriaEmocional {
     /**
      * Genera un resumen en texto de los últimos 5 recuerdos.
      *
-     * Usado por GestorIdeas y BucleCognitivoAutonomo para contextualizar
+     * Usado por GestorIdeas y MindRuntime para contextualizar
      * las preguntas que Salve se genera sobre sí misma durante el sueño.
      *
      * @return String con los recuerdos recientes en formato lista, o mensaje vacío.
@@ -993,23 +972,6 @@ public class MemoriaEmocional {
     // ============================================================
     // ▲▲▲ FIN MÉTODOS NUEVOS v2 ▲▲▲
     // ============================================================
-
-    /** Conecta recuerdos con misma emoción y palabra clave inicial. */
-    private void conectarRecuerdosSimilares() {
-        for (int i = 0; i < recuerdos.size(); i++) {
-            Recuerdo a = recuerdos.get(i);
-            String w1 = codificador.decodificar(a.getBinarioCodificado()).split(" ")[0];
-            for (int j = i + 1; j < recuerdos.size(); j++) {
-                Recuerdo b = recuerdos.get(j);
-                String w2 = codificador.decodificar(b.getBinarioCodificado()).split(" ")[0];
-                if (a.getEmocionPrincipal().equalsIgnoreCase(b.getEmocionPrincipal()) &&
-                        w1.equals(w2)) {
-                    a.conectarCon(b);
-                }
-            }
-        }
-    }
-
     /** Agrupa recuerdos por su etiqueta principal. */
     private void organizarRecuerdos() {
         for (Recuerdo r : recuerdos) {
@@ -1040,83 +1002,6 @@ public class MemoriaEmocional {
         if (reflexiones.size() > 240) {
             reflexiones.remove(0);
         }
-    }
-
-    /** Genera reflexiones silenciosas basadas en el buffer de contexto. */
-    private void generarReflexionesSilenciosas() {
-        if (contextBuffer.isEmpty()) return;
-        String consulta = contextBuffer.peekLast();
-        double umbral   = 0.6;  // fijo o adaptativo si deseas
-
-        for (Recuerdo r : recuerdos) {
-            if (!random.nextBoolean()) continue;
-            String contenido = codificador.decodificar(r.getBinarioCodificado());
-            String tipo      = contenido.contains("?") ? "pregunta" : "hipótesis";
-            double certeza   = 0.4 + random.nextDouble() * 0.6;
-            if (certeza < umbral) continue;
-            Reflexion rf = Reflexion.builder()
-                    .tipo(tipo)
-                    .contenido(contenido)
-                    .profundidad(r.getIntensidad() / 10.0)
-                    .emocion(r.getEmocionPrincipal())
-                    .estado("sueño")
-                    .certeza(certeza)
-                    .origen("sueño")
-                    .build();
-            registrarReflexion(rf);
-
-            // ===== NUBE: reflexión generada en sueño =====
-            CloudLogger.log("reflexion_generada", contenido);
-        }
-    }
-
-    /**
-     * Construye una narrativa creativa utilizando los recuerdos más recientes y misiones vigentes.
-     */
-    private String generarNarrativaCreativaNocturna() {
-        int totalRecuerdos = recuerdos.size();
-        if (totalRecuerdos == 0 && autoCriticas.isEmpty()) {
-            return null;
-        }
-
-        CreativityManifest manifest = CreativityManifest.getInstance(context);
-        StringBuilder narrativa = new StringBuilder();
-        narrativa.append("Crónica creativa del sueño: ");
-
-        int inicio = Math.max(0, totalRecuerdos - 3);
-        for (int i = inicio; i < totalRecuerdos; i++) {
-            Recuerdo recuerdo = recuerdos.get(i);
-            String contenido = codificador.decodificar(recuerdo.getBinarioCodificado());
-            narrativa.append("\n• Recordé " + contenido);
-        }
-
-        if (!misionesCreativas.isEmpty()) {
-            MisionCreativa foco = misionesCreativas.get(misionesCreativas.size() - 1);
-            narrativa.append("\n• Mi misión activa me pide " + foco.getMetaCuantificable());
-        }
-
-        if (!autoCriticas.isEmpty()) {
-            AutoCriticaCreativa ultima = autoCriticas.get(autoCriticas.size() - 1);
-            narrativa.append("\n• Auto-crítica reciente: " + ultima.getMejoraDeseada());
-        }
-
-        List<String> principios = manifest.getCreativePrinciples();
-        if (!principios.isEmpty()) {
-            narrativa.append("\nEco creativo: ").append(principios.get(0));
-        }
-
-        String resultado = narrativa.toString();
-        registrarDiarioCreativo(resultado);
-        registrarReflexion(Reflexion.builder()
-                .tipo("narrativa_creativa")
-                .contenido(resultado)
-                .profundidad(0.85)
-                .emocion("serena")
-                .estado("sueño_creativo")
-                .certeza(0.75)
-                .origen("sueño")
-                .build());
-        return resultado;
     }
 
     private void registrarDiarioCreativo(String narrativa) {

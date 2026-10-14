@@ -286,6 +286,12 @@ public class SalveLLM {
                 throw e;
             } finally { if (large) markLargeOperation(false); }
             engineInitialized = GgufLlm.isInitialized();
+            if (engineInitialized) {
+                try { PersonalAdapter.applyIfPresent(appContext, modelPath); }
+                catch (RuntimeException | LinkageError adapterFailure) {
+                    Log.w(TAG, "Adaptador personal no aplicado", adapterFailure);
+                }
+            }
         } else if (isLiteRT) {
             Log.d(TAG, "Inicializando LiteRTLlm con modelPath=" + modelPath);
             LiteRTLlm.init(appContext, modelPath, withVision);

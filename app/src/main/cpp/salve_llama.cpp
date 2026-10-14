@@ -69,6 +69,11 @@ void error(JNIEnv *env, const char *type, const std::exception &e) {
     env->ThrowNew(env->FindClass(type), e.what());
 }
 std::once_flag backend;
+
+// Adaptador LoRA personal activo (entrenado fuera del móvil con recuerdos consolidados).
+// Pertenece al modelo cargado: llama.cpp lo libera con él. GgufLlm serializa todo el acceso.
+llama_adapter_lora *active_adapter = nullptr;
+float active_scale = 0.0f;
 }
 
 extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
@@ -133,6 +138,9 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         std::unique_ptr<llama_context, decltype(&llama_free)> ctx(llama_init_from_model(model, params), llama_free);
         request.check();
         if (!ctx) throw ContextAllocationFailure();
+        if (active_adapter && active_scale > 0.0f
+                && llama_set_adapter_lora(ctx.get(), active_adapter, active_scale) != 0)
+            throw std::runtime_error("No se pudo aplicar el adaptador LoRA personal");
         auto decode = [&](llama_token *data, int size) {
             request.check();
             int status = llama_decode(ctx.get(), llama_batch_get_one(data, size));
@@ -179,6 +187,27 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
     return nullptr;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL Java_salve_core_GgufLlm_setAdapter(
+        JNIEnv *env, jclass, jlong handle, jbyteArray path, jfloat scale) {
+    try {
+        auto *model = reinterpret_cast<llama_model *>(handle);
+        if (!model) throw std::invalid_argument("Modelo GGUF no cargado");
+        if (active_adapter) { llama_adapter_lora_free(active_adapter); active_adapter = nullptr; }
+        active_scale = 0.0f;
+        if (!path) return JNI_FALSE;
+        std::string file = bytes(env, path);
+        // Un adaptador de otra arquitectura falla aquí y el modelo base sigue funcionando sin él.
+        active_adapter = llama_adapter_lora_init(model, file.c_str());
+        if (!active_adapter) return JNI_FALSE;
+        active_scale = std::max(0.0f, std::min(2.0f, static_cast<float>(scale)));
+        return JNI_TRUE;
+    } catch (const std::exception &e) { error(env, "java/lang/IllegalStateException", e); }
+    return JNI_FALSE;
+}
+
 extern "C" JNIEXPORT void JNICALL Java_salve_core_GgufLlm_release(JNIEnv *, jclass, jlong handle) {
+    // El modelo libera sus adaptadores; olvidar el puntero evita un doble free.
+    active_adapter = nullptr;
+    active_scale = 0.0f;
     llama_model_free(reinterpret_cast<llama_model *>(handle));
 }

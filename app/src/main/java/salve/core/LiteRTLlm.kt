@@ -52,8 +52,9 @@ object LiteRTLlm {
         if (modelPath.endsWith(".task", ignoreCase = true)) {
             check(!withVision) { "El modelo .task importado solo admite texto" }
             legacy = LlmInference.createFromOptions(context,
-                LlmInference.LlmInferenceOptions.builder().setModelPath(modelPath).setMaxTokens(1024)
-                    .setTemperature(0.3f).build())
+                // tasks-genai 0.10.33 no ofrece temperatura en LlmInferenceOptions (se configura por
+                // sesión); llamarla rompía la compilación de main desde la PR #133.
+                LlmInference.LlmInferenceOptions.builder().setModelPath(modelPath).setMaxTokens(1024).build())
             backendName = "MediaPipe (.task)"
         } else {
             require(modelPath.endsWith(".litertlm", ignoreCase = true)) { "Formato local no compatible" }

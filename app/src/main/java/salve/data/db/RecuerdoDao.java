@@ -62,6 +62,16 @@ public interface RecuerdoDao {
     @Query("SELECT * FROM recuerdos WHERE id > :afterId ORDER BY id ASC LIMIT :limit")
     List<RecuerdoEntity> pageForCloud(long afterId, int limit);
 
+    /** Recupera recuerdos concretos (por ejemplo, candidatos de la búsqueda semántica). */
+    @Query("SELECT * FROM recuerdos WHERE id IN (:ids)")
+    List<RecuerdoEntity> porIds(List<Integer> ids);
+
+    @Query("SELECT * FROM recuerdos ORDER BY timestamp DESC, id DESC LIMIT :limit")
+    List<RecuerdoEntity> recientes(int limit);
+
+    @Query("SELECT id FROM recuerdos")
+    List<Integer> todosLosIds();
+
     @Query("SELECT * FROM recuerdos WHERE (etiquetas IS NULL OR (instr(etiquetas, '\"manifiesto\"') = 0 AND instr(etiquetas, '\"identidad_creativa\"') = 0 AND instr(etiquetas, '\"investigacion_publica\"') = 0 AND instr(etiquetas, '\"fuentes_externas\"') = 0 AND instr(etiquetas, '\"sintesis_agente\"') = 0)) ORDER BY timestamp ASC, id ASC LIMIT 1")
     RecuerdoEntity primerRecuerdoCompartido();
 

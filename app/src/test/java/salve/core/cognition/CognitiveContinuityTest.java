@@ -52,7 +52,7 @@ public class CognitiveContinuityTest {
     private String build(String input, List<ChatMessage> history, int budget) throws Exception {
         Path asset = Path.of("src/main/assets/prompts/salve_cognitive_core_v1.txt");
         if (!Files.exists(asset)) asset = Path.of("app/src/main/assets/prompts/salve_cognitive_core_v1.txt");
-        String prompt = CognitivePrompt.build(Files.readString(asset), input, new JsonObject(),
+        String prompt = CognitivePrompt.build(new String(Files.readAllBytes(asset), java.nio.charset.StandardCharsets.UTF_8), input, new JsonObject(),
                 "Fuente: usuario; Ana es su hermana. ".repeat(1000), "Contexto del dispositivo. ".repeat(1000),
                 history, Collections.emptyMap(), new JsonArray(), false, 2, budget);
         assertTrue(prompt.length() <= budget);

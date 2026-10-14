@@ -2,7 +2,10 @@ package salve.core.memory;
 
 import java.text.Normalizer;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -64,6 +67,17 @@ public final class ConversationMemoryGrounding {
         }
     }
 
+    /** Búsqueda por significado (embeddings). Opcional: sin ella se usa solo el índice de palabras. */
+    public interface SemanticRecall {
+        /** Identificadores de recuerdos ordenados por similitud; lista vacía si no está disponible. */
+        List<Integer> nearestMemoryIds(String query, int limit) throws Exception;
+    }
+
+    private static final int SEMANTIC_CANDIDATES = 8;
+    private volatile SemanticRecall semantic;
+
+    public void setSemanticRecall(SemanticRecall recall) { this.semantic = recall; }
+
     private final RecuerdoDao memories;
     private final KnowledgeNodeDao nodes;
     private final KnowledgeRelationDao relations;
@@ -119,7 +133,14 @@ public final class ConversationMemoryGrounding {
         boolean personal = normalized.matches(".*\\b(te dije|hablamos|conmigo|juntos|mi|mis|mio)\\b.*");
         MemorySearchService.Result search = new MemorySearchService(memories).search(query, personal, MAX_RECORDS);
         if (search.failed) out.error();
-        for (RecuerdoEntity record : search.records) out.memory(record, "recuerdo", query);
+        List<RecuerdoEntity> semanticOnly = new ArrayList<>();
+        List<RecuerdoEntity> ordered = fuseSemantic(input, search.records, personal, semanticOnly);
+        for (RecuerdoEntity record : ordered) {
+            if (semanticOnly.contains(record)) out.memory(record, "recuerdo_por_significado");
+            else out.memory(record, "recuerdo", query);
+        }
+        if (!semanticOnly.isEmpty()) out.note(
+                "COINCIDENCIA_POR_SIGNIFICADO: algunos registros se recuperaron por similitud semántica, no por palabras; comprueba que respondan a la pregunta.");
         if (search.expanded && !search.records.isEmpty()) out.note(
                 "BUSQUEDA_AMPLIADA: se probaron variantes de vocabulario; confirma su pertinencia con el texto original.");
         // The graph has no reliable authorship/deletion lineage. Never use it to reconstruct personal history.
@@ -129,6 +150,47 @@ public final class ConversationMemoryGrounding {
         }
         return out.result(null);
     }
+    /**
+     * Fusiona por rango recíproco la búsqueda léxica con la semántica. Si la búsqueda semántica
+     * falla o no existe, devuelve la lista léxica sin cambios.
+     */
+    private List<RecuerdoEntity> fuseSemantic(String input, List<RecuerdoEntity> lexical, boolean personal,
+                                              List<RecuerdoEntity> semanticOnly) {
+        SemanticRecall recall = semantic;
+        if (recall == null) return lexical;
+        List<Integer> semanticIds;
+        try {
+            semanticIds = recall.nearestMemoryIds(input, SEMANTIC_CANDIDATES);
+        } catch (Exception unavailable) {
+            return lexical;
+        }
+        if (semanticIds == null || semanticIds.isEmpty()) return lexical;
+        Map<Integer, RecuerdoEntity> byId = new HashMap<>();
+        List<Integer> lexicalIds = new ArrayList<>();
+        for (RecuerdoEntity r : lexical) { byId.put(r.id, r); lexicalIds.add(r.id); }
+        List<Integer> missing = new ArrayList<>();
+        for (Integer id : semanticIds) if (id != null && !byId.containsKey(id)) missing.add(id);
+        if (!missing.isEmpty()) {
+            try {
+                List<RecuerdoEntity> rows = memories.porIds(missing);
+                if (rows != null) for (RecuerdoEntity r : rows)
+                    if (r != null && (!personal || MemoryProvenance.isPersonalCandidate(r))) byId.put(r.id, r);
+            } catch (RuntimeException unavailable) {
+                return lexical;
+            }
+        }
+        List<Integer> available = new ArrayList<>();
+        for (Integer id : semanticIds) if (byId.containsKey(id)) available.add(id);
+        List<RecuerdoEntity> fused = new ArrayList<>();
+        for (Integer id : HybridFusion.rrf(MAX_RECORDS, lexicalIds, available)) {
+            RecuerdoEntity r = byId.get(id);
+            if (r == null) continue;
+            fused.add(r);
+            if (!lexicalIds.contains(id)) semanticOnly.add(r);
+        }
+        return fused.isEmpty() ? lexical : Collections.unmodifiableList(fused);
+    }
+
     private Result chronology(int direction, boolean shared) {
         Evidence out = new Evidence(maxChars);
         String qualifier = direction < 0 ? "más antiguo" : "más reciente";

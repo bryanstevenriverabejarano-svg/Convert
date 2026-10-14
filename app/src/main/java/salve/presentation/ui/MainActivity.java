@@ -995,6 +995,10 @@ public class MainActivity extends AppCompatActivity {
         // The user starts/stops the companion overlay from Habitación.
 
         ThinkWorker.schedule(this);
+        salve.work.DreamWorker.schedule(this);
+        // Carga el modelo interno y el índice de recuerdos fuera del hilo principal.
+        final android.content.Context mindContext = getApplicationContext();
+        new Thread(() -> salve.core.MindRuntime.get(mindContext).warmUpEmbeddings(), "salve-mind-init").start();
 
         // ===== manejar Intents de compartir =====
         handleShareIntent(getIntent());

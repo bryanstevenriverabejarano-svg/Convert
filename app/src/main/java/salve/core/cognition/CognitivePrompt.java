@@ -54,6 +54,17 @@ public final class CognitivePrompt {
     public static String build(String fullCore, String input, JsonObject state, String memory,
                                String context, List<ChatMessage> history, Map<String, CognitiveTurn.Tool> tools,
                                JsonArray results, boolean repair, int callsLeft, int maxChars) {
+        return build(fullCore, input, state, "", memory, context, history, tools, results, repair, callsLeft, maxChars);
+    }
+
+    /**
+     * @param selfModel modelo persistente de Salve (narrativa, creencias con fuentes, preguntas y
+     *                  pensamientos recientes). Va en su propio campo con presupuesto reservado para que
+     *                  la continuidad no dependa de cuánta memoria o historial ocupen el contexto.
+     */
+    public static String build(String fullCore, String input, JsonObject state, String selfModel, String memory,
+                               String context, List<ChatMessage> history, Map<String, CognitiveTurn.Tool> tools,
+                               JsonArray results, boolean repair, int callsLeft, int maxChars) {
         JsonObject catalog = new JsonObject();
         if (callsLeft > 0) for (Map.Entry<String, CognitiveTurn.Tool> entry : tools.entrySet())
             catalog.addProperty(entry.getKey(), entry.getValue().description);
@@ -73,6 +84,8 @@ public final class CognitivePrompt {
         if (repair) task.addProperty("correction", "La salida anterior no cumplió el contrato; devuelve sólo el JSON exigido");
         data.add("TASK_STATE", task);
         data.add("TOOL_CATALOG", catalog);
+        boolean hasSelf = selfModel != null && !selfModel.trim().isEmpty();
+        if (hasSelf) data.addProperty("SELF_MODEL", "");
         data.addProperty("MEMORY_CONTEXT", "");
         data.addProperty("TOOL_RESULTS", "");
         data.addProperty("CONTEXT", "");
@@ -82,6 +95,7 @@ public final class CognitivePrompt {
         if (remaining < 120) throw new IllegalArgumentException("Catálogo o estado demasiado grande para el contexto");
         remaining -= put(data, "USER_INPUT", input, Math.max(80, remaining * 2 / 5));
         if (results.size() > 0) remaining -= put(data, "TOOL_RESULTS", results.toString(), remaining * 3 / 5);
+        if (hasSelf) remaining -= put(data, "SELF_MODEL", selfModel, Math.min(1400, remaining / 4));
         // Keep antecedents for follow-ups such as "¿Por qué estás bien?" even with dense memory.
         int historyReserve = history.isEmpty() ? 0 : remaining / 3;
         remaining -= put(data, "MEMORY_CONTEXT", memory, (remaining - historyReserve) * 3 / 5);
