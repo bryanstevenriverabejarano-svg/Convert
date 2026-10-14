@@ -1426,6 +1426,8 @@ public class MotorConversacional {
         state.addProperty("low_memory", ram.known() ? ram.low : null);
         // No requested model is labelled active: withEngine fills it after successful initialization.
         state.addProperty("phase", "before_inference");
+        PendingToolAction pending = pendingToolAction;
+        state.addProperty("pending_action", pending == null ? "none" : pending.getType().name());
         return state;
     }
 
