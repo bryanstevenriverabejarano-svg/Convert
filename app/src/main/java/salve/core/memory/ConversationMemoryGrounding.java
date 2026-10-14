@@ -212,7 +212,7 @@ public final class ConversationMemoryGrounding {
                     : MemoryProvenance.kind(record).equals("investigacion_publica") ? "El registro de investigación pública "
                     : MemoryProvenance.kind(record).equals("sintesis_agente") ? "El registro de síntesis del agente " : "Mi recuerdo guardado ")
                     + qualifier + " es: «" + shorten(record.frase.trim(), 900) + "». "
-                    + (record.timestamp > 0 ? "Se registró el " + date(record.timestamp) + "."
+                    + (record.timestamp > 0 ? "Se registró el " + readable(record.timestamp) + "."
                     : "Su fecha de registro es desconocida.");
             if (isConfiguration(record)) answer += " Es configuración del sistema, no una vivencia compartida.";
             return out.result(answer);
@@ -286,10 +286,13 @@ public final class ConversationMemoryGrounding {
         return value == null ? "" : Normalizer.normalize(value.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replaceAll("\\s+", " ").trim();
     }
-    /** Fecha legible en hora de Madrid («14/10/2026 23:17»): el modelo pequeño deformaba el ISO con milisegundos. */
+    /** Fecha legible en hora de Madrid («14/10/2026 23:17»); el ISO exacto se conserva para distinguir registros. */
     private static final java.time.format.DateTimeFormatter READABLE =
             java.time.format.DateTimeFormatter.ofPattern("d/M/yyyy HH:mm").withZone(java.time.ZoneId.of("Europe/Madrid"));
     private static String date(long timestamp) {
+        return timestamp <= 0 ? "desconocida" : Instant.ofEpochMilli(timestamp).toString();
+    }
+    private static String readable(long timestamp) {
         return timestamp <= 0 ? "desconocida" : READABLE.format(Instant.ofEpochMilli(timestamp));
     }
     private static boolean isConfiguration(RecuerdoEntity record) {
@@ -331,7 +334,7 @@ public final class ConversationMemoryGrounding {
             if (append("{\"fuente\":\"recuerdos:" + r.id + "\",\"tipo\":" + json(kind)
                     + ",\"origen\":" + json(isConfiguration(r) ? "configuracion_sistema" : MemoryProvenance.storage(r))
                     + ",\"naturaleza\":" + json(MemoryProvenance.kind(r))
-                    + ",\"fecha_registro\":" + json(date(r.timestamp)) + ",\"texto\":"
+                    + ",\"fecha_registro\":" + json(date(r.timestamp)) + ",\"fecha_legible\":" + json(readable(r.timestamp)) + ",\"texto\":"
                     + json(query == null ? shorten(r.frase, 620) : MemoryEvidenceExcerpt.extract(r.frase, query, 620)) + "}")) evidence = true;
         }
         private boolean node(KnowledgeNodeEntity n) {
