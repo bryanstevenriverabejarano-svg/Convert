@@ -108,6 +108,8 @@ object BasicLocalLlm {
             val responses = try {
                 currentEngine.chat.completions.create(
                     messages = messages,
+                    temperature = 0.3f,
+                    top_p = 0.9f,
                     stream_options = OpenAIProtocol.StreamOptions(include_usage = true)
                 )
             } catch (e: Exception) {

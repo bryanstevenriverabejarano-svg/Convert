@@ -152,7 +152,7 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         }
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_k(40));
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_p(0.9f, 1));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_temp(0.6f));
+        llama_sampler_chain_add(sampler.get(), llama_sampler_init_temp(0.3f));
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
         std::string output;
         for (int i = 0; i < outputTokens; ++i) {

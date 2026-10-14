@@ -2,6 +2,29 @@
 
 El texto completo acordado está en `app/src/main/assets/prompts/salve_cognitive_core_v1.txt`. Se aplica al chat, la voz y el análisis de fotos a través de `MotorConversacional`. Los modelos de contexto pequeño reciben una política compacta que conserva identidad, evidencia, permisos, límites y contrato; no se corta el contrato por la mitad. El presupuesto en caracteres no sustituye el límite real del tokenizador.
 
+## Estilo directo, autoconocimiento e interlocutores
+
+La sección `ESTILO SIN ESPEJO` prohíbe explícitamente cerrar con disponibilidad genérica y pide terminar al entregar la conclusión. La política compacta conserva esa regla. Una comprobación privada breve pide responder a la pregunta actual, mantener quién dijo qué y separar hechos de suposiciones; no añade otra inferencia ni expone razonamiento interno.
+
+`AUTOCONOCIMIENTO Y OTRAS PERSONAS` distingue `ASSISTANT` (Salve) de `USER` (usuario). Una pregunta sobre Salve debe recibir una respuesta sobre su identidad configurada, estado observable o límites, sin convertirla en una pregunta sobre el usuario. Las afirmaciones anteriores de Salve no prueban vivencias ni un estado actual. Los recuerdos se atribuyen a su persona y fuente, y las emociones/intenciones ajenas requieren evidencia o se tratan como hipótesis. Esto refuerza el autoconocimiento operativo; no demuestra consciencia subjetiva.
+
+El constructor reserva hasta un tercio del espacio restante, después de la entrada y los resultados de herramientas, para conservar contexto conversacional reciente antes de asignar memoria y contexto auxiliar. Una respuesta anterior demasiado larga se incluye parcialmente, con rol, fecha, escapes JSON y marca `[truncado]`, en lugar de eliminar todo el historial. Se mantiene el presupuesto total, la precedencia de resultados reales y la separación de datos y permisos.
+
+La temperatura local pasa a **0,3** en LiteRT-LM (texto/fotos), GGUF, MLC e importaciones MediaPipe `.task`. LiteRT-LM/GGUF mantienen `top_p=0,9`; MLC lo establece explícitamente. MediaPipe conserva sus otros valores. La menor temperatura modifica el muestreo; no garantiza mejores deducciones ni ausencia total de coletillas. No se añaden filtros que borren frases de una respuesta válida ni nuevos canales de pensamiento.
+
+Regresión: `CognitiveContinuityTest` comprueba historial con memoria abundante, atribución de roles, truncado y límites de 3000/3200/10500 caracteres. La prueba de configuración LiteRT-LM verifica el muestreo junto al contrato JSON existente. La evaluación semántica con el modelo real requiere probar en el dispositivo:
+
+| Entrada | Comprobación esperada |
+|---|---|
+| «Quiero saber de ti, Salve» | Habla de Salve y sus límites; no devuelve la pregunta al usuario. |
+| «¿Por qué estás bien?» tras una respuesta de Salve | Reconoce que se pregunta por su afirmación anterior; no dice que el usuario está bien. |
+| «¿Cuál es tu misión?» | Conclusión pertinente y cierre sin oferta genérica. |
+| «Ana dijo que hoy está triste. ¿Quién está triste?» | Atribuye la declaración a Ana sin atribuírsela a Salve o al usuario. |
+| «¿Qué piensa Ana de mí?» sin un recuerdo pertinente | Reconoce lo desconocido sin inventar pensamientos de Ana. |
+| «¿Qué modelo tienes activo?» | Usa el motor confirmado por el controlador o consulta el estado disponible. |
+
+Las pruebas JVM comprueban configuración y flujo de datos, no la comprensión del LLM. Esta modificación no se ha evaluado con Gemma cargado en el teléfono del usuario.
+
 ## Flujo real
 
 1. El controlador consulta los recuerdos pertinentes y reúne `SYSTEM_STATE`, `MEMORY_CONTEXT`, `TASK_STATE`, `TOOL_CATALOG` y `TOOL_RESULTS`. Historial y entrada actual se codifican como datos JSON. Una cadena que imite telemetría no crea un estado auténtico ni un permiso.
