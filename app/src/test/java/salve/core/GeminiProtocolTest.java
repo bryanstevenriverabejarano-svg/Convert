@@ -28,6 +28,15 @@ public class GeminiProtocolTest {
         assertEquals(1, request.getAsJsonArray("contents").get(0).getAsJsonObject().getAsJsonArray("parts").size());
     }
 
+    @Test public void cognitiveModeUsesJsonWithoutChangingSpecialistPrompts() {
+        String prompt = salve.core.cognition.CognitivePrompt.build("", "hola", new JsonObject(), "", "",
+                Collections.emptyList(), Collections.emptyMap(), new JsonArray(), false, 2, 3000);
+        JsonObject cognitive = JsonParser.parseString(GeminiProtocol.request(prompt, null)).getAsJsonObject();
+        assertEquals("application/json", cognitive.getAsJsonObject("generationConfig").get("responseMimeType").getAsString());
+        JsonObject specialist = JsonParser.parseString(GeminiProtocol.request("Investiga esta fuente", null)).getAsJsonObject();
+        assertFalse(specialist.getAsJsonObject("generationConfig").has("responseMimeType"));
+    }
+
     @Test public void privateThoughtPartsAreNeverUserText() {
         ModelResult result = GeminiProtocol.response(200, candidate(
                 "[{\"thought\":true,\"text\":\"privado\"},{\"text\":\"Hola\"},{\"text\":\" mundo\"}]", "STOP"), 17L);

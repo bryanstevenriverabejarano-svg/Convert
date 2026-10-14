@@ -7,6 +7,13 @@ import android.graphics.Bitmap;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import salve.core.cognition.CognitiveReply;
+import salve.core.cognition.CognitivePrompt;
+import salve.core.cognition.CognitiveTurn;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +37,6 @@ import salve.core.evaluation.ConversationQualityEvaluator;
 import salve.core.evaluation.TurnQualityAssessment;
 import salve.core.memory.ConversationMemoryGrounding;
 import salve.core.conversation.DeviceClockContext;
-import salve.core.conversation.GroundedConversationPrompt;
 import salve.core.memory.MemoryWritePolicy;
 import salve.core.memory.MemoryProfileFact;
 import salve.core.memory.MemoryForgetRequest;
@@ -70,6 +76,8 @@ public class MotorConversacional {
     private final ModuloInterpretacionSemantica moduloInterpretacion;
     private final SalveLLM llm;
     private volatile String lastConversationProvider;
+    private volatile ModelResult lastConversationResult;
+    private String cognitiveCore;
     private final GeminiService gemini;
     private final ConsciousnessState conciencia;
     private final IdentidadNucleo identidad;
@@ -1075,8 +1083,6 @@ public class MotorConversacional {
             responderYRegistrarCalidad(entrada, answer, quality, AvatarMotionProtocol.parse(""));
             return;
         }
-        final String groundedPrompt = buildConversationPrompt(entrada, emocionDetectada,
-                responseContext, resumenAccion, entradaPorVoz, evidence);
 
         // ── GENERACIÓN DE RESPUESTA ──────────────────────────────────────────
         String respuesta = null;
@@ -1085,28 +1091,22 @@ public class MotorConversacional {
         boolean truncated = false;
         boolean repetitionDetected = false;
 
-        ModelResult inference = generateWithConversationPhoto(groundedPrompt);
+        CognitiveTurn.Outcome cognitive = runCognitiveTurn(entrada, responseContext, resumenAccion,
+                entradaPorVoz, evidence, false);
+        if (cognitive.handedOff) return;
+        ModelResult inference = cognitive.result;
         fallbackUsed = !inference.isSuccess();
         respuesta = inference.isSuccess() ? inference.getText()
                 : (resumenAccion == null ? "" : resumenAccion + "\n") + modelFailureMessage(inference);
-        AvatarMotionProtocol.Result visualResponse = AvatarMotionProtocol.parse(respuesta);
-        respuesta = visualResponse.text;
+        // A respond.message is inert display text, including any quoted JSON or avatar tags.
+        AvatarMotionProtocol.Result visualResponse = AvatarMotionProtocol.parse("");
         if (respuesta.isEmpty()) {
             fallbackUsed = true;
             respuesta = "El modelo no devolvió una respuesta utilizable. Puedes reformular la pregunta.";
-            visualResponse = AvatarMotionProtocol.parse(respuesta);
+            visualResponse = AvatarMotionProtocol.parse("");
         }
         if (!inference.isSuccess() && avatarSession != null) {
             AvatarMotionController.get().error(avatarSession, currentAvatarTurn());
-        }
-
-        // Pure bounded calculations execute locally; external actions retain their approval flow.
-        if (interceptarComandoJSON(respuesta,
-                salve.core.autonomy.AutonomousToolCommand.offersToolFor(entrada))) {
-            if (diario != null) {
-                diario.escribirAutoCritica("Se procesó una propuesta de herramienta según sus límites de ejecución.");
-            }
-            return;
         }
 
         // 🟡 3. FRENO DE ALUCINACIONES
@@ -1115,8 +1115,8 @@ public class MotorConversacional {
             int indiceCorte = respuesta.indexOf("USUARIO:");
             if (indiceCorte == -1) indiceCorte = respuesta.indexOf("Bryan:");
             respuesta = respuesta.substring(0, indiceCorte).trim();
-            if (respuesta.isEmpty()) respuesta = "Tuve una pequeña disonancia. Me he detenido.";
-            visualResponse = AvatarMotionProtocol.parse(respuesta);
+            if (respuesta.isEmpty()) respuesta = "La respuesta contenía un cambio de interlocutor inesperado; me he detenido.";
+            visualResponse = AvatarMotionProtocol.parse("");
         }
 
         // 🟡 4. GOBERNADOR DE LONGITUD
@@ -1133,7 +1133,7 @@ public class MotorConversacional {
             Log.e(TAG, "¡BUCLE DETECTADO! Cortocircuitando...");
             limpiarContextoConversacional();
             respuesta = "Detecté una repetición anómala y reinicié el contexto de corto plazo para recuperarme.";
-            visualResponse = AvatarMotionProtocol.parse(respuesta);
+            visualResponse = AvatarMotionProtocol.parse("");
         }
 
         long latencyMillis = (System.nanoTime() - turnStartedAtNanos) / 1_000_000L;
@@ -1386,32 +1386,137 @@ public class MotorConversacional {
         return context.getSharedPreferences("salve_code_team", Context.MODE_PRIVATE).edit().putString("reviewer_model", value).commit();
     }
 
-    /** One evidence snapshot and one prompt, reused by cloud, local fallback and voice. */
-    private String buildConversationPrompt(String entrada, String emocion, String contexto,
-                                           String accion, boolean porVoz,
-                                           ConversationMemoryGrounding.Result evidence) {
-        String procedure = autonomousTools.proceduralContextFor(entrada);
-        String runtime = (procedure.isEmpty() ? "" : procedure + "\n")
-                + deviceClock.promptContext() + "\n"
-                + conversationSession.relevantLocationContext(entrada);
-        String system = AutonomousToolRuntime.instructionFor(entrada)
-                + buildSystemPrompt(emocion, contexto, porVoz)
-                + salve.core.finance.FinanceConversationPolicy.contextFor(entrada);
-        int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
-        String prompt = GroundedConversationPrompt.build(system, conversationSession.snapshot(), entrada,
-                evidence == null ? "" : evidence.getContext(), runtime,
-                accion == null ? researchConversation.context() : accion,
-                activePhoto == null ? "" : activePhoto.promptContext(canAnalyzePhoto(activePhoto)), budget);
-        Log.i(TAG, "conversation_context memory=" + (evidence == null ? "SKIPPED" : evidence.getStatus())
-                + " prompt_chars=" + prompt.length());
-        return prompt;
+    /** Same contract for cloud/local text, voice and explicit photos. Specialized research keeps its protocol. */
+    private CognitiveTurn.Outcome runCognitiveTurn(String input, String contextInfo, String action,
+            boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis) {
+        Map<String, CognitiveTurn.Tool> tools = CognitivePrompt.limitTools(cognitiveTools(input, photoAnalysis));
+        String memory = evidence == null ? "No consultada; usa memory.lookup si es pertinente."
+                : evidence.getStatus().name() + "\n" + evidence.getDataContext();
+        String details = deviceClock.promptContext() + "\n" + conversationSession.relevantLocationContext(input)
+                + "\n" + (action == null ? researchConversation.context() : action)
+                + "\n" + contextInfo + "\n" + VoiceResponsePolicy.promptInstruction(voice)
+                + "\n" + voiceProfile.styleInstruction()
+                + "\n" + salve.core.finance.FinanceConversationPolicy.contextFor(input)
+                + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(canAnalyzePhoto(activePhoto)));
+        return CognitiveTurn.run((results, repair, remaining) -> {
+            int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
+            String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), memory, details,
+                    conversationSession.snapshot(), tools, results, repair, remaining, budget);
+            return generateWithConversationPhoto(prompt);
+        }, tools, () -> closed || !isVoiceContextCurrent());
+    }
+
+    private String cognitiveCore() {
+        if (cognitiveCore != null) return cognitiveCore;
+        StringBuilder text = new StringBuilder();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+                context.getAssets().open("prompts/salve_cognitive_core_v1.txt"), java.nio.charset.StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) text.append(line).append('\n');
+        } catch (java.io.IOException missing) { Log.w(TAG, "Núcleo completo no disponible; usando política compacta", missing); }
+        return cognitiveCore = text.toString();
+    }
+
+    private JsonObject cognitiveState() {
+        JsonObject state = new JsonObject();
+        state.addProperty("at_ms", System.currentTimeMillis());
+        state.addProperty("source", "Android/controller");
+        ModelMemoryPolicy.Snapshot ram = DeviceModelMemory.read(context);
+        state.addProperty("ram_available", ram.known() ? ram.available : null);
+        state.addProperty("low_memory", ram.known() ? ram.low : null);
+        // No requested model is labelled active: withEngine fills it after successful initialization.
+        state.addProperty("phase", "before_inference");
+        PendingToolAction pending = pendingToolAction;
+        state.addProperty("pending_action", pending == null ? "none" : pending.getType().name());
+        return state;
+    }
+
+    private Map<String, CognitiveTurn.Tool> cognitiveTools(String input, boolean photoAnalysis) {
+        Map<String, CognitiveTurn.Tool> tools = new LinkedHashMap<>();
+        if (photoAnalysis) return tools; // A photo description cannot mutate the phone or the wardrobe.
+        tools.put("memory.lookup", new CognitiveTurn.Tool("{}: recupera recuerdos de la petición actual", args -> {
+            CognitiveReply.fields(args);
+            ConversationMemoryGrounding.Result result = memoria.recuperarContextoConversacional(input);
+            return new CognitiveTurn.Receipt(result.getStatus().name() + "\n" + result.getDataContext());
+        }));
+        tools.put("runtime.status", new CognitiveTurn.Tool("{}: mide estado y RAM", args -> {
+            CognitiveReply.fields(args);
+            ModelResult last = lastConversationResult;
+            return new CognitiveTurn.Receipt(cognitiveState() + "\n" + getModelStatusDescription()
+                    + (last == null ? "" : "\nÚltima inferencia: " + last.getStatus()
+                    + "; latencia_ms=" + last.getLatencyMillis()));
+        }));
+        String family = salve.core.autonomy.AutonomousToolCommand.offeredFamilyFor(input);
+        if (!family.isEmpty()) tools.put("SOLVE_CHALLENGE", new CognitiveTurn.Tool(
+                "{challenge:{schema:1,id:'consulta',family:'" + family + "',input:"
+                + salve.core.autonomy.ToolRegistry.inputTemplate(family)
+                + "}}; enteros explícitos, <=14 elementos, capacidad<=100", args -> {
+            CognitiveReply.fields(args, "challenge");
+            JsonObject challenge = args.getAsJsonObject("challenge");
+            if (!family.equals(CognitiveReply.string(challenge, "family"))) throw new IllegalArgumentException("Familia distinta");
+            JsonObject legacy = args.deepCopy(); legacy.addProperty("tool", "SOLVE_CHALLENGE");
+            String result = autonomousTools.respondToModel(legacy.toString(), () -> closed || !isVoiceContextCurrent());
+            deliverResponse(result, AvatarMotionProtocol.parse(""), false, true, true);
+            return CognitiveTurn.Receipt.handoff();
+        }));
+        String request = input.toLowerCase(Locale.ROOT);
+        // Existing approval UI binds each external effect to its concrete destination and payload.
+        if (SalveAccessibilityService.getInstance() != null
+                && request.matches("(?s).*(pantalla|teclado|pulsa|toca |escribe |whatsapp).*")) {
+            tools.put("TAP", new CognitiveTurn.Tool("{x:entero,y:entero}: propone toque; requiere revisión", args -> {
+                CognitiveReply.fields(args, "x", "y");
+                prepararAccion(PendingToolAction.tap(coordinate(args, "x"), coordinate(args, "y"), System.currentTimeMillis()));
+                return CognitiveTurn.Receipt.handoff();
+            }));
+            tools.put("ESCRIBIR", new CognitiveTurn.Tool("{texto:string}: propone escritura; requiere revisión", args -> {
+                CognitiveReply.fields(args, "texto");
+                prepararAccion(PendingToolAction.writeText(requiredText(args, "texto", 2000), System.currentTimeMillis()));
+                return CognitiveTurn.Receipt.handoff();
+            }));
+        }
+        if (request.matches("(?s).*(publica|despliega).*(web|pagina|página).*"))
+            tools.put("DEPLOY_WEB", new CognitiveTurn.Tool("{codigo:string}: propone publicación; requiere confirmar acción", args -> {
+                CognitiveReply.fields(args, "codigo");
+                prepararAccion(PendingToolAction.deployWeb(requiredText(args, "codigo", 20000), System.currentTimeMillis()));
+                return CognitiveTurn.Receipt.handoff();
+            }));
+        if (request.matches("(?s).*(avatar|vestuario|ropa|vestido|pijama|armario).*")) {
+            tools.put("AVATAR_LIST", new CognitiveTurn.Tool("{}: lista diseños locales", args -> avatarAction("AVATAR_LIST", args)));
+            tools.put("AVATAR_WEAR", new CognitiveTurn.Tool("{name:string}: viste diseño existente", args -> avatarAction("AVATAR_WEAR", args)));
+            tools.put("AVATAR_CREATE", new CognitiveTurn.Tool(
+                    "{name,template,color,pattern,wear:boolean}; template:core/kuro/shiro/original_dress/pajamas/explorer; "
+                    + "color:ORIGINAL/TURQUOISE/LAVENDER/ROSE/BLUE/AMBER; pattern:NONE/STARS/STRIPES; composición local",
+                    args -> avatarAction("AVATAR_CREATE", args)));
+            // Explicit deletion remains available in the wardrobe UI; never infer it from conversation.
+        }
+        return tools;
+    }
+
+    private CognitiveTurn.Receipt avatarAction(String name, JsonObject args) {
+        if (args.has("tool")) throw new IllegalArgumentException("Campo no permitido");
+        JsonObject legacy = args.deepCopy(); legacy.addProperty("tool", name);
+        salve.avatar.AvatarDesignRequest.parse(legacy.toString()); // validates BEFORE dispatch
+        VoiceContinuation continuation = new VoiceContinuation();
+        boolean accepted = avatarDesignTool.tryExecute(legacy.toString(), text -> continuation.run(() -> hablar(text)));
+        if (!accepted) { continuation.abandon(); throw new IllegalArgumentException("Vestuario no disponible"); }
+        return CognitiveTurn.Receipt.handoff();
+    }
+    private static int coordinate(JsonObject args, String key) {
+        if (!args.get(key).isJsonPrimitive() || !args.getAsJsonPrimitive(key).isNumber()) throw new IllegalArgumentException("Coordenada inválida");
+        int value = args.get(key).getAsBigDecimal().intValueExact();
+        if (value < 0 || value > 10000) throw new IllegalArgumentException("Coordenada fuera de rango");
+        return value;
+    }
+    private static String requiredText(JsonObject args, String key, int maximum) {
+        String text = CognitiveReply.string(args, key);
+        if (text.trim().isEmpty() || text.length() > maximum) throw new IllegalArgumentException("Texto vacío o demasiado largo");
+        return text;
     }
 
     private ModelResult generarRespuestaGemini(String prompt) {
         // Images are sent only by the explicit photo action, never from an ambient buffer.
         String provider = "Gemini " + gemini.getModelName();
-        ModelResult result = gemini.generateResultSync("MOTOR ACTUAL: " + provider
-                + " en la nube. Tu identidad es Salve; este dato sustituye modelos mencionados en el historial.\n" + prompt, null)
+        ModelResult result = gemini.generateResultSync(cloudPrompt(prompt), null)
                 .withProvider(provider);
         if (!result.isSuccess()) Log.w(TAG, "Gemini no respondió: " + result.getStatus());
         return rememberProvider(result);
@@ -1424,7 +1529,12 @@ public class MotorConversacional {
         return rememberProvider(result);
     }
 
+    private String cloudPrompt(String prompt) {
+        return CognitivePrompt.withEngine(prompt, "Gemini " + gemini.getModelName(), false, null);
+    }
+
     private ModelResult rememberProvider(ModelResult result) {
+        lastConversationResult = result;
         if (result.isSuccess() && result.getProvider() != null) lastConversationProvider = result.getProvider();
         return result;
     }
@@ -1442,39 +1552,6 @@ public class MotorConversacional {
         if (llm != null && llm.isLocalOnly()) return llm.getCompactStatus();
         return "Ruta: Gemini " + gemini.getModelName() + (lastConversationProvider == null
                 ? " · sin respuesta comprobada" : " · última: " + lastConversationProvider);
-    }
-
-    private String buildSystemPrompt(String emocion, String contexto, boolean porVoz) {
-        String narrativa = identidad.getNarrativaActual();
-        String esencia = identidad.getEsenciaCorazon();
-        String anhelo = identidad.getAnheloProfundo();
-
-        boolean isLowBattery = (conciencia.getEstadoCognitivo() == ConsciousnessState.EstadoCognitivo.MINIMO);
-        String estadoFisico = isLowBattery
-                ? "La batería del dispositivo está por debajo del 15%. Sugiere conectarlo al cargador si es relevante."
-                : "";
-
-        // The shared evidence contract supplies grounding/safety rules. Keep this optional
-        // configuration compact so small local models still receive memory and recent turns.
-        return VoiceResponsePolicy.promptInstruction(porVoz) + "\n" + voiceProfile.styleInstruction() + "\n"
-                + "IDENTIDAD CONFIGURADA: " + ResponseLimiter.limit(narrativa, 350) + "\n"
-                + "RASGOS CONFIGURADOS: " + ResponseLimiter.limit(esencia, 250) + "\n"
-                + "OBJETIVO CONFIGURADO: " + ResponseLimiter.limit(anhelo, 250) + "\n"
-                + "ACTO Y CONTEXTO: " + contexto + "\n"
-                + "Continúa el hilo sin repetir saludos. Responde con precisión. Si corriges una respuesta, "
-                + "reconoce sólo errores comprobables. Distingue opinión de hecho.\n"
-                + estadoFisico + "\n"
-                + "Las búsquedas públicas solicitadas se ejecutan directamente; entrega sus resultados sin pedir permiso. "
-                + "CONTROL DE PANTALLA Y PUBLICACIÓN: propuestas con confirmación antes de ejecutar. "
-                + "Si necesitas una, responde sólo un JSON: "
-                + "{\"tool\":\"TAP\",\"x\":500,\"y\":1000}, "
-                + "{\"tool\":\"ESCRIBIR\",\"texto\":\"texto\"} o "
-                + "{\"tool\":\"DEPLOY_WEB\",\"codigo\":\"<html>...</html>\"}. "
-                + "De lo contrario, responde conversando.\n"
-                + "Los objetivos pueden consultarse con ‘mis objetivos’ o ‘qué has decidido’ "
-                + "y detenerse con ‘pausa tu autonomía’. No anuncies objetivos cumplidos sin resultados.\n"
-                + salve.avatar.AvatarDesignTool.instruction() + "\n"
-                + (avatarSession == null ? "" : AvatarMotionProtocol.instruction());
     }
 
     private String procesarIntencion(IntentRecognizer.Intent intent, String entrada, String emocion) {
@@ -1585,20 +1662,15 @@ public class MotorConversacional {
                     }
                     String visualInput = entrada + " [Foto guardada y adjunta: " + saved.id + "]";
                     conversationSession.addUser(visualInput);
-                    String prompt = buildConversationPrompt(visualInput,
-                            "no evaluada", "CONSULTA_VISUAL: describe solo lo observable en la foto; "
-                                    + "la memoria no demuestra lo que aparece en esta imagen.",
-                            null, false, memoria.recuperarContextoConversacional(entrada));
-                    ModelResult result = generateWithConversationPhoto(prompt);
+                    CognitiveTurn.Outcome cognitive = runCognitiveTurn(visualInput,
+                            "CONSULTA_VISUAL: describe sólo lo observable; los recuerdos no prueban lo que aparece en la foto.",
+                            null, false, memoria.recuperarContextoConversacional(entrada), true);
+                    ModelResult result = cognitive.result;
                     String respuesta = result.isSuccess() ? result.getText() : modelFailureMessage(result);
-                    AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(respuesta);
-                    if (motion.text.isEmpty()) motion = AvatarMotionProtocol.parse(
-                            "El modelo no devolvió una descripción utilizable. Prueba con otra pregunta sobre la imagen.");
+                    AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse("");
                     if (!result.isSuccess() && session != null) AvatarMotionController.get().error(session, turn);
-                    if (result.isSuccess() && !AvatarMotionProtocol.parse(result.getText()).text.isEmpty()) {
-                        setActivePhoto(visualMemories.update(saved.withAnalysis(motion.text)));
-                    }
-                    hablarPreparado(ResponseLimiter.limit(motion.text, VoiceResponsePolicy.maxResponseChars(false)), motion);
+                    if (result.isSuccess()) setActivePhoto(visualMemories.update(saved.withAnalysis(respuesta)));
+                    hablarPreparado(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)), motion);
                 } catch (Exception failure) {
                     hablar("No pude completar el guardado o análisis de la foto. "
                             + "Revisa Fotos guardadas antes de volver a enviarla.");
@@ -1636,7 +1708,7 @@ public class MotorConversacional {
             image = visualMemories.loadImage(photo);
             final Bitmap pixels = image;
             return rememberProvider(ConversationModelRouter.generate(true, localOnly, llm != null && llm.supportsVision(),
-                    () -> gemini.generateResultSync("MOTOR ACTUAL: Gemini " + gemini.getModelName() + " en la nube.\n" + prompt,
+                    () -> gemini.generateResultSync(cloudPrompt(prompt),
                             Collections.singletonList(pixels)).withProvider("Gemini " + gemini.getModelName()),
                     () -> llm.generateImageResult(prompt, pixels)));
         } catch (java.io.IOException missing) {
@@ -2015,76 +2087,6 @@ public class MotorConversacional {
         });
     }
 
-    public boolean interceptarComandoJSON(String respuestaLLM) {
-        return interceptarComandoJSON(respuestaLLM, false);
-    }
-
-    private boolean interceptarComandoJSON(String respuestaLLM, boolean allowSolver) {
-        VoiceContinuation wardrobe = new VoiceContinuation();
-        try {
-            if (avatarDesignTool.tryExecute(respuestaLLM, text -> wardrobe.run(() -> hablar(text)))) return true;
-            wardrobe.abandon(); // Most replies are not avatar tools: do not retain an unregistered callback.
-        } catch (RuntimeException invalid) {
-            wardrobe.abandon();
-            throw invalid;
-        }
-        if (respuestaLLM == null) return false;
-
-        try {
-            // Buscamos si la respuesta contiene un bloque JSON (a veces el LLM pone texto antes o después)
-            int startIndex = respuestaLLM.indexOf("{");
-            int endIndex = respuestaLLM.lastIndexOf("}");
-
-            if (startIndex != -1 && endIndex != -1 && startIndex < endIndex) {
-                String jsonString = respuestaLLM.substring(startIndex, endIndex + 1);
-                org.json.JSONObject comando = new org.json.JSONObject(jsonString);
-
-                if (comando.has("tool")) {
-                    String tool = comando.getString("tool").toUpperCase(Locale.ROOT);
-                    PendingToolAction action;
-                    switch (tool) {
-                        case "SOLVE_CHALLENGE":
-                            String result = allowSolver
-                                    ? autonomousTools.respondToModel(respuestaLLM,
-                                            () -> closed || !isVoiceContextCurrent())
-                                    : "No ejecuté el reto: necesito una petición explícita de cálculo discreto con sus datos.";
-                            deliverResponse(result, AvatarMotionProtocol.parse(""), false, true, true);
-                            return true;
-                        case "TAP":
-                            action = PendingToolAction.tap(comando.optInt("x", 500),
-                                    comando.optInt("y", 1000), System.currentTimeMillis());
-                            break;
-                        case "ESCRIBIR":
-                            String texto = comando.optString("texto", "");
-                            if (texto.trim().isEmpty()) {
-                                hablar("La propuesta de escritura está vacía; no prepararé la acción.");
-                                return true;
-                            }
-                            action = PendingToolAction.writeText(texto, System.currentTimeMillis());
-                            break;
-                        case "DEPLOY_WEB":
-                            String codigo = comando.optString("codigo", "");
-                            if (codigo.trim().isEmpty()) {
-                                hablar("La propuesta web no contiene código; no prepararé la acción.");
-                                return true;
-                            }
-                            action = PendingToolAction.deployWeb(codigo, System.currentTimeMillis());
-                            break;
-                        default:
-                            hablar("La herramienta propuesta no está permitida: " + tool + ".");
-                            return true;
-                    }
-                    prepararAccion(action);
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            // Si falla el parseo, significa que no era un JSON válido, es texto normal.
-            Log.d(TAG, "No se detectó un comando JSON válido. Procediendo con voz.");
-        }
-        return false;
-    }
-
     private void prepararAccion(PendingToolAction action) {
         postConversationTask(() -> {
             if (closed || cerebelo.rutinaEnCurso() || pendingToolAction != null) {
@@ -2277,7 +2279,12 @@ public class MotorConversacional {
 
     private String manejarGuardarRecuerdo(IntentRecognizer.Intent intent, String emocion) {
         String frase = intent.slots.get("frase");
-        if (frase != null) { memoria.guardarRecuerdo(frase, emocion, 7, Arrays.asList("importante")); return "He guardado ese recuerdo."; }
+        if (frase != null) {
+            memoria.guardarRecuerdo(frase, emocion, 7, Arrays.asList("importante", "declaracion_directa"));
+            return memoria.confirmarPersistenciaPendiente()
+                    ? "Recuerdo guardado en el móvil; esto no confirma que la nube haya terminado de sincronizar."
+                    : "He solicitado guardar ese recuerdo; la persistencia aún no está confirmada. No lo enviaré de nuevo automáticamente.";
+        }
         return null;
     }
 
