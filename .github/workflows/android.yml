@@ -76,10 +76,19 @@ jobs:
         timeout-minutes: 30
         # The checked-in daemon criteria still select/download JetBrains JDK 21.
         # TVM runtime fetching and generative model downloads are not build tasks.
-        run: >-
-          bash ./gradlew --no-daemon --stacktrace --console=plain --max-workers=2
-          --init-script scripts/android-arm64.init.gradle
-          :app:test${{ matrix.task_suffix }}UnitTest :app:assemble${{ matrix.task_suffix }}
+        # Compile errors and failing tests are also published as one annotation, readable
+        # through the checks API without downloading the full log.
+        run: |
+          set -o pipefail
+          mkdir -p build
+          if ! bash ./gradlew --no-daemon --stacktrace --console=plain --max-workers=2 \
+              --init-script scripts/android-arm64.init.gradle \
+              :app:test${{ matrix.task_suffix }}UnitTest :app:assemble${{ matrix.task_suffix }} 2>&1 | tee build/gradle.log; then
+            summary=$(grep -E "error:|FAILED|What went wrong|Exception at|expected:<|\.java:[0-9]+" build/gradle.log | grep -v "^\s*at " | head -40)
+            summary="${summary//'%'/'%25'}"; summary="${summary//$'\n'/'%0A'}"
+            echo "::error title=Gradle::${summary}"
+            exit 1
+          fi
 
       - name: Compile opt-in real device inference tests
         if: matrix.variant == 'debug'
