@@ -362,7 +362,8 @@ public class SalveLLM {
                 }
             } else {
                 decorated = salve.core.cognition.CognitivePrompt.withEngine(decorated, ModelRuntimeInfo.name(modelPath), true, null);
-                text = isLiteRT ? LiteRTLlm.generate(identity + decorated) : BasicLocalLlm.chatSinglePrompt(identity + decorated);
+                text = isLiteRT ? LiteRTLlm.generate(identity + decorated, salve.core.cognition.CognitivePrompt.isCognitive(decorated),
+                        salve.core.cognition.CognitivePrompt.isFormatRepair(decorated)) : BasicLocalLlm.chatSinglePrompt(identity + decorated);
             }
             long latency = (System.nanoTime() - start) / 1_000_000L;
             if (text == null || text.trim().isEmpty()) {
@@ -635,7 +636,8 @@ public class SalveLLM {
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
             if (!image.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) throw new java.io.IOException("No se pudo leer la foto");
             String text = LiteRTLlm.generateImage(ModelRuntimeInfo.context(modelPath)
-                    + salve.core.cognition.CognitivePrompt.withEngine(prompt, ModelRuntimeInfo.name(modelPath), true, null), bytes.toByteArray());
+                    + salve.core.cognition.CognitivePrompt.withEngine(prompt, ModelRuntimeInfo.name(modelPath), true, null), bytes.toByteArray(), salve.core.cognition.CognitivePrompt.isCognitive(prompt),
+                    salve.core.cognition.CognitivePrompt.isFormatRepair(prompt));
             ModelResult result = ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L)
                     .withProvider(ModelRuntimeInfo.name(modelPath));
             recordInference(ModelCatalog.Capability.VISION, result.isSuccess());

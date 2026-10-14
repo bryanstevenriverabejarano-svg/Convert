@@ -93,11 +93,12 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
-        JNIEnv *env, jclass, jlong handle, jbyteArray input, jbyteArray systemInput, jint contextSize, jobject cancelled) {
+        JNIEnv *env, jclass, jlong handle, jbyteArray input, jbyteArray systemInput, jbyteArray grammarInput, jint contextSize, jboolean repair, jobject cancelled) {
     try {
         if (contextSize != 4096 && contextSize != 2048) throw std::invalid_argument("Contexto GGUF no admitido");
         auto *model = reinterpret_cast<llama_model *>(handle);
         Request request(env, cancelled);
+        if (repair) request.deadline = Clock::now() + std::chrono::seconds(30);
         request.check();
         const auto *vocab = llama_model_get_vocab(model);
         std::string content = bytes(env, input);
@@ -114,7 +115,7 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         std::vector<char> formatted(length + 1);
         length = llama_chat_apply_template(chatTemplate, messages, 2, true, formatted.data(), formatted.size());
         int count = -llama_tokenize(vocab, formatted.data(), length, nullptr, 0, true, true);
-        constexpr int outputTokens = 512;
+        const int outputTokens = repair ? 256 : 512;
         const int batchSize = contextSize == 2048 ? 128 : 256;
         if (count <= 0 || count > contextSize - outputTokens)
             throw std::invalid_argument("El mensaje supera el contexto local; acórtalo e inténtalo de nuevo");
@@ -142,6 +143,13 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             decode(tokens.data() + offset, std::min(batchSize, count - offset));
         std::unique_ptr<llama_sampler, decltype(&llama_sampler_free)> sampler(
                 llama_sampler_chain_init(llama_sampler_chain_default_params()), llama_sampler_free);
+        std::string grammar = bytes(env, grammarInput);
+        if (!grammar.empty()) {
+            // Mask invalid tokens BEFORE top-k/top-p. sample() also accepts the chosen token once.
+            auto *constraint = llama_sampler_init_grammar(vocab, grammar.c_str(), "root");
+            if (!constraint) throw std::invalid_argument("Gramática de salida de Salve inválida");
+            llama_sampler_chain_add(sampler.get(), constraint);
+        }
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_k(40));
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_p(0.9f, 1));
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_temp(0.6f));

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Salve cognitive reply v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "mode": { "const": "respond" },
+        "message": { "type": "string", "minLength": 1 },
+        "action": { "type": "null" }
+      },
+      "required": ["mode", "message", "action"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "mode": { "const": "tool" },
+        "message": { "type": "null" },
+        "action": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]{0,63}$" },
+            "arguments": { "type": "object" }
+          },
+          "required": ["name", "arguments"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["mode", "message", "action"],
+      "additionalProperties": false
+    }
+  ]
+}

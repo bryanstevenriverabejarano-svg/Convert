@@ -30,6 +30,25 @@ public final class CognitiveReply {
         }
         throw new IllegalArgumentException("Contrato de salida inválido");
     }
+    /** Conversation-only fallback. Strict parse remains available to verify constrained generation. */
+    public static CognitiveReply parseForConversation(String raw) {
+        try { return parse(raw); }
+        catch (IllegalArgumentException invalid) {
+            String text = CognitiveTextFallback.checkedText(raw);
+            if (text == null) throw invalid;
+            String unfenced = CognitiveTextFallback.unwrapFence(text);
+            if (unfenced != null && CognitiveTextFallback.brokenEnvelope(unfenced)) {
+                // Recover a complete response envelope only. Never recover an action from fences/prose.
+                CognitiveReply reply = parse(unfenced);
+                if (reply.name == null) return reply;
+                throw invalid;
+            }
+            if (isToolAttempt(text) || CognitiveTextFallback.brokenEnvelope(text)) throw invalid;
+            return new CognitiveReply(text, null, null);
+        }
+    }
+    public static boolean isToolAttempt(String raw) { return CognitiveTextFallback.toolAttempt(raw); }
+
     public static void fields(JsonObject value, String... names) {
         if (value.size() != names.length) throw new IllegalArgumentException("Campos incorrectos");
         for (String name : names) if (!value.has(name)) throw new IllegalArgumentException("Falta " + name);
