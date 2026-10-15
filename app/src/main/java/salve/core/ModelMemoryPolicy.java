@@ -3,8 +3,10 @@ package salve.core;
 /** Admission estimates, not measured device guarantees. Uses bytes, never Java heap limits. */
 public final class ModelMemoryPolicy {
     public static final long MIB = 1024L * 1024L;
-    /** Margen que se deja libre para Android, además de su propio umbral de memoria baja. */
-    public static final long RESERVE = 512 * MIB;
+    /** Margen libre para Android en los modelos GGUF (retirados) y el vigilante de presión. */
+    public static final long RESERVE = 768 * MIB;
+    /** Margen para Android con Gemma (LiteRT-LM), además de su propio umbral de memoria baja. */
+    public static final long LITERT_RESERVE = 512 * MIB;
     public static final long LARGE_WEIGHTS = 4920749472L;
     private ModelMemoryPolicy() { }
     public static final class Snapshot {
@@ -48,7 +50,7 @@ public final class ModelMemoryPolicy {
         long weights = LocalModelPolicy.LIGHT.equals(id) ? 2019382400L
                 : LocalModelPolicy.GEMMA_E4B.equals(id) ? 3659530240L : 2588147712L;
         return (weightsResident ? 0 : weights) + LITERT_RUNTIME_OVERHEAD + (vision ? VISION_OVERHEAD : 0)
-                + (contextTokens > LITERT_STANDARD ? LONG_CONTEXT_OVERHEAD : 0) + Math.max(RESERVE, threshold);
+                + (contextTokens > LITERT_STANDARD ? LONG_CONTEXT_OVERHEAD : 0) + Math.max(LITERT_RESERVE, threshold);
     }
 
     /** Mayor contexto que cabe (7.000 o 4.096), o 0 si ni el estándar cabe. */
