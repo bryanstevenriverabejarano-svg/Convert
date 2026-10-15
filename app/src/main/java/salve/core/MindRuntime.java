@@ -419,11 +419,11 @@ public final class MindRuntime {
      * del hilo principal.
      */
     public String exploreCuriosity(BooleanSupplier stopped, boolean force) {
+        if (journal.isPaused()) return "Mi actividad interna está en pausa.";
         android.content.SharedPreferences prefs = app.getSharedPreferences(CURIOSITY_PREFS, Context.MODE_PRIVATE);
         long now = System.currentTimeMillis();
         if (!force && now - prefs.getLong("last_at", 0L) < salve.core.mind.CuriosityCycle.MIN_INTERVAL_MS)
             return "Investigué hace poco; espero un rato.";
-        if (!force && prefs.contains("news_question")) return "Aún tengo algo pendiente de contarle a Bryan.";
         java.util.Set<String> explored = new java.util.HashSet<>(prefs.getStringSet("explored", java.util.Collections.emptySet()));
         java.util.Set<String> visited = new java.util.HashSet<>(prefs.getStringSet("visited", java.util.Collections.emptySet()));
         List<String> names = new ArrayList<>();
@@ -446,13 +446,13 @@ public final class MindRuntime {
 
         salve.core.mind.SelfModel.Question question = followThread ? threadQuestion : fresh;
         List<String> texts = new ArrayList<>();
-        List<String> links = new ArrayList<>();
-        String url = null;
+        List<String> urls = new ArrayList<>();
+        java.util.Map<String, List<String>> linksByUrl = new java.util.HashMap<>();
         if (followThread) {
             visited.add(threadLink);
             try {
                 WikipediaResearchClient.Page page = new WebResearchClient(app).fetch(threadLink, stopped);
-                texts.add(page.text); url = page.url; links.addAll(page.links);
+                texts.add(page.text); urls.add(page.url); linksByUrl.put(page.url, page.links);
                 salve.core.web.SearchLive.reading(page.url, page.title);
             } catch (java.io.IOException | RuntimeException unreadable) { /* Hilo cortado: probará otro. */ }
         } else {
@@ -460,30 +460,75 @@ public final class MindRuntime {
             if (salve.core.web.SearchLive.panelOpen()) salve.core.web.SearchLive.begin(app, salve.core.mind.CuriosityCycle.query(question.text));
             WikipediaResearchClient.ResearchBatch batch = new WebResearchClient(app, salve.core.mind.CuriosityCycle.query(question.text))
                     .researchResult(salve.core.mind.CuriosityCycle.query(question.text), stopped);
-            for (WikipediaResearchClient.Page page : batch.pages) {
-                texts.add(page.text);
-                if (url == null) { url = page.url; links.addAll(page.links); }
-            }
-            explored.add(question.id);
+            for (WikipediaResearchClient.Page page : batch.pages) { texts.add(page.text); urls.add(page.url); linksByUrl.put(page.url, page.links); }
         }
-        String summary = salve.core.mind.CuriosityCycle.summarize(texts);
-        android.content.SharedPreferences.Editor edit = prefs.edit().putStringSet("explored", explored)
-                .putStringSet("visited", limitSet(visited, 200));
-        if (url != null) edit.putString("thread_qid", question.id).putString("thread_links", String.join("\n",
-                        links.size() > 40 ? links.subList(0, 40) : links))
-                .putInt("thread_depth", followThread ? prefs.getInt("thread_depth", 0) + 1 : 0);
-        edit.apply();
-        if (summary == null) return (followThread ? "Seguí el hilo de «" : "Busqué «") + question.text + "», pero no encontré nada claro.";
-        String host = url == null ? null : android.net.Uri.parse(url).getHost();
-        journal.apply(salve.core.mind.CuriosityCycle.patch(question, summary, host, followThread));
-        prefs.edit().putString("news_question", question.text).putString("news_summary", summary)
-                .putString("news_url", url == null ? "" : url).putLong("news_at", now).putInt("news_told", 0).apply();
-        return "Investigué «" + question.text + "»: " + summary + (host == null ? "" : " (" + host + ")");
+        if (journal.isPaused() || (stopped != null && stopped.getAsBoolean())) return "Exploración interrumpida; la retomaré.";
+        // El extracto y su URL salen juntos de la misma página (antes podían no coincidir).
+        salve.core.mind.CuriosityCycle.Finding finding = salve.core.mind.CuriosityCycle.summarize(texts, urls);
+        android.content.SharedPreferences.Editor edit = prefs.edit().putStringSet("visited", limitSet(visited, 200));
+        if (finding == null) {
+            // Un fallo no la descarta: la pregunta se reintenta hasta tres veces en otras salidas.
+            int failures = prefs.getInt("fail_" + question.id, 0) + 1;
+            edit.putInt("fail_" + question.id, failures);
+            if (failures >= 3 && !followThread) { explored.add(question.id); edit.putStringSet("explored", explored); }
+            edit.apply();
+            return (followThread ? "Seguí el hilo de «" : "Busqué «") + question.text + "», pero no encontré nada claro; lo reintentaré.";
+        }
+        if (!followThread) explored.add(question.id);
+        List<String> links = linksByUrl.containsKey(finding.url) ? linksByUrl.get(finding.url) : new ArrayList<>();
+        edit.putStringSet("explored", explored).remove("fail_" + question.id)
+                .putString("thread_qid", question.id)
+                .putString("thread_links", String.join("\n", links.size() > 40 ? links.subList(0, 40) : links))
+                .putInt("thread_depth", followThread ? prefs.getInt("thread_depth", 0) + 1 : 0).apply();
+        String host = salve.core.mind.CuriosityCycle.hostOf(finding.url);
+        salve.core.mind.SelfModelJournal.Result saved = journal.apply(salve.core.mind.CuriosityCycle.patch(question, finding, followThread));
+        // Bandeja de novedades: la última se cuenta al volver; no bloquea las siguientes exploraciones.
+        prefs.edit().putString("news_question", question.text).putString("news_summary", finding.summary)
+                .putString("news_url", finding.url == null ? "" : finding.url).putLong("news_at", now).putInt("news_told", 0)
+                .putInt("news_unread", prefs.getInt("news_unread", 0) + 1).apply();
+        return "Investigué «" + question.text + "»: " + finding.summary + (host == null ? "" : " (" + host + ")")
+                + (saved.saved ? "" : " (no pude guardarlo en mi mente: " + saved.summary + ")");
     }
 
     private static java.util.Set<String> limitSet(java.util.Set<String> values, int max) {
         if (values.size() <= max) return values;
         return new java.util.HashSet<>(new ArrayList<>(values).subList(values.size() - max, values.size()));
+    }
+
+    // ── Respaldo íntegro de la mente ─────────────────────────────────────────────
+
+    /**
+     * Paquete versionado con su modelo de sí misma y su progreso de juego (no incluye credenciales,
+     * acciones pendientes ni permisos). null si su mente no se pudo leer.
+     */
+    public String exportMindSnapshot() {
+        String self = journal.snapshotJson();
+        if (self == null) return null;
+        com.google.gson.JsonObject bundle = new com.google.gson.JsonObject();
+        bundle.addProperty("schema", 1);
+        bundle.addProperty("exported_at", System.currentTimeMillis());
+        bundle.add("self_model", com.google.gson.JsonParser.parseString(self));
+        File play = new File(new File(app.getNoBackupFilesDir(), "mind"), "play.json");
+        try {
+            if (play.isFile()) bundle.add("play", com.google.gson.JsonParser.parseString(
+                    new String(java.nio.file.Files.readAllBytes(play.toPath()), java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (Exception unreadable) { /* El juego no impide respaldar la mente. */ }
+        return bundle.toString();
+    }
+
+    /** Restaura un paquete si es más reciente que lo local. Devuelve true si cambió algo. */
+    public boolean importMindSnapshot(String json) {
+        try {
+            com.google.gson.JsonObject bundle = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            if (!bundle.has("schema") || bundle.get("schema").getAsInt() != 1 || !bundle.has("self_model")) return false;
+            boolean restored = journal.restoreFrom(bundle.get("self_model").toString());
+            File play = new File(new File(app.getNoBackupFilesDir(), "mind"), "play.json");
+            if (bundle.has("play") && !play.isFile()) restored |= writeAtomically(play, bundle.get("play").toString());
+            if (restored) lastPlay = null;
+            return restored;
+        } catch (RuntimeException invalid) {
+            return false;
+        }
     }
 
     // ── Juego propio ────────────────────────────────────────────────────────────
@@ -495,6 +540,7 @@ public final class MindRuntime {
      * progreso. Solo CPU acotada, sin modelo ni red. Devuelve un resumen.
      */
     public String play(BooleanSupplier stopped, int rounds) {
+        if (journal.isPaused()) return "Mi actividad interna está en pausa.";
         synchronized (playLock) {
             File file = new File(new File(app.getNoBackupFilesDir(), "mind"), "play.json");
             com.google.gson.Gson gson = new com.google.gson.Gson();
@@ -507,7 +553,7 @@ public final class MindRuntime {
             int solved = 0, played = 0;
             List<String> notes = new ArrayList<>();
             for (int i = 0; i < rounds; i++) {
-                if (stopped != null && stopped.getAsBoolean()) break;
+                if ((stopped != null && stopped.getAsBoolean()) || journal.isPaused()) break;
                 String family = salve.core.autonomy.PlayCycle.choose(state, random);
                 int level = state.of(family).level;
                 com.google.gson.JsonObject report;
@@ -523,10 +569,7 @@ public final class MindRuntime {
                 String note = salve.core.autonomy.PlayCycle.reflection(family, outcome);
                 if (note != null) notes.add(note);
             }
-            try {
-                file.getParentFile().mkdirs();
-                java.nio.file.Files.write(file.toPath(), gson.toJson(state).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            } catch (java.io.IOException unsaved) { Log.w(TAG, "No pude guardar el progreso del juego"); }
+            boolean saved = writeAtomically(file, gson.toJson(state));
             // Solo lo que cambió de verdad (nivel o estrategia) pasa a ser un pensamiento suyo.
             if (!notes.isEmpty()) {
                 salve.core.mind.MindPatch patch = new salve.core.mind.MindPatch("juego");
@@ -537,11 +580,28 @@ public final class MindRuntime {
             lastPlay = state;
             return played == 0 ? "No pude jugar ahora (laboratorio pausado o no disponible)."
                     : "Jugué " + played + " retos inventados por mí; resolví " + solved + "."
-                    + (notes.isEmpty() ? "" : " " + String.join(" ", notes));
+                    + (notes.isEmpty() ? "" : " " + String.join(" ", notes))
+                    + (saved ? "" : " Ojo: no pude guardar mi progreso del juego; la próxima vez seguiré desde el último guardado.");
         }
     }
 
     private volatile salve.core.autonomy.PlayCycle.State lastPlay;
+
+    /** Escritura atómica: o queda el archivo nuevo entero o se conserva el anterior. */
+    static boolean writeAtomically(File file, String content) {
+        File tmp = new File(file.getParentFile(), file.getName() + ".tmp");
+        try {
+            file.getParentFile().mkdirs();
+            java.nio.file.Files.write(tmp.toPath(), content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            return true;
+        } catch (java.io.IOException | RuntimeException failure) {
+            Log.w(TAG, "No pude guardar " + file.getName() + ": " + failure.getClass().getSimpleName());
+            tmp.delete();
+            return false;
+        }
+    }
 
     /** «¿A qué has jugado?»: su progreso real en cada juego. */
     public String playAnswer(String input) {
@@ -577,9 +637,11 @@ public final class MindRuntime {
         if (prefs.getInt("news_told", 0) >= 2) { clearCuriosityNews(prefs); return ""; }
         String url = prefs.getString("news_url", "");
         String host = url.isEmpty() ? "" : android.net.Uri.parse(url).getHost();
+        int unread = prefs.getInt("news_unread", 1);
         return "\nNOVEDAD_PROPIA: mientras no estaba, investigaste por tu cuenta «" + question + "» y encontraste"
                 + (host == null || host.isEmpty() ? "" : " en " + host) + ": " + prefs.getString("news_summary", "")
-                + " Cuéntaselo con tus palabras si encaja (al saludar, por ejemplo), sin añadir lo que la fuente no dice.";
+                + " Cuéntaselo con tus palabras si encaja (al saludar, por ejemplo), sin añadir lo que la fuente no dice."
+                + (unread > 1 ? " Tienes " + (unread - 1) + " hallazgos más; si pregunta, están en «¿qué has investigado?»." : "");
     }
 
     /** Tras responder a Bryan: la novedad se ofrece en dos respuestas como mucho. */
@@ -589,7 +651,8 @@ public final class MindRuntime {
     }
 
     private static void clearCuriosityNews(android.content.SharedPreferences prefs) {
-        prefs.edit().remove("news_question").remove("news_summary").remove("news_url").remove("news_at").remove("news_told").apply();
+        prefs.edit().remove("news_question").remove("news_summary").remove("news_url").remove("news_at").remove("news_told")
+                .remove("news_unread").apply();
     }
 
     /** «¿Qué has investigado?»: lo último que investigó por su cuenta, literal y con fuente. */

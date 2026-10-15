@@ -3,7 +3,8 @@ package salve.core;
 /** Admission estimates, not measured device guarantees. Uses bytes, never Java heap limits. */
 public final class ModelMemoryPolicy {
     public static final long MIB = 1024L * 1024L;
-    public static final long RESERVE = 768 * MIB;
+    /** Margen que se deja libre para Android, además de su propio umbral de memoria baja. */
+    public static final long RESERVE = 512 * MIB;
     public static final long LARGE_WEIGHTS = 4920749472L;
     private ModelMemoryPolicy() { }
     public static final class Snapshot {
@@ -31,10 +32,12 @@ public final class ModelMemoryPolicy {
     }
     /** Codificador visual de Gemma (LiteRT-LM) además del modelo de texto. Estimación, no medición. */
     public static final long VISION_OVERHEAD = 384 * MIB;
-    /** Caché KV adicional al pasar de 4.096 a 8.192 tokens de contexto en LiteRT-LM. Estimación. */
-    public static final long LONG_CONTEXT_OVERHEAD = 512 * MIB;
+    /** Caché KV adicional al pasar de 4.096 a 7.000 tokens de contexto en LiteRT-LM. Estimación. */
+    public static final long LONG_CONTEXT_OVERHEAD = 384 * MIB;
+    /** Motor LiteRT-LM (buffers y activaciones) además de los pesos, que se mapean del archivo. */
+    public static final long LITERT_RUNTIME_OVERHEAD = 384 * MIB;
     public static final int LITERT_STANDARD = 4096;
-    public static final int LITERT_LONG = 8192;
+    public static final int LITERT_LONG = 7000;
 
     /**
      * Memoria necesaria para LiteRT-LM. Si los pesos ya están residentes (mismo modelo cargado),
@@ -44,11 +47,11 @@ public final class ModelMemoryPolicy {
     public static long requiredLiteRt(String id, boolean weightsResident, long threshold, boolean vision, int contextTokens) {
         long weights = LocalModelPolicy.LIGHT.equals(id) ? 2019382400L
                 : LocalModelPolicy.GEMMA_E4B.equals(id) ? 3659530240L : 2588147712L;
-        return (weightsResident ? 0 : weights) + 512 * MIB + (vision ? VISION_OVERHEAD : 0)
+        return (weightsResident ? 0 : weights) + LITERT_RUNTIME_OVERHEAD + (vision ? VISION_OVERHEAD : 0)
                 + (contextTokens > LITERT_STANDARD ? LONG_CONTEXT_OVERHEAD : 0) + Math.max(RESERVE, threshold);
     }
 
-    /** Mayor contexto que cabe (8.192 o 4.096), o 0 si ni el estándar cabe. */
+    /** Mayor contexto que cabe (7.000 o 4.096), o 0 si ni el estándar cabe. */
     public static int selectLiteRtContext(String id, Snapshot ram, boolean weightsResident, boolean vision) {
         if (!ram.known() || ram.low) return 0;
         if (ram.available >= requiredLiteRt(id, weightsResident, ram.threshold, vision, LITERT_LONG)) return LITERT_LONG;

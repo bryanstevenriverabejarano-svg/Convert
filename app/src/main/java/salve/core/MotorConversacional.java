@@ -1176,8 +1176,28 @@ public class MotorConversacional {
         boolean truncated = false;
         boolean repetitionDetected = false;
 
+        // «Dímelo en español»: la tarea es decir en español lo que dijo antes en inglés, no cambiar de tema.
+        java.util.List<String> anteriores = recentAssistantReplies(2);
+        String anteriorEnIngles = null;
+        for (String previous : anteriores) if (salve.core.conversation.LanguageGuard.isMostlyEnglish(previous)) { anteriorEnIngles = previous; break; }
+        if (anteriorEnIngles != null && salve.core.conversation.LanguageGuard.asksForSpanish(entrada))
+            responseContext += " | TAREA: Bryan te pide en español lo que le dijiste antes en inglés. Tu respuesta anterior fue: «"
+                    + (anteriorEnIngles.length() > 700 ? anteriorEnIngles.substring(0, 700) + "…" : anteriorEnIngles)
+                    + "». Dile lo mismo en español, con su contenido, y si quieres explica que se te cruzó el idioma.";
         CognitiveTurn.Outcome cognitive = runCognitiveTurn(entrada, responseContext, resumenAccion,
                 entradaPorVoz, evidence, false);
+        // Si se le cruza el inglés sin que se lo pidan, rehace la respuesta en español.
+        if (cognitive.result != null && cognitive.result.isSuccess() && !cognitive.handedOff
+                && salve.core.conversation.LanguageGuard.isMostlyEnglish(cognitive.result.getText())
+                && !salve.core.conversation.LanguageGuard.isMostlyEnglish(entrada)
+                && !entrada.toLowerCase(Locale.ROOT).matches(".*\\b(en ingles|en inglés|in english|traduce al ingles|traduce al inglés)\\b.*")) {
+            CognitiveTurn.Outcome spanish = runCognitiveTurn(entrada, responseContext
+                    + " | IDIOMA: tu borrador salió en inglés. Responde SOLO en español, con naturalidad.", resumenAccion,
+                    entradaPorVoz, evidence, false);
+            if (spanish.handedOff) return;
+            if (spanish.result != null && spanish.result.isSuccess()
+                    && !salve.core.conversation.LanguageGuard.isMostlyEnglish(spanish.result.getText())) cognitive = spanish;
+        }
         if (cognitive.handedOff) return;
         ModelResult inference = cognitive.result;
         fallbackUsed = !inference.isSuccess();
@@ -1624,7 +1644,8 @@ public class MotorConversacional {
     /** Same contract for cloud/local text, voice and explicit photos. Specialized research keeps its protocol. */
     private CognitiveTurn.Outcome runCognitiveTurn(String input, String contextInfo, String action,
             boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis) {
-        Map<String, CognitiveTurn.Tool> tools = CognitivePrompt.limitTools(cognitiveTools(input, photoAnalysis));
+        Map<String, CognitiveTurn.Tool> tools = CognitivePrompt.limitTools(
+                CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis), input));
         String memory = evidence == null ? "No consultada; usa memory.lookup si es pertinente."
                 : evidence.getStatus().name() + "\n" + evidence.getDataContext();
         String details = deviceClock.promptContext() + "\n" + conversationSession.relevantLocationContext(input)
@@ -1681,6 +1702,11 @@ public class MotorConversacional {
             CognitiveReply.fields(args, "query");
             String query = CognitiveReply.string(args, "query").trim();
             if (query.isEmpty() || query.length() > 160) throw new IllegalArgumentException("Consulta vacía o demasiado larga");
+            List<String> known = new java.util.ArrayList<>();
+            for (salve.core.identity.PeopleGraph.PersonEntity p : mind().peopleGraph().people()) known.add(p.name);
+            if (!salve.core.identity.NetworkPrivacy.safeForNetwork(query, known))
+                return new CognitiveTurn.Receipt("CONSULTA_PRIVADA: contiene datos personales y no la envío a internet. "
+                        + "Responde con lo que sabes o pregunta a Bryan.");
             mostrarBusqueda(query);
             WikipediaResearchClient.ResearchBatch batch = new WebResearchClient(context, query)
                     .researchResult(query, () -> closed || !isVoiceContextCurrent());
@@ -2072,6 +2098,8 @@ public class MotorConversacional {
         if (NOT_CREATOR.matcher(entrada).find()) {
             identity.session().onNotCreator();
             identity.clearVerification();
+            // Otra persona: el historial y la foto de Bryan no pasan a su conversación.
+            limpiarContextoConversacional();
             return "De acuerdo, no eres " + first + ". Encantada; ¿cómo te llamas?";
         }
         if (!VERIFY_REQUEST.matcher(entrada).matches()) return null;
@@ -2093,9 +2121,15 @@ public class MotorConversacional {
         String declared = salve.core.mind.Interlocutor.extractName(entrada);
         String known = mind().interlocutor().name;
         salve.core.identity.SessionIdentity session = salve.core.identity.IdentityManager.get(context).session();
+        boolean wasCreator = session.isCreatorSide();
         if (declared != null && (known != null || !session.isCreatorSide())) {
             salve.core.identity.PeopleGraph graph = mind().peopleGraph();
             session.onDeclaredName(declared, graph.creator().name, graph.familyPairs(), System.currentTimeMillis());
+        }
+        if (wasCreator && !session.isCreatorSide()) {
+            // Cambio de interlocutor: lo hablado con Bryan no entra en el contexto de otra persona.
+            limpiarContextoConversacional();
+            conversationSession.addUser(entrada);
         }
         return !session.isCreatorSide();
     }

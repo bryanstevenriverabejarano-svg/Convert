@@ -41,18 +41,9 @@ public final class CuriosityCycle {
         return null;
     }
 
-    /** Preguntas sobre Bryan, su familia o su vida no se envían a un buscador. */
+    /** Preguntas sobre Bryan, su familia o su vida no se envían a un buscador (política común). */
     public static boolean isPrivate(String text, Collection<String> privateNames) {
-        String t = normalize(text);
-        if (t.matches(".*\\b(bryan|mi creador|tu creador|su familia|tu familia|mi familia|su madre|su padre|su hermana|su hermano"
-                + "|su pareja|su salud|su trabajo|su dinero|sus recuerdos|nuestra conversacion|me dijo|le dije|siente por mi)\\b.*"))
-            return true;
-        if (privateNames != null) for (String name : privateNames) {
-            if (name == null) continue;
-            for (String part : normalize(name).split(" "))
-                if (part.length() >= 3 && t.matches(".*\\b" + java.util.regex.Pattern.quote(part) + "\\b.*")) return true;
-        }
-        return false;
+        return !salve.core.identity.NetworkPrivacy.safeForNetwork(text, privateNames);
     }
 
     /** Consulta para el buscador: la propia pregunta, sin signos. */
@@ -61,13 +52,20 @@ public final class CuriosityCycle {
         return q.length() > 120 ? q.substring(0, 120).trim() : q;
     }
 
+    /** Lo que dice una página concreta: el extracto y su URL exacta viajan siempre juntos. */
+    public static final class Finding {
+        public final String summary, url;
+        Finding(String summary, String url) { this.summary = summary; this.url = url; }
+    }
+
     /**
-     * Las primeras frases con contenido de la primera página legible. Literal, acotado y sin
-     * reescribir: si la fuente no dice nada claro, devuelve null y no se guarda nada.
+     * Las primeras frases con contenido de la primera página legible, junto con la URL de esa
+     * misma página. Literal, acotado y sin reescribir; null si ninguna dice nada claro.
      */
-    public static String summarize(List<String> pageTexts) {
+    public static Finding summarize(List<String> pageTexts, List<String> pageUrls) {
         if (pageTexts == null) return null;
-        for (String text : pageTexts) {
+        for (int i = 0; i < pageTexts.size(); i++) {
+            String text = pageTexts.get(i);
             if (text == null) continue;
             StringBuilder out = new StringBuilder();
             for (String sentence : text.replaceAll("\\s+", " ").split("(?<=[.!?])\\s+")) {
@@ -78,9 +76,25 @@ public final class CuriosityCycle {
                 out.append(s);
                 if (out.length() > 160) break;
             }
-            if (out.length() >= 40) return out.toString();
+            if (out.length() >= 40)
+                return new Finding(out.toString(), pageUrls != null && i < pageUrls.size() ? pageUrls.get(i) : null);
         }
         return null;
+    }
+
+    /** Compatibilidad: solo el texto del extracto. */
+    public static String summarize(List<String> pageTexts) {
+        Finding finding = summarize(pageTexts, null);
+        return finding == null ? null : finding.summary;
+    }
+
+    /** Referencia compacta (≤64) a la URL exacta: «web:» + dominio y ruta, con huella si no cabe. */
+    public static String sourceRef(String url) {
+        if (url == null || url.isEmpty()) return "web:desconocida";
+        String bare = url.replaceFirst("^https?://", "").replaceFirst("^www\\.", "");
+        if (bare.length() <= 60) return "web:" + bare;
+        String hash = Integer.toHexString(url.hashCode());
+        return "web:" + bare.substring(0, 59 - hash.length()) + "#" + hash;
     }
 
     /** Pensamiento propio con la fuente: «Mientras no estabas investigué…». */
@@ -88,8 +102,26 @@ public final class CuriosityCycle {
         return patch(question, summary, host, false);
     }
 
+    /** Pensamiento con la URL exacta de la página que dijo el extracto. */
+    public static MindPatch patch(SelfModel.Question question, Finding finding, boolean thread) {
+        String host = hostOf(finding.url);
+        String text = (thread ? "Seguí el hilo de «" : "Investigué por mi cuenta «") + question.text.trim() + "». "
+                + (thread ? "Leí en " : "Encontré en ") + (host == null ? "una fuente pública" : host) + ": " + finding.summary;
+        List<String> sources = new ArrayList<>();
+        sources.add(sourceRef(finding.url));
+        if (question.id != null) sources.add("q:" + question.id);
+        return new MindPatch("curiosidad").thought(text, sources);
+    }
+
+    public static String hostOf(String url) {
+        if (url == null) return null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^https?://([^/?#]+)").matcher(url);
+        return m.find() ? m.group(1).replaceFirst("^www\\.", "") : null;
+    }
+
     public static MindPatch patch(SelfModel.Question question, String summary, String host, boolean thread) {
-        String source = "web:" + (host == null || host.isEmpty() ? "desconocida" : host);
+        String source = host != null && host.startsWith("http") ? sourceRef(host)
+                : "web:" + (host == null || host.isEmpty() ? "desconocida" : host);
         if (source.length() > 64) source = source.substring(0, 64);
         String text = (thread ? "Seguí el hilo de «" : "Investigué por mi cuenta «") + question.text.trim() + "». "
                 + (thread ? "Leí en " : "Encontré en ") + (host == null ? "una fuente pública" : host)

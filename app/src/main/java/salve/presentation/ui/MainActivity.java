@@ -1000,7 +1000,11 @@ public class MainActivity extends AppCompatActivity {
         salve.work.PlayWorker.schedule(this);
         // Carga el modelo interno y el índice de recuerdos fuera del hilo principal.
         final android.content.Context mindContext = getApplicationContext();
-        new Thread(() -> salve.core.MindRuntime.get(mindContext).warmUpEmbeddings(), "salve-mind-init").start();
+        new Thread(() -> {
+            salve.core.MindRuntime.get(mindContext).warmUpEmbeddings();
+            try { salve.core.SalveLLM.getInstance(mindContext).removeRetiredModels(); }
+            catch (RuntimeException ignored) { /* Se reintenta en el siguiente arranque. */ }
+        }, "salve-mind-init").start();
 
         // ===== manejar Intents de compartir =====
         handleShareIntent(getIntent());
@@ -1844,11 +1848,8 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage(String.format(java.util.Locale.getDefault(), "Descarga de %.2f GB desde Hugging Face. ", entry.sizeBytes / 1_000_000_000.0)
                         + "El modelo se guarda aparte de la aplicación. Podrás pausarlo y reanudarlo; "
                         + "se activará después de verificar el archivo y probar una respuesta. "
-                        + (entry.supportsVision ? "El catálogo declara soporte de fotos; su ejecución se comprueba al analizar una imagen."
-                                : "Se guardan Dolphin 8B (4,92 GB) y el respaldo 3B (2,02 GB): unos 6,94 GB en total. "
-                                + "Salve comprueba la RAM antes de descargar y al cargar. Puede reducir el contexto de 4096 a 2048 tokens o pasar al 3B; "
-                                + "si no hay otro motor cargado y el 8B no cabe, omite su descarga. Gemma solo se prepara si tampoco funciona el 3B. "
-                                + "Ambos Dolphin procesan texto. Los archivos existentes se verifican y reutilizan.")
+                        + "Es el único modelo que descarga Salve (los Dolphin de 6,9 GB se retiraron). Entiende texto y fotos; "
+                        + "Salve comprueba la RAM antes de descargar y al cargar. Los archivos existentes se verifican y reutilizan."
                         + "\n\n" + SalveLLM.getInstance(this).getMemoryDescription())
                 .setPositiveButton("Descargar por Wi-Fi", (d, which) -> iniciarDescargaModelos())
                 .setNeutralButton("Usar datos móviles", (d, which) -> {
