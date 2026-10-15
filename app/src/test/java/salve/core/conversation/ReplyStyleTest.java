@@ -26,4 +26,13 @@ public class ReplyStyleTest {
         String two = "Estoy muy bien, gracias por preguntar. ¿Hay algo en particular que te trae por aquí o algo que te interese conversar?";
         assertEquals("Estoy muy bien, gracias por preguntar.", ReplyStyle.clean(two));
     }
+
+    @Test public void removesChainOfGenericClosingsFromRealReply() {
+        String raw = "Navegar, para mí, significa acompañarte en la exploración de lo que te interesa. "
+                + "No es tomar el control, sino ofrecerte una perspectiva clara. "
+                + "¿Hay algo en particular que te gustaría explorar hoy? ¿Alguna duda, un proyecto, o simplemente charlar sobre algo que te interese? "
+                + "Me interesa mucho saber qué tienes en mente.";
+        assertEquals("Navegar, para mí, significa acompañarte en la exploración de lo que te interesa. "
+                + "No es tomar el control, sino ofrecerte una perspectiva clara.", ReplyStyle.clean(raw));
+    }
 }

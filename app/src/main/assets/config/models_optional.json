@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "id": "Gemma 4 E4B",
+      "url": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/2eee7ac325f20eb8c9ac1d0e972f7c84663062da/gemma-4-E4B-it.litertlm?download=true",
+      "filename": "gemma-4-E4B-it-2eee7ac.litertlm",
+      "sizeBytes": 3659530240,
+      "sha256": "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0",
+      "supportsVision": true,
+      "license": "Apache-2.0",
+      "modelCard": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm"
+    }
+  ]
+}

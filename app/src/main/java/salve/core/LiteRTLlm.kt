@@ -28,9 +28,14 @@ object LiteRTLlm {
     private var visionEnabled = false
     @Volatile private var initialized = false
     @Volatile private var backendName = "sin cargar"
+    @Volatile private var contextTokens = 4096
 
     @JvmStatic fun isInitialized(): Boolean = initialized
     @JvmStatic fun getBackendName(): String = backendName
+    /** Tokens de contexto con los que se cargó el motor (entrada + imagen + salida). */
+    @JvmStatic fun getContextTokens(): Int = contextTokens
+    @JvmStatic fun isVisionEnabled(): Boolean = initialized && visionEnabled
+    @JvmStatic fun isLoaded(path: String?): Boolean = initialized && path != null && path == loadedPath
 
     @JvmStatic @Synchronized
     fun reset() {
@@ -38,6 +43,7 @@ object LiteRTLlm {
         loadedPath = null
         visionEnabled = false
         backendName = "sin cargar"
+        contextTokens = 4096
         val oldEngine = engine
         val oldLegacy = legacy
         engine = null
@@ -46,8 +52,8 @@ object LiteRTLlm {
     }
 
     @JvmStatic @JvmOverloads @Synchronized
-    fun init(context: Context, modelPath: String, withVision: Boolean = false) {
-        if (initialized && loadedPath == modelPath && (!withVision || visionEnabled)) return
+    fun init(context: Context, modelPath: String, withVision: Boolean = false, maxTokens: Int = 4096) {
+        if (initialized && loadedPath == modelPath && (!withVision || visionEnabled) && maxTokens <= contextTokens) return
         reset()
         if (modelPath.endsWith(".task", ignoreCase = true)) {
             check(!withVision) { "El modelo .task importado solo admite texto" }
@@ -58,10 +64,11 @@ object LiteRTLlm {
             backendName = "MediaPipe (.task)"
         } else {
             require(modelPath.endsWith(".litertlm", ignoreCase = true)) { "Formato local no compatible" }
+            var tokens = maxTokens
             fun load(backend: Backend, vision: Backend?): Engine {
                 val candidate = Engine(EngineConfig(modelPath = modelPath, backend = backend,
                     visionBackend = vision,
-                    maxNumTokens = 4096, maxNumImages = 1, cacheDir = context.cacheDir.absolutePath))
+                    maxNumTokens = tokens, maxNumImages = 1, cacheDir = context.cacheDir.absolutePath))
                 try { candidate.initialize(); return candidate }
                 catch (error: Exception) { runCatching { candidate.close() }; throw error }
                 catch (error: LinkageError) { runCatching { candidate.close() }; throw error }
@@ -85,12 +92,29 @@ object LiteRTLlm {
                     lastError = error
                 }
             }
+            if (lastError != null && tokens > 4096) {
+                // Si el contexto ampliado no cabe o el modelo no lo admite, se vuelve a 4.096.
+                Log.w(TAG, "Contexto de $tokens tokens no disponible; reintentando con 4096")
+                tokens = 4096
+                for ((name, text, vision) in attempts) {
+                    try {
+                        engine = load(text(), vision?.invoke())
+                        backendName = name
+                        lastError = null
+                        break
+                    } catch (error: Exception) {
+                        Log.w(TAG, "$name no disponible", error)
+                        lastError = error
+                    }
+                }
+            }
             lastError?.let { throw it }
+            contextTokens = tokens
         }
         loadedPath = modelPath
         visionEnabled = withVision
         initialized = true
-        Log.i(TAG, "runtime=$backendName vision=$visionEnabled")
+        Log.i(TAG, "runtime=$backendName vision=$visionEnabled context=$contextTokens")
     }
 
     @JvmStatic @JvmOverloads @Synchronized

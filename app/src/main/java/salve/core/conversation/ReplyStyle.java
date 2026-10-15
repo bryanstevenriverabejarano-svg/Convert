@@ -23,7 +23,9 @@ public final class ReplyStyle {
                     + "te gustaria (compartir|contarme|explorar|conversar|hablar|que exploremos|saber (mas )?sobre mi)|"
                     + "que te interese|te apasion|en que (mas )?(puedo|podria) ayudarte|podamos empezar|"
                     + "estoy aqui para (ayudarte|escucharte|conversar|acompanarte)|no dudes en|"
-                    + "cuentame (que|lo que|mas)|construir esa conexion|que te trae por aqui)\\b.*");
+                    + "cuentame (que|lo que|mas)|cuentame y veremos|construir esa conexion|que te trae por aqui|"
+                    + "me interesa mucho (saber|entender|conocer)|que tienes en mente|te este rondando la cabeza|"
+                    + "hay algun tema|alguna duda un proyecto|simplemente charlar)\\b.*");
 
     private ReplyStyle() {}
 
@@ -52,8 +54,8 @@ public final class ReplyStyle {
 
         int start = 0, end = sentences.size();
         if (FILLER_OPENING.matcher(normalize(sentences.get(0))).matches()) start = 1;
-        // Hasta dos cierres genéricos seguidos («¿Hay algo…? Estoy aquí para ayudarte.»).
-        for (int i = 0; i < 2 && end - start > 1; i++) {
+        // Hasta tres cierres genéricos seguidos («¿Hay algo…? Estoy aquí para ayudarte.»).
+        for (int i = 0; i < 3 && end - start > 1; i++) {
             if (GENERIC_CLOSING.matcher(normalize(sentences.get(end - 1))).matches()) end--;
             else break;
         }

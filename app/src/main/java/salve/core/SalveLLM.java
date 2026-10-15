@@ -271,8 +271,22 @@ public class SalveLLM {
             throw new IllegalStateException("initEngineIfNeeded sin modelo válido.");
         }
 
+        // Motor LiteRT ya residente con visión: no hay nada que cargar ni RAM que volver a exigir.
+        boolean resident = isLiteRT && LiteRTLlm.isLoaded(modelPath);
+        if (resident && (!withVision || LiteRTLlm.isVisionEnabled())) {
+            engineInitialized = true;
+            return;
+        }
+        int liteRtTokens = ModelMemoryPolicy.LITERT_STANDARD;
+        boolean liteRtVision = withVision;
         if (isGguf) ggufContextTokens = DeviceModelMemory.contextFor(appContext, modelPath, false);
-        else DeviceModelMemory.require(appContext, modelPath, false);
+        else if (isLiteRT && !modelPath.toLowerCase(java.util.Locale.ROOT).endsWith(".task")) {
+            // Si el modelo tiene visión y cabe, se carga con ella desde el principio: una foto
+            // posterior no obliga a recargar ni a exigir otra vez la RAM de los pesos.
+            if (!liteRtVision && visionModel && DeviceModelMemory.fitsLiteRtVision(appContext, modelPath, resident))
+                liteRtVision = true;
+            liteRtTokens = DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, liteRtVision);
+        } else DeviceModelMemory.require(appContext, modelPath, false);
         publishStatus("cargando");
         if (isGguf) {
             boolean large = LocalModelPolicy.isLarge(modelPath);
@@ -294,7 +308,7 @@ public class SalveLLM {
             }
         } else if (isLiteRT) {
             Log.d(TAG, "Inicializando LiteRTLlm con modelPath=" + modelPath);
-            LiteRTLlm.init(appContext, modelPath, withVision);
+            LiteRTLlm.init(appContext, modelPath, liteRtVision, liteRtTokens);
             engineInitialized = LiteRTLlm.isInitialized();
         } else {
             if (modelLib == null) {
@@ -682,8 +696,9 @@ public class SalveLLM {
                     : ModelMemoryPolicy.selectContext(id, DeviceModelMemory.read(appContext), engineInitialized);
             return GgufContextPolicy.promptBudget(forecast == 0 ? GgufContextPolicy.COMPACT : Math.min(ggufContextTokens, forecast));
         }
-        return isLiteRT && path != null && path.toLowerCase(java.util.Locale.ROOT).endsWith(".task")
-                ? 3200 : 10500;
+        if (isLiteRT && path != null && path.toLowerCase(java.util.Locale.ROOT).endsWith(".task")) return 3200;
+        // Con 8.192 tokens cabe el núcleo cognitivo completo, la memoria y más historial.
+        return isLiteRT && LiteRTLlm.getContextTokens() >= ModelMemoryPolicy.LITERT_LONG ? 21000 : 10500;
     }
 
     /**
