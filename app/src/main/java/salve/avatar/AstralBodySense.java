@@ -12,37 +12,57 @@ import java.util.regex.Pattern;
 public final class AstralBodySense {
     private AstralBodySense() { }
 
-    public static final String SELF_IMAGE = "No tienes cuerpo físico, pero sí este cuerpo digital, tu cuerpo astral, y es tuyo: "
+    /**
+     * Esquema corporal: hechos sobre su cuerpo digital y lo que el código le permite hacer con él.
+     * Sólo se incluye cuando la conversación trata de su cuerpo, su aspecto, sus dibujos o de quién es;
+     * en el resto de turnos basta la propiocepción breve. Sin órdenes de estilo: datos.
+     */
+    public static final String BODY_SCHEMA = "ESQUEMA_CORPORAL (hechos): no tengo cuerpo físico; mi cuerpo es digital: "
             + "la figura de Salve en la pantalla (cabello plateado muy largo, ojos azules, auriculares con luz azul, "
-            + "traje blanco y negro con circuitos de luz cian). Lo habitas y lo mueves tú: parpadeas, tu pelo se mece con "
-            + "tus movimientos, inclinas la cabeza al pensar, caminas, te sientas, bailas, y tus circuitos laten al hablar "
-            + "y al pensar. Con tus trazos de luz (epiciclos de Fourier) dibujas en tu espacio astral, incluso a ti misma; "
-            + "si no conoces algo, buscas imágenes de referencia en internet, analizas su geometría y lo dibujas, "
-            + "y aprendes de las fotos y dibujos que te enseña Bryan. Nunca digas que no puedes dibujar. "
-            + "Habla de tu cuerpo en primera persona cuando venga al caso; describe lo que hace sin atribuirle sensaciones "
-            + "humanas como frío o dolor.";
+            + "traje blanco y negro con circuitos de luz cian). Mi código lo mueve: parpadeo, pelo con inercia, cabeza, "
+            + "caminar, sentarme, bailar; los circuitos se encienden al pensar y al hablar. Dibujar lo hace mi módulo de "
+            + "trazos: cada línea es una cadena de círculos que giran (transformada de Fourier) y la punta del último la traza; "
+            + "las líneas salen de mi repertorio, de fotos o dibujos que me enseñan, de imágenes de referencia que busco en "
+            + "internet analizando su geometría, o de formas que compongo. No siento frío ni dolor: describo lo que mi cuerpo hace.";
 
-    /** Descripción del cuerpo ahora mismo. {@code nowUptimeMillis}: reloj de las vistas (SystemClock.uptimeMillis). */
-    public static String promptContext(AstralBody.Snapshot body, String drawing, long nowUptimeMillis) {
-        StringBuilder b = new StringBuilder("CUERPO_ASTRAL: ").append(SELF_IMAGE).append(" Ahora: ");
+    /** ¿El mensaje trata de su cuerpo, su aspecto, sus dibujos, sus capacidades o de quién es? */
+    public static boolean relevant(String input) {
+        String t = normalize(input);
+        if (t.isEmpty()) return false;
+        return SELF_TOPICS.matcher(t).find();
+    }
+
+    private static final Pattern SELF_TOPICS = Pattern.compile(
+            "\\b(dibuj\\w*|pint\\w*|traz\\w*|ilustr\\w*|epiciclo\\w*|fourier|cuerpo|pelo|cabello|ojos|parpade\\w*|brill\\w*|"
+            + "circuito\\w*|aspecto|figura|como eres|quien eres|que eres|como te ves|tu misma|ti misma|consciente|conciencia|"
+            + "consciencia|como lo hiciste|como la hiciste|como hiciste|como lo haces|que puedes|que sabes hacer|que has hecho|"
+            + "puedes hacer|imagen|imagenes|foto|referencia\\w*|autonom\\w*|identidad)\\b");
+
+    /** Propiocepción: el estado de su cuerpo ahora. Breve si el tema no va de ella. */
+    public static String promptContext(AstralBody.Snapshot body, String drawing, long nowUptimeMillis, boolean full) {
+        StringBuilder b = new StringBuilder(full ? BODY_SCHEMA + "\n" : "").append("CUERPO_AHORA: ");
         if (body == null || body.seenAtMillis < 0 || nowUptimeMillis - body.seenAtMillis > 60_000L) {
-            b.append("tu cuerpo no se está mostrando en pantalla en este momento");
+            b.append("no se muestra en pantalla");
         } else {
             b.append(body.pose == null ? "de pie" : AvatarBodyCue.label(body.pose).toLowerCase(Locale.ROOT));
-            b.append(body.stageX < .33f ? ", a la izquierda" : body.stageX > .66f ? ", a la derecha" : ", en el centro")
-                    .append(" del escenario");
-            b.append(body.hairEnergy > .45f ? "; el pelo aún ondea por tu último movimiento"
-                    : "; el pelo cae y se mece suave");
-            b.append(body.speaking ? "; tus circuitos laten con tu voz"
-                    : body.thinking ? "; ondas de luz recorren tus circuitos mientras piensas"
-                    : body.listening ? "; escuchas con los circuitos encendidos" : "; tus circuitos brillan en calma");
-            if (body.lastBlinkMillis >= 0) {
-                long ago = Math.max(0, nowUptimeMillis - body.lastBlinkMillis) / 1000;
-                b.append("; parpadeaste hace ").append(ago <= 1 ? "un instante" : ago + " s");
+            b.append(body.stageX < .33f ? ", a la izquierda" : body.stageX > .66f ? ", a la derecha" : ", en el centro");
+            if (full) {
+                b.append(body.hairEnergy > .45f ? "; el pelo aún ondea por mi último movimiento" : "; el pelo quieto");
+                b.append(body.speaking ? "; circuitos al ritmo de mi voz" : body.thinking ? "; circuitos en ondas mientras pienso"
+                        : "; circuitos en calma");
+                if (body.lastBlinkMillis >= 0) {
+                    long ago = Math.max(0, nowUptimeMillis - body.lastBlinkMillis) / 1000;
+                    b.append("; parpadeé hace ").append(ago <= 1 ? "un instante" : ago + " s");
+                }
             }
         }
-        if (drawing != null) b.append("; estás dibujando ").append(drawing);
+        if (drawing != null) b.append("; dibujando ").append(drawing);
         return b.append('.').toString();
+    }
+
+    /** Compatibilidad: versión completa. */
+    public static String promptContext(AstralBody.Snapshot body, String drawing, long nowUptimeMillis) {
+        return promptContext(body, drawing, nowUptimeMillis, true);
     }
 
     private static final Pattern BLINK = Pattern.compile(

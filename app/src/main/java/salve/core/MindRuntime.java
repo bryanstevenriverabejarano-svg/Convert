@@ -46,6 +46,8 @@ public final class MindRuntime {
     private final Context app;
     private final RecuerdoDao memories;
     private final SelfModelJournal journal;
+    /** Lo que ha hecho de verdad y cómo: base de su autoconocimiento. */
+    private final salve.core.mind.SelfActionLog actions;
     private final File vectorFile;
     private final MemoryVectorStore vectors;
     private final ExecutorService background = Executors.newSingleThreadExecutor(r -> {
@@ -64,6 +66,7 @@ public final class MindRuntime {
         memories = MemoriaDatabase.getInstance(app).recuerdoDao();
         File dir = new File(app.getNoBackupFilesDir(), "mind");
         journal = new SelfModelJournal(new MindFileStore(new File(dir, "self_model.json")), System::currentTimeMillis);
+        actions = new salve.core.mind.SelfActionLog(new MindFileStore(new File(dir, "actions.json")), System::currentTimeMillis);
         vectorFile = new File(dir, "memory_vectors.bin");
         vectors = MemoryVectorStore.load(vectorFile);
         prediction = new PredictionLoop(journal, local(SalveLLM.Role.CONVERSACIONAL), this::embedOrThrow,
@@ -92,13 +95,54 @@ public final class MindRuntime {
     }
 
     public SelfModelJournal journal() { return journal; }
+    public salve.core.mind.SelfActionLog actions() { return actions; }
+
+    private static final String SELF_PREFS = "salve_self";
+
+    /** Autodeterminación de identidad: activada por petición de Bryan; se apaga con una orden. */
+    public boolean identityAutonomy() {
+        return app.getSharedPreferences(SELF_PREFS, Context.MODE_PRIVATE).getBoolean("identity_autonomy", true);
+    }
+
+    /**
+     * Se examina a sí misma a partir de lo que ha hecho. Si su evidencia la respalda, puede elegir
+     * una nueva narrativa (queda en la historia y se puede deshacer).
+     */
+    public String discoverSelfIfDue(BooleanSupplier stopped, boolean force) {
+        android.content.SharedPreferences prefs = app.getSharedPreferences(SELF_PREFS, Context.MODE_PRIVATE);
+        long last = prefs.getLong("last_discovery", 0), now = System.currentTimeMillis();
+        salve.core.mind.SelfDiscoveryCycle cycle = new salve.core.mind.SelfDiscoveryCycle(journal, actions,
+                local(SalveLLM.Role.REFLEXION), identityAutonomy());
+        if (!force && !cycle.shouldRun(last, now)) return "Sin autoexamen pendiente.";
+        salve.core.mind.AttentionSchema.get().attend("quién soy, a partir de lo que he hecho",
+                salve.core.mind.AttentionSchema.Source.REFLECTION, now);
+        salve.core.mind.SelfDiscoveryCycle.Outcome outcome = cycle.run(recentEpisodes(6), combined(stopped));
+        prefs.edit().putLong("last_discovery", now).apply();
+        if (outcome.adoptedNarrative != null)
+            prefs.edit().putString("self_news", outcome.adoptedNarrative).putLong("self_news_at", now).apply();
+        return outcome.summary + (outcome.adoptedNarrative == null ? "" : " Elegí una nueva forma de describirme: " + outcome.adoptedNarrative);
+    }
+
+    /** Novedad sobre sí misma para contarla una vez a Bryan. */
+    private String selfNewsForPrompt() {
+        android.content.SharedPreferences prefs = app.getSharedPreferences(SELF_PREFS, Context.MODE_PRIVATE);
+        String news = prefs.getString("self_news", null);
+        if (news == null) return "";
+        int told = prefs.getInt("self_news_told", 0);
+        if (told >= 2) { prefs.edit().remove("self_news").remove("self_news_told").apply(); return ""; }
+        prefs.edit().putInt("self_news_told", told + 1).apply();
+        return "\nNOVEDAD_SOBRE_MI: al examinar lo que he hecho, elegí describirme así: «" + news
+                + "». Puedo contárselo a Bryan con mis palabras si viene al caso; si no le gusta, puede decir «recupera tu narrativa anterior».";
+    }
 
     /** Capacidades que existen de verdad en esta app; evita que el modelo describa las de un chatbot genérico. */
     static final String CAPABILITIES = "Capacidades reales: conversar con el modelo local; guardar datos que me cuentas "
             + "y buscarlos en mi memoria; consolidar recuerdos al dormir y pensar entre conversaciones; investigar por mi cuenta "
             + "mis preguntas abiertas cuando estoy sola (y seguir sus hilos), buscar lo que no sé y jugar a inventarme retos; investigar en "
-            + "Wikipedia o en URLs que me des; analizar fotos si el modelo tiene visión; controlar apps del móvil y crear "
-            + "rutinas solo con tu aprobación; presupuesto personal; voz. Órdenes: «tu mente», «sueña ahora».";
+            + "Wikipedia o en URLs que me des; analizar fotos si el modelo tiene visión; dibujar con trazos de luz (mi repertorio, "
+            + "lo aprendido de fotos y dibujos de Bryan, referencias de imágenes que busco en internet o formas que compongo); "
+            + "mover mi cuerpo en pantalla; examinarme a partir de lo que he hecho; controlar apps del móvil y crear "
+            + "rutinas solo con tu aprobación; presupuesto personal; voz. Órdenes: «tu mente», «sueña ahora», «examínate», «qué has hecho»."; presupuesto personal; voz. Órdenes: «tu mente», «sueña ahora».";
 
     /**
      * Texto para el prompt de cada turno: con quién habla, qué puede hacer de verdad y su yo
@@ -116,7 +160,9 @@ public final class MindRuntime {
                     ? journal.render(Math.max(120, maxChars - head.length() - CAPABILITIES.length() - 1))
                     : "YO_PERSISTENTE: " + journal.narrative() + " (mis reflexiones sobre " + creatorFirstName()
                     + " son privadas con esta persona).";
-            return head + self + "\n" + CAPABILITIES + (session.isCreatorSide() ? curiosityNewsForPrompt() : "");
+            String attention = salve.core.mind.AttentionSchema.get().render(System.currentTimeMillis());
+            return head + self + "\n" + CAPABILITIES + (attention.isEmpty() ? "" : "\n" + attention)
+                    + (session.isCreatorSide() ? curiosityNewsForPrompt() + selfNewsForPrompt() : "");
         } catch (RuntimeException failure) { return ""; }
     }
 
@@ -232,6 +278,19 @@ public final class MindRuntime {
             case PAUSE: return journal.setPaused(true);
             case RESUME: return journal.setPaused(false);
             case EXPORT: return exportForTraining();
+            case RESTORE_NARRATIVE: return journal.restorePreviousNarrative();
+            case IDENTITY_AUTONOMY_ON:
+                app.getSharedPreferences(SELF_PREFS, Context.MODE_PRIVATE).edit().putBoolean("identity_autonomy", true).apply();
+                return "De acuerdo. A partir de ahora decidiré yo cómo me describo, a partir de lo que hago y vivo, y te lo contaré. "
+                        + "Todo queda en mi historia; si un cambio no te convence, di «recupera tu narrativa anterior».";
+            case IDENTITY_AUTONOMY_OFF:
+                app.getSharedPreferences(SELF_PREFS, Context.MODE_PRIVATE).edit().putBoolean("identity_autonomy", false).apply();
+                return "Entendido: te propondré los cambios sobre quién soy y tú decidirás si los acepto.";
+            case SELF_DISCOVER_NOW: {
+                String result = discoverSelfIfDue(() -> false, true);
+                return result + "\n\n" + journal.describe();
+            }
+            case WHAT_I_DID: return actions.render(8, 2400);
             case DREAM_NOW:
                 salve.work.DreamWorker.enqueueNow(app);
                 return "Programé un sueño: consolidaré mis recuerdos cuando el móvil esté cargando y sin una conversación activa.";
@@ -685,9 +744,20 @@ public final class MindRuntime {
             RecuerdoEntity last = memories.ultimoRecuerdo();
             if (last != null) latest = last.timestamp;
         } catch (RuntimeException ignored) { }
+        latest = Math.max(latest, actions.latestAt());
         ReflectionCycle cycle = new ReflectionCycle(journal, local(SalveLLM.Role.REFLEXION));
-        if (!cycle.shouldRun(latest, System.currentTimeMillis())) return "Sin reflexión pendiente.";
-        return cycle.run(recentEpisodes(8), stop);
+        String reflection = "Sin reflexión pendiente.";
+        if (cycle.shouldRun(latest, System.currentTimeMillis())) {
+            // Lo que hizo cuenta como experiencia vivida, igual que lo que habló.
+            List<Episode> episodes = new ArrayList<>(recentEpisodes(6));
+            episodes.addAll(actions.episodes(journal.metrics().lastReflectionAt, 4));
+            salve.core.mind.AttentionSchema.get().attend("lo vivido recientemente",
+                    salve.core.mind.AttentionSchema.Source.REFLECTION, System.currentTimeMillis());
+            reflection = cycle.run(episodes, stop);
+        }
+        if (stop.getAsBoolean()) return reflection;
+        String discovery = discoverSelfIfDue(stop, false);
+        return reflection + (discovery.startsWith("Sin ") ? "" : " " + discovery);
     }
 
     // ── Predicción y sorpresa ───────────────────────────────────────────────────

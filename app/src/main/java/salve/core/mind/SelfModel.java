@@ -30,6 +30,10 @@ public final class SelfModel {
         boolean paused;
         String narrative = DEFAULT_NARRATIVE;
         PendingNarrative pendingNarrative;
+        /** Narrativa anterior a la última que eligió ella sola (para «recupera tu narrativa anterior»). */
+        String previousNarrative;
+        /** Si la última narrativa la decidió ella (true) o la aceptó Bryan (false). */
+        boolean narrativeOwn;
         List<Belief> beliefs = new ArrayList<>();
         List<Question> questions = new ArrayList<>();
         List<Thought> thoughts = new ArrayList<>();
