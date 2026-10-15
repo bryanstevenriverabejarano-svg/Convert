@@ -71,6 +71,30 @@ public final class Sketches {
         }
     }
 
+    private static volatile SketchJournal journal;
+
+    /** Su diario de dibujo: cómo entiende cada cosa y cómo la dibujó (files/sketch/journal.json). */
+    public static SketchJournal journal(Context context) {
+        SketchJournal j = journal;
+        if (j != null) return j;
+        synchronized (Sketches.class) {
+            if (journal == null)
+                journal = new SketchJournal(new java.io.File(context.getApplicationContext().getFilesDir(), "sketch"));
+            return journal;
+        }
+    }
+
+    /** Olvida un motivo aprendido (p. ej. una versión con la petición pegada al nombre). */
+    public static void forget(Context context, String name) {
+        try {
+            if (!learned(context).forget(name)) return;
+            synchronized (Sketches.class) {
+                if (builtIn != null) library = builtIn.withLearned(learned(context).all());
+                version++;
+            }
+        } catch (java.io.IOException ignored) { /* no es grave: queda como un motivo más */ }
+    }
+
     /**
      * Aprende un motivo nuevo (cualquier hilo) y lo suma al repertorio en caliente.
      * @return la escena lista para dibujarlo

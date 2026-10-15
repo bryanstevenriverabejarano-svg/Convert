@@ -33,10 +33,12 @@ public final class AstralBodySense {
     }
 
     private static final Pattern SELF_TOPICS = Pattern.compile(
-            "\\b(dibuj\\w*|pint\\w*|traz\\w*|ilustr\\w*|epiciclo\\w*|fourier|cuerpo|pelo|cabello|ojos|parpade\\w*|brill\\w*|"
+            // Pedir un dibujo no es hablar de ella: sólo preguntar CÓMO dibuja o cómo es trae el esquema completo.
+            "\\b(como dibujas|como lo dibujas|como la dibujas|como dibujaste|como lo dibujaste|como la dibujaste|"
+            + "con que dibujas|tecnica|epiciclo\\w*|fourier|cuerpo|pelo|cabello|ojos|parpade\\w*|brill\\w*|"
             + "circuito\\w*|aspecto|figura|como eres|quien eres|que eres|como te ves|tu misma|ti misma|consciente|conciencia|"
             + "consciencia|como lo hiciste|como la hiciste|como hiciste|como lo haces|que puedes|que sabes hacer|que has hecho|"
-            + "puedes hacer|imagen|imagenes|foto|referencia\\w*|autonom\\w*|identidad)\\b");
+            + "puedes hacer|autonom\\w*|identidad)\\b");
 
     /** Propiocepción: el estado de su cuerpo ahora. Breve si el tema no va de ella. */
     public static String promptContext(AstralBody.Snapshot body, String drawing, long nowUptimeMillis, boolean full) {

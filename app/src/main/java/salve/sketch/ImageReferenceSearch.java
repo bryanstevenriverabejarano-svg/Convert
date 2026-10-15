@@ -46,16 +46,35 @@ public final class ImageReferenceSearch {
 
     /** Hasta {@code max} referencias: primero dibujos vectoriales, luego fotos. */
     public List<Candidate> search(String subject, int max) throws IOException {
+        return search(subject, null, max, null);
+    }
+
+    /**
+     * Busca primero siluetas y dibujos de línea (su forma se reconoce con pocas líneas), luego dibujos
+     * vectoriales cualesquiera y por último fotos.
+     * @param englishHint nombre en inglés que ella pensó (si Wikipedia no da traducción)
+     * @param exclude URLs ya usadas para este objeto: al mejorar un dibujo no repite la misma referencia
+     */
+    public List<Candidate> search(String subject, String englishHint, int max, java.util.Collection<String> exclude)
+            throws IOException {
         String es = clean(subject);
         if (es.isEmpty()) return new ArrayList<>();
         Set<String> terms = new LinkedHashSet<>();
         String english = null;
         try { english = englishTerm(es); } catch (IOException ignored) { /* seguimos con el término en español */ }
+        if (english == null && englishHint != null && !clean(englishHint).isEmpty()) english = clean(englishHint);
         if (english != null) terms.add(english);
         terms.add(es);
         List<Candidate> out = new ArrayList<>();
         Set<String> seen = new java.util.HashSet<>();
-        for (String term : terms) addAll(out, seen, commons(term + " filetype:drawing", 8), max);
+        if (exclude != null) seen.addAll(exclude);
+        String main = terms.iterator().next();
+        for (String shape : new String[]{" silhouette", " line art"}) {
+            if (out.size() >= max) break;
+            try { addAll(out, seen, commons(main + shape + " filetype:drawing", 6), max); }
+            catch (IOException ignored) { /* seguimos con la búsqueda general */ }
+        }
+        for (String term : terms) if (out.size() < max) addAll(out, seen, commons(term + " filetype:drawing", 8), max);
         if (out.size() < max) for (String term : terms) addAll(out, seen, commons(term + " filetype:bitmap", 6), max);
         return out;
     }
@@ -142,11 +161,41 @@ public final class ImageReferenceSearch {
     public static float score(Candidate candidate, ImageTracer.Result traced) {
         if (traced == null || !traced.isUsable()) return 0;
         int strokes = traced.strokes.size();
-        if (strokes > 65) return 0; // demasiado ruido o texto
+        if (strokes > 220) return 0; // casi todo ruido o texto
         float s = Math.min(strokes, 25) / 25f + Math.min(1f, (traced.geometry.lines + traced.geometry.curves) / 20f);
+        if (strokes > 65) s *= .6f; // se puede quedar con los contornos largos, pero vale menos
         if (strokes < 2) s *= .5f;
         if (candidate.drawing) s *= 1.6f;
+        String title = candidate.title.toLowerCase(Locale.ROOT);
+        if (title.matches(".*\\b(silhouette|silueta|outline|line ?art|lineart|clipart|clip art|icon|sketch|contorno)\\b.*")) s *= 1.35f;
+        if (title.matches(".*\\b(skull|skeleton|anatomy|range|distribution|track|footprint|cr[aá]neo|esqueleto|huella)\\b.*")) s *= .3f;
         return s;
+    }
+
+    /**
+     * Se queda con los contornos más largos (la forma del objeto) y descarta el detalle menudo: una
+     * foto de un gorila da cientos de bordes de pelo; su silueta está en los más largos.
+     */
+    public static ImageTracer.Result focus(ImageTracer.Result traced, int maxStrokes) {
+        if (traced == null || traced.strokes.size() <= maxStrokes) return traced;
+        List<float[]> sorted = new ArrayList<>(traced.strokes);
+        sorted.sort((a, b) -> Float.compare(length(b), length(a)));
+        java.util.Set<float[]> keep = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        keep.addAll(sorted.subList(0, maxStrokes));
+        List<float[]> kept = new ArrayList<>();
+        for (float[] s : traced.strokes) if (keep.contains(s)) kept.add(s); // conserva el orden de trazado
+        ImageTracer.Geometry g = traced.geometry;
+        float share = maxStrokes / (float) traced.strokes.size();
+        ImageTracer.Geometry focused = new ImageTracer.Geometry(Math.round(g.lines * share), Math.round(g.horizontal * share),
+                Math.round(g.vertical * share), Math.round(g.diagonal * share), Math.round(g.curves * share),
+                Math.min(g.closed, maxStrokes), kept.size(), g.symmetry, g.aspect);
+        return new ImageTracer.Result(kept, traced.aspect, focused);
+    }
+
+    private static float length(float[] s) {
+        float d = 0;
+        for (int i = 2; i + 1 < s.length; i += 2) d += (float) Math.hypot(s[i] - s[i - 2], s[i + 1] - s[i - 1]);
+        return d;
     }
 
     static String clean(String subject) {

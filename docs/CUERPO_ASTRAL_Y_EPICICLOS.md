@@ -36,6 +36,19 @@ Cada trazo se convierte en su transformada discreta de Fourier (`FourierStroke`)
 
 Lo aprendido se guarda en `files/sketch/learned.json` (hasta 80 motivos) y tiene prioridad sobre el repertorio de serie: si le enseñas tu casa, «dibuja una casa» dibuja la tuya. Una foto sin nombre se guarda como «tu foto de las HH:MM».
 
+## Entender lo que dibuja
+
+| Pieza | Qué hace |
+|---|---|
+| `VisualConcept` | Antes de dibujar algo nuevo, su modelo lo describe: qué es, sus partes con forma y posición, la pose y el nombre en inglés. Se guarda y se reutiliza. |
+| Búsqueda | Primero siluetas y dibujos de línea (`gorilla silhouette`, `gorilla line art`), luego dibujos vectoriales y fotos. De cada imagen se queda con los 45 contornos más largos, así una foto con mucho pelo ya no se descarta. |
+| Mirarse | Si el modelo tiene visión, pinta su dibujo en negro sobre blanco y se pregunta qué parece sin saber qué quería dibujar. Si no se reconoce, prueba la siguiente referencia o corrige su composición una vez. |
+| Componer | Sin referencia, dibuja cada parte de su `VisualConcept` (mínimo 3 formas, entre 8 y 25 recomendadas). |
+| Mejorar | «Dibújalo mejor», «con más detalle», «otra pose», «el que te enseñé estaba feo», «mejóralo», «busca referencias» (con erratas): no reutiliza la versión guardada y no repite referencias ya usadas. |
+| `SketchJournal` | Diario de dibujo (`files/sketch/journal.json`): cómo lo entendió, de dónde salieron las líneas, qué vio al mirarlo y qué opinó Bryan. Responde a «¿por qué lo dibujaste así?», «no se parece», «mira tu dibujo». |
+
+Un dibujo a mano con «mejóralo» en el nombre se guarda como ejemplo de Bryan y ella hace su propia versión. Al hablar de un dibujo cuenta qué hizo y por qué; la técnica (epiciclos, Fourier) sólo si se le pregunta cómo dibuja.
+
 ## Vista previa
 
 `python3 tools/astral-preview/build.py salida.html` genera una página autónoma con los mismos recursos (WebGL para la malla, Canvas para los epiciclos).

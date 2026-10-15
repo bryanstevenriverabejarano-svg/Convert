@@ -19,10 +19,21 @@ public final class SketchRequest {
     public final boolean references;
     /** Lo que pidió y no está en el repertorio (para decirlo con honestidad). */
     public final String unknown;
+    /**
+     * Pidió que lo mejore («dibújalo mejor», «con más detalle», «el que te enseñé estaba feo»): no repite
+     * la versión que ya tiene, la rehace ella con otras referencias o pensando sus partes.
+     */
+    public final boolean improve;
+    /** Lo que quiere distinto («con más detalle, pose diferente»); vacío si nada. */
+    public final String wish;
 
     private SketchRequest(Kind kind, SketchScene scene, String unknown) { this(kind, scene, unknown, false); }
     private SketchRequest(Kind kind, SketchScene scene, String unknown, boolean references) {
+        this(kind, scene, unknown, references, false, "");
+    }
+    private SketchRequest(Kind kind, SketchScene scene, String unknown, boolean references, boolean improve, String wish) {
         this.kind = kind; this.scene = scene; this.unknown = unknown == null ? "" : unknown; this.references = references;
+        this.improve = improve; this.wish = wish == null ? "" : wish;
     }
 
     private static final Pattern SELF = Pattern.compile(
@@ -39,10 +50,24 @@ public final class SketchRequest {
             + "|dibujalo|dibujala|dibujalos|dibujalas|dibujamelo|dibujamela|pintalo|pintala|trazalo|trazala)\\b");
     /** «Busca referencias (en internet) de un cochinillo», «busca imágenes de…». */
     private static final Pattern REFERENCES = Pattern.compile(
-            "\\b(busca|buscar|buscas|busques|mira|consulta)\\b.*\\b(referencia|referencias|imagen|imagenes|fotos|dibujos|internet)\\b"
-            + "|\\breferencias?\\b");
+            "\\b(busca|buscar|buscas|busques|mira|consulta)\\b.*\\b(ref\\w{0,5}ncias?|imagen|imagenes|fotos|dibujos|internet)\\b"
+            + "|\\bref\\w{0,5}ncias?\\b"); // tolera erratas: «refwrencias», «referncias»
     private static final Pattern REFERENCE_SUBJECT = Pattern.compile(
-            "\\b(?:referencias?|imagenes|imagen|fotos|dibujos)(?: en internet)? (?:de|del|sobre) (.+)$");
+            "\\b(?:ref\\w{0,5}ncias?|imagenes|imagen|fotos|dibujos)(?: en internet)? (?:de|del|sobre) (.+)$");
+    /** Quiere una versión mejor, no la misma. */
+    private static final Pattern IMPROVE = Pattern.compile(
+            "\\b(mejor|mejora|mejoralo|mejorala|mejorarlo|mejorarla|mejoralos|perfeccionalo|perfecciona"
+            + "|mas (bonito|bonita|detalle|detallado|detallada|realista|parecido|parecida|reconocible)|con (mucho )?(mas )?detalle"
+            + "|(otra|una|con una|con otra) pose|pose (diferente|distinta|nueva)|de otra (forma|manera)|otra version|version (nueva|tuya|propia)"
+            + "|(estaba|esta|era|es|quedo|salio) (muy |un poco |bastante )?(feo|fea|mal|raro|rara)|no se parec\\w*|que se parezca)\\b");
+    /** «Mejóralo» a secas: se refiere al último dibujo. */
+    private static final Pattern IMPROVE_ONLY = Pattern.compile(
+            "^(salve )?(mejoralo|mejorala|mejora (el|tu|ese|este) dibujo|hazlo mejor|hazla mejor|dibujalo mejor|dibujala mejor"
+            + "|intentalo (otra vez|de nuevo)( pero)?( mejor)?|otra vez pero mejor|puedes mejorarlo|puedes mejorarla)( por favor| porfa)?$");
+    private static final Pattern WISH = Pattern.compile(
+            "\\b(con (mucho )?mas detalle|mas detallad[oa]|(una |otra )?pose (diferente|distinta|nueva)|otra pose|mas realista"
+            + "|mas bonit[oa]|mas reconocible|de perfil|de frente|sentad[oa]|de pie|corriendo|volando|saltando|durmiendo|comiendo"
+            + "|a cuatro patas|con los brazos (abiertos|arriba)|de lado)\\b");
     private static final Pattern PRONOUN_ONLY = Pattern.compile(
             "^(dibujalo|dibujala|dibujalos|dibujalas|dibujamelo|dibujamela|pintalo|pintala|trazalo|trazala|hazlo)$");
     private static final Pattern NEGATED = Pattern.compile("\\b(no|deja de|para de|nunca) (me )?(dibujes|pintes|dibujar|pintar)\\b");
@@ -54,7 +79,11 @@ public final class SketchRequest {
             "que", "se", "vea", "ver", "para", "mi", "dibujo", "dibujar", "muy", "poco", "rapido", "aqui", "hola",
             "busca", "buscar", "buscas", "referencia", "referencias", "imagen", "imagenes", "fotos", "internet",
             "analiza", "analizalas", "analizala", "analizas", "hanalizas", "hazlo", "haces", "lo", "las", "les", "y",
-            "puedes", "podrias", "por", "ti", "encima", "debajo", "junto", "sobre", "bajo", "cerca", "lado"));
+            "puedes", "podrias", "por", "ti", "encima", "debajo", "junto", "sobre", "bajo", "cerca", "lado",
+            "mejor", "mejora", "mejoralo", "mejorala", "mejorarlo", "mejorarla", "detalle", "detallado", "detallada", "pose",
+            "diferente", "distinta", "nueva", "nuevo", "forma", "manera", "version", "pero", "mas", "realista", "parecido",
+            "parecida", "feo", "fea", "raro", "rara", "mal", "estaba", "esta", "era", "ese", "esa", "este", "umm", "um", "vale",
+            "ok", "bueno", "ensene", "ensenaste", "hice", "hiciste", "anterior", "antes", "perfeccionalo", "reconocible"));
 
     public static SketchRequest parse(String input, SketchLibrary library) {
         String text = SketchLibrary.normalize(input);
@@ -67,8 +96,17 @@ public final class SketchRequest {
                     : new SketchRequest(Kind.SELF, SketchScene.compose(java.util.Collections.singletonList(self)), null);
         }
         boolean references = REFERENCES.matcher(text).find();
+        boolean improve = IMPROVE.matcher(text).find();
+        String wish = wishes(text);
+        if (IMPROVE_ONLY.matcher(text).matches()) return new SketchRequest(Kind.AGAIN, null, null, true, true, wish);
         Matcher verb = VERB.matcher(text);
         if (!verb.find()) return new SketchRequest(Kind.NONE, null, null);
+        if (improve) {
+            // Rehacerlo mejor: nunca la versión guardada; ella vuelve a buscar o a pensar sus partes.
+            String wanted = improvedSubject(input, library);
+            return wanted.isEmpty() ? new SketchRequest(Kind.AGAIN, null, null, true, true, wish)
+                    : new SketchRequest(Kind.UNKNOWN, null, wanted, true, true, wish);
+        }
         Matcher about = REFERENCE_SUBJECT.matcher(text);
         String subject = about.find() ? about.group(1).trim() : text.substring(verb.end()).trim();
         if (references) {
@@ -87,6 +125,60 @@ public final class SketchRequest {
         String rest = meaningful(subject);
         return rest.isEmpty() ? new SketchRequest(Kind.FREE, null, null)
                 : new SketchRequest(Kind.UNKNOWN, null, rest);
+    }
+
+    /** Lo que quiere distinto, en sus palabras («con mas detalle, pose diferente»). */
+    static String wishes(String normalized) {
+        Matcher m = WISH.matcher(normalized);
+        java.util.LinkedHashSet<String> found = new java.util.LinkedHashSet<>();
+        while (m.find() && found.size() < 4) found.add(m.group(1));
+        return String.join(", ", found);
+    }
+
+    /**
+     * Qué quiere que mejore: la frase con el verbo de dibujar (sin «busca referencias, el que te enseñé
+     * estaba feo»), el nombre de un motivo conocido si lo menciona, o sus palabras con contenido.
+     */
+    static String improvedSubject(String raw, SketchLibrary library) {
+        for (String sentence : raw.split("[.!?;\\n]+")) {
+            String t = SketchLibrary.normalize(sentence);
+            Matcher verb = VERB.matcher(t);
+            if (!verb.find()) continue;
+            String after = t.substring(verb.end()).trim();
+            for (SketchLibrary.Mention m : library.mentions(after, false))
+                if (!m.motif.self) return LearnedSketches.stripArticle(cleanName(m.motif.name));
+            Matcher about = REFERENCE_SUBJECT.matcher(after);
+            String wanted = meaningful(about.find() ? about.group(1) : cut(after));
+            if (!wanted.isEmpty()) return wanted;
+        }
+        return "";
+    }
+
+    /** Corta en lo que ya no es el objeto: «un gorila con más detalle» → «un gorila». */
+    private static String cut(String after) {
+        Matcher m = Pattern.compile("\\b(con|pero|que|en|de forma|de otra|mas|y busca|busca)\\b").matcher(after);
+        return m.find() && m.start() > 2 ? after.substring(0, m.start()).trim() : after;
+    }
+
+    private static final Pattern TRAILING_ASK = Pattern.compile(
+            "(?:[\\s.,;:!¡]+(?:mej[oó]ralo|mej[oó]rala|mejorarlo|mejorarla|perfecci[oó]nalo|por favor|porfa|plis|mejor))+[\\s.,;:!¡]*$",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    /**
+     * Nombre de un dibujo sin la petición pegada: «Muñeco de nieve mejóralo..» → «muñeco de nieve».
+     * @return el nombre limpio en minúsculas (o el original si quedaría vacío)
+     */
+    public static String cleanName(String name) {
+        if (name == null) return "";
+        String n = name.trim().toLowerCase(java.util.Locale.ROOT);
+        String cleaned = TRAILING_ASK.matcher(n).replaceAll("").replaceAll("[.,;:!?¡¿]+", " ").replaceAll("\\s+", " ").trim();
+        return cleaned.length() < 2 ? n : cleaned;
+    }
+
+    /** ¿El nombre traía una petición de mejora («… mejóralo»)? */
+    public static boolean asksToImprove(String name) {
+        return name != null && TRAILING_ASK.matcher(name.trim().toLowerCase(java.util.Locale.ROOT)).find()
+                && SketchLibrary.normalize(name).matches(".*\\b(mejoralo|mejorala|mejorarlo|mejorarla|perfeccionalo|mejor)( por favor| porfa| plis)?$");
     }
 
     /** Hasta cuatro palabras con contenido (sin artículos ni muletillas). */

@@ -20,7 +20,22 @@ public final class ShapeProgram {
     private ShapeProgram() { }
 
     /** Instrucción para el modelo (ejemplos completos: un modelo pequeño copia mejor que interpreta). */
-    public static String prompt(String subject) {
+    public static String prompt(String subject) { return prompt(subject, null, null); }
+
+    /**
+     * Con su idea del objeto: le pide dibujar cada parte que ella misma describió, y lo que Bryan
+     * quiere distinto («con más detalle, otra pose»).
+     */
+    public static String prompt(String subject, VisualConcept concept, String wish) {
+        String base = basePrompt(subject);
+        String parts = concept == null ? "" : concept.forShapes();
+        String w = wish == null || wish.trim().isEmpty() ? "" : "Bryan quiere: " + VisualConcept.clip(wish, 80) + ".\n";
+        if (parts.isEmpty() && w.isEmpty()) return base;
+        int at = base.lastIndexOf("Ahora «");
+        return base.substring(0, at) + parts + w + "Usa entre 8 y 25 formas, una o más por parte.\n" + base.substring(at);
+    }
+
+    private static String basePrompt(String subject) {
         String what = subject == null ? "" : subject.replaceAll("[\\r\\n\"«»]+", " ").trim();
         if (what.length() > 60) what = what.substring(0, 60);
         return "Eres Salve y dibujas con formas geométricas. Lienzo de 100x100: x crece a la derecha, y crece hacia abajo.\n"
@@ -41,8 +56,8 @@ public final class ShapeProgram {
         Result(List<float[]> strokes, int shapes, int rejected, float aspect) {
             this.strokes = strokes; this.shapes = shapes; this.rejected = rejected; this.aspect = aspect;
         }
-        /** Al menos dos formas válidas y casi todo lo escrito entendido. */
-        public boolean isUsable() { return shapes >= 2 && rejected <= shapes; }
+        /** Al menos tres formas válidas (con menos sale un garabato abstracto) y casi todo lo escrito entendido. */
+        public boolean isUsable() { return shapes >= 3 && rejected <= shapes; }
     }
 
     public static Result parse(String text) {

@@ -34,16 +34,22 @@ public final class SketchProtocol {
         /** Nota breve para el historial: así Salve recuerda qué dibujó. */
         public String historyNote() {
             if (scenes.isEmpty()) return "";
-            StringBuilder b = new StringBuilder(" (Dibujé con mis trazos de luz: ");
+            StringBuilder b = new StringBuilder(" [dibujo mostrado: ");
             for (int i = 0; i < scenes.size(); i++) b.append(i == 0 ? "" : "; ").append(scenes.get(i).title);
-            return b.append(".)").toString();
+            return b.append(']').toString();
         }
     }
 
     public static boolean contains(String text) { return text != null && ANY.matcher(text).find(); }
 
+    /** Notas de historial que el modelo a veces copia en su respuesta; no son para Bryan. */
+    private static final Pattern ECHO = Pattern.compile(
+            "\\s*(\\(\\s*Dibuj[eé] con mis trazos de luz:[^)]*\\)|\\[\\s*dibujo mostrado:[^\\]]*\\])",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
     public static Extraction extract(String text, SketchLibrary library) {
         if (text == null) text = "";
+        text = ECHO.matcher(text).replaceAll("");
         List<SketchScene> scenes = new ArrayList<>();
         StringBuilder clean = new StringBuilder(), display = new StringBuilder();
         Matcher any = ANY.matcher(text);
