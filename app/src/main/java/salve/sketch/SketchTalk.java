@@ -78,4 +78,39 @@ public final class SketchTalk {
         }
         return new Look(verdict, seen);
     }
+
+    // ───────────── recortar: dónde está el objeto en una foto ─────────────
+
+    /** Pregunta para su visión: dónde está el objeto, para recortarlo antes de calcarlo. */
+    public static String locatePrompt(String subject) {
+        String what = VisualConcept.clip(subject == null ? "" : subject.replaceAll("[\\r\\n\"«»]+", " "), 60);
+        return "Mira la foto. ¿Dónde está «" + what + "»? Responde SOLO con una línea:\n"
+                + "CAJA: izquierda arriba derecha abajo (porcentajes de 0 a 100 del ancho y del alto)\n"
+                + "Si no aparece, responde: CAJA: no";
+    }
+
+    private static final Pattern BOX = Pattern.compile("(?i)caja\\s*[:=]\\s*(\\d{1,3})\\D+(\\d{1,3})\\D+(\\d{1,3})\\D+(\\d{1,3})");
+
+    /** Caja en fracciones {izquierda, arriba, derecha, abajo}, o null si no la ve o no tiene sentido. */
+    public static float[] parseBox(String text) {
+        if (text == null) return null;
+        Matcher m = BOX.matcher(text);
+        if (!m.find()) return null;
+        float[] b = new float[4];
+        for (int i = 0; i < 4; i++) b[i] = Math.min(100, Integer.parseInt(m.group(i + 1))) / 100f;
+        if (b[2] - b[0] < .12f || b[3] - b[1] < .12f) return null; // demasiado pequeña o al revés
+        if (b[2] - b[0] > .97f && b[3] - b[1] > .97f) return null; // toda la imagen: no recorta nada
+        return b;
+    }
+
+    // ───────────── honestidad: no decir que dibujó si no dibujó ─────────────
+
+    private static final Pattern CLAIM = Pattern.compile(
+            "\\b(aqui tienes (el|tu|un) dibujo|he terminado (de (refinar|dibujar|hacer) )?(el|tu) dibujo|estoy (dibujando|terminando|"
+            + "refinando|anadiendo|trazando)|ya (lo )?(he )?dibujad[oa]|te (lo )?muestro el dibujo|mira (el|mi) dibujo)\\b");
+
+    /** ¿La respuesta dice que dibujó o está dibujando? */
+    public static boolean claimsDrawing(String reply) {
+        return reply != null && CLAIM.matcher(SketchLibrary.normalize(reply)).find();
+    }
 }

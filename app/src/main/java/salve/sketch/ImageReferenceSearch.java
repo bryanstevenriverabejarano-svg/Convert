@@ -60,9 +60,11 @@ public final class ImageReferenceSearch {
         String es = clean(subject);
         if (es.isEmpty()) return new ArrayList<>();
         Set<String> terms = new LinkedHashSet<>();
+        log.clear();
+        // Primero el nombre en inglés que ella pensó (corrige erratas: «vesrido» → dress); luego Wikipedia.
+        if (englishHint != null && !clean(englishHint).isEmpty()) terms.add(clean(englishHint));
         String english = null;
-        try { english = englishTerm(es); } catch (IOException ignored) { /* seguimos con el término en español */ }
-        if (english == null && englishHint != null && !clean(englishHint).isEmpty()) english = clean(englishHint);
+        try { english = englishTerm(es); } catch (IOException error) { log.add("Wikipedia: " + error.getMessage()); }
         if (english != null) terms.add(english);
         terms.add(es);
         List<Candidate> out = new ArrayList<>();
@@ -74,8 +76,14 @@ public final class ImageReferenceSearch {
             try { addAll(out, seen, commons(main + shape + " filetype:drawing", 6), max); }
             catch (IOException ignored) { /* seguimos con la búsqueda general */ }
         }
-        for (String term : terms) if (out.size() < max) addAll(out, seen, commons(term + " filetype:drawing", 8), max);
-        if (out.size() < max) for (String term : terms) addAll(out, seen, commons(term + " filetype:bitmap", 6), max);
+        IOException last = null;
+        for (String term : terms) if (out.size() < max) {
+            try { addAll(out, seen, commons(term + " filetype:drawing", 8), max); } catch (IOException e) { last = e; }
+        }
+        for (String term : terms) if (out.size() < max) {
+            try { addAll(out, seen, commons(term + " filetype:bitmap", 6), max); } catch (IOException e) { last = e; }
+        }
+        if (out.isEmpty() && last != null) throw last; // sin red o Commons caído: que se sepa
         return out;
     }
 
@@ -99,8 +107,20 @@ public final class ImageReferenceSearch {
     }
 
     List<Candidate> commons(String query, int limit) throws IOException {
-        return parseCommons(text(http.get(commonsUrl(query, limit), 400_000)));
+        try {
+            List<Candidate> found = parseCommons(text(http.get(commonsUrl(query, limit), 400_000)));
+            log.add("«" + query.replace(" filetype:", " ·") + "»: " + found.size());
+            return found;
+        } catch (IOException error) {
+            log.add("«" + query.replace(" filetype:", " ·") + "»: error " + error.getMessage());
+            throw error;
+        }
     }
+
+    private final List<String> log = new ArrayList<>();
+
+    /** Qué buscó y cuántas imágenes dio cada búsqueda (para contárselo a Bryan si falla). */
+    public String diagnostic() { return String.join("; ", log); }
 
     static String esWikipediaUrl(String es) {
         return "https://es.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&generator=search&gsrlimit=1"
