@@ -25,6 +25,16 @@ Cada trazo se convierte en su transformada discreta de Fourier (`FourierStroke`)
 - La voz y el historial reciben el texto sin marcas y una nota de lo dibujado, para que lo recuerde.
 - El escenario muestra el dibujo grande delante de ella, a la altura de las manos.
 
+## Aprender a dibujar cualquier cosa
+
+| Vía | Cómo | Qué pasa |
+|---|---|---|
+| Foto | «Esto es un mueble, dibújame uno» con la foto adjunta; o «dibújala» sobre la foto del chat | `ImageTracer` analiza la geometría (bordes finos o, en dibujos de líneas, el esqueleto), aísla el objeto principal (corta horizontes y lo que sale del encuadre), simplifica y ordena los trazos. Salve describe lo que ve (rectas horizontales/verticales/diagonales, curvas, contornos, simetría), lo traza y, si lo nombraste, lo aprende. |
+| A mano | Opciones → «Enséñale a dibujar», o «te enseño a dibujar una lámpara» | Lienzo para dibujar con el dedo; se suaviza, se normaliza y se aprende. |
+| Ella sola | «Dibuja una bicicleta» sin tenerla | Su modelo describe el objeto con formas (`rect`, `circle`, `ellipse`, `line`, `poly`, `path`, `arc`) en un lienzo 100×100; `ShapeProgram` valida la gramática (nada se ejecuta) y lo convierte en trazos. Lo guarda como suyo. |
+
+Lo aprendido se guarda en `files/sketch/learned.json` (hasta 80 motivos) y tiene prioridad sobre el repertorio de serie: si le enseñas tu casa, «dibuja una casa» dibuja la tuya. Una foto sin nombre se guarda como «tu foto de las HH:MM».
+
 ## Vista previa
 
 `python3 tools/astral-preview/build.py salida.html` genera una página autónoma con los mismos recursos (WebGL para la malla, Canvas para los epiciclos).
@@ -33,5 +43,6 @@ Cada trazo se convierte en su transformada discreta de Fourier (`FourierStroke`)
 
 - La malla sólo anima el fotograma base; caminar, bailar y las poses siguen siendo fotogramas ilustrados.
 - Los párpados son dos estados (entrecerrado y cerrado), no una animación continua; un guiño de un solo ojo no está preparado.
-- Dibuja motivos de su repertorio, no imágenes arbitrarias: si le piden algo que no tiene, lo dice y ofrece algo cercano.
+- Trazar una foto sigue sus líneas reales: funciona mejor con el objeto grande, buena luz y fondo liso. Con fondos muy cargados puede incluir líneas que no son del objeto.
+- Lo que compone ella sola depende de su modelo (Gemma 4 E2B): será esquemático y a veces poco reconocible; una foto o un dibujo a mano lo corrige.
 - Pendiente de medir en el S24 Ultra: fluidez de la malla, consumo y tiempos de la DFT del autorretrato.
