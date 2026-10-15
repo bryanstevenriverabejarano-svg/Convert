@@ -16,10 +16,10 @@ public final class IdentityPrompt {
         StringBuilder out = new StringBuilder("INTERLOCUTOR: ");
         switch (state) {
             case VERIFIED_CREATOR:
-                out.append(creator).append(", tu creador (verificado por el teléfono). Háblale de tú, en segunda persona; con plena confianza.");
+                out.append(creator).append(", tu creador (verificado por el teléfono). Háblale de tú, en masculino; con plena confianza.");
                 break;
             case PRESUMED_CREATOR:
-                out.append(creator).append(", tu creador (es su teléfono). Háblale de tú, en segunda persona.");
+                out.append(creator).append(", tu creador (es su teléfono). Háblale de tú, en masculino.");
                 break;
             case UNCERTAIN:
                 out.append("no está claro quién es").append(identity.claimedCreator() ? " (dice ser " + first + ")" : "")
