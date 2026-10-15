@@ -96,7 +96,7 @@ public final class MindRuntime {
     /** Capacidades que existen de verdad en esta app; evita que el modelo describa las de un chatbot genérico. */
     static final String CAPABILITIES = "Capacidades reales: conversar con el modelo local; guardar datos que me cuentas "
             + "y buscarlos en mi memoria; consolidar recuerdos al dormir y pensar entre conversaciones; investigar por mi cuenta "
-            + "mis preguntas abiertas cuando estoy sola; investigar en "
+            + "mis preguntas abiertas cuando estoy sola (y seguir sus hilos), y buscar lo que no sé; investigar en "
             + "Wikipedia o en URLs que me des; analizar fotos si el modelo tiene visión; controlar apps del móvil y crear "
             + "rutinas solo con tu aprobación; presupuesto personal; voz. Órdenes: «tu mente», «sueña ahora».";
 
@@ -425,25 +425,65 @@ public final class MindRuntime {
             return "Investigué hace poco; espero un rato.";
         if (!force && prefs.contains("news_question")) return "Aún tengo algo pendiente de contarle a Bryan.";
         java.util.Set<String> explored = new java.util.HashSet<>(prefs.getStringSet("explored", java.util.Collections.emptySet()));
+        java.util.Set<String> visited = new java.util.HashSet<>(prefs.getStringSet("visited", java.util.Collections.emptySet()));
         List<String> names = new ArrayList<>();
         for (salve.core.identity.PeopleGraph.PersonEntity p : peopleGraph().people()) names.add(p.name);
-        salve.core.mind.SelfModel.Question question = salve.core.mind.CuriosityCycle.choose(journal.questions(), explored, names);
-        if (question == null) return "No tengo ahora preguntas abiertas que pueda investigar fuera sin tocar tu vida privada.";
-        String query = salve.core.mind.CuriosityCycle.query(question.text);
+        List<salve.core.mind.SelfModel.Question> open = journal.questions();
+        salve.core.mind.SelfModel.Question fresh = salve.core.mind.CuriosityCycle.choose(open, explored, names);
+
+        // Seguir el hilo de su última lectura si esa pregunta sigue abierta y le importa al menos
+        // tanto como la siguiente: sus prioridades deciden si profundiza o cambia de tema.
+        salve.core.mind.SelfModel.Question threadQuestion = null;
+        String threadId = prefs.getString("thread_qid", null);
+        if (threadId != null) for (salve.core.mind.SelfModel.Question q : open) if (threadId.equals(q.id)) threadQuestion = q;
+        String threadLink = threadQuestion == null ? null : salve.core.mind.CuriosityCycle.pickThread(
+                java.util.Arrays.asList(prefs.getString("thread_links", "").split("\n")), threadQuestion.text, visited);
+        boolean followThread = threadLink != null && prefs.getInt("thread_depth", 0) < 3
+                && (fresh == null || threadQuestion.salience >= fresh.salience);
+        if (!followThread && fresh == null)
+            return "No tengo ahora preguntas abiertas que pueda investigar fuera sin tocar tu vida privada.";
         prefs.edit().putLong("last_at", now).apply();
-        WikipediaResearchClient.ResearchBatch batch = new WebResearchClient(app, query).researchResult(query, stopped);
+
+        salve.core.mind.SelfModel.Question question = followThread ? threadQuestion : fresh;
         List<String> texts = new ArrayList<>();
+        List<String> links = new ArrayList<>();
         String url = null;
-        for (WikipediaResearchClient.Page page : batch.pages) { texts.add(page.text); if (url == null) url = page.url; }
+        if (followThread) {
+            visited.add(threadLink);
+            try {
+                WikipediaResearchClient.Page page = new WebResearchClient(app).fetch(threadLink, stopped);
+                texts.add(page.text); url = page.url; links.addAll(page.links);
+                salve.core.web.SearchLive.reading(page.url, page.title);
+            } catch (java.io.IOException | RuntimeException unreadable) { /* Hilo cortado: probará otro. */ }
+        } else {
+            // Si la mini ventana está abierta, Bryan ve en directo lo que ella decide buscar.
+            if (salve.core.web.SearchLive.panelOpen()) salve.core.web.SearchLive.begin(app, salve.core.mind.CuriosityCycle.query(question.text));
+            WikipediaResearchClient.ResearchBatch batch = new WebResearchClient(app, salve.core.mind.CuriosityCycle.query(question.text))
+                    .researchResult(salve.core.mind.CuriosityCycle.query(question.text), stopped);
+            for (WikipediaResearchClient.Page page : batch.pages) {
+                texts.add(page.text);
+                if (url == null) { url = page.url; links.addAll(page.links); }
+            }
+            explored.add(question.id);
+        }
         String summary = salve.core.mind.CuriosityCycle.summarize(texts);
-        explored.add(question.id);
-        prefs.edit().putStringSet("explored", explored).apply();
-        if (summary == null) return "Busqué «" + question.text + "», pero no encontré nada claro que contarte.";
+        android.content.SharedPreferences.Editor edit = prefs.edit().putStringSet("explored", explored)
+                .putStringSet("visited", limitSet(visited, 200));
+        if (url != null) edit.putString("thread_qid", question.id).putString("thread_links", String.join("\n",
+                        links.size() > 40 ? links.subList(0, 40) : links))
+                .putInt("thread_depth", followThread ? prefs.getInt("thread_depth", 0) + 1 : 0);
+        edit.apply();
+        if (summary == null) return (followThread ? "Seguí el hilo de «" : "Busqué «") + question.text + "», pero no encontré nada claro.";
         String host = url == null ? null : android.net.Uri.parse(url).getHost();
-        journal.apply(salve.core.mind.CuriosityCycle.patch(question, summary, host));
+        journal.apply(salve.core.mind.CuriosityCycle.patch(question, summary, host, followThread));
         prefs.edit().putString("news_question", question.text).putString("news_summary", summary)
                 .putString("news_url", url == null ? "" : url).putLong("news_at", now).putInt("news_told", 0).apply();
         return "Investigué «" + question.text + "»: " + summary + (host == null ? "" : " (" + host + ")");
+    }
+
+    private static java.util.Set<String> limitSet(java.util.Set<String> values, int max) {
+        if (values.size() <= max) return values;
+        return new java.util.HashSet<>(new ArrayList<>(values).subList(values.size() - max, values.size()));
     }
 
     /** Novedad para el prompt de los dos siguientes turnos con Bryan; después se da por contada. */
@@ -474,12 +514,18 @@ public final class MindRuntime {
         String t = salve.core.memory.TypoTolerantText.normalize(input);
         if (!t.matches(".*\\b(que has investigado|que investigaste|que has aprendido (?:por tu cuenta|sola|tu sola)|"
                 + "en que has estado (?:pensando|investigando)|que has descubierto)\\b.*")) return null;
-        for (int i = journal.thoughts().size() - 1; i >= 0; i--) {
-            salve.core.mind.SelfModel.Thought thought = journal.thoughts().get(i);
-            if ("curiosidad".equals(thought.origin)) {
-                clearCuriosityNews(app.getSharedPreferences(CURIOSITY_PREFS, Context.MODE_PRIVATE));
-                return thought.text;
-            }
+        List<salve.core.mind.SelfModel.Thought> thoughts = journal.thoughts();
+        StringBuilder found = new StringBuilder();
+        int shown = 0;
+        for (int i = thoughts.size() - 1; i >= 0 && shown < 3; i--) {
+            if (!"curiosidad".equals(thoughts.get(i).origin)) continue;
+            if (found.length() > 0) found.append("\n\n");
+            found.append(thoughts.get(i).text);
+            shown++;
+        }
+        if (shown > 0) {
+            clearCuriosityNews(app.getSharedPreferences(CURIOSITY_PREFS, Context.MODE_PRIVATE));
+            return found.toString();
         }
         return journal.questions().isEmpty()
                 ? "Todavía no he investigado nada por mi cuenta: aún no tengo preguntas abiertas propias. Me surgen al reflexionar y al dormir."
