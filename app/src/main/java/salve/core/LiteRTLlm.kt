@@ -118,16 +118,26 @@ object LiteRTLlm {
     }
 
     @JvmStatic @JvmOverloads @Synchronized
-    fun generate(prompt: String, structured: Boolean = false, repair: Boolean = false, creative: Boolean = false): String {
+    fun generate(prompt: String, structured: Boolean = false, repair: Boolean = false, creative: Boolean = false): String =
+        generateStreaming(prompt, structured, repair, creative, null)
+
+    /**
+     * Igual que [generate], pero entrega cada fragmento según llega (palabra a palabra) a
+     * [onChunk]. Devuelve el texto completo. El motor .task antiguo no emite flujo: se entrega
+     * entero al final.
+     */
+    @JvmStatic @Synchronized
+    fun generateStreaming(prompt: String, structured: Boolean, repair: Boolean, creative: Boolean,
+                          onChunk: java.util.function.Consumer<String>?): String {
         check(initialized) { "El modelo local no está inicializado" }
-        legacy?.let { return it.generateResponse(prompt) }
-        return respond(Contents.of(prompt), structured, repair, creative && !structured)
+        legacy?.let { model -> return model.generateResponse(prompt).also { onChunk?.accept(it) } }
+        return respond(Contents.of(prompt), structured, repair, creative && !structured, onChunk)
     }
 
     @JvmStatic @JvmOverloads @Synchronized
     fun generateImage(prompt: String, jpeg: ByteArray, structured: Boolean = false, repair: Boolean = false): String {
         check(initialized && visionEnabled && engine != null) { "No hay un motor visual local cargado" }
-        return respond(Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt)), structured, repair, false)
+        return respond(Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt)), structured, repair, false, null)
     }
 
     /** Read text only. Private channels and tool arguments never enter chat or TTS. */
@@ -150,15 +160,13 @@ object LiteRTLlm {
         thinkingConfig = ThinkingConfig(enableThinking = false),
         extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured)
 
-    /** Segundos de espera: un cuento de 1024 tokens necesita más que una respuesta breve. */
-    @JvmStatic
-    fun timeoutSeconds(repair: Boolean, creative: Boolean): Long = if (repair) 30 else if (creative) 180 else 90
 
     @JvmStatic
     fun responseFormat(structured: Boolean): ResponseFormat? =
         if (structured) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
 
-    private fun respond(contents: Contents, structured: Boolean, repair: Boolean, creative: Boolean): String {
+    private fun respond(contents: Contents, structured: Boolean, repair: Boolean, creative: Boolean,
+                        onChunk: java.util.function.Consumer<String>?): String {
         val activeEngine = checkNotNull(engine) { "El runtime LiteRT-LM no está cargado" }
         // The application supplies the history; do not keep a second session or execute native tool calls.
         val config = conversationConfig(structured, repair, creative)
@@ -167,20 +175,34 @@ object LiteRTLlm {
             val done = CountDownLatch(1)
             val error = AtomicReference<Throwable?>()
             val text = StringBuffer()
+            val lastTokenAt = java.util.concurrent.atomic.AtomicLong(0L)
             conversation.sendMessageAsync(contents, object : MessageCallback {
                 override fun onMessage(message: Message) {
                     if (message.toolCalls.isNotEmpty()) {
                         error.compareAndSet(null, IllegalStateException("La respuesta requiere una herramienta no conectada"))
                     }
-                    text.append(publicText(message))
+                    val chunk = publicText(message)
+                    lastTokenAt.set(System.currentTimeMillis())
+                    if (chunk.isEmpty()) return
+                    text.append(chunk)
+                    // A slow UI/TTS consumer must never break generation.
+                    try { onChunk?.accept(chunk) } catch (consumer: RuntimeException) { Log.w(TAG, "Fallo al mostrar el flujo", consumer) }
                 }
                 override fun onDone() { done.countDown() }
                 override fun onError(throwable: Throwable) { error.set(throwable); done.countDown() }
             }, responseFormat = format)
+            val startedAt = System.currentTimeMillis()
             try {
-                if (!done.await(timeoutSeconds(repair, creative), TimeUnit.SECONDS)) {
+                // No fixed deadline: wait while tokens keep arriving; stop a stalled engine.
+                while (!done.await(1, TimeUnit.SECONDS)) {
+                    val verdict = GenerationWatchdog.check(System.currentTimeMillis(), startedAt, lastTokenAt.get(), repair, creative)
+                    if (verdict == GenerationWatchdog.Verdict.RUNNING) continue
                     conversation.cancelProcess()
-                    throw java.util.concurrent.TimeoutException("El modelo local agotó el tiempo de respuesta")
+                    if (GenerationWatchdog.keepPartial(structured, text.length)) {
+                        Log.w(TAG, "Generación detenida ($verdict); se entrega el texto escrito")
+                        return text.toString().trim()
+                    }
+                    throw java.util.concurrent.TimeoutException("El modelo local dejó de responder ($verdict)")
                 }
             } catch (interrupted: InterruptedException) {
                 conversation.cancelProcess()

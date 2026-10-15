@@ -341,7 +341,13 @@ public class SalveLLM {
     }
 
     /** Serializes reload and generation across conversation/background consumers. */
-    public synchronized ModelResult generateResult(String prompt, Role role) {
+    public ModelResult generateResult(String prompt, Role role) { return generateResult(prompt, role, null); }
+
+    /**
+     * Como {@link #generateResult(String, Role)}, entregando el texto por fragmentos según se
+     * escribe (LiteRT). Otros motores lo entregan de una vez al final.
+     */
+    public synchronized ModelResult generateResult(String prompt, Role role, java.util.function.Consumer<String> onChunk) {
         long start = System.nanoTime();
         if (Thread.currentThread().isInterrupted()) return ModelResult.failure(
                 ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
@@ -349,7 +355,7 @@ public class SalveLLM {
                 ModelResult.Status.ERROR, "Prompt vacío", 0L);
         if (!activationInProgress && (LocalModelPolicy.idForPath(modelPath) != null || !modelAvailable)
                 && getPendingFallbackFrom() != null) {
-            if (tryCachedFallback()) return generateResult(prompt, role);
+            if (tryCachedFallback()) return generateResult(prompt, role, onChunk);
             if (Thread.currentThread().isInterrupted()) return ModelResult.failure(ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
             try { salve.work.ModelDownloadWorker.enqueueFallback(appContext); } catch (Exception ignored) { }
             return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
@@ -369,8 +375,11 @@ public class SalveLLM {
                 boolean large = LocalModelPolicy.isLarge(modelPath);
                 DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
                 if (large) markLargeOperation(true);
-                try { text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
-                        ggufContextTokens, watch); }
+                try {
+                    text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
+                            ggufContextTokens, watch);
+                    if (onChunk != null && text != null) onChunk.accept(text);
+                }
                 catch (java.util.concurrent.CancellationException e) {
                     if (watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
                         throw new ModelMemoryPolicy.PressureException("Memoria baja durante la respuesta de " + ModelRuntimeInfo.name(modelPath)
@@ -383,9 +392,10 @@ public class SalveLLM {
             } else {
                 decorated = salve.core.cognition.CognitivePrompt.withEngine(decorated, ModelRuntimeInfo.name(modelPath), true, null);
                 boolean structured = salve.core.cognition.CognitivePrompt.isCognitive(decorated);
-                text = isLiteRT ? LiteRTLlm.generate(identity + decorated, structured,
-                        salve.core.cognition.CognitivePrompt.isFormatRepair(decorated), role == Role.NARRADOR && !structured)
+                text = isLiteRT ? LiteRTLlm.generateStreaming(identity + decorated, structured,
+                        salve.core.cognition.CognitivePrompt.isFormatRepair(decorated), role == Role.NARRADOR && !structured, onChunk)
                         : BasicLocalLlm.chatSinglePrompt(identity + decorated);
+                if (!isLiteRT && onChunk != null && text != null) onChunk.accept(text);
             }
             long latency = (System.nanoTime() - start) / 1_000_000L;
             if (text == null || text.trim().isEmpty()) {
@@ -409,7 +419,7 @@ public class SalveLLM {
             Log.e(TAG, "Falló la inferencia local", e);
             boolean fallback = !activationInProgress && !Thread.currentThread().isInterrupted()
                     && requestDolphinFallback(e);
-            if (fallback && tryCachedFallback()) return generateResult(prompt, role);
+            if (fallback && tryCachedFallback()) return generateResult(prompt, role, onChunk);
             publishStatus("no disponible; consulta el respaldo");
             return ModelResult.failure(Thread.currentThread().isInterrupted()
                     ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR,

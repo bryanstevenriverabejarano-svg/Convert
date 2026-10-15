@@ -845,6 +845,10 @@ public class MainActivity extends AppCompatActivity {
                 if (!isFinishing() && !isDestroyed()) stageController.appendMessage(true, texto);
             });
         });
+        // Lo que Salve está escribiendo ahora (cuentos y escenas aparecen palabra a palabra).
+        motorConversacional.setDraftListener(parcial -> runOnUiThread(() -> {
+            if (!isFinishing() && !isDestroyed()) stageController.showDraft(parcial);
+        }));
 
         // >>> LLM LOCAL: sólo informativo por ahora (el motor puede leer esta ruta con getPreferredModelPath)
         String preferredModel = getPreferredModelPath(this);

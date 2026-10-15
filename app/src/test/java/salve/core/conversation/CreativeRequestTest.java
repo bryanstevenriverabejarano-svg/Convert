@@ -78,4 +78,32 @@ public class CreativeRequestTest {
         for (int i = 0; i < n; i++) out.append(s);
         return out.toString();
     }
+
+    @Test public void longStoriesAreThoughtFirstAndWrittenInParts() {
+        assertEquals(1, CreativeRequest.parts("Cuéntame un cuento para dormir"));
+        assertEquals(2, CreativeRequest.parts("Cuéntame un cuento largo"));
+        assertEquals(3, CreativeRequest.parts("invéntate una historia muy larga de piratas"));
+        assertEquals(3, CreativeRequest.parts("escríbeme una aventura por capítulos"));
+        assertEquals(4, CreativeRequest.parts("escribe una historia en cuatro capítulos"));
+        assertEquals(1, CreativeRequest.parts("cuéntame un cuento que pase a lo largo del río"));
+        assertTrue(CreativeRequest.maxCharsFor(4) <= 11000);
+        String plan = CreativeRequest.planPrompt("Cuéntame un cuento largo", "", "Alex", 2);
+        assertTrue(plan.contains("2 partes") && plan.contains("SOLO tu plan"));
+        String first = CreativeRequest.partPrompt("Cuéntame un cuento largo", "", "Alex", "Título: El faro", "", 1, 2);
+        assertTrue(first.contains("parte 1 de 2") && first.contains("No cierres todavía") && first.contains("TU PLAN"));
+        String written = repeat("palabra ", 400) + "y el faro calló.";
+        String last = CreativeRequest.partPrompt("Cuéntame un cuento largo", "", "Alex", "Título: El faro", written, 2, 2);
+        assertTrue(last.contains("y el faro calló.") && last.contains("última parte") && last.contains("sin repetir"));
+        assertTrue("solo el final de lo escrito", last.length() < written.length() + 1200);
+    }
+
+    @Test public void continuationKeepsTheEndOfTheLastStory() {
+        List<ChatMessage> history = new ArrayList<>();
+        history.add(new ChatMessage(ChatMessage.Role.ASSISTANT, repeat("Había una vez. ", 200) + "Y la puerta se abrió sola.", 1L));
+        String prompt = CreativeRequest.prompt("sigue con el cuento", "", null, history, "Alex");
+        assertTrue(prompt.contains("Y la puerta se abrió sola."));
+        assertTrue(CreativeRequest.isCreative("sigue con el cuento", NONE));
+        assertTrue(CreativeRequest.isCreative("continúa la historia", NONE));
+        assertFalse(CreativeRequest.isCreative("sigue con lo de la nube", NONE));
+    }
 }
