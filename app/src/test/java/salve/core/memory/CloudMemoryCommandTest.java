@@ -14,4 +14,9 @@ public class CloudMemoryCommandTest {
         org.junit.Assert.assertEquals(CloudMemoryCommand.Action.ASK, CloudMemoryCommand.parse("¿Qué recuerdos tienes en la nube?"));
         org.junit.Assert.assertNull(CloudMemoryCommand.parse("¿Cuál es tu primer recuerdo?"));
     }
+
+    @Test public void restoreAcceptsKeyboardTypos() {
+        assertEquals(CloudMemoryCommand.Action.RESTORE, CloudMemoryCommand.parse("Rexupera tus recuerdos"));
+        assertEquals(CloudMemoryCommand.Action.RESTORE, CloudMemoryCommand.parse("recupera tus recuerdos de pcloud"));
+    }
 }

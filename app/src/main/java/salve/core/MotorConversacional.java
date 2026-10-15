@@ -650,6 +650,11 @@ public class MotorConversacional {
         }
         String identityResponse = comandoIdentidad(entrada);
         if (identityResponse != null) { hablar(identityResponse); return; }
+        if (pideEmpezarDeNuevo(entrada)) {
+            limpiarContextoConversacional();
+            hablar("Hecho: empiezo la conversación en limpio. Mis recuerdos y lo que sé de ti siguen intactos.");
+            return;
+        }
         String windowResponse = comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
         String mindResponse = mind().handleCommand(entrada);
@@ -1180,16 +1185,19 @@ public class MotorConversacional {
 
         // Una respuesta idéntica a otra anterior suele significar que el modelo ignoró el mensaje
         // nuevo («Es un placer conocerte…» dos veces). Se reintenta una vez avisándolo.
-        if (inference.isSuccess() && salve.core.conversation.ReplyStyle.repeats(respuesta, recentAssistantReplies(3))) {
+        java.util.List<String> recientes = recentAssistantReplies(3);
+        if (inference.isSuccess() && (salve.core.conversation.ReplyStyle.repeats(respuesta, recientes)
+                || salve.core.conversation.ReplyStyle.mostlyEchoes(respuesta, recientes))) {
             CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext
-                            + " | EVITA_REPETIR: tu última respuesta fue idéntica a una anterior; responde de forma distinta y concreta al mensaje actual.",
+                            + " | EVITA_REPETIR: estabas repitiendo frases de respuestas anteriores; responde con palabras nuevas y concretas al mensaje actual.",
                     resumenAccion, entradaPorVoz, evidence, false);
             if (retry.handedOff) return;
-            if (retry.result.isSuccess() && !salve.core.conversation.ReplyStyle.repeats(retry.result.getText(), recentAssistantReplies(3)))
+            if (retry.result.isSuccess() && !salve.core.conversation.ReplyStyle.repeats(retry.result.getText(), recientes))
                 respuesta = retry.result.getText();
         }
-        // Muletillas que el modelo pequeño repite aunque el prompt las prohíba.
-        if (inference.isSuccess()) respuesta = salve.core.conversation.ReplyStyle.clean(respuesta, recentAssistantReplies(3));
+        // Muletillas que el modelo pequeño repite aunque el prompt las prohíba, y frases que ya dijo.
+        if (inference.isSuccess()) respuesta = salve.core.conversation.ReplyStyle.dropEchoes(
+                salve.core.conversation.ReplyStyle.clean(respuesta, recientes), recientes);
 
         // 🟡 3. FRENO DE ALUCINACIONES
         if (respuesta.contains("USUARIO:") || respuesta.contains("Bryan:")) {
@@ -1930,6 +1938,13 @@ public class MotorConversacional {
                 ? " Si quieres abrir mis reflexiones contigo, di «verifícame»." : "");
     }
 
+    /** «Empecemos de nuevo»: limpia el historial reciente (no la memoria) si arrastra respuestas raras. */
+    private static boolean pideEmpezarDeNuevo(String entrada) {
+        String t = salve.core.memory.TypoTolerantText.normalize(entrada).replaceFirst("^salve ", "");
+        return t.matches("(?:empecemos|empezamos|empieza|vamos a empezar) de (?:nuevo|cero)|"
+                + "(?:borra|limpia|olvida) (?:la |esta )?conversacion(?: reciente| de hoy)?|nueva conversacion");
+    }
+
     private boolean liveHintGiven;
 
     /** Abre la búsqueda en la mini ventana; devuelve una pista (una vez por sesión) si no se pudo. */
@@ -2000,6 +2015,7 @@ public class MotorConversacional {
 
     private static final java.util.regex.Pattern VERIFY_REQUEST = java.util.regex.Pattern.compile(
             "^\\s*(?:salve[, ]+)?(?:verif[ií]ca(?:me)?|comprueba que soy yo|confirma que soy yo|pon(?:go)? (?:mi )?huella|"
+                    + "(?:confirma(?:r)?|verifica(?:r)?|comprueba|comprobar) (?:mi |la )?identidad|"
                     + "quiero verificarme|verif[ií]came con (?:la )?(?:huella|cara|rostro))\\b.*",
             java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
     private static final java.util.regex.Pattern NOT_CREATOR = java.util.regex.Pattern.compile(
