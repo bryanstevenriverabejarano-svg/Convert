@@ -44,7 +44,11 @@ public final class WebResearchClient extends WikipediaResearchClient {
                     for (String url : urls) {
                         checkSearch(stopped, deadline);
                         if (pages.size() == MAX_PAGES) break;
-                        try { Page page = readPage(url, stopped, deadline); if (!page.text.isEmpty()) pages.add(page); else failures++; }
+                        try {
+                            Page page = readPage(url, stopped, deadline);
+                            if (!page.text.isEmpty()) { pages.add(page); if (context != null) SearchLive.reading(page.url, page.title); }
+                            else failures++;
+                        }
                         catch (java.io.IOException failed) { failures++; }
                     }
                     if (!pages.isEmpty()) {

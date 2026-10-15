@@ -99,6 +99,9 @@ public final class ConversationMemoryGrounding {
                 || text.matches(".*\\b(recuerda|recuerdas|recuerdos?|memoria|nodos?|grafo|dije|hablamos|lo anterior)\\b.*")
                 || !queryTerms(input).isEmpty());
     }
+    /** -1 primer registro, 1 último, 0 no es una pregunta de cronología. */
+    public static int chronologyDirection(String input) { return simpleChronology(input); }
+
     public static boolean isPersonalHistoryQuery(String input) {
         String text = normalize(input);
         return simpleChronology(input) != 0 || !profileCategories(text).isEmpty()
@@ -270,7 +273,9 @@ public final class ConversationMemoryGrounding {
         return result;
     }
     /** Exact, simple requests only; a question about a trip's first memory needs normal retrieval. */
-    private static int simpleChronology(String input) {
+    static int simpleChronology(String input) {
+        int loose = looseChronology(input);
+        if (loose != 0) return loose;
         String text = normalize(input).replaceAll("[¿?¡!.,;:]", " ").replaceAll("\\s+", " ").trim();
         text = text.replaceAll("^(?:salve )?(?:(?:cual (?:es|fue)|dime|muestra(?:me)?|recuerdas) )?", "")
                 .replaceAll("^(?:tu|el|su) ", "").replaceAll(" (?:por favor|que tienes|que guardaste|registrado)$", "");
@@ -279,6 +284,27 @@ public final class ConversationMemoryGrounding {
         if (text.matches("ultimo recuerdo|recuerdo (?:mas reciente|ultimo)|ultima memoria")) return 1;
         return 0;
     }
+    private static final java.util.regex.Pattern LOOSE_CHRONOLOGY = java.util.regex.Pattern.compile(
+            "\\b(?:(tu|su|el) )?(primer(?:o)? recuerdo|recuerdo (?:mas antiguo|primero)|primera memoria|recuerdo mas viejo"
+                    + "|ultimo recuerdo|recuerdo (?:mas reciente|ultimo)|ultima memoria)\\b(?: (\\p{L}+))?");
+
+    /**
+     * «Entonces dime cuál es tu primer recuerdo», «cual es ru ñrimee recuerdi o que te dije»: la
+     * pregunta sobre el registro más antiguo o más reciente de Salve, aunque tenga erratas o una
+     * coletilla. No toma «el primer recuerdo del viaje», que necesita búsqueda normal.
+     */
+    static int looseChronology(String input) {
+        String text = TypoTolerantText.forRouting(input);
+        java.util.regex.Matcher m = LOOSE_CHRONOLOGY.matcher(text);
+        if (!m.find()) return 0;
+        String next = m.group(3) == null ? "" : m.group(3);
+        if (next.matches("de|del|sobre|en|durante|cuando|con|desde")) return 0;
+        boolean askedToSalve = m.group(1) != null && !"el".equals(m.group(1))
+                || text.matches(".*\\b(cual|dime|recuerdas|cuentame|tienes|guardas)\\b.*");
+        if (!askedToSalve) return 0;
+        return m.group(2).contains("ultim") || m.group(2).contains("reciente") ? 1 : -1;
+    }
+
     private static List<String> queryTerms(String input) {
         return MemorySearchQuery.parse(input).terms();
     }
