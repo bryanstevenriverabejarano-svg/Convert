@@ -49,10 +49,10 @@ public final class SketchStageView extends View {
             salve.avatar.AstralBody.get().setDrawing(null);
             return;
         }
-        // Encima de Salve, a la altura de su pecho y cabeza; ella queda visible a través del velo.
+        // Delante de ella, a la altura de las manos: lo proyecta sin taparse la cara.
         float w = getWidth(), h = getHeight();
-        float side = Math.min(w * .86f, h * .56f);
-        box.set((w - side) / 2, h * .06f, (w + side) / 2, h * .06f + side);
+        float side = Math.min(w * .8f, h * .4f);
+        box.set((w - side) / 2, h * .52f, (w + side) / 2, h * .52f + side);
         veil.setAlpha(Math.round(110 * alpha));
         float r = 22 * density;
         canvas.drawRoundRect(box.left - 8 * density, box.top - 8 * density, box.right + 8 * density,

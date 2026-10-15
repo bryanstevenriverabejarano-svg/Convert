@@ -69,8 +69,8 @@ public final class SketchScene {
             List<SketchLibrary.Motif> row = sky.isEmpty() ? ground : sky;
             layoutRow(row, strokes, 30, 690, width, true);
         } else {
-            layoutRow(sky, strokes, 20, 270, width, false);
-            layoutRow(ground, strokes, 250, 700, width, true);
+            layoutRow(sky, strokes, 15, 255, width, false);
+            layoutRow(ground, strokes, 290, 705, width, true);
         }
         return new SketchScene(key.toString(), title.toString(), width, height, strokes, motifs);
     }
