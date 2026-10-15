@@ -300,6 +300,15 @@ public class MotorConversacional {
         this.listener = listener;
     }
 
+    /** Texto que Salve está escribiendo ahora (null: ya no hay borrador). */
+    public interface DraftListener { void onBorrador(String textoParcial); }
+    private volatile DraftListener draftListener;
+    public void setDraftListener(DraftListener listener) { this.draftListener = listener; }
+    /** Frases leídas por flujo mientras se escribían → id de enunciado y turno del avatar. */
+    private final java.util.Map<String, Long> streamUtterances = new java.util.concurrent.ConcurrentHashMap<>();
+    /** La respuesta final ya se leyó en voz alta mientras se escribía: no se repite. */
+    private final ThreadLocal<Boolean> spokenWhileWriting = new ThreadLocal<>();
+
     public synchronized void setAvatarSession(AvatarMotionController.Session session) {
         activeUtterance = null;
         if (avatarSession != null) AvatarMotionController.get().closeSession(avatarSession);
@@ -1200,8 +1209,11 @@ public class MotorConversacional {
         // Cuentos, poemas y escenas de historia: texto libre, sin el JSON que les cortaba el texto.
         boolean creativeTurn = activePhoto == null
                 && (storyTurn || salve.core.conversation.CreativeRequest.isCreative(entrada, recentAssistantReplies(2)));
-        ModelResult creativeResult = creativeTurn ? generarTextoCreativo(entrada, storyTurn ? story : null) : null;
+        int creativeParts = storyTurn ? 1 : salve.core.conversation.CreativeRequest.parts(entrada);
+        LiveWriting live = creativeTurn ? new LiveWriting(creativeParts, storyTurn ? entrada : null) : null;
+        ModelResult creativeResult = creativeTurn ? generarTextoCreativo(entrada, storyTurn ? story : null, creativeParts, live) : null;
         boolean creativeOk = creativeUsable(creativeResult);
+        if (live != null && !creativeOk) live.abandon();
         CognitiveTurn.Outcome cognitive = creativeOk ? null : runCognitiveTurn(entrada, responseContext, resumenAccion,
                 entradaPorVoz, evidence, false);
         // Si se le cruza el inglés sin que se lo pidan, rehace la respuesta en español.
@@ -1220,13 +1232,15 @@ public class MotorConversacional {
         // Red de seguridad: «Aquí tienes uno corto…» sin el texto detrás → lo escribe en texto libre.
         if (!creativeOk && activePhoto == null && cognitive.result.isSuccess()
                 && salve.core.conversation.CreativeRequest.promisedWithoutDelivering(cognitive.result.getText())) {
-            creativeResult = generarTextoCreativo(entrada, storyTurn ? story : null);
+            live = new LiveWriting(creativeParts, storyTurn ? entrada : null);
+            creativeResult = generarTextoCreativo(entrada, storyTurn ? story : null, creativeParts, live);
             creativeOk = creativeUsable(creativeResult);
+            if (!creativeOk) live.abandon();
         }
         ModelResult inference = creativeOk ? creativeResult : cognitive.result;
         fallbackUsed = !inference.isSuccess();
-        respuesta = inference.isSuccess() ? (creativeOk ? salve.core.conversation.CreativeRequest.stripPreamble(inference.getText())
-                : inference.getText())
+        respuesta = inference.isSuccess() ? (creativeOk ? salve.core.conversation.CreativeRequest.cutTranscriptLeak(
+                salve.core.conversation.CreativeRequest.stripPreamble(inference.getText()), live.listener) : inference.getText())
                 : (resumenAccion == null ? "" : resumenAccion + "\n") + modelFailureMessage(inference)
                 + (activePhoto != null && gemini.isAvailable()
                     ? " Si quieres, di «analízala en la nube» y la enviaré a Gemini solo esta vez." : "");
@@ -1275,7 +1289,7 @@ public class MotorConversacional {
         }
 
         // 🟡 4. GOBERNADOR DE LONGITUD
-        int maxResponseChars = creativeOk ? salve.core.conversation.CreativeRequest.MAX_CHARS
+        int maxResponseChars = creativeOk ? salve.core.conversation.CreativeRequest.maxCharsFor(creativeParts)
                 : VoiceResponsePolicy.maxResponseChars(entradaPorVoz);
         if (respuesta.length() > maxResponseChars) {
             truncated = true;
@@ -1295,8 +1309,12 @@ public class MotorConversacional {
         long latencyMillis = (System.nanoTime() - turnStartedAtNanos) / 1_000_000L;
         TurnQualityAssessment assessment = ConversationQualityEvaluator.evaluate(
                 respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
-        responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse, entradaPorVoz);
-        if (inference.isSuccess() && !entradaPorVoz && !storyTurn) buscarPorSuCuentaSiNoLoSabe(entrada, respuesta);
+        // Lo que quedó por leer se encola tras las frases que ya sonaron; la final no se relee.
+        boolean spoken = creativeOk && live.finishSpeech();
+        if (spoken) spokenWhileWriting.set(true);
+        try { responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse, entradaPorVoz); }
+        finally { spokenWhileWriting.remove(); }
+        if (inference.isSuccess() && !entradaPorVoz && !storyTurn && !creativeOk) buscarPorSuCuentaSiNoLoSabe(entrada, respuesta);
     }
 
     /**
@@ -1578,36 +1596,166 @@ public class MotorConversacional {
     }
 
     /**
-     * Cuento, poema o escena en texto libre (rol NARRADOR: sin gramática JSON, 1024 tokens).
-     * Si sale en inglés, lo reescribe una vez en español.
+     * Cuento, poema o escena en texto libre (rol NARRADOR: sin gramática JSON, 1024 tokens),
+     * escrito por flujo: aparece palabra a palabra y se lee frase a frase mientras se escribe.
+     * Un texto largo primero se piensa (plan interno) y después se escribe por partes: mientras
+     * la voz lee una parte, el modelo ya escribe la siguiente.
      */
-    private ModelResult generarTextoCreativo(String entrada, salve.core.conversation.StoryMode.State story) {
+    private ModelResult generarTextoCreativo(String entrada, salve.core.conversation.StoryMode.State story,
+                                             int parts, LiveWriting live) {
         String self = "";
         try { self = mind().selfModelForPrompt(700); } catch (RuntimeException ignored) { }
-        String listener = null;
-        if (creatorSide()) {
-            String name = mind().interlocutor().name;
-            listener = name == null || name.trim().isEmpty() ? null : name.trim().split("\\s+")[0];
-        }
+        String listener = live == null ? null : live.listener;
         String storyBlock = story == null ? null : salve.core.conversation.StoryMode.promptBlock(story, entrada);
         java.util.List<salve.core.conversation.ChatMessage> history = conversationSession.snapshot();
-        ModelResult result = generarCreativo(salve.core.conversation.CreativeRequest.prompt(entrada, self, storyBlock, history, listener));
-        if (result.isSuccess() && salve.core.conversation.LanguageGuard.isMostlyEnglish(result.getText())
-                && !salve.core.conversation.LanguageGuard.isMostlyEnglish(entrada)) {
-            ModelResult spanish = generarCreativo(salve.core.conversation.CreativeRequest.prompt(
-                    entrada + " (escríbelo SOLO en español)", self, storyBlock, history, listener));
-            if (spanish.isSuccess() && !salve.core.conversation.LanguageGuard.isMostlyEnglish(spanish.getText())) return spanish;
+        if (parts <= 1) {
+            ModelResult result = generarCreativo(salve.core.conversation.CreativeRequest.prompt(entrada, self, storyBlock, history, listener), live);
+            if (result.isSuccess() && salve.core.conversation.LanguageGuard.isMostlyEnglish(result.getText())
+                    && !salve.core.conversation.LanguageGuard.isMostlyEnglish(entrada)) {
+                if (live != null) live.restart();
+                ModelResult spanish = generarCreativo(salve.core.conversation.CreativeRequest.prompt(
+                        entrada + " (escríbelo SOLO en español)", self, storyBlock, history, listener), live);
+                if (spanish.isSuccess() && !salve.core.conversation.LanguageGuard.isMostlyEnglish(spanish.getText())) return spanish;
+            }
+            return result;
         }
-        return result;
+        // Piensa antes de escribir: un plan propio y privado da unidad a las partes.
+        if (live != null) live.status("✦ Imaginando la historia antes de escribirla…");
+        ModelResult plan = generarCreativo(salve.core.conversation.CreativeRequest.planPrompt(entrada, self, listener, parts), null);
+        String planText = plan.isSuccess() ? salve.core.conversation.CreativeRequest.cleanPlan(plan.getText()) : "";
+        StringBuilder written = new StringBuilder();
+        ModelResult last = plan;
+        long latency = plan.isSuccess() ? plan.getLatencyMillis() : 0L;
+        for (int part = 1; part <= parts; part++) {
+            if (closed || Thread.currentThread().isInterrupted()) break;
+            if (live != null && part > 1) live.nextPart();
+            ModelResult piece = generarCreativo(salve.core.conversation.CreativeRequest.partPrompt(
+                    entrada, self, listener, planText, written.toString(), part, parts), live);
+            last = piece;
+            if (!piece.isSuccess()) break;
+            latency += piece.getLatencyMillis();
+            String text = salve.core.conversation.CreativeRequest.cutTranscriptLeak(
+                    salve.core.conversation.CreativeRequest.stripPreamble(piece.getText()), listener);
+            if (text.trim().isEmpty()) break;
+            if (written.length() > 0) written.append("\n\n");
+            written.append(text.trim());
+        }
+        if (written.length() == 0) return last;
+        ModelResult whole = ModelResult.success(written.toString(), latency);
+        return last.getProvider() == null ? whole : whole.withProvider(last.getProvider());
     }
 
-    private ModelResult generarCreativo(String prompt) {
-        return ConversationModelRouter.generate(false, llm != null && llm.isLocalOnly(), false,
+    private ModelResult generarCreativo(String prompt, LiveWriting live) {
+        int before = live == null ? 0 : live.draft.received();
+        ModelResult result = ConversationModelRouter.generate(false, llm != null && llm.isLocalOnly(), false,
                 gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
                 () -> {
                     if (llm == null) return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Sin modelo local", 0L);
-                    return rememberProvider(llm.generateResult(prompt, SalveLLM.Role.NARRADOR));
+                    return rememberProvider(llm.generateResult(prompt, SalveLLM.Role.NARRADOR, live));
                 });
+        // Un motor sin flujo (Gemini, GGUF) entrega el texto de una vez: también se lee por frases.
+        if (live != null && result.isSuccess() && live.draft.received() == before) live.accept(result.getText());
+        return result;
+    }
+
+    /**
+     * Escritura en vivo de un turno creativo. Recibe los fragmentos del modelo (en su hilo),
+     * publica el borrador limpio como mucho cada 150 ms y encola en la voz cada frase completa.
+     * Los datos del turno (generación de voz, avatar) se capturan aquí: son de este hilo.
+     */
+    private final class LiveWriting implements java.util.function.Consumer<String> {
+        final String listener;
+        final salve.core.conversation.LiveDraft draft;
+        private final Long generation;
+        private final long avatarTurnId;
+        private final boolean voiceAllowed;
+        private volatile boolean muted, abandoned, spoke;
+        private long lastUi;
+
+        LiveWriting(int parts, String storyInput) {
+            String name = null;
+            if (creatorSide()) {
+                try { name = mind().interlocutor().name; } catch (RuntimeException ignored) { }
+            }
+            listener = name == null || name.trim().isEmpty() ? null : name.trim().split("\\s+")[0];
+            final String echoOf = storyInput;
+            final String who = listener;
+            draft = new salve.core.conversation.LiveDraft(raw -> {
+                String clean = salve.core.conversation.CreativeRequest.cutTranscriptLeak(
+                        salve.core.conversation.CreativeRequest.stripPreamble(raw), who);
+                return echoOf == null ? clean : salve.core.conversation.StoryMode.stripEcho(
+                        salve.core.conversation.StoryMode.stripEcho(clean, echoOf), echoOf);
+            }, salve.core.conversation.CreativeRequest.maxCharsFor(parts));
+            generation = voiceTurn.get();
+            avatarTurnId = currentAvatarTurn();
+            voiceAllowed = generation != null && liveVoiceTurn.get() == null && liveVoiceBatch.get() == null
+                    && !Boolean.TRUE.equals(silentVoiceReplies.get());
+        }
+
+        @Override public void accept(String chunk) {
+            if (abandoned) return;
+            draft.append(chunk);
+            publish(false);
+            if (!voiceAllowed || muted) return;
+            String visible = draft.visible();
+            // Si se le cruzó el inglés, no se lee: el turno lo rehará en español.
+            if (visible.length() >= salve.core.conversation.LiveDraft.HOLD_CHARS
+                    && salve.core.conversation.LanguageGuard.isMostlyEnglish(visible)) { muted = true; return; }
+            String sentence = draft.nextSpeech(false);
+            if (sentence != null && hablarFragmento(sentence, generation, avatarTurnId)) spoke = true;
+        }
+
+        void status(String text) {
+            DraftListener l = draftListener;
+            if (l != null && !abandoned) l.onBorrador(text);
+        }
+
+        void nextPart() { draft.nextPart(); }
+
+        /** Vuelve a empezar (p. ej. rehacer en español): calla lo que sonaba y borra el borrador. */
+        void restart() {
+            if (spoke) stopVoicePlayback();
+            spoke = false; muted = false;
+            draft.nextPart();
+            status("✦ Reescribiéndolo en español…");
+        }
+
+        /** El texto no sirvió: se quita el borrador y la voz queda libre para la respuesta normal. */
+        void abandon() {
+            abandoned = true;
+            if (spoke) stopVoicePlayback();
+            spoke = false;
+            status(null);
+        }
+
+        /** Encola lo que falta por leer. true si la respuesta ya suena por flujo. */
+        boolean finishSpeech() {
+            if (!spoke || muted || abandoned) return false;
+            for (String rest : draft.drainSpeech()) hablarFragmento(rest, generation, avatarTurnId);
+            return true;
+        }
+
+        private void publish(boolean force) {
+            long now = android.os.SystemClock.uptimeMillis();
+            if (!force && now - lastUi < 150) return;
+            lastUi = now;
+            DraftListener l = draftListener;
+            String visible = draft.visible();
+            if (l != null && !visible.isEmpty()) l.onBorrador(visible);
+        }
+    }
+
+    /** Lee una frase de un texto que aún se está escribiendo (cola, sin cortar la anterior). */
+    private synchronized boolean hablarFragmento(String text, Long generation, long turn) {
+        if (closed || text == null || text.trim().isEmpty() || generation == null || listening || tts == null || !ttsReady) return false;
+        if (liveVoiceChannel.isActive() || !voiceTurnGate.maySpeak(generation)) return false;
+        String id = "salve_stream_" + (++utteranceSequence);
+        streamUtterances.put(id, turn);
+        int result;
+        try { result = tts.speak(text, TextToSpeech.QUEUE_ADD, null, id); }
+        catch (RuntimeException unavailable) { result = TextToSpeech.ERROR; }
+        if (result == TextToSpeech.ERROR) { streamUtterances.remove(id); return false; }
+        return true;
     }
 
     private static boolean creativeUsable(ModelResult result) {
@@ -2334,9 +2482,10 @@ public class MotorConversacional {
 
         // Each utterance owns its callbacks. QUEUE_FLUSH and microphone interruption revoke old IDs.
         // A revoked inference still reaches history/UI, but cannot disturb a newer utterance.
-        if (currentVoice) activeUtterance = null;
+        boolean spokenAlready = Boolean.TRUE.equals(spokenWhileWriting.get());
+        if (currentVoice && !spokenAlready) activeUtterance = null;
         boolean budgetVoiceAllowed = !privateBudget || hasOfflineVoice();
-        boolean audioQueued = currentVoice && ttsReady && !listening && tts != null && budgetVoiceAllowed
+        boolean audioQueued = !spokenAlready && currentVoice && ttsReady && !listening && tts != null && budgetVoiceAllowed
                 && (owner != null || !liveVoiceChannel.isActive());
         String visibleText = texto + (privateBudget && !budgetVoiceAllowed
                 ? "\nPara escuchar esta respuesta privada, elige una voz sin conexión en Voz de Salve." : "");
@@ -2409,7 +2558,15 @@ public class MotorConversacional {
         toolHandler.post(() -> {
             salve.core.voice.LiveVoiceChannel.Ticket owner;
             synchronized (MotorConversacional.this) {
-                if (closed || listening || !utteranceId.equals(activeUtterance)) return;
+                Long streamTurn = event >= 2 ? streamUtterances.remove(utteranceId) : streamUtterances.get(utteranceId);
+                if (closed || listening) return;
+                if (streamTurn != null && event == 1) {
+                    // Cada frase leída por flujo pasa a ser el enunciado activo al empezar a sonar.
+                    activeUtterance = utteranceId;
+                    activeUtteranceOwner = null;
+                    if (avatarSession != null) AvatarMotionController.get().speechPending(avatarSession, streamTurn, utteranceId);
+                }
+                if (!utteranceId.equals(activeUtterance)) return;
                 owner = activeUtteranceOwner;
                 if (event >= 2) {
                     activeUtterance = null;

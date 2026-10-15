@@ -168,7 +168,23 @@ final class SalveStageController {
         options.setImportantForAccessibility("options".equals(active) ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
     }
 
+    /** Borrador de Salve mientras escribe; no se guarda en el historial ni sobrevive a una recreación. */
+    private String draft;
+
+    /** Muestra (o quita, con null) lo que Salve está escribiendo ahora mismo. */
+    void showDraft(String text) {
+        String next = text == null || text.trim().isEmpty() ? null : text;
+        if (next == null && draft == null) return;
+        draft = next == null ? null : next.length() > 12000 ? next.substring(0, 12000) + "…" : next;
+        renderMessages();
+        if (draft != null) {
+            caption.setText(draft.length() > 180 ? "…" + draft.substring(draft.length() - 180) : draft);
+            scrollToEnd();
+        }
+    }
+
     void appendMessage(boolean fromSalve, String text) {
+        if (fromSalve) draft = null; // la respuesta final sustituye al borrador
         if (text == null || text.trim().isEmpty()) return;
         // Bound recreation state so a long session cannot exceed the Android Binder limit.
         String visible = text.length() > 12000 ? text.substring(0, 12000) + "…" : text;
@@ -185,9 +201,11 @@ final class SalveStageController {
     }
 
     private void renderMessages() {
-        if (messages.isEmpty()) { transcript.setText(R.string.salve_chat_empty); return; }
+        if (messages.isEmpty() && draft == null) { transcript.setText(R.string.salve_chat_empty); return; }
         SpannableStringBuilder text = new SpannableStringBuilder();
-        for (String message : messages) {
+        java.util.List<String> shown = new java.util.ArrayList<>(messages);
+        if (draft != null) shown.add("Salve · escribiendo\n" + draft + " ▍");
+        for (String message : shown) {
             if (text.length() > 0) text.append("\n\n");
             int start = text.length();
             text.append(message);
