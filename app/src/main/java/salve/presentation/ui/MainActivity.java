@@ -997,6 +997,7 @@ public class MainActivity extends AppCompatActivity {
         ThinkWorker.schedule(this);
         salve.work.DreamWorker.schedule(this);
         salve.work.CuriosityWorker.schedule(this);
+        salve.work.PlayWorker.schedule(this);
         // Carga el modelo interno y el índice de recuerdos fuera del hilo principal.
         final android.content.Context mindContext = getApplicationContext();
         new Thread(() -> salve.core.MindRuntime.get(mindContext).warmUpEmbeddings(), "salve-mind-init").start();
@@ -1564,6 +1565,7 @@ public class MainActivity extends AppCompatActivity {
         // Al dejar el móvil (pantalla apagada o cambio de app) con la app abierta, su curiosidad
         // puede empezar en unos minutos en vez de esperar al ciclo de 3 h.
         salve.work.CuriosityWorker.enqueueWhenIdle(this);
+        salve.work.PlayWorker.enqueueWhenIdle(this);
         modelStatusHandler.removeCallbacks(refreshModelStatus);
         pendingLiveVoiceStart = false;
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);

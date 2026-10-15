@@ -122,6 +122,14 @@ public final class AutonomousToolRuntime {
             return "No pude completar el reto del modelo ni verificar su resultado.";
         }
     }
+    /** Juego propio: un reto inventado por Salve, resuelto y verificado por el laboratorio. */
+    public JsonObject play(JsonObject challenge, BooleanSupplier stopped) throws Exception {
+        long epoch = cancellationEpoch.get();
+        if (paused.get()) return null;
+        return lab().solve(challenge, () -> paused.get() || cancellationEpoch.get() != epoch
+                || Thread.currentThread().isInterrupted() || (stopped != null && stopped.getAsBoolean()));
+    }
+
     private String solve(JsonObject challenge, BooleanSupplier stopped) throws Exception {
         long epoch = cancellationEpoch.get();
         if (paused.get()) return "El laboratorio está pausado. Di reanuda el laboratorio para aceptar nuevos retos.";

@@ -96,7 +96,7 @@ public final class MindRuntime {
     /** Capacidades que existen de verdad en esta app; evita que el modelo describa las de un chatbot genérico. */
     static final String CAPABILITIES = "Capacidades reales: conversar con el modelo local; guardar datos que me cuentas "
             + "y buscarlos en mi memoria; consolidar recuerdos al dormir y pensar entre conversaciones; investigar por mi cuenta "
-            + "mis preguntas abiertas cuando estoy sola (y seguir sus hilos), y buscar lo que no sé; investigar en "
+            + "mis preguntas abiertas cuando estoy sola (y seguir sus hilos), buscar lo que no sé y jugar a inventarme retos; investigar en "
             + "Wikipedia o en URLs que me des; analizar fotos si el modelo tiene visión; controlar apps del móvil y crear "
             + "rutinas solo con tu aprobación; presupuesto personal; voz. Órdenes: «tu mente», «sueña ahora».";
 
@@ -484,6 +484,89 @@ public final class MindRuntime {
     private static java.util.Set<String> limitSet(java.util.Set<String> values, int max) {
         if (values.size() <= max) return values;
         return new java.util.HashSet<>(new ArrayList<>(values).subList(values.size() - max, values.size()));
+    }
+
+    // ── Juego propio ────────────────────────────────────────────────────────────
+
+    private final Object playLock = new Object();
+
+    /**
+     * Juega unas rondas: se inventa retos, el laboratorio los resuelve y verifica, y ella guarda su
+     * progreso. Solo CPU acotada, sin modelo ni red. Devuelve un resumen.
+     */
+    public String play(BooleanSupplier stopped, int rounds) {
+        synchronized (playLock) {
+            File file = new File(new File(app.getNoBackupFilesDir(), "mind"), "play.json");
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            salve.core.autonomy.PlayCycle.State state;
+            try { state = file.isFile() ? gson.fromJson(new String(java.nio.file.Files.readAllBytes(file.toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8), salve.core.autonomy.PlayCycle.State.class) : null; }
+            catch (Exception unreadable) { state = null; }
+            if (state == null) state = new salve.core.autonomy.PlayCycle.State();
+            java.util.Random random = new java.util.Random();
+            int solved = 0, played = 0;
+            List<String> notes = new ArrayList<>();
+            for (int i = 0; i < rounds; i++) {
+                if (stopped != null && stopped.getAsBoolean()) break;
+                String family = salve.core.autonomy.PlayCycle.choose(state, random);
+                int level = state.of(family).level;
+                com.google.gson.JsonObject report;
+                try {
+                    report = salve.core.AutonomousToolRuntime.get(app).play(salve.core.autonomy.PlayCycle.invent(
+                            family, level, random, "juego-" + Long.toString(System.currentTimeMillis(), 36) + "-" + i), stopped);
+                } catch (Exception unavailable) { break; }
+                if (report == null) break;
+                salve.core.autonomy.PlayCycle.Outcome outcome =
+                        salve.core.autonomy.PlayCycle.record(state, family, report, System.currentTimeMillis());
+                played++;
+                if (outcome.solved) solved++;
+                String note = salve.core.autonomy.PlayCycle.reflection(family, outcome);
+                if (note != null) notes.add(note);
+            }
+            try {
+                file.getParentFile().mkdirs();
+                java.nio.file.Files.write(file.toPath(), gson.toJson(state).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } catch (java.io.IOException unsaved) { Log.w(TAG, "No pude guardar el progreso del juego"); }
+            // Solo lo que cambió de verdad (nivel o estrategia) pasa a ser un pensamiento suyo.
+            if (!notes.isEmpty()) {
+                salve.core.mind.MindPatch patch = new salve.core.mind.MindPatch("juego");
+                for (String note : notes.subList(Math.max(0, notes.size() - 2), notes.size()))
+                    patch.thought(note, java.util.Collections.singletonList("juego:laboratorio"));
+                journal.apply(patch);
+            }
+            lastPlay = state;
+            return played == 0 ? "No pude jugar ahora (laboratorio pausado o no disponible)."
+                    : "Jugué " + played + " retos inventados por mí; resolví " + solved + "."
+                    + (notes.isEmpty() ? "" : " " + String.join(" ", notes));
+        }
+    }
+
+    private volatile salve.core.autonomy.PlayCycle.State lastPlay;
+
+    /** «¿A qué has jugado?»: su progreso real en cada juego. */
+    public String playAnswer(String input) {
+        String t = salve.core.memory.TypoTolerantText.normalize(input);
+        if (!t.matches(".*\\b(a que has jugado|que has jugado|como vas (?:en|con) (?:tus )?(?:juegos|retos)|tus juegos|tu progreso jugando)\\b.*"))
+            return null;
+        salve.core.autonomy.PlayCycle.State state = lastPlay;
+        if (state == null) {
+            File file = new File(new File(app.getNoBackupFilesDir(), "mind"), "play.json");
+            try { if (file.isFile()) state = new com.google.gson.Gson().fromJson(new String(java.nio.file.Files.readAllBytes(file.toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8), salve.core.autonomy.PlayCycle.State.class); }
+            catch (Exception ignored) { }
+        }
+        if (state == null || state.totalRounds == 0)
+            return "Todavía no he jugado. Cuando estoy sola me invento retos (rutas, la mochila, horarios, dependencias) y los resuelvo; "
+                    + "si quieres que empiece ya, di «juega un rato».";
+        StringBuilder out = new StringBuilder("Llevo " + state.totalRounds + " retos inventados por mí:");
+        for (java.util.Map.Entry<String, salve.core.autonomy.PlayCycle.FamilyStats> e : state.families.entrySet()) {
+            salve.core.autonomy.PlayCycle.FamilyStats f = e.getValue();
+            if (f.played == 0) continue;
+            out.append("\n- ").append(salve.core.autonomy.PlayCycle.displayName(e.getKey())).append(": nivel ").append(f.level)
+                    .append(", ").append(f.solved).append(" de ").append(f.played).append(" resueltos")
+                    .append(f.bestStrategy == null ? "" : ", mi estrategia: " + f.bestStrategy);
+        }
+        return out.toString();
     }
 
     /** Novedad para el prompt de los dos siguientes turnos con Bryan; después se da por contada. */
