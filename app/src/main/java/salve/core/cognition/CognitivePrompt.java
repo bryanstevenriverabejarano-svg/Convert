@@ -44,6 +44,8 @@ public final class CognitivePrompt {
             "(?iu).*\\b(ropa|prenda|vestid|pijama|traje|camiseta|falda|abrigo|armario|outfit|vistete|vístete|ponte|disen|diseñ|conjunto)\\w*.*");
     private static final java.util.regex.Pattern DRAWING = java.util.regex.Pattern.compile(
             "(?iu)\\b(dib[uú]j|p[ií]nt|ilustr|tr[aá]z|bosquej)\\w*");
+    private static final java.util.regex.Pattern CLOUD = java.util.regex.Pattern.compile(
+            "(?iu).*\\b(p ?cloud|la nube|sincroniz|recuerdos|fotos guardadas|copia de seguridad)\\w*.*");
     private static final java.util.regex.Pattern RESEARCH = java.util.regex.Pattern.compile(
             "(?iu).*\\b(busca|investiga|internet|google|noticia|actual|hoy|precio|quien gano|quién ganó)\\w*.*");
 
@@ -54,9 +56,12 @@ public final class CognitivePrompt {
     public static Map<String, CognitiveTurn.Tool> prioritize(Map<String, CognitiveTurn.Tool> available, String input) {
         if (available == null || input == null) return available;
         java.util.List<String> first = new java.util.ArrayList<>();
-        if (WARDROBE.matcher(input).matches()) for (String name : available.keySet()) if (name.startsWith("AVATAR_")) first.add(name);
+        boolean drawing = DRAWING.matcher(input).find();
+        // «Dibuja un vestido» es un dibujo, no ropa para su avatar.
+        if (!drawing && WARDROBE.matcher(input).matches()) for (String name : available.keySet()) if (name.startsWith("AVATAR_")) first.add(name);
+        if (CLOUD.matcher(input).matches() && available.containsKey("cloud.sync")) first.add("cloud.sync");
         if (RESEARCH.matcher(input).matches() && available.containsKey("web.search")) first.add("web.search");
-        if (DRAWING.matcher(input).find() && available.containsKey("sketch.draw")) first.add("sketch.draw");
+        if (drawing && available.containsKey("sketch.draw")) first.add(0, "sketch.draw");
         if (first.isEmpty()) return available;
         Map<String, CognitiveTurn.Tool> ordered = new java.util.LinkedHashMap<>();
         // Dentro del vestuario, crear va antes que listar o vestir: es la más grande y la que se perdía.
