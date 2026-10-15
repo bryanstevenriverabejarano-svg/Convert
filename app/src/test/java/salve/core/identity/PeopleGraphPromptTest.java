@@ -34,10 +34,12 @@ public class PeopleGraphPromptTest {
         SessionIdentity s = new SessionIdentity();
         s.onBiometricSuccess(1);
         String p = IdentityPrompt.render(s, PeopleGraph.build("Bryan", FAMILY), true, 2);
-        assertTrue(p.startsWith("ESTADO DEL INTERLOCUTOR"));
+        assertTrue(p.startsWith("INTERLOCUTOR: Bryan"));
         assertTrue(p.contains("segunda persona"));
-        assertTrue(p.contains("es él mirándote"));
         assertTrue(p.contains("tu hermana Ana"));
+        // Sin frases de ejemplo: un modelo pequeño las copia («Veo que estás bien…»).
+        assertFalse(p.contains("te veo"));
+        assertTrue("bloque breve para no desplazar su yo persistente", p.length() < 260);
     }
 
     @Test public void uncertainPromptAsksNaturallyAndHidesFamily() {
@@ -45,6 +47,7 @@ public class PeopleGraphPromptTest {
         s.onBiometricRejected(1);
         String p = IdentityPrompt.render(s, PeopleGraph.build("Bryan", FAMILY), true, 2);
         assertTrue(p.contains("averigua con naturalidad"));
+        assertTrue(p.length() < 260);
         assertTrue(p.contains("verifícame"));
         assertFalse(p.contains("Ana"));
     }

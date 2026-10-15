@@ -19,7 +19,7 @@ public final class ReplyStyle {
             "^(entiendo tu pregunta|entiendo perfectamente|buena pregunta|que buena pregunta|"
                     + "entiendo que (estas|me estas) (buscando|preguntando|pidiendo)|entiendo lo que (buscas|preguntas))\\b.*");
     private static final Pattern GENERIC_CLOSING = Pattern.compile(
-            ".*\\b(hay algo (mas |en particular |especifico )|algo en particular|algo mas que|"
+            ".*\\b(hay algo (mas |en particular |especifico |en lo que )|te gustaria que (pensemos|investiguemos|hablemos|exploremos)|algo en particular|algo mas que|"
                     + "te gustaria (compartir|contarme|explorar|conversar|hablar|que exploremos|saber (mas )?sobre mi)|"
                     + "que te interese|te apasion|en que (mas )?(puedo|podria) ayudarte|podamos empezar|"
                     + "estoy aqui para (ayudarte|escucharte|conversar|acompanarte)|no dudes en|"
@@ -41,22 +41,31 @@ public final class ReplyStyle {
         return false;
     }
 
-    public static String clean(String reply) {
+    /** Solo quita etiquetas y aperturas de relleno; los cierres son parte de su voz. */
+    public static String clean(String reply) { return clean(reply, null); }
+
+    /**
+     * Quita etiquetas y aperturas de relleno. Un cierre genérico («¿Hay algún tema que te esté
+     * rondando la cabeza?») forma parte de su personalidad y se conserva; solo se quita si es
+     * una copia del cierre de una respuesta anterior, que es cuando se vuelve una muletilla.
+     */
+    public static String clean(String reply, java.util.List<String> previousReplies) {
         if (reply == null) return null;
         String labelFree = LABEL.matcher(reply).replaceAll(" ").replaceAll("\\s+([,.])", "$1").replaceAll("\\s{2,}", " ");
         if (labelFree.trim().length() >= 12) reply = labelFree;
         String trimmed = reply.trim();
         if (trimmed.isEmpty()) return reply;
-        List<String> sentences = new ArrayList<>();
-        Matcher m = SENTENCE.matcher(trimmed);
-        while (m.find()) if (!m.group().trim().isEmpty()) sentences.add(m.group().trim());
+        List<String> sentences = sentences(trimmed);
         if (sentences.size() < 2) return trimmed;
+        java.util.Set<String> used = new java.util.HashSet<>();
+        if (previousReplies != null) for (String previous : previousReplies)
+            if (previous != null) for (String sentence : sentences(previous.trim())) used.add(normalize(sentence));
 
         int start = 0, end = sentences.size();
         if (FILLER_OPENING.matcher(normalize(sentences.get(0))).matches()) start = 1;
-        // Hasta tres cierres genéricos seguidos («¿Hay algo…? Estoy aquí para ayudarte.»).
         for (int i = 0; i < 3 && end - start > 1; i++) {
-            if (GENERIC_CLOSING.matcher(normalize(sentences.get(end - 1))).matches()) end--;
+            String last = normalize(sentences.get(end - 1));
+            if (used.contains(last) && GENERIC_CLOSING.matcher(last).matches()) end--;
             else break;
         }
         if (end - start < 1 || (start == 0 && end == sentences.size())) return trimmed;
@@ -67,6 +76,13 @@ public final class ReplyStyle {
         }
         String result = out.toString().trim();
         return result.length() < 12 ? trimmed : result;
+    }
+
+    private static List<String> sentences(String text) {
+        List<String> out = new ArrayList<>();
+        Matcher m = SENTENCE.matcher(text);
+        while (m.find()) if (!m.group().trim().isEmpty()) out.add(m.group().trim());
+        return out;
     }
 
     static String normalize(String value) {

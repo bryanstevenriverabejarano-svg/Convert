@@ -1189,7 +1189,7 @@ public class MotorConversacional {
                 respuesta = retry.result.getText();
         }
         // Muletillas que el modelo pequeño repite aunque el prompt las prohíba.
-        if (inference.isSuccess()) respuesta = salve.core.conversation.ReplyStyle.clean(respuesta);
+        if (inference.isSuccess()) respuesta = salve.core.conversation.ReplyStyle.clean(respuesta, recentAssistantReplies(3));
 
         // 🟡 3. FRENO DE ALUCINACIONES
         if (respuesta.contains("USUARIO:") || respuesta.contains("Bryan:")) {
@@ -1596,7 +1596,7 @@ public class MotorConversacional {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
             // Con foto, la imagen ocupa contexto (Gemma 4: 4.096 tokens con entrada, imagen y salida).
             if (activePhoto != null && canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
-            String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1400),
+            String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1600),
                     memory, details, conversationSession.snapshot(), tools, results, repair, remaining, budget);
             return generateWithConversationPhoto(prompt);
         }, tools, () -> closed || !isVoiceContextCurrent());
@@ -1636,8 +1636,7 @@ public class MotorConversacional {
             return new CognitiveTurn.Receipt(result.getStatus().name() + "\n" + result.getDataContext());
         }));
         tools.put("web.search", new CognitiveTurn.Tool(
-                "{query:string}: busca en internet por tu cuenta cuando te falte un dato actual o que no sabes; "
-                        + "Bryan lo ve en la mini ventana. Nunca pongas datos privados en la consulta", args -> {
+                "{query:string}: busca en internet un dato que no sabes (sin datos privados)", args -> {
             CognitiveReply.fields(args, "query");
             String query = CognitiveReply.string(args, "query").trim();
             if (query.isEmpty() || query.length() > 160) throw new IllegalArgumentException("Consulta vacía o demasiado larga");

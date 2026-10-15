@@ -106,13 +106,16 @@ public final class MindRuntime {
     public String selfModelForPrompt(int maxChars) {
         try {
             salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(app);
-            String head = salve.core.identity.IdentityPrompt.render(identity.session(), peopleGraph(),
-                    identity.biometricAvailable(), System.currentTimeMillis()) + "\n" + CAPABILITIES + "\n";
-            // Reflexiones y creencias sobre Bryan son su espacio íntimo: solo con acceso privado.
-            String self = identity.privateAccess() ? journal.render(Math.max(120, maxChars - head.length()))
-                    : "YO_PERSISTENTE: " + journal.narrative() + " (mis recuerdos y reflexiones sobre Bryan quedan reservados "
-                    + "hasta que se verifique que es él).";
-            return head + self;
+            salve.core.identity.SessionIdentity session = identity.session();
+            String head = salve.core.identity.IdentityPrompt.render(session, peopleGraph(),
+                    identity.biometricAvailable(), System.currentTimeMillis()) + "\n";
+            // Su yo persistente es lo que la hace Salve: con su creador (verificado o en su
+            // teléfono) va entero. Solo ante otra persona o en duda se guarda lo íntimo.
+            String self = session.isCreatorSide()
+                    ? journal.render(Math.max(120, maxChars - head.length() - CAPABILITIES.length() - 1))
+                    : "YO_PERSISTENTE: " + journal.narrative() + " (mis reflexiones sobre " + creatorFirstName()
+                    + " son privadas con esta persona).";
+            return head + self + "\n" + CAPABILITIES;
         } catch (RuntimeException failure) { return ""; }
     }
 
@@ -213,9 +216,9 @@ public final class MindRuntime {
     public String handleCommand(String input) {
         MindCommand.Action action = MindCommand.parse(input);
         if (action == null) return null;
-        if (!salve.core.identity.IdentityManager.get(app).privateAccess())
-            return "Mi mente guarda reflexiones sobre " + creatorFirstName() + "; solo la abro cuando sé que es él. "
-                    + "Di «verifícame» y confírmalo con tu huella o tu rostro.";
+        if (!salve.core.identity.IdentityManager.get(app).session().isCreatorSide())
+            return "Mi mente guarda reflexiones sobre " + creatorFirstName() + "; solo la abro con él. "
+                    + "Si eres " + creatorFirstName() + ", di «verifícame».";
         switch (action) {
             case DESCRIBE: {
                 EmbeddingCalibration.Result c = calibration;

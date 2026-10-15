@@ -703,8 +703,10 @@ public class SalveLLM {
             return GgufContextPolicy.promptBudget(forecast == 0 ? GgufContextPolicy.COMPACT : Math.min(ggufContextTokens, forecast));
         }
         if (isLiteRT && path != null && path.toLowerCase(java.util.Locale.ROOT).endsWith(".task")) return 3200;
-        // Con 8.192 tokens cabe el núcleo cognitivo completo, la memoria y más historial.
-        return isLiteRT && LiteRTLlm.getContextTokens() >= ModelMemoryPolicy.LITERT_LONG ? 21000 : 10500;
+        // El motor se carga con 8.192 tokens para tener holgura (foto + respuesta larga), pero el
+        // prompt de conversación se mantiene en ~10.500 caracteres: con el doble, Gemma 4 E2B
+        // perdía el hilo, repetía respuestas antiguas y llegaba a cortar palabras.
+        return 10500;
     }
 
     /**
