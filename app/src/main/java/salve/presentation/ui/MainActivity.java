@@ -1561,6 +1561,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         activityResumed = false;
         salve.core.identity.IdentityManager.get(this).detach(this);
+        // Al dejar el móvil (pantalla apagada o cambio de app) con la app abierta, su curiosidad
+        // puede empezar en unos minutos en vez de esperar al ciclo de 3 h.
+        salve.work.CuriosityWorker.enqueueWhenIdle(this);
         modelStatusHandler.removeCallbacks(refreshModelStatus);
         pendingLiveVoiceStart = false;
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);
