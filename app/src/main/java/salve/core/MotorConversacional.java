@@ -1666,7 +1666,13 @@ public class MotorConversacional {
             olvidarVersionesConPeticion(subject);
             // No se queda con el calco: hace su versión (contornos que definen la forma, redondeados a mano).
             salve.sketch.SketchStyle.Result mine = salve.sketch.SketchStyle.ownVersion(bestTrace.strokes, 32);
-            List<float[]> lines = mine.strokes.size() >= 2 ? mine.strokes : bestTrace.strokes;
+            // Y lo pasa a sus propios vectores: curvas de Bézier que puede redibujar y variar.
+            salve.sketch.BezierSketch vectors = salve.sketch.BezierSketch.fit(
+                    mine.strokes.size() >= 2 ? mine.strokes : bestTrace.strokes, 6f);
+            boolean pose = wish != null && wish.contains("pose");
+            if (pose) vectors = vectors.vary(System.currentTimeMillis(), 45f);
+            List<float[]> lines = vectors.segments() >= 2 ? vectors.sample(10)
+                    : mine.strokes.size() >= 2 ? mine.strokes : bestTrace.strokes;
             salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, lines, bestTrace.aspect, "web");
             String how = "busqué referencias en Wikimedia Commons" + (concept != null && !concept.english.isEmpty()
                     ? " (como «" + concept.english + "», priorizando siluetas y dibujos de línea)" : "")
@@ -1674,7 +1680,8 @@ public class MotorConversacional {
                     + (best.drawing ? "dibujo vectorial" : "foto") + "); me quedé con sus contornos principales: "
                     + bestTrace.geometry.describe()
                     + (cropped > 0 ? " En las fotos, primero miré dónde estaba y recorté sólo eso." : "")
-                    + " No lo copié tal cual: " + mine.describe() + "."
+                    + " No lo copié tal cual: " + mine.describe() + "; " + vectors.describe() + "."
+                    + (pose ? " Para la pose distinta deformé suavemente esas curvas (experimental)." : "")
                     + (discarded.length() > 0 ? " Antes " + discarded + "." : "")
                     + (improving ? " Lo rehíce porque Bryan pidió mejorarlo, sin repetir referencias anteriores." : "");
             salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
@@ -1683,7 +1690,8 @@ public class MotorConversacional {
             journal.record(subject, attempt);
             registrarAccion(salve.core.mind.SelfActionLog.Kind.WEB_REFERENCE, subject, how);
             turnSketchStatus = "Referencia: «" + best.label() + "» de Wikimedia Commons (" + analyzed + " analizadas"
-                    + (cropped > 0 ? ", " + cropped + " recortadas" : "") + "); " + mine.describe() + ".";
+                    + (cropped > 0 ? ", " + cropped + " recortadas" : "") + "); " + mine.describe() + "; "
+                    + vectors.segments() + " curvas de Bézier propias.";
             referenceNote = "ACCION_REALIZADA: " + (improving ? "has rehecho «" + subject + "» tú misma sin copiar la versión anterior: " : "")
                     + "pensaste cómo es («" + (concept == null ? subject : concept.summary()) + "»), buscaste referencias en internet, "
                     + "analizaste " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegiste «" + best.label() + "» ("
@@ -1767,7 +1775,7 @@ public class MotorConversacional {
         if (llm == null || subject == null || subject.trim().isEmpty()) return null;
         try {
             String prompt = salve.sketch.ShapeProgram.prompt(subject, concept, wish);
-            ModelResult result = llm.generateResult(prompt, SalveLLM.Role.CREADOR);
+            ModelResult result = pensarDibujo(prompt);
             if (result == null || !result.isSuccess()) return null;
             salve.sketch.ShapeProgram.Result shapes = salve.sketch.ShapeProgram.parse(result.getText());
             if (!shapes.isUsable()) return null;
@@ -1777,8 +1785,7 @@ public class MotorConversacional {
                 int at = prompt.lastIndexOf("Ahora «");
                 String fix = "Tu intento anterior parecía «" + (look.seen.isEmpty() ? "otra cosa" : look.seen) + "», no «"
                         + subject + "». Dibuja mejor sus partes.\n";
-                ModelResult retry = llm.generateResult(at < 0 ? prompt : prompt.substring(0, at) + fix + prompt.substring(at),
-                        SalveLLM.Role.CREADOR);
+                ModelResult retry = pensarDibujo(at < 0 ? prompt : prompt.substring(0, at) + fix + prompt.substring(at));
                 salve.sketch.ShapeProgram.Result second = retry != null && retry.isSuccess()
                         ? salve.sketch.ShapeProgram.parse(retry.getText()) : null;
                 if (second != null && second.isUsable()) {
@@ -1796,7 +1803,8 @@ public class MotorConversacional {
             String how = "no tenía una referencia útil (" + salve.sketch.VisualConcept.clip(referenceFailure, 220)
                     + "), así que lo imaginé yo"
                     + (partNames.length() > 0 ? " parte por parte (" + partNames + ")" : " sin una idea clara de sus partes")
-                    + " y lo escribí como " + shapes.shapes + " formas geométricas (rectángulos, círculos, líneas…)." + correction
+                    + " con " + drawingThinker + " y lo escribí como " + shapes.shapes
+                    + " formas (curvas de Bézier, contornos curvos, líneas…)." + correction
                     + " Por eso es una versión esquemática.";
             salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
             attempt.source = "model"; attempt.how = how; attempt.wish = wish;
@@ -1823,7 +1831,7 @@ public class MotorConversacional {
         salve.sketch.VisualConcept known = journal.concept(subject);
         if (known != null || llm == null) return known;
         try {
-            ModelResult result = llm.generateResult(salve.sketch.VisualConcept.prompt(subject, wish), SalveLLM.Role.CREADOR);
+            ModelResult result = pensarDibujo(salve.sketch.VisualConcept.prompt(subject, wish));
             if (result == null || !result.isSuccess()) return null;
             salve.sketch.VisualConcept concept = salve.sketch.VisualConcept.parse(result.getText(), subject);
             if (!concept.isUsable()) return null;
@@ -1840,6 +1848,26 @@ public class MotorConversacional {
             Log.w(TAG, "No pudo pensar cómo es " + subject, error);
             return null;
         }
+    }
+
+    /** Motor con el que pensó el último dibujo («Gemini …» o su modelo local). */
+    private volatile String drawingThinker = "mi modelo local";
+
+    /**
+     * Enrutador para pensar un dibujo: si hay Gemini configurado y no está en modo sólo local, lo piensa
+     * allí (razona mejor formas y partes); si falla o no hay, con su modelo local.
+     */
+    private ModelResult pensarDibujo(String prompt) {
+        boolean cloud = gemini != null && gemini.isAvailable() && (llm == null || !llm.isLocalOnly()) && hayInternet();
+        if (cloud) {
+            try {
+                ModelResult r = gemini.generateResultSync(prompt, null);
+                if (r != null && r.isSuccess()) { drawingThinker = "Gemini " + gemini.getModelName(); return r; }
+            } catch (RuntimeException error) { Log.w(TAG, "Gemini no pudo pensar el dibujo", error); }
+        }
+        if (llm == null) return null;
+        drawingThinker = "mi modelo local";
+        return llm.generateResult(prompt, SalveLLM.Role.CREADOR);
     }
 
     /**

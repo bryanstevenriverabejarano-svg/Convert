@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 public final class ShapeProgram {
     public static final int MAX_SHAPES = 40;
     private static final Pattern LINE = Pattern.compile(
-            "^\\s*[-*•]?\\s*(rect|rectangulo|circle|circulo|ellipse|elipse|line|linea|poly|poligono|path|camino|arc|arco)\\b\\s*[:(]?\\s*([-0-9.,\\s]+)\\)?\\s*$");
+            "^\\s*[-*•]?\\s*(rect|rectangulo|circle|circulo|ellipse|elipse|line|linea|poly|poligono|path|camino|arc|arco|curve|curva|blob|mancha)\\b\\s*[:(]?\\s*([-0-9.,\\s]+)\\)?\\s*$");
 
     private ShapeProgram() { }
 
@@ -42,8 +42,13 @@ public final class ShapeProgram {
                 + "Escribe SOLO las formas, una por línea, sin explicaciones ni texto extra. Formas permitidas:\n"
                 + "rect x y ancho alto\ncircle x y radio\nellipse x y radioX radioY\nline x1 y1 x2 y2\n"
                 + "poly x1 y1 x2 y2 x3 y3 ... (cerrado)\npath x1 y1 x2 y2 x3 y3 ... (abierto)\narc x y radio gradoInicio gradoFin\n"
+                + "curve x1 y1 cx1 cy1 cx2 cy2 x2 y2 (curva Bézier: inicio, dos puntos de control, fin)\n"
+                + "blob x1 y1 x2 y2 x3 y3 ... (contorno curvo y cerrado que pasa por esos puntos: cuerpos, cabezas, hojas)\n"
+                + "Para seres vivos y ropa usa blob y curve, no rectángulos.\n"
                 + "Piensa en las partes reales del objeto, su forma y su posición.\n"
                 + "Ejemplo «casa»:\nrect 20 45 60 45\npoly 14 47 50 15 86 47\nrect 44 65 12 25\nrect 27 55 11 10\nrect 62 55 11 10\n"
+                + "Ejemplo «gato sentado»:\nblob 40 55 52 48 64 56 66 78 58 92 40 92 32 78\nblob 44 30 52 26 62 30 62 42 53 48 44 42\n"
+                + "poly 46 30 47 20 52 27\npoly 56 27 61 20 61 31\ncurve 62 88 80 88 86 70 78 58\nline 50 37 52 37\nline 56 37 58 37\n"
                 + "Ejemplo «gafas»:\ncircle 32 50 14\ncircle 68 50 14\narc 50 52 6 200 340\nline 18 46 6 40\nline 82 46 94 40\n"
                 + "Ejemplo «mesa»:\nrect 10 40 80 6\nline 16 46 16 85\nline 84 46 84 85\nline 26 46 24 80\nline 74 46 76 80\n"
                 + "Ahora «" + what + "»:\n";
@@ -130,6 +135,18 @@ public final class ShapeProgram {
                 if (closed) { p[v.length] = v[0]; p[v.length + 1] = v[1]; }
                 return p;
             }
+            case "curve": case "curva": {
+                if (v.length != 8) return null;
+                float[] p = new float[2 * 25];
+                for (int i = 0; i < 25; i++) {
+                    float[] q = BezierSketch.point(v, i / 24f);
+                    p[2 * i] = q[0]; p[2 * i + 1] = q[1];
+                }
+                return p;
+            }
+            case "blob": case "mancha":
+                if (v.length < 6 || v.length % 2 != 0 || v.length > 60) return null;
+                return catmullRom(v);
             case "arc": case "arco":
                 if (v.length != 5 || !ok(v[0]) || !ok(v[1]) || v[2] <= 0 || v[2] > 70 || !Float.isFinite(v[3]) || !Float.isFinite(v[4]))
                     return null;
@@ -139,6 +156,25 @@ public final class ShapeProgram {
             default:
                 return null;
         }
+    }
+
+    /** Contorno suave y cerrado que pasa por los puntos (Catmull-Rom). */
+    static float[] catmullRom(float[] v) {
+        int n = v.length / 2, steps = 8;
+        float[] out = new float[2 * (n * steps + 1)];
+        int k = 0;
+        for (int i = 0; i < n; i++) {
+            int i0 = (i - 1 + n) % n, i2 = (i + 1) % n, i3 = (i + 2) % n;
+            for (int s = 0; s < steps; s++) {
+                float t = s / (float) steps, t2 = t * t, t3 = t2 * t;
+                for (int c = 0; c < 2; c++) {
+                    float p0 = v[2 * i0 + c], p1 = v[2 * i + c], p2 = v[2 * i2 + c], p3 = v[2 * i3 + c];
+                    out[k++] = .5f * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+                }
+            }
+        }
+        out[k++] = v[0]; out[k++] = v[1];
+        return out;
     }
 
     private static float[] ellipse(float cx, float cy, float rx, float ry, float from, float to) {

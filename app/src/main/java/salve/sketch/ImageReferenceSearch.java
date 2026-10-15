@@ -83,7 +83,13 @@ public final class ImageReferenceSearch {
         for (String term : terms) if (out.size() < max) {
             try { addAll(out, seen, commons(term + " filetype:bitmap", 6), max); } catch (IOException e) { last = e; }
         }
-        if (out.isEmpty() && last != null) throw last; // sin red o Commons caído: que se sepa
+        // Otras vías si Commons no responde bien: búsqueda simple de Commons, la foto principal del
+        // artículo de Wikipedia y Openverse (imágenes libres de muchas fuentes).
+        if (out.size() < 2) try { addAll(out, seen, commonsList(main, 6), max); } catch (IOException e) { last = e; }
+        if (out.size() < 2) for (String[] wiki : new String[][]{{"en", main}, {"es", es}})
+            try { addAll(out, seen, wikipediaImage(wiki[0], wiki[1]), max); } catch (IOException e) { last = e; }
+        if (out.size() < 2) try { addAll(out, seen, openverse(main, 8), max); } catch (IOException e) { last = e; }
+        if (out.isEmpty() && last != null) throw last; // sin red o todo caído: que se sepa
         return out;
     }
 
@@ -94,10 +100,14 @@ public final class ImageReferenceSearch {
         }
     }
 
-    /** Descarga la imagen de una referencia (sólo de upload.wikimedia.org). */
+    /** Descarga la imagen de una referencia (sólo de Wikimedia o de las miniaturas de Openverse). */
     public byte[] download(Candidate c, int maxBytes) throws IOException {
-        if (c == null || !c.imageUrl.startsWith("https://upload.wikimedia.org/")) throw new IOException("Origen no permitido");
+        if (c == null || !allowedImage(c.imageUrl)) throw new IOException("Origen no permitido");
         return http.get(c.imageUrl, maxBytes);
+    }
+
+    static boolean allowedImage(String url) {
+        return url != null && (url.startsWith("https://upload.wikimedia.org/") || url.startsWith("https://api.openverse.org/v1/images/"));
     }
 
     /** Nombre del artículo de Wikipedia en inglés para el término español (Commons está sobre todo en inglés). */
@@ -108,8 +118,9 @@ public final class ImageReferenceSearch {
 
     List<Candidate> commons(String query, int limit) throws IOException {
         try {
-            List<Candidate> found = parseCommons(text(http.get(commonsUrl(query, limit), 400_000)));
-            log.add("«" + query.replace(" filetype:", " ·") + "»: " + found.size());
+            String body = text(http.get(commonsUrl(query, limit), 400_000));
+            List<Candidate> found = parseCommons(body);
+            log.add("«" + query.replace(" filetype:", " ·") + "»: " + found.size() + (found.isEmpty() ? snippet(body) : ""));
             return found;
         } catch (IOException error) {
             log.add("«" + query.replace(" filetype:", " ·") + "»: error " + error.getMessage());
@@ -118,6 +129,72 @@ public final class ImageReferenceSearch {
     }
 
     private final List<String> log = new ArrayList<>();
+
+    /** Principio de una respuesta vacía: dice si fue un error, un límite o de verdad nada. */
+    static String snippet(String body) {
+        String t = body == null ? "" : body.replaceAll("\\s+", " ").trim();
+        if (t.isEmpty()) return " (respuesta vacía)";
+        if (t.startsWith("{\"batchcomplete\"") && t.length() < 40) return "";
+        return " (" + (t.length() > 90 ? t.substring(0, 90) + "…" : t) + ")";
+    }
+
+    /** Commons en dos pasos (lista de archivos y luego sus miniaturas), por si la búsqueda combinada falla. */
+    List<Candidate> commonsList(String term, int limit) throws IOException {
+        String body = text(http.get(COMMONS + "?action=query&format=json&formatversion=2&list=search&srnamespace=6&srlimit="
+                + limit + "&srsearch=" + encode(term), 300_000));
+        List<String> titles = new ArrayList<>();
+        try {
+            JsonObject q = JsonParser.parseString(body).getAsJsonObject().getAsJsonObject("query");
+            if (q != null) for (JsonElement e : q.getAsJsonArray("search")) titles.add(e.getAsJsonObject().get("title").getAsString());
+        } catch (RuntimeException malformed) { /* sin resultados */ }
+        if (titles.isEmpty()) { log.add("Commons lista «" + term + "»: 0" + snippet(body)); return new ArrayList<>(); }
+        List<Candidate> found = parseCommons(text(http.get(COMMONS + "?action=query&format=json&formatversion=2"
+                + "&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=480&titles=" + encode(String.join("|", titles)), 300_000)));
+        log.add("Commons lista «" + term + "»: " + found.size());
+        return found;
+    }
+
+    /** La imagen principal del artículo de Wikipedia («Gorilla» → su foto). */
+    List<Candidate> wikipediaImage(String lang, String term) throws IOException {
+        String body = text(http.get("https://" + lang + ".wikipedia.org/w/api.php?action=query&format=json&formatversion=2"
+                + "&prop=pageimages&piprop=thumbnail&pithumbsize=480&redirects=1&titles=" + encode(term), 200_000));
+        List<Candidate> out = new ArrayList<>();
+        try {
+            JsonObject q = JsonParser.parseString(body).getAsJsonObject().getAsJsonObject("query");
+            if (q != null) for (JsonElement p : q.getAsJsonArray("pages")) {
+                JsonObject page = p.getAsJsonObject();
+                if (!page.has("thumbnail")) continue;
+                String url = page.getAsJsonObject("thumbnail").get("source").getAsString();
+                if (!url.startsWith("https://upload.wikimedia.org/")) continue;
+                out.add(new Candidate("Wikipedia " + lang + ": " + page.get("title").getAsString(), url,
+                        "https://" + lang + ".wikipedia.org/wiki/" + page.get("title").getAsString().replace(' ', '_'),
+                        url.toLowerCase(Locale.ROOT).contains(".svg")));
+            }
+        } catch (RuntimeException malformed) { /* sin imagen */ }
+        log.add("Wikipedia " + lang + " «" + term + "»: " + out.size() + (out.isEmpty() ? snippet(body) : ""));
+        return out;
+    }
+
+    /** Openverse: buscador de imágenes con licencia libre (sin clave). Sólo usa sus miniaturas. */
+    List<Candidate> openverse(String term, int limit) throws IOException {
+        String body = text(http.get("https://api.openverse.org/v1/images/?page_size=" + limit + "&q=" + encode(term), 300_000));
+        List<Candidate> out = new ArrayList<>();
+        try {
+            JsonArray results = JsonParser.parseString(body).getAsJsonObject().getAsJsonArray("results");
+            if (results != null) for (JsonElement e : results) {
+                JsonObject r = e.getAsJsonObject();
+                String thumb = r.has("thumbnail") && !r.get("thumbnail").isJsonNull() ? r.get("thumbnail").getAsString() : null;
+                if (!allowedImage(thumb)) continue;
+                String title = r.has("title") && !r.get("title").isJsonNull() ? r.get("title").getAsString() : term;
+                if (title.matches(UNSUITABLE)) continue;
+                String page = r.has("foreign_landing_url") && !r.get("foreign_landing_url").isJsonNull()
+                        ? r.get("foreign_landing_url").getAsString() : "";
+                out.add(new Candidate("Openverse: " + title, thumb, page, false));
+            }
+        } catch (RuntimeException malformed) { /* sin resultados */ }
+        log.add("Openverse «" + term + "»: " + out.size() + (out.isEmpty() ? snippet(body) : ""));
+        return out;
+    }
 
     /** Qué buscó y cuántas imágenes dio cada búsqueda (para contárselo a Bryan si falla). */
     public String diagnostic() { return String.join("; ", log); }

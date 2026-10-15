@@ -52,6 +52,11 @@ Lo aprendido se guarda en `files/sketch/learned.json` (hasta 80 motivos) y tiene
 | Honestidad | Si no dibujó en ese turno, se le dice que no lo afirme; y si aun así dice «aquí tienes el dibujo», se añade una corrección visible. Cada búsqueda deja una línea fija en el chat con lo que hizo (búsquedas, imágenes, recortes, referencia elegida) o por qué falló. |
 | Erratas | Su concepto incluye `NOMBRE` bien escrito y el nombre en inglés, que se busca antes que la traducción de Wikipedia («vesrido» → «vestido» → dress). |
 
+| Vectores propios | `BezierSketch`: cada contorno de su versión se ajusta con curvas de Bézier cúbicas (Schneider, mínimos cuadrados, tolerancia 6/1000). Lo que guarda y traza son esos vectores, no los píxeles. `vary()` deforma los puntos de control con un campo suave para «otra pose» (experimental). |
+| Formas orgánicas | Su gramática admite `curve` (Bézier) y `blob` (contorno curvo cerrado por Catmull-Rom); el ejemplo del prompt es un gato hecho con curvas, no cajas. |
+| Más fuentes | Si Commons no da nada: búsqueda de Commons en dos pasos, foto principal del artículo de Wikipedia (en/es) y Openverse. El diagnóstico incluye el principio de una respuesta vacía. |
+| Enrutador | Con Gemini configurado y sin «sólo local», piensa el concepto y las formas en Gemini (Fase 1 del informe aplicada al dibujo); si no, con Gemma. Queda anotado con qué lo pensó. |
+
 Un dibujo a mano con «mejóralo» en el nombre se guarda como ejemplo de Bryan y ella hace su propia versión. Al hablar de un dibujo cuenta qué hizo y por qué; la técnica (epiciclos, Fourier) sólo si se le pregunta cómo dibuja.
 
 ## Vista previa
