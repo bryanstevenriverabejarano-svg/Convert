@@ -34,6 +34,7 @@ class IllustratedAvatarView extends View {
             store.advance(now);
             locomotion.advance(now,store.state().getX(),store.state().getPose()==AvatarState.Pose.WALKING);
             motion.advance(now);
+            AstralBody.get().advance(now, motion.snapshot(), store.state().getX(), store.state().getPose());
             phase = (now % 60000L) / 1000f;
             if (frameListener != null) frameListener.run();
             invalidate();
@@ -182,7 +183,8 @@ class IllustratedAvatarView extends View {
         AvatarState.Pose body = store.state().getPose();
         AvatarDesignSpec design = wardrobe.selected();
         if (RealisticSpriteRenderer.supports(design)
-                && realistic.draw(canvas, store.state(), expression, height, locomotion.phase(), phase, sleeping)) {
+                && realistic.draw(canvas, store.state(), expression, AstralBody.get().snapshot(), height,
+                        locomotion.phase(), phase, sleeping)) {
             poses.select(null);
             return;
         }

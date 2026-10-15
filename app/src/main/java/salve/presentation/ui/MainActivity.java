@@ -811,6 +811,7 @@ public class MainActivity extends AppCompatActivity {
         btnMostrarReflexion   = findViewById(R.id.btnMostrarReflexion);
         btnAdjuntar = findViewById(R.id.btnAdjuntar);
         btnReflexiones = findViewById(R.id.btnReflexiones);
+        salve.sketch.Sketches.preload(this); // repertorio de trazos listo antes del primer dibujo
         stageController = new SalveStageController(this, savedInstanceState);
 
 

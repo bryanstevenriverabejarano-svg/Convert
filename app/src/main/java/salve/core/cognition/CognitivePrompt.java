@@ -42,6 +42,8 @@ public final class CognitivePrompt {
     /** Bound metadata before inference; omitted tools are also removed from the executable map. */
     private static final java.util.regex.Pattern WARDROBE = java.util.regex.Pattern.compile(
             "(?iu).*\\b(ropa|prenda|vestid|pijama|traje|camiseta|falda|abrigo|armario|outfit|vistete|vístete|ponte|disen|diseñ|conjunto)\\w*.*");
+    private static final java.util.regex.Pattern DRAWING = java.util.regex.Pattern.compile(
+            "(?iu)\\b(dib[uú]j|p[ií]nt|ilustr|tr[aá]z|bosquej)\\w*");
     private static final java.util.regex.Pattern RESEARCH = java.util.regex.Pattern.compile(
             "(?iu).*\\b(busca|investiga|internet|google|noticia|actual|hoy|precio|quien gano|quién ganó)\\w*.*");
 
@@ -54,6 +56,7 @@ public final class CognitivePrompt {
         java.util.List<String> first = new java.util.ArrayList<>();
         if (WARDROBE.matcher(input).matches()) for (String name : available.keySet()) if (name.startsWith("AVATAR_")) first.add(name);
         if (RESEARCH.matcher(input).matches() && available.containsKey("web.search")) first.add("web.search");
+        if (DRAWING.matcher(input).find() && available.containsKey("sketch.draw")) first.add("sketch.draw");
         if (first.isEmpty()) return available;
         Map<String, CognitiveTurn.Tool> ordered = new java.util.LinkedHashMap<>();
         // Dentro del vestuario, crear va antes que listar o vestir: es la más grande y la que se perdía.

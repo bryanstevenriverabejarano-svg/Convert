@@ -568,6 +568,7 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        turnSketchTag.set(null); // un dibujo de un turno anterior nunca se cuela en esta respuesta
         salve.core.memory.CloudMemoryCommand.Action cloudCommand = salve.core.memory.CloudMemoryCommand.parse(entrada);
         if (cloudCommand != null) {
             String status;
@@ -814,6 +815,11 @@ public class MotorConversacional {
             hablarPreparado(gestureCommand.text, gestureCommand);
             return;
         }
+        // Cuerpo astral: acciones voluntarias sobre su propio cuerpo (parpadear, mover el pelo, brillar).
+        String bodyReply = salve.avatar.AstralBodySense.command(entrada);
+        if (bodyReply != null) { hablar(bodyReply); return; }
+        // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
+        String sketchContext = prepararDibujo(entrada);
         if (procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
@@ -1136,7 +1142,7 @@ public class MotorConversacional {
                 intent.type == IntentType.BUSCAR_WEB
         );
         String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
-                + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext();
+                + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext() + sketchContext;
         // Si quien habla se presenta como otra persona, cambia el estado y no se pisa el perfil de Bryan.
         // En una historia, «soy el explorador Aric» es su personaje: no cambia quién habla ni su perfil.
         boolean otherSpeaker = !storyTurn && registrarIdentidadDeclarada(entrada);
@@ -1310,11 +1316,62 @@ public class MotorConversacional {
         TurnQualityAssessment assessment = ConversationQualityEvaluator.evaluate(
                 respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
         // Lo que quedó por leer se encola tras las frases que ya sonaron; la final no se relee.
+        // Un cuento se ilustra mientras se cuenta: un dibujo tras cada parte que nombra algo dibujable.
+        if (inference.isSuccess() && (creativeOk || storyTurn)) respuesta = ilustrarRelato(respuesta);
         boolean spoken = creativeOk && live.finishSpeech();
         if (spoken) spokenWhileWriting.set(true);
         try { responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse, entradaPorVoz); }
         finally { spokenWhileWriting.remove(); }
         if (inference.isSuccess() && !entradaPorVoz && !storyTurn && !creativeOk) buscarPorSuCuentaSiNoLoSabe(entrada, respuesta);
+    }
+
+
+    // ───────────── Dibujo por epiciclos y cuerpo astral ─────────────
+
+    /** Detecta una petición de dibujo; si procede, empieza a trazar y devuelve contexto para la respuesta. */
+    private String prepararDibujo(String entrada) {
+        salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(context);
+        if (library == null) return "";
+        salve.sketch.SketchRequest request = salve.sketch.SketchRequest.parse(entrada, library);
+        switch (request.kind) {
+            case DRAW: case SELF: case FREE: {
+                salve.sketch.SketchScene scene = request.scene != null ? request.scene
+                        : salve.sketch.SketchRequest.choose(library, java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY),
+                        new java.util.Random());
+                if (scene == null) return "";
+                empezarDibujo(scene);
+                return " | ACCION_REALIZADA: ya estás dibujando " + scene.title + " con tus trazos de luz (epiciclos de Fourier: "
+                        + "círculos que giran encadenados y cuya punta traza la línea) en tu espacio astral, delante de ti; "
+                        + "Bryan lo está viendo aparecer en la pantalla y en el chat."
+                        + (request.kind == salve.sketch.SketchRequest.Kind.SELF
+                            ? " Te estás dibujando a ti misma: tu cuerpo astral, cabello largo plateado, auriculares y circuitos." : "")
+                        + (request.kind == salve.sketch.SketchRequest.Kind.FREE ? " Lo elegiste tú." : "")
+                        + " Comenta el dibujo con naturalidad en una o dos frases. No digas que no puedes dibujar.";
+            }
+            case LIST:
+                return " | DIBUJO: Bryan pregunta qué sabes dibujar. Tu repertorio de trazos: "
+                        + salve.sketch.SketchRequest.repertoire(library, 40)
+                        + ". También puedes combinar hasta cuatro en una escena y dibujarte a ti misma. Al contar cuentos los ilustras.";
+            case UNKNOWN:
+                return " | DIBUJO: Bryan te pide dibujar «" + request.unknown + "», que todavía no está en tu repertorio de trazos ("
+                        + salve.sketch.SketchRequest.repertoire(library, 18) + "). Díselo con honestidad y ofrece algo parecido "
+                        + "del repertorio. No afirmes haberlo dibujado.";
+            default:
+                return "";
+        }
+    }
+
+    /** Publica la escena en el escenario y deja su marca para el chat de la respuesta final. */
+    private void empezarDibujo(salve.sketch.SketchScene scene) {
+        salve.sketch.Sketches.show(scene);
+        turnSketchTag.set(salve.sketch.SketchProtocol.tag(scene));
+    }
+
+    private String ilustrarRelato(String relato) {
+        salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(context);
+        if (library == null || relato == null) return relato;
+        try { return salve.sketch.StoryIllustrator.annotate(relato, library, false); }
+        catch (RuntimeException error) { Log.w(TAG, "No se pudo ilustrar el relato", error); return relato; }
     }
 
     /**
@@ -1868,7 +1925,10 @@ public class MotorConversacional {
                 CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis), input));
         String memory = evidence == null ? "No consultada; usa memory.lookup si es pertinente."
                 : evidence.getStatus().name() + "\n" + evidence.getDataContext();
-        String details = deviceClock.promptContext() + "\n" + conversationSession.relevantLocationContext(input)
+        String details = deviceClock.promptContext()
+                + "\n" + salve.avatar.AstralBodySense.promptContext(salve.avatar.AstralBody.get().snapshot(),
+                        salve.avatar.AstralBody.get().drawingNow(), android.os.SystemClock.uptimeMillis())
+                + "\n" + conversationSession.relevantLocationContext(input)
                 + "\n" + (action == null ? researchConversation.context() : action)
                 + "\n" + contextInfo + "\n" + VoiceResponsePolicy.promptInstruction(voice)
                 + "\n" + voiceProfile.styleInstruction()
@@ -1939,6 +1999,18 @@ public class MotorConversacional {
             }
             if (batch.pages.isEmpty() && batch.diagnostic != null) receipt.append(batch.diagnostic);
             return new CognitiveTurn.Receipt(receipt.toString());
+        }));
+        tools.put("sketch.draw", new CognitiveTurn.Tool("{motivos:string}: dibujas con tus epiciclos de luz, ej. 'arbol+luna'", args -> {
+            CognitiveReply.fields(args, "motivos");
+            String wanted = CognitiveReply.string(args, "motivos").trim();
+            salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(context);
+            if (library == null) return new CognitiveTurn.Receipt("DIBUJO_NO_DISPONIBLE: el repertorio de trazos no se pudo cargar.");
+            if (turnSketchTag.get() != null) return new CognitiveTurn.Receipt("YA_DIBUJANDO: ya estás trazando un dibujo en este turno.");
+            salve.sketch.SketchScene scene = wanted.length() > 120 ? null : salve.sketch.SketchScene.fromKey(library, wanted);
+            if (scene == null) return new CognitiveTurn.Receipt("MOTIVO_DESCONOCIDO: no sabes trazar «" + wanted
+                    + "». Repertorio: " + salve.sketch.SketchRequest.repertoire(library, 30));
+            empezarDibujo(scene);
+            return new CognitiveTurn.Receipt("DIBUJANDO " + scene.title + ": tus epiciclos ya lo trazan en tu espacio astral y en el chat.");
         }));
         tools.put("runtime.status", new CognitiveTurn.Tool("{}: mide estado y RAM", args -> {
             CognitiveReply.fields(args);
@@ -2457,18 +2529,30 @@ public class MotorConversacional {
     private synchronized void deliverResponse(String texto, AvatarMotionProtocol.Result motion,
                                               boolean record, boolean publishUi, boolean privateBudget) {
         if (closed || texto == null || texto.trim().isEmpty()) return;
+        // Dibujos: la marca [[salve_draw:…]] dice dónde va cada lienzo en el chat; la voz y el
+        // historial reciben el texto limpio y una nota de lo que dibujó (así lo recuerda).
+        String pendingSketch = record ? turnSketchTag.getAndSet(null) : null;
+        if (pendingSketch != null && !salve.sketch.SketchProtocol.contains(texto)) texto = pendingSketch + "\n" + texto;
+        if (salve.sketch.SketchProtocol.contains(texto)) {
+            salve.sketch.SketchLibrary sketchLibrary = salve.sketch.Sketches.library(context);
+            salve.sketch.SketchProtocol.Extraction drawn = salve.sketch.SketchProtocol.extract(texto, sketchLibrary);
+            if (drawn.clean.isEmpty() && !drawn.hasSketches()) return;
+            if (drawn.hasSketches() && pendingSketch == null) salve.sketch.Sketches.show(drawn.scenes.get(0));
+            deliverSketched(drawn, motion, record, publishUi, privateBudget);
+            return;
+        }
         salve.core.voice.LiveVoiceChannel.Ticket owner = liveVoiceTurn.get();
         if (owner != null && !liveVoiceChannel.owns(owner)) return;
         salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch = liveVoiceBatch.get();
         if (batch != null && batch.offer(new PendingVoiceResponse(texto, motion, record, publishUi, privateBudget))) return;
         if (record) conversationSession.addAssistant(texto);
         if (Boolean.TRUE.equals(silentVoiceReplies.get())) {
-            if (publishUi && listener != null) listener.onHablar(texto);
+            if (publishUi && listener != null) listener.onHablar(withSketches(texto));
             return;
         }
         if (owner == null && liveVoiceChannel.isActive()) {
             // A late asynchronous tool reply must not stop/restart a live session's audio.
-            if (publishUi && listener != null) listener.onHablar(texto);
+            if (publishUi && listener != null) listener.onHablar(withSketches(texto));
             return;
         }
         AvatarMotionController.Session session = avatarSession;
@@ -2507,8 +2591,37 @@ public class MotorConversacional {
                 Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
             }
         }
-        if (publishUi && listener != null) listener.onHablar(visibleText);
+        if (publishUi && listener != null) listener.onHablar(withSketches(visibleText));
         if (standaloneResponse) AvatarMotionController.get().endTurn(session, turn);
+    }
+
+    /** Lo dibujado en este turno (intención o herramienta) espera a la respuesta final para ir en el chat. */
+    private final java.util.concurrent.atomic.AtomicReference<String> turnSketchTag =
+            new java.util.concurrent.atomic.AtomicReference<>();
+
+    /** Igual que deliverResponse, pero la voz/historial y el chat reciben versiones distintas del texto. */
+    private void deliverSketched(salve.sketch.SketchProtocol.Extraction drawn, AvatarMotionProtocol.Result motion,
+                                 boolean record, boolean publishUi, boolean privateBudget) {
+        String spoken = drawn.clean.isEmpty() ? "Mira." : drawn.clean;
+        salve.core.voice.LiveVoiceChannel.Ticket owner = liveVoiceTurn.get();
+        if (owner != null && !liveVoiceChannel.owns(owner)) return;
+        if (record) {
+            conversationSession.addAssistant(spoken + drawn.historyNote());
+            // La respuesta ya está en el historial con su nota: la voz no la vuelve a registrar.
+        }
+        sketchDisplay.set(new String[]{drawn.display, spoken});
+        try { deliverResponse(spoken, motion, false, publishUi, privateBudget); }
+        finally { sketchDisplay.remove(); }
+    }
+
+    /** Texto con marcas de dibujo para el chat del turno que se está entregando. */
+    private final ThreadLocal<String[]> sketchDisplay = new ThreadLocal<>();
+
+    private String withSketches(String visible) {
+        String[] display = sketchDisplay.get();
+        if (display == null) return visible;
+        // Conserva cualquier aviso añadido al texto hablado (p. ej. la voz privada).
+        return visible.startsWith(display[1]) ? display[0] + visible.substring(display[1].length()) : display[0];
     }
 
     private boolean hasOfflineVoice() {
