@@ -118,16 +118,16 @@ object LiteRTLlm {
     }
 
     @JvmStatic @JvmOverloads @Synchronized
-    fun generate(prompt: String, structured: Boolean = false, repair: Boolean = false): String {
+    fun generate(prompt: String, structured: Boolean = false, repair: Boolean = false, creative: Boolean = false): String {
         check(initialized) { "El modelo local no está inicializado" }
         legacy?.let { return it.generateResponse(prompt) }
-        return respond(Contents.of(prompt), structured, repair)
+        return respond(Contents.of(prompt), structured, repair, creative && !structured)
     }
 
     @JvmStatic @JvmOverloads @Synchronized
     fun generateImage(prompt: String, jpeg: ByteArray, structured: Boolean = false, repair: Boolean = false): String {
         check(initialized && visionEnabled && engine != null) { "No hay un motor visual local cargado" }
-        return respond(Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt)), structured, repair)
+        return respond(Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt)), structured, repair, false)
     }
 
     /** Read text only. Private channels and tool arguments never enter chat or TTS. */
@@ -135,22 +135,33 @@ object LiteRTLlm {
     fun publicText(message: Message): String = message.contents.contents
         .filterIsInstance<Content.Text>().joinToString("") { it.text }
 
+    /** Salida máxima de un texto creativo libre (cuento, escena): ~350 palabras caben con holgura. */
+    const val CREATIVE_OUTPUT_TOKENS = 1024
+
     // Kept independently testable: both initialization AND each send must opt into constraints.
+    // Creative text runs without the JSON grammar (it may use paragraphs) and with more room and
+    // temperature; a 512-token JSON cut a bedtime story in half (15/10/2026).
     @JvmStatic @JvmOverloads
-    fun conversationConfig(structured: Boolean, repair: Boolean = false): ConversationConfig = ConversationConfig(
+    fun conversationConfig(structured: Boolean, repair: Boolean = false, creative: Boolean = false): ConversationConfig = ConversationConfig(
         automaticToolCalling = false,
-        samplerConfig = SamplerConfig(topK = 40, topP = 0.9, temperature = 0.3),
-        maxOutputToken = if (repair) 256 else 512, thinkingConfig = ThinkingConfig(enableThinking = false),
+        samplerConfig = if (creative && !structured) SamplerConfig(topK = 64, topP = 0.95, temperature = 0.8)
+            else SamplerConfig(topK = 40, topP = 0.9, temperature = 0.3),
+        maxOutputToken = if (repair) 256 else if (creative && !structured) CREATIVE_OUTPUT_TOKENS else 512,
+        thinkingConfig = ThinkingConfig(enableThinking = false),
         extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured)
+
+    /** Segundos de espera: un cuento de 1024 tokens necesita más que una respuesta breve. */
+    @JvmStatic
+    fun timeoutSeconds(repair: Boolean, creative: Boolean): Long = if (repair) 30 else if (creative) 180 else 90
 
     @JvmStatic
     fun responseFormat(structured: Boolean): ResponseFormat? =
         if (structured) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
 
-    private fun respond(contents: Contents, structured: Boolean, repair: Boolean): String {
+    private fun respond(contents: Contents, structured: Boolean, repair: Boolean, creative: Boolean): String {
         val activeEngine = checkNotNull(engine) { "El runtime LiteRT-LM no está cargado" }
         // The application supplies the history; do not keep a second session or execute native tool calls.
-        val config = conversationConfig(structured, repair)
+        val config = conversationConfig(structured, repair, creative)
         val format = responseFormat(structured)
         activeEngine.createConversation(config).use { conversation ->
             val done = CountDownLatch(1)
@@ -167,7 +178,7 @@ object LiteRTLlm {
                 override fun onError(throwable: Throwable) { error.set(throwable); done.countDown() }
             }, responseFormat = format)
             try {
-                if (!done.await(if (repair) 30 else 90, TimeUnit.SECONDS)) {
+                if (!done.await(timeoutSeconds(repair, creative), TimeUnit.SECONDS)) {
                     conversation.cancelProcess()
                     throw java.util.concurrent.TimeoutException("El modelo local agotó el tiempo de respuesta")
                 }
