@@ -28,31 +28,29 @@ public class ModelCatalogTest {
     private JsonObject bundled() throws Exception {
         JsonObject root = fullCatalog();
         JsonArray gemmaOnly = new JsonArray();
-        gemmaOnly.add(root.getAsJsonArray("items").get(2).deepCopy());
+        gemmaOnly.add(root.getAsJsonArray("items").get(0).deepCopy());
         root.add("items", gemmaOnly);
         return root;
     }
 
-    @Test public void dolphinIsPrimaryAndGemmaIsTheOnlyVisionFallback() throws Exception {
+    /** 15/10/2026: los Dolphin (6,9 GB) salen del catálogo; Gemma 4 E2B es el único modelo que se descarga. */
+    @Test public void gemmaIsTheOnlyDownloadedModel() throws Exception {
         ModelCatalog catalog = read(fullCatalog());
-        ModelCatalog.Entry dolphin = catalog.selectDownload(TEXT, null);
-        assertEquals(LocalModelPolicy.PRIMARY, dolphin.id);
-        assertEquals(4920749472L, dolphin.sizeBytes);
-        assertEquals("268390e07edd407ad93ea21a868b7ae995b5950e01cad0db9e1802ae5049d405", dolphin.sha256);
-        assertEquals("fd2736a6e6f4e637b2242b06e267572495d88e2f", dolphin.revision);
-        assertFalse(dolphin.supportsVision);
-        assertEquals(LocalModelPolicy.FALLBACK, catalog.selectDownload(TEXT, LocalModelPolicy.FALLBACK).id);
-        assertNull(catalog.selectDownload(VISION, dolphin.id));
-        assertEquals(3, catalog.getEntries().size());
+        assertEquals(1, catalog.getEntries().size());
+        ModelCatalog.Entry gemma = catalog.selectDownload(TEXT, null);
+        assertEquals(LocalModelPolicy.FALLBACK, gemma.id);
+        assertEquals(2588147712L, gemma.sizeBytes);
+        assertTrue(gemma.supportsVision);
+        assertEquals(LocalModelPolicy.FALLBACK, catalog.selectDownload(VISION, null).id);
     }
 
     @Test public void rejectsGgufVisionAndMismatchedArtifactFormat() throws Exception {
         JsonObject root = fullCatalog();
-        first(root).addProperty("supportsVision", true);
+        first(root).addProperty("filename", "synthetic-model.gguf");
         assertThrows(IllegalArgumentException.class, () -> read(root));
-        first(root).addProperty("supportsVision", false);
-        first(root).addProperty("filename", "incorrect.litertlm");
-        assertThrows(IllegalArgumentException.class, () -> read(root));
+        JsonObject other = fullCatalog();
+        first(other).addProperty("filename", "incorrect.task.bin");
+        assertThrows(IllegalArgumentException.class, () -> read(other));
     }
 
     private ModelCatalog read(String json) {

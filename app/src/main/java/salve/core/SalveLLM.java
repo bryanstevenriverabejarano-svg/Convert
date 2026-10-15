@@ -281,11 +281,10 @@ public class SalveLLM {
         boolean liteRtVision = withVision;
         if (isGguf) ggufContextTokens = DeviceModelMemory.contextFor(appContext, modelPath, false);
         else if (isLiteRT && !modelPath.toLowerCase(java.util.Locale.ROOT).endsWith(".task")) {
-            // Para conversar se carga igual que en la versión del 15/10 a la 1:23, con la que Salve
-            // hablaba con su voz más propia: solo texto y 4.096 tokens. La visión (y el contexto de
-            // 8K, si cabe) se cargan únicamente cuando llega una foto.
-            if (liteRtVision) liteRtTokens = DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, true);
-            else DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, false); // comprueba la RAM
+            // Para conversar se carga solo texto; la visión se carga únicamente cuando llega una foto.
+            // 7.000 tokens si caben (si no, 4.096): el prompt sigue en ~10.500 caracteres (unos 3.500
+            // tokens), así que el margen extra es para responder sin cortarse, no para llenar más texto.
+            liteRtTokens = DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, liteRtVision);
         } else DeviceModelMemory.require(appContext, modelPath, false);
         publishStatus("cargando");
         if (isGguf) {
@@ -494,6 +493,25 @@ public class SalveLLM {
         runtimeStatus = ModelRuntimeInfo.name(modelPath) + " · " + phase
                 + (isGguf && engineInitialized ? " · contexto " + ggufContextTokens + " tokens" : "");
     }
+    /**
+     * Borra del almacenamiento los Dolphin retirados (hasta 6,9 GB) si el motor activo no es uno de
+     * ellos. Nunca toca el modelo en uso. Devuelve los bytes liberados.
+     */
+    public long removeRetiredModels() {
+        String active = modelPath;
+        if (active == null || LocalModelPolicy.isDolphin(active)) return 0;
+        long freed = 0;
+        File[] files = ModelStore.dir(appContext).listFiles();
+        if (files != null) for (File file : files) {
+            String name = file.getName();
+            if (!name.startsWith("Dolphin3.0-") || file.getAbsolutePath().equals(active)) continue;
+            long size = file.length();
+            if (file.delete()) freed += size;
+        }
+        if (freed > 0) Log.i(TAG, "Modelos retirados borrados: " + (freed / 1_000_000) + " MB liberados");
+        return freed;
+    }
+
     /** true mientras se carga o activa un modelo: momento en que no conviene lanzar otras tareas. */
     public boolean isLoading() {
         String status = runtimeStatus;
@@ -703,7 +721,7 @@ public class SalveLLM {
             return GgufContextPolicy.promptBudget(forecast == 0 ? GgufContextPolicy.COMPACT : Math.min(ggufContextTokens, forecast));
         }
         if (isLiteRT && path != null && path.toLowerCase(java.util.Locale.ROOT).endsWith(".task")) return 3200;
-        // El motor se carga con 8.192 tokens para tener holgura (foto + respuesta larga), pero el
+        // El motor se carga con hasta 7.000 tokens para tener holgura (foto + respuesta larga), pero el
         // prompt de conversación se mantiene en ~10.500 caracteres: con el doble, Gemma 4 E2B
         // perdía el hilo, repetía respuestas antiguas y llegaba a cortar palabras.
         return 10500;

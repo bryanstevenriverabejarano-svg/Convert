@@ -226,12 +226,44 @@ public final class CloudSyncManager {
             if (progress != null && batch.more) progress.accept(memoryStatus(ctx));
             if (batch.retry || !batch.more) break;
         }
+        boolean mind = restoreMind(ctx);
         // Reinicia el trabajo en segundo plano sin el retraso acumulado de reintentos antiguos.
         try { SyncWorker.restartNow(ctx.getApplicationContext()); } catch (RuntimeException ignored) { }
-        String status = memoryStatus(ctx);
+        String status = memoryStatus(ctx) + (mind ? " También he recuperado mi mente (lo que pensaba, creía y había aprendido)." : "");
         return (restored > 0 ? "He traído " + restored + " recuerdos nuevos de pCloud. "
                 : batch != null && !batch.retry ? "No había recuerdos nuevos que traer de pCloud. " : "")
                 + status;
+    }
+
+    private static final String MIND_REMOTE = ROOT + "/mind/salve_mind_v1.json";
+
+    /** Sube su mente (yo persistente y juego) si cambió desde la última copia. Fuera del hilo principal. */
+    public static boolean uploadMind(Context ctx) {
+        if (!isEnabled(ctx) || !isPCloudConfigured(ctx)) return false;
+        String snapshot = salve.core.MindRuntime.get(ctx).exportMindSnapshot();
+        if (snapshot == null) return false;
+        String hash = Integer.toHexString(snapshot.hashCode());
+        android.content.SharedPreferences prefs = ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE);
+        if (hash.equals(prefs.getString("mind_hash", null))) return true;
+        boolean ok = new PCloudProvider(ctx).uploadJson(MIND_REMOTE, snapshot);
+        if (ok) prefs.edit().putString("mind_hash", hash).apply();
+        return ok;
+    }
+
+    /** En una instalación nueva (o con una copia más reciente en pCloud) recupera su mente. */
+    public static boolean restoreMind(Context ctx) { return restoreMind(ctx, true); }
+
+    /** Sin forzar, comprueba como mucho cada 12 h (evita descargar la copia en cada sincronización). */
+    public static boolean restoreMind(Context ctx, boolean force) {
+        if (!isEnabled(ctx) || !isPCloudConfigured(ctx)) return false;
+        android.content.SharedPreferences prefs = ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE);
+        long now = System.currentTimeMillis();
+        if (!force && now - prefs.getLong("mind_checked_at", 0L) < 12L * 60 * 60 * 1000) return false;
+        prefs.edit().putLong("mind_checked_at", now).apply();
+        try {
+            byte[] bytes = new PCloudProvider(ctx).downloadBounded(MIND_REMOTE, 2 * 1024 * 1024);
+            return bytes != null && salve.core.MindRuntime.get(ctx).importMindSnapshot(new String(bytes, StandardCharsets.UTF_8));
+        } catch (RuntimeException unavailable) { return false; }
     }
 
     private static void restoreStatus(Context ctx, String status, boolean complete) {

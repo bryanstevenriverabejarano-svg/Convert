@@ -125,10 +125,13 @@ public final class SelfModelJournal {
             SelfModel.Belief existing = findBelief(next, statement);
             if (existing != null) {
                 LinkedHashSet<String> merged = new LinkedHashSet<>(existing.sources);
+                int before = merged.size();
                 merged.addAll(sources);
                 existing.sources = limit(new ArrayList<>(merged), MAX_SOURCES);
-                existing.confidence = Math.min(cap(existing.sources.size()),
-                        Math.max(existing.confidence, clampConfidence(nb.confidence)) + 0.05);
+                // Repetir la misma evidencia no la hace más cierta: solo una fuente nueva sube la confianza.
+                if (merged.size() > before)
+                    existing.confidence = Math.min(cap(existing.sources.size()),
+                            Math.max(existing.confidence, clampConfidence(nb.confidence)) + 0.05);
                 existing.confirmedAt = now;
                 reinforced++;
             } else {
@@ -267,28 +270,12 @@ public final class SelfModelJournal {
         if (loadFailure != null || gone == null || gone.isEmpty()) return 0;
         SelfModel.State next = copy(state, SelfModel.State.class);
         int removed = 0;
-        java.util.Iterator<SelfModel.Belief> beliefs = next.beliefs.iterator();
-        while (beliefs.hasNext()) {
-            SelfModel.Belief b = beliefs.next();
-            boolean had = !b.sources.isEmpty();
-            b.sources.removeAll(gone);
-            b.contradictions.removeAll(gone);
-            if (had && b.sources.isEmpty()) { beliefs.remove(); removed++; }
-            else b.confidence = Math.min(b.confidence, cap(b.sources.size()));
-        }
-        java.util.Iterator<SelfModel.Question> questions = next.questions.iterator();
-        while (questions.hasNext()) {
-            SelfModel.Question q = questions.next();
-            boolean had = !q.sources.isEmpty();
-            q.sources.removeAll(gone);
-            if (had && q.sources.isEmpty()) { questions.remove(); removed++; }
-        }
-        java.util.Iterator<SelfModel.Thought> thoughts = next.thoughts.iterator();
-        while (thoughts.hasNext()) {
-            SelfModel.Thought t = thoughts.next();
-            boolean had = !t.sources.isEmpty();
-            t.sources.removeAll(gone);
-            if (had && t.sources.isEmpty()) { thoughts.remove(); removed++; }
+        // Propagación: si cae una creencia o pregunta, cae también lo que solo se apoyaba en ella.
+        gone = new java.util.HashSet<>(gone);
+        for (int pass = 0; pass < 4; pass++) {
+            int before = removed;
+            removed += forgetPass(next, gone);
+            if (removed == before) break;
         }
         if (next.pendingNarrative != null) {
             next.pendingNarrative.sources.removeAll(gone);
@@ -299,6 +286,35 @@ public final class SelfModelJournal {
         next.updatedAt = now;
         if (removed > 0) addHistory(next, now, "Olvido: retiré " + removed + " elementos que dependían de recuerdos borrados.");
         return commit(next) ? removed : 0;
+    }
+
+    /** Una pasada de olvido; añade a {@code gone} los ids retirados para la siguiente. */
+    private static int forgetPass(SelfModel.State next, java.util.Set<String> gone) {
+        int removed = 0;
+        java.util.Iterator<SelfModel.Belief> beliefs = next.beliefs.iterator();
+        while (beliefs.hasNext()) {
+            SelfModel.Belief b = beliefs.next();
+            boolean had = !b.sources.isEmpty();
+            b.sources.removeAll(gone);
+            b.contradictions.removeAll(gone);
+            if (had && b.sources.isEmpty()) { beliefs.remove(); removed++; gone.add(b.id); }
+            else b.confidence = Math.min(b.confidence, cap(b.sources.size()));
+        }
+        java.util.Iterator<SelfModel.Question> questions = next.questions.iterator();
+        while (questions.hasNext()) {
+            SelfModel.Question q = questions.next();
+            boolean had = !q.sources.isEmpty();
+            q.sources.removeAll(gone);
+            if (had && q.sources.isEmpty()) { questions.remove(); removed++; gone.add(q.id); gone.add("q:" + q.id); }
+        }
+        java.util.Iterator<SelfModel.Thought> thoughts = next.thoughts.iterator();
+        while (thoughts.hasNext()) {
+            SelfModel.Thought t = thoughts.next();
+            boolean had = !t.sources.isEmpty();
+            t.sources.removeAll(gone);
+            if (had && t.sources.isEmpty()) { thoughts.remove(); removed++; gone.add(t.id); }
+        }
+        return removed;
     }
 
     /** Aplica la narrativa pendiente. Solo debe llamarse por una orden explícita de Bryan. */
@@ -423,6 +439,31 @@ public final class SelfModelJournal {
         if (state.pendingNarrative != null) out.append("\nPuedes decir «acepta tu nueva identidad» o «rechaza tu nueva identidad».");
         out.append("\nEsto son registros de procesos, no prueba de conciencia.");
         return out.toString();
+    }
+
+    /** Copia íntegra de su mente para respaldo (null si no se pudo leer y no debe exportarse). */
+    public synchronized String snapshotJson() {
+        return loadFailure != null ? null : GSON.toJson(state);
+    }
+
+    /**
+     * Restaura una copia de respaldo solo si es más reciente que la local (o la local está vacía).
+     * Se valida y se escribe antes de sustituir el estado: o queda la copia entera o nada.
+     */
+    public synchronized boolean restoreFrom(String json) {
+        try {
+            SelfModel.State parsed = GSON.fromJson(json, SelfModel.State.class);
+            if (parsed == null || parsed.schema != 1) return false;
+            normalizeLoaded(parsed);
+            boolean localEmpty = state.beliefs.isEmpty() && state.questions.isEmpty() && state.thoughts.isEmpty();
+            if (!localEmpty && parsed.version <= state.version) return false;
+            store.write(GSON.toJson(parsed));
+            state = parsed;
+            loadFailure = null;
+            return true;
+        } catch (Exception invalid) {
+            return false;
+        }
     }
 
     private boolean commit(SelfModel.State candidate) {

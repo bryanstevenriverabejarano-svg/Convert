@@ -35,19 +35,22 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
             return complete ?: throw IOException("No se confirmó el archivo de $id")
         }
         try {
+            // Gemma 4 E2B es el modelo de Salve: los Dolphin (6,9 GB) ya no se descargan. Un respaldo
+            // pendiente de una instalación antigua con Dolphin termina también en Gemma.
             val start = if (fallbackOnly) LocalModelPolicy.next(engine.pendingFallbackFrom)
-                ?: throw LocalModelPolicy.SupersededFallbackException() else LocalModelPolicy.PRIMARY
+                ?: throw LocalModelPolicy.SupersededFallbackException() else LocalModelPolicy.FALLBACK
+            val primaryAttempt = !fallbackOnly
             var selectionBeforeAttempt = engine.selectionVersion
             val prepared = LocalModelPolicy.prepare(start, attempt = { id ->
                 selectionBeforeAttempt = engine.selectionVersion
-                if (id != LocalModelPolicy.PRIMARY && !LocalModelPolicy.fallbackAllowed(id, engine.pendingFallbackFrom))
+                if (!(primaryAttempt && id == start) && !LocalModelPolicy.fallbackAllowed(id, engine.pendingFallbackFrom))
                     throw LocalModelPolicy.SupersededFallbackException()
                 emit(ModelDownloadEvent.Status("Comprobando RAM antes de descargar $id…", 0))
                 engine.checkModelPreparation(id)
                 val event = fetch(id)
                 emit(ModelDownloadEvent.Status("Midiendo RAM, cargando $id y comprobando una respuesta…", 99))
                 val result = runInterruptible(Dispatchers.IO) {
-                    if (id == LocalModelPolicy.PRIMARY)
+                    if (primaryAttempt && id == start)
                         engine.activateDownloadedModel(event.file.absolutePath, event.supportsVision, { !jobContext.isActive })
                     else engine.activateFallbackModel(event.file.absolutePath, event.supportsVision, { !jobContext.isActive })
                 }
@@ -57,23 +60,12 @@ class ModelDownloadRepository(private val downloader: ModelDownloader = ModelDow
                 ModelDownloadEvent.Prepared(event.file, result.latencyMillis, event.name, event.supportsVision)
             }, onFailure = { id, failure ->
                 // A successful concurrent recovery must not be replaced by an obsolete fallback.
-                if (id != LocalModelPolicy.PRIMARY && !LocalModelPolicy.fallbackAllowed(id, engine.pendingFallbackFrom))
+                if (!(primaryAttempt && id == start) && !LocalModelPolicy.fallbackAllowed(id, engine.pendingFallbackFrom))
                     throw LocalModelPolicy.SupersededFallbackException()
                 engine.recordFailureIfUnchanged(id, failure.message ?: "Falló $id", selectionBeforeAttempt)
                 val next = LocalModelPolicy.next(id)
                 if (next != null) emit(ModelDownloadEvent.Status("$id no está disponible. Preparando $next.", 0))
             })
-            // A verified 3B file allows an offline downgrade; keep only the 8B loaded in RAM.
-            if (prepared.modelName == LocalModelPolicy.PRIMARY) {
-                try {
-                    emit(ModelDownloadEvent.Status("8B activo. Guardando Dolphin 3B para cambios automáticos sin conexión…", 0))
-                    fetch(LocalModelPolicy.LIGHT)
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (failure: Exception) {
-                    jobContext.ensureActive()
-                    emit(ModelDownloadEvent.Notice("8B preparado. El respaldo 3B aún no está guardado: ${failure.message}. Reanuda la preparación en IA y cámara."))
-                }
-            }
             // KEEP can coalesce a runtime downgrade while the 3B prefetch is in progress.
             if (engine.pendingFallbackFrom != null) {
                 downloadAndPrepareModels(context, jsonBytes, true).collect { emit(it) }

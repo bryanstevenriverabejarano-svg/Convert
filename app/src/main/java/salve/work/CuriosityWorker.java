@@ -52,7 +52,9 @@ public class CuriosityWorker extends Worker {
                 return Result.success();
             }
             boolean force = getInputData().getBoolean(FORCE, false);
-            String outcome = MindRuntime.get(app).exploreCuriosity(this::isStopped, force);
+            // Cede en cuanto Bryan empiece a conversar, también a mitad de la búsqueda.
+            java.util.function.BooleanSupplier stop = () -> isStopped() || salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation();
+            String outcome = MindRuntime.get(app).exploreCuriosity(stop, force);
             Log.i(TAG, outcome.length() > 160 ? outcome.substring(0, 160) : outcome);
             if (outcome.startsWith("Investigué «")) {
                 notifyFinding(app, outcome);

@@ -39,7 +39,9 @@ public class SyncWorker extends Worker {
             boolean memoriesPending = CloudSyncManager.enqueueExistingMemories(getApplicationContext());
             CloudSyncManager.enqueueExistingProfiles(getApplicationContext());
             CloudSyncManager.enqueueArchivedPhotos(getApplicationContext());
+            CloudSyncManager.restoreMind(getApplicationContext(), false);
             int enviados = CloudSyncManager.flush(getApplicationContext(), 10);
+            CloudSyncManager.uploadMind(getApplicationContext());
             Log.d(TAG, "Flush completado. Enviados=" + enviados);
             boolean outboxPending = CloudSyncManager.hasPending(getApplicationContext());
             // Backoff is for network failures. Successful history pages continue immediately,

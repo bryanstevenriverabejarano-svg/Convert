@@ -173,4 +173,18 @@ public class CognitiveContractTest {
         tools.put("memory.lookup",new CognitiveTurn.Tool("{}: recupera recuerdos de la petición actual",args->{
             CognitiveReply.fields(args);count.incrementAndGet();return new CognitiveTurn.Receipt("dato documentado");}));return tools;
     }
+
+    /** H5 del informe: pedir ropa nueva debe traer AVATAR_CREATE aunque el catálogo esté lleno. */
+    @Test public void wardrobeRequestKeepsAvatarCreateInTheCatalog() {
+        Map<String,CognitiveTurn.Tool> tools=new java.util.LinkedHashMap<>();
+        tools.put("memory.lookup",new CognitiveTurn.Tool("{}: recupera recuerdos de la petición actual", a->null));
+        tools.put("web.search",new CognitiveTurn.Tool("{query:string}: busca en internet un dato que no sabes (sin datos privados)", a->null));
+        tools.put("runtime.status",new CognitiveTurn.Tool("{}: mide estado y RAM", a->null));
+        tools.put("AVATAR_LIST",new CognitiveTurn.Tool("{}: lista diseños locales", a->null));
+        tools.put("AVATAR_WEAR",new CognitiveTurn.Tool("{name:string}: viste diseño existente", a->null));
+        tools.put("AVATAR_CREATE",new CognitiveTurn.Tool("{name,template,color,pattern,wear:boolean}; template:core/kuro/shiro/original_dress/pajamas/explorer; color:ORIGINAL/TURQUOISE/LAVENDER/ROSE/BLUE/AMBER; pattern:NONE/STARS/STRIPES; composición local", a->null));
+        assertFalse("sin priorizar se perdía", CognitivePrompt.limitTools(tools).containsKey("AVATAR_CREATE"));
+        assertTrue(CognitivePrompt.limitTools(CognitivePrompt.prioritize(tools, "Diseña un pijama lavanda")).containsKey("AVATAR_CREATE"));
+        assertEquals(tools.keySet(), CognitivePrompt.prioritize(tools, "hola").keySet());
+    }
 }

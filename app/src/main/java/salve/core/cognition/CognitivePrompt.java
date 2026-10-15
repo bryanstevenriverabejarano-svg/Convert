@@ -40,6 +40,29 @@ public final class CognitivePrompt {
     }
 
     /** Bound metadata before inference; omitted tools are also removed from the executable map. */
+    private static final java.util.regex.Pattern WARDROBE = java.util.regex.Pattern.compile(
+            "(?iu).*\\b(ropa|prenda|vestid|pijama|traje|camiseta|falda|abrigo|armario|outfit|vistete|vístete|ponte|disen|diseñ|conjunto)\\w*.*");
+    private static final java.util.regex.Pattern RESEARCH = java.util.regex.Pattern.compile(
+            "(?iu).*\\b(busca|investiga|internet|google|noticia|actual|hoy|precio|quien gano|quién ganó)\\w*.*");
+
+    /**
+     * Ordena el catálogo por la intención del mensaje antes de recortarlo: lo que la petición
+     * necesita entra primero (pedir ropa nueva debe traer AVATAR_CREATE aunque el catálogo esté lleno).
+     */
+    public static Map<String, CognitiveTurn.Tool> prioritize(Map<String, CognitiveTurn.Tool> available, String input) {
+        if (available == null || input == null) return available;
+        java.util.List<String> first = new java.util.ArrayList<>();
+        if (WARDROBE.matcher(input).matches()) for (String name : available.keySet()) if (name.startsWith("AVATAR_")) first.add(name);
+        if (RESEARCH.matcher(input).matches() && available.containsKey("web.search")) first.add("web.search");
+        if (first.isEmpty()) return available;
+        Map<String, CognitiveTurn.Tool> ordered = new java.util.LinkedHashMap<>();
+        // Dentro del vestuario, crear va antes que listar o vestir: es la más grande y la que se perdía.
+        if (first.remove("AVATAR_CREATE")) ordered.put("AVATAR_CREATE", available.get("AVATAR_CREATE"));
+        for (String name : first) ordered.put(name, available.get(name));
+        for (Map.Entry<String, CognitiveTurn.Tool> e : available.entrySet()) ordered.putIfAbsent(e.getKey(), e.getValue());
+        return ordered;
+    }
+
     public static Map<String, CognitiveTurn.Tool> limitTools(Map<String, CognitiveTurn.Tool> available) {
         Map<String, CognitiveTurn.Tool> selected = new java.util.LinkedHashMap<>();
         JsonObject catalog = new JsonObject();
