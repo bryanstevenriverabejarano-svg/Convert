@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/salve_splash_background" />
+    <item
+        android:width="240dp"
+        android:height="240dp"
+        android:gravity="center">
+        <bitmap
+            android:gravity="fill"
+            android:src="@drawable/salve_splash_logo" />
+    </item>
+</layer-list>

@@ -2,4 +2,5 @@
 <resources>
     <color name="black">#8E1818</color>
     <color name="white">#AB0F0F</color>
+    <color name="salve_splash_background">#00030D</color>
 </resources>
