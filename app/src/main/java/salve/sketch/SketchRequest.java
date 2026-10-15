@@ -26,6 +26,11 @@ public final class SketchRequest {
     public final boolean improve;
     /** Lo que quiere distinto («con más detalle, pose diferente»); vacío si nada. */
     public final String wish;
+    /**
+     * Pedido sin verbo de dibujar («mejóralo, busca referencias…»): sólo cuenta si se estaba hablando
+     * de un dibujo hace poco.
+     */
+    public boolean implicit;
 
     private SketchRequest(Kind kind, SketchScene scene, String unknown) { this(kind, scene, unknown, false); }
     private SketchRequest(Kind kind, SketchScene scene, String unknown, boolean references) {
@@ -60,6 +65,11 @@ public final class SketchRequest {
             + "|mas (bonito|bonita|detalle|detallado|detallada|realista|parecido|parecida|reconocible)|con (mucho )?(mas )?detalle"
             + "|(otra|una|con una|con otra) pose|pose (diferente|distinta|nueva)|de otra (forma|manera)|otra version|version (nueva|tuya|propia)"
             + "|(estaba|esta|era|es|quedo|salio) (muy |un poco |bastante )?(feo|fea|mal|raro|rara)|no se parec\\w*|que se parezca)\\b");
+    private static final Pattern STRONG_IMPROVE = Pattern.compile(
+            "\\b(mejoralo|mejorala|mejorarlo|mejorarla|perfeccionalo|con mas detalle|mas detalle|dale mas detalle)\\b");
+    private static final Pattern REF_WORD = Pattern.compile("\\bref\\w{0,5}ncias?\\b");
+    /** «… que sea un vestido de verano». */
+    private static final Pattern THAT_IS = Pattern.compile("\\bque sea (?:un|una|el|la|unos|unas) (.+)$");
     /** «Mejóralo» a secas: se refiere al último dibujo. */
     private static final Pattern IMPROVE_ONLY = Pattern.compile(
             "^(salve )?(mejoralo|mejorala|mejora (el|tu|ese|este) dibujo|hazlo mejor|hazla mejor|dibujalo mejor|dibujala mejor"
@@ -83,7 +93,7 @@ public final class SketchRequest {
             "mejor", "mejora", "mejoralo", "mejorala", "mejorarlo", "mejorarla", "detalle", "detallado", "detallada", "pose",
             "diferente", "distinta", "nueva", "nuevo", "forma", "manera", "version", "pero", "mas", "realista", "parecido",
             "parecida", "feo", "fea", "raro", "rara", "mal", "estaba", "esta", "era", "ese", "esa", "este", "umm", "um", "vale",
-            "ok", "bueno", "ensene", "ensenaste", "hice", "hiciste", "anterior", "antes", "perfeccionalo", "reconocible"));
+            "ok", "bueno", "nada", "si", "dale", "venga", "quiero", "hazlo", "haslo", "pues", "joder", "ensene", "ensenaste", "hice", "hiciste", "anterior", "antes", "perfeccionalo", "reconocible"));
 
     public static SketchRequest parse(String input, SketchLibrary library) {
         String text = SketchLibrary.normalize(input);
@@ -100,7 +110,19 @@ public final class SketchRequest {
         String wish = wishes(text);
         if (IMPROVE_ONLY.matcher(text).matches()) return new SketchRequest(Kind.AGAIN, null, null, true, true, wish);
         Matcher verb = VERB.matcher(text);
-        if (!verb.find()) return new SketchRequest(Kind.NONE, null, null);
+        if (!verb.find()) {
+            // «Mejóralo, busca referencias que sea un vestido de verano»: es un dibujo aunque no diga «dibuja».
+            // Sólo vale justo después de hablar de un dibujo (lo comprueba quien llama con {@link #implicit}).
+            boolean strong = STRONG_IMPROVE.matcher(text).find();
+            if (!strong && !REF_WORD.matcher(text).find()) return new SketchRequest(Kind.NONE, null, null);
+            Matcher sea = THAT_IS.matcher(text);
+            Matcher about = REFERENCE_SUBJECT.matcher(text);
+            String wanted = meaningful(sea.find() ? sea.group(1) : about.find() ? about.group(1) : "");
+            SketchRequest r = wanted.isEmpty() ? new SketchRequest(Kind.AGAIN, null, null, references, improve || strong, wish)
+                    : new SketchRequest(Kind.UNKNOWN, null, wanted, true, improve || strong, wish);
+            r.implicit = true;
+            return r;
+        }
         if (improve) {
             // Rehacerlo mejor: nunca la versión guardada; ella vuelve a buscar o a pensar sus partes.
             String wanted = improvedSubject(input, library);
@@ -109,6 +131,8 @@ public final class SketchRequest {
         }
         Matcher about = REFERENCE_SUBJECT.matcher(text);
         String subject = about.find() ? about.group(1).trim() : text.substring(verb.end()).trim();
+        // «Un vestido de verano blanco con volantes, dibújalo»: el objeto va antes del verbo.
+        if (meaningful(subject).isEmpty() && verb.start() > 0) subject = text.substring(0, verb.start()).trim();
         if (references) {
             // Con referencias, busca en internet aunque el motivo ya exista en su repertorio.
             String wanted = meaningful(subject);
@@ -125,6 +149,53 @@ public final class SketchRequest {
         String rest = meaningful(subject);
         return rest.isEmpty() ? new SketchRequest(Kind.FREE, null, null)
                 : new SketchRequest(Kind.UNKNOWN, null, rest);
+    }
+
+    // ───────────── seguimiento de una conversación de dibujo ─────────────
+
+    public enum FollowUp { NONE, GO, SHOW, IMPROVE }
+
+    /** «Hazlo otra vez» sobre lo último que se estaba dibujando. */
+    public static SketchRequest again(boolean improve, String wish) {
+        return new SketchRequest(Kind.AGAIN, null, null, false, improve, wish);
+    }
+
+    private static final Pattern GO = Pattern.compile(
+            "^(si|vale|ok|okey|venga|dale|claro|perfecto|adelante|bueno|pues)?( (si|vale|venga|dale|claro|adelante))*"
+            + "( (hazlo|haslo|hazla|dale|adelante|empieza|por favor|porfa|ya))*$");
+    private static final Pattern SHOW = Pattern.compile(
+            "\\b(no (me )?(lo )?(estas )?(mostrando|ensenando|veo)|donde esta|quiero ver|ver) (el |tu |ese )?dibujo\\b"
+            + "|^\\?+$|^(y )?(el )?dibujo\\??$");
+    private static final Pattern MORE = Pattern.compile(
+            "\\b(mas detalle|mas detallado|detallalo|mejoralo|mejorala|hazlo mejor|otra vez|de nuevo|intentalo)\\b");
+    private static final String[] SHOW_WORDS = {"muestrame", "muestramelo", "muestramela", "ensename", "ensenamelo", "ensenamela"};
+
+    /**
+     * Respuestas cortas que, justo después de hablar de un dibujo, siguen pidiéndolo: «vale, hazlo»,
+     * «sí, dale más detalle», «muéstrame el dibujo», «?». Tolera erratas («muestrsme»).
+     */
+    public static FollowUp followUp(String input) {
+        String t = SketchLibrary.normalize(input);
+        if (input != null && input.trim().matches("\\?+")) return FollowUp.SHOW;
+        if (t.isEmpty() || t.length() > 160) return FollowUp.NONE;
+        if (MORE.matcher(t).find()) return FollowUp.IMPROVE;
+        if (SHOW.matcher(t).find()) return FollowUp.SHOW;
+        for (String w : t.split(" ")) for (String target : SHOW_WORDS)
+            if (Math.abs(w.length() - target.length()) <= 2 && w.length() >= 7 && distance(w, target) <= 2) return FollowUp.SHOW;
+        if (t.length() <= 30 && GO.matcher(t).matches()) return FollowUp.GO;
+        return FollowUp.NONE;
+    }
+
+    static int distance(String a, String b) {
+        int[] prev = new int[b.length() + 1], cur = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) prev[j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            cur[0] = i;
+            for (int j = 1; j <= b.length(); j++)
+                cur[j] = Math.min(Math.min(cur[j - 1] + 1, prev[j] + 1), prev[j - 1] + (a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1));
+            int[] tmp = prev; prev = cur; cur = tmp;
+        }
+        return prev[b.length()];
     }
 
     /** Lo que quiere distinto, en sus palabras («con mas detalle, pose diferente»). */
@@ -145,6 +216,7 @@ public final class SketchRequest {
             Matcher verb = VERB.matcher(t);
             if (!verb.find()) continue;
             String after = t.substring(verb.end()).trim();
+            if (meaningful(cut(after)).isEmpty() && verb.start() > 0) after = t.substring(0, verb.start()).trim();
             for (SketchLibrary.Mention m : library.mentions(after, false))
                 if (!m.motif.self) return LearnedSketches.stripArticle(cleanName(m.motif.name));
             Matcher about = REFERENCE_SUBJECT.matcher(after);

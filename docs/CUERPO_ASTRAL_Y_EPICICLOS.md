@@ -47,6 +47,11 @@ Lo aprendido se guarda en `files/sketch/learned.json` (hasta 80 motivos) y tiene
 | Mejorar | «Dibújalo mejor», «con más detalle», «otra pose», «el que te enseñé estaba feo», «mejóralo», «busca referencias» (con erratas): no reutiliza la versión guardada y no repite referencias ya usadas. |
 | `SketchJournal` | Diario de dibujo (`files/sketch/journal.json`): cómo lo entendió, de dónde salieron las líneas, qué vio al mirarlo y qué opinó Bryan. Responde a «¿por qué lo dibujaste así?», «no se parece», «mira tu dibujo». |
 
+| Calco propio | En fotos de referencia, su visión localiza el objeto («CAJA: …») y recorta antes de calcar. Del calco se queda con los 32 contornos más largos, los redondea (Chaikin) y simplifica (Douglas-Peucker): `SketchStyle`. |
+| Seguimiento | Justo después de hablar de un dibujo, «vale, hazlo», «sí, dale más detalle», «muéstrame el dibujo» (con erratas) o «?» lo hacen o lo vuelven a mostrar; «mejóralo, busca referencias que sea un …» funciona sin decir «dibuja»; el objeto puede ir antes del verbo («un vestido blanco, dibújalo»). |
+| Honestidad | Si no dibujó en ese turno, se le dice que no lo afirme; y si aun así dice «aquí tienes el dibujo», se añade una corrección visible. Cada búsqueda deja una línea fija en el chat con lo que hizo (búsquedas, imágenes, recortes, referencia elegida) o por qué falló. |
+| Erratas | Su concepto incluye `NOMBRE` bien escrito y el nombre en inglés, que se busca antes que la traducción de Wikipedia («vesrido» → «vestido» → dress). |
+
 Un dibujo a mano con «mejóralo» en el nombre se guarda como ejemplo de Bryan y ella hace su propia versión. Al hablar de un dibujo cuenta qué hizo y por qué; la técnica (epiciclos, Fourier) sólo si se le pregunta cómo dibuja.
 
 ## Vista previa

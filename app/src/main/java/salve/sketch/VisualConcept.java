@@ -23,6 +23,8 @@ public final class VisualConcept {
     }
 
     public final String subject, english, kind, pose;
+    /** El nombre bien escrito que ella entendió («vestido de verano» aunque Bryan escribiera «vesrido»). */
+    public String name = "";
     public final List<Part> parts;
 
     public VisualConcept(String subject, String english, String kind, String pose, List<Part> parts) {
@@ -42,21 +44,22 @@ public final class VisualConcept {
         String w = wish == null || wish.trim().isEmpty() ? "" : " (" + clip(wish.replaceAll("[\\r\\n\"«»]+", " "), 80) + ")";
         return "Eres Salve. Antes de dibujar algo, piensas cómo es de verdad. Describe cómo se ve «" + what + "» para "
                 + "dibujarlo con líneas. Responde SOLO con este formato, sin nada más:\n"
-                + "INGLES: nombre en inglés\nTIPO: qué es\nPARTES:\n- parte: forma y posición\nPOSE: postura para dibujarlo\n"
-                + "Ejemplo «gato»:\nINGLES: cat\nTIPO: animal, felino pequeño\nPARTES:\n"
+                + "NOMBRE: el objeto bien escrito en español\nINGLES: nombre en inglés\nTIPO: qué es\nPARTES:\n"
+                + "- parte: forma y posición\nPOSE: postura para dibujarlo\n"
+                + "Ejemplo «gaton»:\nNOMBRE: gato\nINGLES: cat\nTIPO: animal, felino pequeño\nPARTES:\n"
                 + "- cabeza: redonda, delante y arriba, con dos orejas triangulares\n"
                 + "- cuerpo: óvalo alargado y horizontal\n- patas: cuatro, finas y rectas, debajo del cuerpo\n"
                 + "- cola: larga, curvada hacia arriba, detrás\nPOSE: de perfil, de pie\n"
                 + "Ahora «" + what + "»" + w + ":\n";
     }
 
-    private static final Pattern FIELD = Pattern.compile("^\\s*[*#-]*\\s*(ingles|inglés|english|tipo|pose|partes)\\s*[:=]\\s*(.*)$",
+    private static final Pattern FIELD = Pattern.compile("^\\s*[*#-]*\\s*(nombre|ingles|inglés|english|tipo|pose|partes)\\s*[:=]\\s*(.*)$",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern PART = Pattern.compile("^\\s*(?:[-*•]|\\d+[.)])\\s*([\\p{L} ]{2,30}?)\\s*[:=–-]\\s*(.{3,})$");
     private static final Pattern ENGLISH = Pattern.compile("^[a-z][a-z '\\-]{1,38}$");
 
     public static VisualConcept parse(String text, String subject) {
-        String english = "", kind = "", pose = "";
+        String english = "", kind = "", pose = "", name = "";
         List<Part> parts = new ArrayList<>();
         if (text == null) return new VisualConcept(subject, "", "", "", parts);
         boolean inParts = false;
@@ -76,15 +79,21 @@ public final class VisualConcept {
                     if (ENGLISH.matcher(e).matches()) english = e;
                 } else if (key.equals("tipo")) kind = value;
                 else if (key.equals("pose")) pose = value;
+                else if (key.equals("nombre")) {
+                    String n = value.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L} ]", " ").replaceAll("\\s+", " ").trim();
+                    if (n.length() >= 2 && n.length() <= 40 && n.split(" ").length <= 5) name = n;
+                }
                 continue;
             }
             Matcher p = PART.matcher(line);
             if (p.matches() && (inParts || parts.size() > 0 || kind.length() > 0) && parts.size() < 8) {
-                String name = p.group(1).trim().toLowerCase(Locale.ROOT), shape = clip(p.group(2).trim(), 110);
-                if (name.length() >= 2) parts.add(new Part(name, shape));
+                String partName = p.group(1).trim().toLowerCase(Locale.ROOT), shape = clip(p.group(2).trim(), 110);
+                if (partName.length() >= 2) parts.add(new Part(partName, shape));
             }
         }
-        return new VisualConcept(subject, english, kind, pose, parts);
+        VisualConcept c = new VisualConcept(subject, english, kind, pose, parts);
+        c.name = name;
+        return c;
     }
 
     /** Partes para la composición geométrica («dibuja cada una con su forma y posición»). */
@@ -110,7 +119,7 @@ public final class VisualConcept {
         return clip(b.toString(), 420);
     }
 
-    static String clip(String s, int max) {
+    public static String clip(String s, int max) {
         String t = s == null ? "" : s.replaceAll("[\\p{Cntrl}]+", " ").replaceAll("\\s+", " ").trim();
         return t.length() <= max ? t : t.substring(0, max - 1).trim() + "…";
     }

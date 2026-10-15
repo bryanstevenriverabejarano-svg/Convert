@@ -151,4 +151,56 @@ public class SketchUnderstandingTest {
     }
 
     private static int[] blank() { int[] p = new int[256]; Arrays.fill(p, 0xFFFFFFFF); return p; }
+
+    @Test public void followsTheConversationAboutADrawing() throws Exception {
+        // Lo que Bryan escribió con el vestido.
+        SketchRequest r = parse("Vale mejoralo busca referencias en internet que sea un vesrido de verano");
+        assertEquals(SketchRequest.Kind.UNKNOWN, r.kind);
+        assertTrue(r.implicit);
+        assertTrue(r.improve);
+        assertEquals("vesrido verano", r.unknown);
+        r = parse("Nada un vesitdo de verano blanco con volantes dibujalo");
+        assertEquals(SketchRequest.Kind.UNKNOWN, r.kind);
+        assertTrue(r.unknown.startsWith("vesitdo verano"));
+        assertEquals(SketchRequest.FollowUp.IMPROVE, SketchRequest.followUp("Sí dale más detalle"));
+        assertEquals(SketchRequest.FollowUp.GO, SketchRequest.followUp("Vale haslo"));
+        assertEquals(SketchRequest.FollowUp.SHOW, SketchRequest.followUp("No. Muestrsme el dibujo"));
+        assertEquals(SketchRequest.FollowUp.SHOW, SketchRequest.followUp("No solo muesyrame el dibujo del vesrido"));
+        assertEquals(SketchRequest.FollowUp.SHOW, SketchRequest.followUp("Pues no me estas mostrando el dibujo joder"));
+        assertEquals(SketchRequest.FollowUp.SHOW, SketchRequest.followUp("?"));
+        assertEquals(SketchRequest.FollowUp.NONE, SketchRequest.followUp("¿Qué tal tu día?"));
+        assertEquals("no es un dibujo", SketchRequest.Kind.NONE, parse("estoy mucho mejor hoy").kind);
+        assertEquals(SketchRequest.Kind.NONE, parse("busca en internet el tiempo de mañana").kind);
+    }
+
+    @Test public void fixesTyposThroughHerConcept() {
+        VisualConcept c = VisualConcept.parse("NOMBRE: vestido de verano\nINGLES: summer dress\nTIPO: prenda\n"
+                + "PARTES:\n- tirantes: finos arriba\n- falda: acampanada abajo", "vesrido verano");
+        assertEquals("vestido de verano", c.name);
+        assertEquals("summer dress", c.english);
+    }
+
+    @Test public void makesHerOwnVersionOfATracing() {
+        List<float[]> traced = new ArrayList<>();
+        float[] zigzag = new float[2 * 60];
+        for (int i = 0; i < 60; i++) { zigzag[2 * i] = 100 + i * 12; zigzag[2 * i + 1] = 500 + (i % 2 == 0 ? 0 : 6); }
+        traced.add(zigzag);
+        traced.add(new float[]{10, 10, 12, 11}); // mota
+        for (int i = 0; i < 50; i++) traced.add(new float[]{200, 200 + i * 10, 300, 200 + i * 10});
+        SketchStyle.Result mine = SketchStyle.ownVersion(traced, 20);
+        assertEquals(20, mine.kept);
+        assertTrue("el contorno largo sigue y queda más simple", mine.strokes.get(0).length < zigzag.length);
+        assertTrue(mine.describe().contains("52"));
+        for (float[] s : mine.strokes) for (float v : s) assertTrue(v >= 0 && v <= 1000);
+    }
+
+    @Test public void cropsAndStaysHonest() {
+        float[] box = SketchTalk.parseBox("CAJA: 20 10 70 95");
+        assertArrayEquals(new float[]{.2f, .1f, .7f, .95f}, box, 1e-4f);
+        assertNull(SketchTalk.parseBox("CAJA: no"));
+        assertNull(SketchTalk.parseBox("CAJA: 0 0 100 100"));
+        assertTrue(SketchTalk.claimsDrawing("Aquí tienes el dibujo del vestido de verano blanco"));
+        assertTrue(SketchTalk.claimsDrawing("Claro que sí. Estoy terminando de refinar el detalle del vestido."));
+        assertFalse(SketchTalk.claimsDrawing("¿Qué estilo de vestido prefieres?"));
+    }
 }
