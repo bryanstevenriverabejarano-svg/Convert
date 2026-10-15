@@ -54,12 +54,27 @@ public class CuriosityWorker extends Worker {
             boolean force = getInputData().getBoolean(FORCE, false);
             String outcome = MindRuntime.get(app).exploreCuriosity(this::isStopped, force);
             Log.i(TAG, outcome.length() > 160 ? outcome.substring(0, 160) : outcome);
-            if (outcome.startsWith("Investigué «")) notifyFinding(app, outcome);
+            if (outcome.startsWith("Investigué «")) {
+                notifyFinding(app, outcome);
+                // Pensar sobre lo que encontró (puede abrir una pregunta nueva o cerrar la que tenía).
+                // Usa el modelo local, así que solo si está cargando y nadie conversa.
+                if (charging(app) && !isStopped() && !salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation()) {
+                    String reflection = MindRuntime.get(app).reflectIfDue(this::isStopped);
+                    Log.i(TAG, "Reflexión tras explorar: " + (reflection.length() > 120 ? reflection.substring(0, 120) : reflection));
+                }
+            }
             return Result.success();
         } catch (Exception failure) {
             Log.w(TAG, "Curiosidad interrumpida: " + failure.getClass().getSimpleName());
             return Result.success();
         }
+    }
+
+    private static boolean charging(Context context) {
+        try {
+            android.os.BatteryManager battery = context.getSystemService(android.os.BatteryManager.class);
+            return battery != null && battery.isCharging();
+        } catch (RuntimeException unknown) { return false; }
     }
 
     /** Aviso discreto, solo si Android permite notificaciones a Salve. */

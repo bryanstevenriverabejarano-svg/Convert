@@ -1236,6 +1236,26 @@ public class MotorConversacional {
         TurnQualityAssessment assessment = ConversationQualityEvaluator.evaluate(
                 respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
         responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse, entradaPorVoz);
+        if (inference.isSuccess() && !entradaPorVoz) buscarPorSuCuentaSiNoLoSabe(entrada, respuesta);
+    }
+
+    /**
+     * Si su propia respuesta reconoce que le falta un dato sobre el mundo, va a buscarlo sin que se
+     * lo pidan (y se ve en la mini ventana). Nada privado sale a internet.
+     */
+    private void buscarPorSuCuentaSiNoLoSabe(String entrada, String respuesta) {
+        if (!salve.core.mind.CuriosityCycle.admitsNotKnowing(respuesta) || !salve.core.mind.CuriosityCycle.isWorldQuestion(entrada))
+            return;
+        List<String> names = new java.util.ArrayList<>();
+        for (salve.core.identity.PeopleGraph.PersonEntity p : mind().peopleGraph().people()) names.add(p.name);
+        if (salve.core.mind.CuriosityCycle.isPrivate(entrada, names) || !hayInternet()) return;
+        try {
+            conversationExecutor.execute(() -> {
+                if (closed) return;
+                String found = ejecutarInvestigacionPublica(entrada);
+                if (found != null && !found.trim().isEmpty()) hablar("No me quedé con la duda y lo he buscado por mi cuenta:\n" + found);
+            });
+        } catch (java.util.concurrent.RejectedExecutionException closing) { /* La conversación se cierra. */ }
     }
 
     private boolean procesarProtocolosEspeciales(String input, String original) {

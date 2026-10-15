@@ -52,4 +52,30 @@ public class CuriosityCycleTest {
         assertTrue(patch.thoughts.get(0).text.length() <= 400);
         assertEquals("Por qué los pulpos tienen tres corazones", CuriosityCycle.query(question.text));
     }
+
+    @Test public void followsTheMostRelatedUnvisitedThread() {
+        java.util.List<String> links = Arrays.asList(
+                "https://www.google.com/search?q=pulpos",
+                "https://es.wikipedia.org/wiki/Cookies",
+                "https://es.wikipedia.org/wiki/Sistema_circulatorio_de_los_cefal%C3%B3podos",
+                "https://es.wikipedia.org/wiki/Hemocianina",
+                "https://es.wikipedia.org/wiki/Pulpo_com%C3%BAn");
+        String q = "¿Por qué los pulpos tienen tres corazones y sangre azul?";
+        assertEquals("https://es.wikipedia.org/wiki/Pulpo_com%C3%BAn", CuriosityCycle.pickThread(links, q, Collections.emptySet()));
+        assertNull("sin otro enlace relacionado, no sigue ningún hilo", CuriosityCycle.pickThread(links, q,
+                new HashSet<>(Collections.singletonList("https://es.wikipedia.org/wiki/Pulpo_com%C3%BAn"))));
+        assertTrue(CuriosityCycle.patch(q("q", q, 1), "Tienen tres.", "es.wikipedia.org", true)
+                .thoughts.get(0).text.startsWith("Seguí el hilo de"));
+    }
+
+    @Test public void recognisesWhenSheDoesNotKnowAWorldFact() {
+        assertTrue(CuriosityCycle.admitsNotKnowing("No lo sé con certeza, mis datos pueden estar desactualizados."));
+        assertTrue(CuriosityCycle.admitsNotKnowing("No tengo información sobre ese torneo."));
+        assertFalse(CuriosityCycle.admitsNotKnowing("Navegar, para mí, significa acompañarte."));
+        assertTrue(CuriosityCycle.isWorldQuestion("¿Quién ganó el último mundial de fútbol?"));
+        assertTrue(CuriosityCycle.isWorldQuestion("cuántos habitantes tiene Vitoria"));
+        assertFalse(CuriosityCycle.isWorldQuestion("¿Tú qué sientes cuando hablamos?"));
+        assertFalse(CuriosityCycle.isWorldQuestion("¿Qué te dije ayer?"));
+        assertFalse(CuriosityCycle.isWorldQuestion("Ser mejor eso quiero"));
+    }
 }

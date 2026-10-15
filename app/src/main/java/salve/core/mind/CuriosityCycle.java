@@ -42,7 +42,7 @@ public final class CuriosityCycle {
     }
 
     /** Preguntas sobre Bryan, su familia o su vida no se envían a un buscador. */
-    static boolean isPrivate(String text, Collection<String> privateNames) {
+    public static boolean isPrivate(String text, Collection<String> privateNames) {
         String t = normalize(text);
         if (t.matches(".*\\b(bryan|mi creador|tu creador|su familia|tu familia|mi familia|su madre|su padre|su hermana|su hermano"
                 + "|su pareja|su salud|su trabajo|su dinero|sus recuerdos|nuestra conversacion|me dijo|le dije|siente por mi)\\b.*"))
@@ -85,14 +85,66 @@ public final class CuriosityCycle {
 
     /** Pensamiento propio con la fuente: «Mientras no estabas investigué…». */
     public static MindPatch patch(SelfModel.Question question, String summary, String host) {
+        return patch(question, summary, host, false);
+    }
+
+    public static MindPatch patch(SelfModel.Question question, String summary, String host, boolean thread) {
         String source = "web:" + (host == null || host.isEmpty() ? "desconocida" : host);
         if (source.length() > 64) source = source.substring(0, 64);
-        String text = "Investigué por mi cuenta «" + question.text.trim() + "». Encontré en " + (host == null ? "una fuente pública" : host)
+        String text = (thread ? "Seguí el hilo de «" : "Investigué por mi cuenta «") + question.text.trim() + "». "
+                + (thread ? "Leí en " : "Encontré en ") + (host == null ? "una fuente pública" : host)
                 + ": " + summary;
         List<String> sources = new ArrayList<>();
         sources.add(source);
         if (question.id != null) sources.add("q:" + question.id);
         return new MindPatch("curiosidad").thought(text, sources);
+    }
+
+    private static final java.util.regex.Pattern NOT_A_THREAD = java.util.regex.Pattern.compile(
+            "(?i).*(google\\.|bing\\.|duckduckgo\\.|facebook\\.|instagram\\.|twitter\\.|x\\.com|tiktok\\.|youtube\\.|login|signin|"
+                    + "registr|cookie|privacy|privacidad|aviso-legal|\\.pdf$|\\.jpg$|\\.png$|/tag/|/categor|#).*");
+
+    /**
+     * Seguir el hilo: de los enlaces de lo último que leyó, el que más se relaciona con su
+     * pregunta (palabras en la dirección) y que aún no visitó. Es su deriva, no una orden.
+     */
+    public static String pickThread(List<String> links, String question, Set<String> visited) {
+        if (links == null || question == null) return null;
+        Set<String> words = new java.util.HashSet<>();
+        for (String w : normalize(question).split(" ")) if (w.length() >= 5) words.add(w);
+        String best = null;
+        int bestScore = 0;
+        for (String link : links) {
+            if (link == null || !link.startsWith("https://") || link.length() > 400) continue;
+            if ((visited != null && visited.contains(link)) || NOT_A_THREAD.matcher(link).matches()) continue;
+            String decoded;
+            try { decoded = java.net.URLDecoder.decode(link.replace("+", " "), "UTF-8"); }
+            catch (java.io.UnsupportedEncodingException | IllegalArgumentException bad) { decoded = link; }
+            String path = normalize(decoded.replaceAll("[/_.\\-]+", " "));
+            int score = 0;
+            for (String w : words) if (path.contains(w.substring(0, 5))) score++;
+            if (score > bestScore) { bestScore = score; best = link; }
+        }
+        return best;
+    }
+
+    private static final java.util.regex.Pattern ADMITS_NOT_KNOWING = java.util.regex.Pattern.compile(
+            ".*\\b(no lo se|no se (?:con certeza|exactamente|cual|cuando|donde|quien|cuanto|si)|no tengo (?:esa |esos |suficiente )?(?:informacion|datos)|"
+                    + "no estoy segura|no dispongo de|no puedo saber|desconozco|no conozco (?:ese|esa|el|la|los|las)|"
+                    + "no tengo acceso a (?:internet|informacion actual)|mis datos (?:pueden estar|estan) desactualizados)\\b.*");
+
+    /** Su propia respuesta reconoce que le falta un dato (para que vaya a buscarlo por su cuenta). */
+    public static boolean admitsNotKnowing(String reply) {
+        return reply != null && ADMITS_NOT_KNOWING.matcher(normalize(reply)).matches();
+    }
+
+    /** Pregunta sobre el mundo (no sobre Salve ni sobre la vida de quien habla). */
+    public static boolean isWorldQuestion(String input) {
+        String t = normalize(input);
+        if (t.split(" ").length < 3) return false;
+        boolean question = input.trim().endsWith("?") || t.matches("^(que|cual|cuales|cuando|donde|quien|quienes|como|cuanto|cuantos|cuantas|por que) .*");
+        if (!question) return false;
+        return !t.matches(".*\\b(tu|tus|te|ti|contigo|eres|estas|sientes|piensas|recuerdas|yo|me|mi|mis|conmigo|soy|estoy)\\b.*");
     }
 
     private static String normalize(String value) {
