@@ -345,7 +345,10 @@ final class SalveStageController {
         text.clearSpans();
     }
 
+    private int sketchVersion = -1;
+
     private SketchScene scene(String key) {
+        if (sketchVersion != Sketches.version()) { scenes.clear(); sketchVersion = Sketches.version(); }
         SketchScene cached = scenes.get(key);
         if (cached != null) return cached;
         SketchLibrary library = Sketches.loaded();

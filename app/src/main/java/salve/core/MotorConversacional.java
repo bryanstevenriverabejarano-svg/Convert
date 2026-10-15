@@ -1332,7 +1332,30 @@ public class MotorConversacional {
     private String prepararDibujo(String entrada) {
         salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(context);
         if (library == null) return "";
+        // «Dibújala», «dibuja la foto», «esto es una silla»: sobre la foto que ya está en el chat.
+        VisualMemoryRecord photo = activePhoto;
+        salve.sketch.PhotoSketchRequest onPhoto = photo == null ? null : salve.sketch.PhotoSketchRequest.parse(entrada, false);
+        if (onPhoto != null && onPhoto.kind != salve.sketch.PhotoSketchRequest.Kind.NONE) {
+            Bitmap image = null;
+            try {
+                image = visualMemories.loadImage(photo);
+                if (dibujarFoto(image, onPhoto) != null) return " | " + photoSketchContext;
+            } catch (java.io.IOException missing) {
+                return " | DIBUJO: no puedes abrir los píxeles de la foto guardada; pide que la envíe otra vez.";
+            } finally { if (image != null) image.recycle(); }
+        }
         salve.sketch.SketchRequest request = salve.sketch.SketchRequest.parse(entrada, library);
+        if (request.kind == salve.sketch.SketchRequest.Kind.UNKNOWN) {
+            // No lo tiene: lo piensa en formas geométricas, lo dibuja y lo guarda como suyo.
+            salve.sketch.SketchScene own = componerDibujo(request.unknown);
+            if (own != null) {
+                empezarDibujo(own);
+                return " | ACCION_REALIZADA: no tenías «" + request.unknown + "» en tu repertorio; lo has compuesto tú misma "
+                        + "con formas geométricas (rectángulos, círculos, líneas) y ya lo estás dibujando con tus epiciclos. "
+                        + "Es tu propia interpretación y ya forma parte de tu repertorio. Coméntalo con naturalidad y dile a Bryan "
+                        + "que, si te enseña una foto o te lo dibuja con el dedo, lo aprenderás mejor.";
+            }
+        }
         switch (request.kind) {
             case DRAW: case SELF: case FREE: {
                 salve.sketch.SketchScene scene = request.scene != null ? request.scene
@@ -1353,12 +1376,95 @@ public class MotorConversacional {
                         + salve.sketch.SketchRequest.repertoire(library, 40)
                         + ". También puedes combinar hasta cuatro en una escena y dibujarte a ti misma. Al contar cuentos los ilustras.";
             case UNKNOWN:
-                return " | DIBUJO: Bryan te pide dibujar «" + request.unknown + "», que todavía no está en tu repertorio de trazos ("
-                        + salve.sketch.SketchRequest.repertoire(library, 18) + "). Díselo con honestidad y ofrece algo parecido "
-                        + "del repertorio. No afirmes haberlo dibujado.";
+                return " | DIBUJO: Bryan te pide dibujar «" + request.unknown + "», que todavía no está en tu repertorio de trazos y "
+                        + "no conseguiste componerlo con formas. Díselo con honestidad y pídele que te enseñe una foto («esto es…») "
+                        + "o que te lo dibuje con el dedo en «Enséñale a dibujar». No afirmes haberlo dibujado.";
             default:
                 return "";
         }
+    }
+
+    /** Contexto del último trazado de foto (geometría y lo aprendido) para la respuesta del modelo. */
+    private volatile String photoSketchContext = "";
+
+    /**
+     * Analiza la geometría de una foto y la dibuja; si Bryan la nombró, la aprende.
+     * @return una frase de respaldo para decir si no hay modelo con visión, o null si no se pidió dibujo
+     */
+    private String dibujarFoto(Bitmap foto, salve.sketch.PhotoSketchRequest request) {
+        if (request == null || request.kind == salve.sketch.PhotoSketchRequest.Kind.NONE || foto == null || foto.isRecycled()) return null;
+        salve.sketch.ImageTracer.Result traced;
+        Bitmap small = null;
+        try {
+            float scale = Math.min(1f, salve.sketch.ImageTracer.MAX_SIDE / (float) Math.max(foto.getWidth(), foto.getHeight()));
+            int w = Math.max(8, Math.round(foto.getWidth() * scale)), h = Math.max(8, Math.round(foto.getHeight() * scale));
+            small = Bitmap.createScaledBitmap(foto, w, h, true);
+            int[] pixels = new int[w * h];
+            small.getPixels(pixels, 0, w, 0, 0, w, h);
+            boolean learn = request.kind == salve.sketch.PhotoSketchRequest.Kind.LEARN;
+            traced = salve.sketch.ImageTracer.trace(pixels, w, h, 1600, learn);
+        } catch (RuntimeException | OutOfMemoryError error) {
+            Log.w(TAG, "No se pudo trazar la foto", error);
+            photoSketchContext = "DIBUJO: intentaste trazar la foto pero falló el análisis; dilo con sencillez.";
+            return "Quise trazar la foto, pero no pude analizar sus líneas. ¿Me mandas otra con más luz?";
+        } finally { if (small != null && small != foto) small.recycle(); }
+        if (!traced.isUsable()) {
+            photoSketchContext = "DIBUJO: la foto tiene muy pocas líneas claras para dibujarla. Pide otra con el objeto "
+                    + "más grande, buena luz y fondo liso.";
+            return "En esta foto no encuentro líneas claras para dibujarla. Si me mandas otra con el objeto más grande y el fondo liso, la trazo.";
+        }
+        String name = request.kind == salve.sketch.PhotoSketchRequest.Kind.LEARN ? request.name
+                : "tu foto de las " + new java.text.SimpleDateFormat("HH:mm", java.util.Locale.ROOT).format(new java.util.Date());
+        salve.sketch.SketchScene scene;
+        try { scene = salve.sketch.Sketches.learn(context, name, traced.strokes, traced.aspect, "photo"); }
+        catch (java.io.IOException | RuntimeException error) {
+            Log.w(TAG, "No se pudo guardar el dibujo aprendido", error);
+            photoSketchContext = "DIBUJO: analizaste la foto pero no pudiste guardar lo aprendido.";
+            return "He analizado la foto, pero no he podido guardar el dibujo. Inténtalo de nuevo.";
+        }
+        empezarDibujo(scene);
+        boolean learned = request.kind == salve.sketch.PhotoSketchRequest.Kind.LEARN;
+        photoSketchContext = "GEOMETRIA_DE_LA_FOTO: " + traced.geometry.describe()
+                + " ACCION_REALIZADA: has analizado esa geometría y ya estás trazando sus líneas con tus epiciclos"
+                + (learned ? "; has aprendido a dibujar «" + scene.title + "» y a partir de ahora lo tienes en tu repertorio"
+                           + " (si te piden otro, lo dibujas así)" : "")
+                + ". Comenta brevemente qué formas ves y lo que estás dibujando.";
+        return (learned ? "Aprendido: ya sé dibujar " + scene.title + ". " : "")
+                + "He analizado sus líneas: " + traced.geometry.describe() + " Mira cómo lo trazo.";
+    }
+
+    /** Sin el motivo en su repertorio, lo compone ella con formas geométricas y lo aprende. */
+    private salve.sketch.SketchScene componerDibujo(String subject) {
+        if (llm == null || subject == null || subject.trim().isEmpty()) return null;
+        try {
+            ModelResult result = llm.generateResult(salve.sketch.ShapeProgram.prompt(subject), SalveLLM.Role.CREADOR);
+            if (result == null || !result.isSuccess()) return null;
+            salve.sketch.ShapeProgram.Result shapes = salve.sketch.ShapeProgram.parse(result.getText());
+            if (!shapes.isUsable()) return null;
+            return salve.sketch.Sketches.learn(context, subject, shapes.strokes, shapes.aspect, "model");
+        } catch (Exception | OutOfMemoryError error) {
+            Log.w(TAG, "No pudo componer el dibujo de " + subject, error);
+            return null;
+        }
+    }
+
+    /** Bryan le enseña un dibujo hecho con el dedo: lo aprende y lo redibuja con sus epiciclos. */
+    public void aprenderDibujoAMano(String nombre, List<float[]> trazos, float proporcion) {
+        try {
+            conversationExecutor.execute(() -> {
+                if (closed) return;
+                try {
+                    salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, nombre, trazos, proporcion, "hand");
+                    conversationSession.addUser("[Te enseñé a dibujar " + scene.title + " con el dedo]");
+                    salve.sketch.Sketches.show(scene);
+                    hablar(salve.sketch.SketchProtocol.tag(scene) + "\nGracias por enseñarme. Ya sé dibujar "
+                            + scene.title + ": así lo trazo yo, con mis círculos de luz. Pídemelo cuando quieras.");
+                } catch (java.io.IOException | RuntimeException error) {
+                    Log.w(TAG, "No se pudo aprender el dibujo", error);
+                    hablar("No he podido guardar ese dibujo. Prueba otra vez con un nombre más corto.");
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ignored) { }
     }
 
     /** Publica la escena en el escenario y deja su marca para el chat de la respuesta final. */
@@ -2228,6 +2334,14 @@ public class MotorConversacional {
                     VisualMemoryRecord saved = visualMemories.capture(foto, entrada, personName, relationship, position, localOnly);
                     setActivePhoto(saved);
                     rememberDeclaredSelf(saved);
+                    // «Esto es un mueble, dibújame uno»: analiza la geometría, aprende y dibuja.
+                    turnSketchTag.set(null);
+                    String photoSketch = dibujarFoto(foto, salve.sketch.PhotoSketchRequest.parse(entrada, true));
+                    if (!canAnalyzePhoto(saved) && photoSketch != null) {
+                        conversationSession.addUser(entrada + " [Foto guardada: " + saved.id + "]");
+                        hablar(photoSketch);
+                        return;
+                    }
                     if (!canAnalyzePhoto(saved)) {
                         conversationSession.addUser(entrada + " [Foto guardada: " + saved.id + "]");
                         hablar("He guardado la foto" + (saved.personName.isEmpty() ? "." : " con el nombre que confirmaste: " + saved.personName + ".")
@@ -2238,7 +2352,8 @@ public class MotorConversacional {
                     String visualInput = entrada + " [Foto guardada y adjunta: " + saved.id + "]";
                     conversationSession.addUser(visualInput);
                     CognitiveTurn.Outcome cognitive = runCognitiveTurn(visualInput,
-                            "CONSULTA_VISUAL: describe sólo lo observable; los recuerdos no prueban lo que aparece en la foto.",
+                            "CONSULTA_VISUAL: describe sólo lo observable; los recuerdos no prueban lo que aparece en la foto."
+                                    + (photoSketch == null ? "" : " | " + photoSketchContext),
                             null, false, memoria.recuperarContextoConversacional(entrada), true);
                     ModelResult result = cognitive.result;
                     String respuesta = result.isSuccess() ? result.getText() : modelFailureMessage(result);

@@ -33,23 +33,63 @@ public final class Sketches {
 
     private Sketches() { }
 
-    /** Bloquea la primera vez (≈0,3 MB de JSON); llámese desde un hilo de fondo o tras {@link #preload}. */
+    private static volatile SketchLibrary builtIn;
+    private static volatile LearnedSketches learnedStore;
+    private static volatile int version;
+
+    /**
+     * Repertorio completo (de serie + aprendido). Bloquea la primera vez (≈0,3 MB de JSON);
+     * llámese desde un hilo de fondo o tras {@link #preload}.
+     */
     public static SketchLibrary library(Context context) {
         SketchLibrary current = library;
         if (current != null || context == null) return current;
         synchronized (Sketches.class) {
             if (library != null) return library;
-            try (InputStream input = context.getApplicationContext().getAssets().open("sketch/library.json")) {
+            Context app = context.getApplicationContext();
+            try (InputStream input = app.getAssets().open("sketch/library.json")) {
                 ByteArrayOutputStream bytes = new ByteArrayOutputStream();
                 byte[] buffer = new byte[16384]; int n;
                 while ((n = input.read(buffer)) != -1) bytes.write(buffer, 0, n);
-                library = SketchLibrary.parse(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
+                builtIn = SketchLibrary.parse(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
+                library = builtIn.withLearned(learned(app).all());
             } catch (Exception | OutOfMemoryError error) {
                 Log.e(TAG, "No se pudo cargar el repertorio de trazos", error);
             }
             return library;
         }
     }
+
+    /** Lo que ha aprendido a dibujar (files/sketch/learned.json). */
+    public static LearnedSketches learned(Context context) {
+        LearnedSketches store = learnedStore;
+        if (store != null) return store;
+        synchronized (Sketches.class) {
+            if (learnedStore == null)
+                learnedStore = new LearnedSketches(new java.io.File(context.getApplicationContext().getFilesDir(), "sketch"));
+            return learnedStore;
+        }
+    }
+
+    /**
+     * Aprende un motivo nuevo (cualquier hilo) y lo suma al repertorio en caliente.
+     * @return la escena lista para dibujarlo
+     */
+    public static SketchScene learn(Context context, String name, List<float[]> strokes, float aspect, String source)
+            throws java.io.IOException {
+        SketchLibrary base = library(context);
+        if (base == null) throw new java.io.IOException("Repertorio no disponible");
+        SketchLibrary.Motif motif = learned(context).learn(name, strokes, aspect, source);
+        synchronized (Sketches.class) {
+            library = builtIn.withLearned(learned(context).all());
+            version++;
+        }
+        main.post(() -> { for (Runnable l : new ArrayList<>(listeners)) l.run(); });
+        return SketchScene.compose(java.util.Collections.singletonList(motif));
+    }
+
+    /** Cambia cada vez que aprende algo: las vistas descartan escenas guardadas en caché. */
+    public static int version() { return version; }
 
     /** Sólo devuelve la biblioteca si ya está cargada (seguro en el hilo principal). */
     public static SketchLibrary loaded() { return library; }
@@ -65,16 +105,16 @@ public final class Sketches {
     public static SketchAnimation animation(SketchScene scene) {
         if (scene == null) return null;
         synchronized (ready) {
-            SketchAnimation done = ready.get(scene.key);
-            if (done != null || !pending.add(scene.key)) return done;
+            SketchAnimation done = ready.get(scene.cacheKey);
+            if (done != null || !pending.add(scene.cacheKey)) return done;
         }
         worker.execute(() -> {
             SketchAnimation made = null;
             try { made = new SketchAnimation(scene); }
             catch (RuntimeException | OutOfMemoryError error) { Log.w(TAG, "Escena no dibujable: " + scene.key, error); }
             synchronized (ready) {
-                pending.remove(scene.key);
-                if (made != null) ready.put(scene.key, made);
+                pending.remove(scene.cacheKey);
+                if (made != null) ready.put(scene.cacheKey, made);
             }
         });
         return null;
@@ -99,7 +139,7 @@ public final class Sketches {
         animation(scene);
         main.post(() -> {
             Showing current = showing;
-            if (current != null && current.scene.key.equals(scene.key)
+            if (current != null && current.scene.cacheKey.equals(scene.cacheKey)
                     && android.os.SystemClock.uptimeMillis() - current.startedAt < 15000) return;
             showing = new Showing(scene, android.os.SystemClock.uptimeMillis());
             salve.avatar.AstralBody.get().setDrawing(scene.title, 12f);

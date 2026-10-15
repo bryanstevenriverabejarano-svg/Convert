@@ -715,12 +715,34 @@ public class MainActivity extends AppCompatActivity {
         liveVoiceSession.show();
     }
 
+    private static final java.util.regex.Pattern ENSENAR_DIBUJO = java.util.regex.Pattern.compile(
+            "^(?:salve,?\\s*)?(?:te\\s+)?(?:voy\\s+a\\s+|quiero\\s+)?ens[eé](?:ñ|n)(?:o|ar|arte|ale|arle)(?:te)?\\s+a\\s+dibujar"
+            + "(?:\\s+((?:un|una|el|la|mi)\\s+[\\p{L} ]{2,40}))?\\s*[.!]*$",
+            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
+
+    /** Lienzo para dibujar con el dedo; Salve aprende el dibujo y lo redibuja con sus epiciclos. */
+    private void abrirLienzoParaEnsenar(String nombreSugerido) {
+        if (isFinishing() || isDestroyed()) return;
+        salve.sketch.TeachSketchDialog.show(this, nombreSugerido, (nombre, trazos, proporcion) -> {
+            stageController.appendMessage(false, "Te enseño a dibujar " + nombre + " (dibujo a mano)");
+            motorConversacional.aprenderDibujoAMano(nombre, trazos, proporcion);
+        });
+    }
+
     private void procesarMensajeUsuario(String mensaje, boolean porVoz) {
         if (mensaje == null || mensaje.trim().isEmpty()) return;
         String limpio = mensaje.trim();
         // A typed/dictated turn takes ownership from the continuous microphone session.
         if (liveVoiceSession != null) { liveVoiceSession.dismiss(); liveVoiceSession = null; }
         stageController.appendMessage(false, limpio);
+        // «Te enseño a dibujar una lámpara»: abre el lienzo para dibujar con el dedo.
+        java.util.regex.Matcher teach = ENSENAR_DIBUJO.matcher(limpio);
+        if (teach.find()) {
+            inputChat.setText("");
+            String sugerido = teach.group(1) == null ? null : teach.group(1).trim();
+            abrirLienzoParaEnsenar(sugerido == null || sugerido.isEmpty() ? null : sugerido);
+            return;
+        }
         salve.core.tools.AssistantControlCommand sceneCommand = salve.core.tools.AssistantControlCommand.parse(limpio);
         if (sceneCommand != null) {
             switch (sceneCommand.type) {
@@ -881,6 +903,7 @@ public class MainActivity extends AppCompatActivity {
         // ==== LISTENERS ====
         findViewById(R.id.btnConfigurarIA).setOnClickListener(v -> { stageController.closePanels(); mostrarAjustesIA(); });
         findViewById(R.id.btnAvatar).setOnClickListener(v -> { stageController.closePanels(); startActivity(new Intent(this, AvatarRoomActivity.class)); });
+        findViewById(R.id.btnTeachDrawing).setOnClickListener(v -> { stageController.closePanels(); abrirLienzoParaEnsenar(null); });
         findViewById(R.id.btnDispositivos).setOnClickListener(v -> { stageController.closePanels(); startActivity(new Intent(this, DeviceControlActivity.class)); });
         btnEnviarMensaje.setOnClickListener(v -> {
             String mensaje = inputChat.getText().toString().trim();

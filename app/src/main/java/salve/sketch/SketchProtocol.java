@@ -15,7 +15,7 @@ public final class SketchProtocol {
     public static final int MAX_PER_MESSAGE = 6;
     /** Cualquier intento de marca (incluso mal formado) se retira de voz e historial. */
     private static final Pattern ANY = Pattern.compile("(?i)\\[{1,2}\\s*salve[_\\s-]*draw\\b[^\\]\\n]{0,160}\\]{0,2}");
-    private static final Pattern VALID = Pattern.compile("(?iu)\\[\\[\\s*salve_draw\\s*:\\s*([a-zñáéíóú +]{2,120})\\]\\]");
+    private static final Pattern VALID = Pattern.compile("(?iu)\\[\\[\\s*salve_draw\\s*:\\s*([a-z0-9ñáéíóú +]{2,120})\\]\\]");
 
     private SketchProtocol() { }
 

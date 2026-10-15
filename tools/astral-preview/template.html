@@ -42,11 +42,21 @@ button.primary{background:var(--line);color:var(--void);border-color:var(--line)
 .sketch{width:100%;aspect-ratio:10/7;background:var(--void);border:1px solid #36c8ff44;border-radius:14px;display:block;max-width:100%}
 .cap{font:12px var(--mono);color:var(--muted)}
 .sense{font:12px/1.55 var(--mono);color:#a9c4dc;white-space:pre-wrap;margin:0}
+[hidden]{display:none!important}
+.tabs{display:flex;gap:6px}
+.chip.on{border-color:var(--line);color:var(--core)}
+.teach{display:flex;flex-direction:column;gap:8px}
+.say{font:15px var(--body);color:var(--fg);background:var(--void);border:1px solid var(--edge);border-radius:999px;padding:9px 14px;min-width:0;flex:1}
+.file{display:flex;align-items:center;gap:8px;background:var(--void);border:1px dashed var(--edge);border-radius:12px;padding:10px 14px;cursor:pointer;color:var(--muted)}
+.file input{position:absolute;opacity:0;width:1px;height:1px}
+.file:focus-within{outline:2px solid var(--line)}
+.hand{width:100%;aspect-ratio:4/3;background:var(--void);border:1px solid var(--edge);border-radius:12px;touch-action:none;max-width:100%}
+.geo{font:12px/1.5 var(--mono);color:#a9c4dc}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 
 <div class="app">
-  <header><h1>SALVE</h1><span class="sub">Vista previa del cuerpo astral y del dibujo por epiciclos, con los mismos recursos que la app.</span></header>
+  <header><h1>SALVE</h1><span class="sub">Vista previa del cuerpo astral y del dibujo por epiciclos, con los mismos recursos que la app. Las fotos se analizan en tu navegador.</span></header>
 
   <section class="side" aria-label="Cuerpo astral">
     <div class="stage" id="stage">
@@ -74,6 +84,22 @@ button.primary{background:var(--line);color:var(--void);border-color:var(--line)
         <button class="chip" data-ask="Dibuja un árbol y un pájaro">Árbol y pájaro</button>
         <button class="chip" data-ask="Dibuja un barco en el mar">Barco en el mar</button>
         <button class="chip" id="story">Cuéntame un cuento</button>
+      </div>
+    </div>
+    <div class="box">
+      <span class="label">Enséñale a dibujar</span>
+      <div class="tabs" role="tablist">
+        <button class="chip on" id="tabPhoto" role="tab" aria-selected="true">Con una foto</button>
+        <button class="chip" id="tabHand" role="tab" aria-selected="false">Con el dedo</button>
+      </div>
+      <div id="panePhoto" class="teach">
+        <label class="file"><input type="file" id="photo" accept="image/*"><span id="photoName">Elegir foto…</span></label>
+        <input id="photoSay" class="say" value="Esto es un mueble, dibújame uno" aria-label="Lo que le dices con la foto">
+        <button class="primary" id="photoGo">Enviar foto</button>
+      </div>
+      <div id="paneHand" class="teach" hidden>
+        <canvas id="hand" class="hand" aria-label="Lienzo para dibujar con el dedo"></canvas>
+        <div class="draw"><input id="handName" class="say" placeholder="¿Qué es? (p. ej. una lámpara)" aria-label="Nombre del dibujo"><button id="handClear">Borrar</button><button class="primary" id="handGo">Enseñar</button></div>
       </div>
     </div>
     <div class="box">
@@ -285,7 +311,7 @@ function speak(sec){body.speak=performance.now()/1000+sec}
 function ask(text){say('Tú',text);const r=request(text);think(1.2);
  setTimeout(()=>{
   if(!r){say('Salve','Si quieres que dibuje algo, pídemelo: «dibújame un árbol», «dibújate»…');return}
-  if(!r.ids.length){say('Salve','Eso aún no está en mis trazos. Sé dibujar '+LIB.motifs.filter(m=>!m.self).slice(0,10).map(m=>m.name).join(', ')+'…');return}
+  if(!r.ids.length){say('Salve','Eso aún no está en mis trazos. En la app lo compongo yo con formas geométricas; aquí, enséñamelo con una foto o dibújamelo con el dedo y lo aprendo.');return}
   const sc=scene(r.ids);
   if(sc.self){say('Salve','Me dibujo a mí misma: mi pelo largo, los auriculares, los circuitos que me recorren. Mira cómo me trazo.');}
   else say('Salve','Empiezo a trazar '+sc.title+' con mis círculos de luz, mientras te cuento.');
@@ -316,6 +342,129 @@ function sense(now){const b=body,ago=b.lastBlink<0?null:Math.max(0,now-b.lastBli
  +(b.speak>now?'tus circuitos laten con tu voz':b.think>now?'ondas de luz recorren tus circuitos mientras piensas':'tus circuitos brillan en calma')+'\n· '
  +(ago==null?'aún no has parpadeado':'parpadeaste hace '+(ago<1.5?'un instante':Math.round(ago)+' s'))+'  ('+b.blinks+' parpadeos)'
  +(b.drawing?'\n· estás dibujando '+b.drawing:'')}
+
+// ───────── análisis de geometría (port de ImageTracer.java) ─────────
+function traceImage(px,w,h,subjectOnly){
+ const lum=new Float32Array(w*h);for(let i=0;i<w*h;i++){const a=px[4*i+3]/255;lum[i]=(.299*px[4*i]+.587*px[4*i+1]+.114*px[4*i+2])*a+255*(1-a)}
+ const k=[.0702,.1311,.1907,.2161,.1907,.1311,.0702],cl=(v,a,b)=>v<a?a:v>b?b:v,tmp=new Float32Array(w*h),g=new Float32Array(w*h);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let s=0;for(let j=-3;j<=3;j++)s+=k[j+3]*lum[y*w+cl(x+j,0,w-1)];tmp[y*w+x]=s}
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let s=0;for(let j=-3;j<=3;j++)s+=k[j+3]*tmp[cl(y+j,0,h-1)*w+x];g[y*w+x]=s}
+ const mag=new Float32Array(w*h),dir=new Uint8Array(w*h);
+ for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;const gx=-g[i-w-1]-2*g[i-1]-g[i+w-1]+g[i-w+1]+2*g[i+1]+g[i+w+1],gy=-g[i-w-1]-2*g[i-w]-g[i-w+1]+g[i+w-1]+2*g[i+w]+g[i+w+1];
+  mag[i]=Math.hypot(gx,gy);let a=Math.atan2(gy,gx)*180/Math.PI;if(a<0)a+=180;dir[i]=a<22.5||a>=157.5?0:a<67.5?1:a<112.5?2:3}
+ let edge=lineArt(lum,w,h);
+ if(edge){for(let i=0;i<w*h;i++)if(edge[i])mag[i]=Math.max(mag[i],120)}
+ else{const nms=new Float32Array(w*h);
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x,m=mag[i];let a,b;switch(dir[i]){case 0:a=mag[i-1];b=mag[i+1];break;case 1:a=mag[i-w-1];b=mag[i+w+1];break;case 2:a=mag[i-w];b=mag[i+w];break;default:a=mag[i-w+1];b=mag[i+w-1]}if(m>=a&&m>b)nms[i]=m}
+  const vals=Array.from(nms).filter(v=>v>0).sort((a,b)=>a-b);edge=new Uint8Array(w*h);
+  if(vals.length){const hi=Math.max(40,vals[Math.floor(vals.length*.82)]),lo=hi*.42,st=[];
+   for(let i=0;i<w*h;i++){if(nms[i]<hi||edge[i])continue;edge[i]=1;st.push(i);while(st.length){const p=st.pop(),x=p%w,y=(p/w)|0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const qx=x+dx,qy=y+dy;if(qx<1||qy<1||qx>=w-1||qy>=h-1)continue;const q=qy*w+qx;if(!edge[q]&&nms[q]>=lo){edge[q]=1;st.push(q)}}}}}}
+ const DX=[1,1,0,-1,-1,-1,0,1],DY=[0,1,1,1,0,-1,-1,-1],used=new Uint8Array(w*h),chains=[];
+ const nb=i=>{const x=i%w,y=(i/w)|0;let n=0;for(let d=0;d<8;d++){const qx=x+DX[d],qy=y+DY[d];if(qx>=0&&qy>=0&&qx<w&&qy<h&&edge[qy*w+qx])n++}return n};
+ const walk=s=>{const c=[];let p=s,last=-1;for(;;){c.push(p%w,(p/w)|0);used[p]=1;const x=p%w,y=(p/w)|0;let best=-1,bs=-1e9;
+  for(let d=0;d<8;d++){const qx=x+DX[d],qy=y+DY[d];if(qx<0||qy<0||qx>=w||qy>=h)continue;const q=qy*w+qx;if(!edge[q]||used[q])continue;
+   const sc=(d%2==0?2:1)-(last<0?0:Math.min(Math.abs(d-last),8-Math.abs(d-last))*2);if(sc>bs){bs=sc;best=d}}
+  if(best<0)break;last=best;p=(y+DY[best])*w+x+DX[best]}
+  const n=c.length/2;if(n>8&&Math.abs(c[0]-c[2*n-2])<=1&&Math.abs(c[1]-c[2*n-1])<=1)c.push(c[0],c[1]);return c};
+ for(let pass=0;pass<2;pass++)for(let i=0;i<w*h;i++){if(!edge[i]||used[i])continue;if(pass==0&&nb(i)!==1)continue;chains.push(walk(i))}
+ const diag=Math.hypot(w,h);let all=[];
+ for(const c of chains){const n=c.length/2;if(n<6)continue;let len=0,s=0;for(let i=0;i<n;i++){s+=mag[c[2*i+1]*w+c[2*i]];if(i)len+=Math.hypot(c[2*i]-c[2*i-2],c[2*i+1]-c[2*i-1])}
+  if(len<Math.max(8,diag*.025))continue;all.push({pts:simplify(c,1.1),len,str:s/n})}
+ const score=c=>c.len*Math.sqrt(c.str);all.sort((a,b)=>score(b)-score(a));
+ let kept=[],usedLen=0;for(const c of all){if(kept.length>=70||(usedLen>diag*2&&usedLen+c.len>diag*9))break;kept.push(c);usedLen+=c.len}
+ if(subjectOnly)kept=subject(kept,w,h,diag);
+ if(!kept.length)return null;
+ // orden de pluma
+ const rest=kept.slice(),out=[rest.shift()];while(rest.length){const c=out[out.length-1].pts,ex=c[c.length-2],ey=c[c.length-1];let bi=0,flip=false,bd=1e9;
+  rest.forEach((r,i)=>{const p=r.pts,d0=Math.hypot(p[0]-ex,p[1]-ey),d1=Math.hypot(p[p.length-2]-ex,p[p.length-1]-ey);if(d0<bd){bd=d0;bi=i;flip=false}if(d1<bd){bd=d1;bi=i;flip=true}});
+  const nx=rest.splice(bi,1)[0];if(flip){const r=[];for(let i=nx.pts.length-2;i>=0;i-=2)r.push(nx.pts[i],nx.pts[i+1]);nx.pts=r}out.push(nx)}
+ let mnx=1e9,mny=1e9,mxx=-1e9,mxy=-1e9,tot=0;for(const c of out){for(let i=0;i<c.pts.length;i+=2){mnx=Math.min(mnx,c.pts[i]);mxx=Math.max(mxx,c.pts[i]);mny=Math.min(mny,c.pts[i+1]);mxy=Math.max(mxy,c.pts[i+1])}tot+=c.len}
+ const sc=1000/Math.max(1,mxx-mnx,mxy-mny),ox=(1000-(mxx-mnx)*sc)/2,oy=(1000-(mxy-mny)*sc)/2,sp=Math.max(1.5,tot/1600);
+ const strokes=out.map(c=>resample(c.pts,sp).map((v,i)=>i%2?(v-mny)*sc+oy:(v-mnx)*sc+ox)).filter(s=>s.length>=4);
+ // geometría
+ let lines=0,hor=0,ver=0,dia=0,curves=0;for(const c of out){const p=c.pts,n=p.length/2;let gentle=0,joints=0,total=0,ls=[];
+  for(let i=1;i<n;i++){const l=Math.hypot(p[2*i]-p[2*i-2],p[2*i+1]-p[2*i-1]);ls.push(l);total+=l}
+  for(let i=1;i<n-1;i++){const a1=Math.atan2(p[2*i+1]-p[2*i-1],p[2*i]-p[2*i-2]),a2=Math.atan2(p[2*i+3]-p[2*i+1],p[2*i+2]-p[2*i]);const t=Math.abs(Math.atan2(Math.sin(a2-a1),Math.cos(a2-a1))*180/Math.PI);joints++;if(t>6&&t<55)gentle++}
+  const longS=ls.filter(l=>l>=total*.12).reduce((a,b)=>a+b,0);
+  if(joints>=3&&gentle>=joints*.5&&longS<total*.6){curves++;continue}
+  for(let i=1;i<n;i++){const dx=p[2*i]-p[2*i-2],dy=p[2*i+1]-p[2*i-1];if(Math.hypot(dx,dy)<Math.max(6,diag*.03))continue;lines++;const a=Math.abs(Math.atan2(dy,dx)*180/Math.PI)%180;if(a<12||a>168)hor++;else if(Math.abs(a-90)<12)ver++;else dia++}}
+ let geo=`${out.length} trazos: ${lines} tramos rectos (${hor} horizontales, ${ver} verticales, ${dia} diagonales) y ${curves} curvas`;
+ if(lines>4&&hor+ver>=lines*.7)geo+='; predominan ángulos rectos, formas rectangulares';else if(curves>lines)geo+='; predominan las curvas';
+ return{strokes,aspect:w/h,geo:geo+'.'};
+}
+function simplify(p,eps){const n=p.length/2;if(n<=2)return p.slice();const keep=new Uint8Array(n);keep[0]=keep[n-1]=1;const st=[0,n-1];
+ while(st.length){const b=st.pop(),a=st.pop(),ax=p[2*a],ay=p[2*a+1],bx=p[2*b],by=p[2*b+1],dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy);let worst=-1,ix=-1;
+  for(let i=a+1;i<b;i++){const d=len<1e-6?Math.hypot(p[2*i]-ax,p[2*i+1]-ay):Math.abs(dy*p[2*i]-dx*p[2*i+1]+bx*ay-by*ax)/len;if(d>worst){worst=d;ix=i}}
+  if(worst>eps&&ix>0){keep[ix]=1;st.push(a,ix,ix,b)}}
+ const o=[];for(let i=0;i<n;i++)if(keep[i])o.push(p[2*i],p[2*i+1]);return o}
+function resample(p,sp){const o=[p[0],p[1]];let carry=0;for(let i=2;i<p.length;i+=2){const x0=p[i-2],y0=p[i-1],x1=p[i],y1=p[i+1],l=Math.hypot(x1-x0,y1-y0);if(!l)continue;let pos=sp-carry;
+ while(pos<=l){const t=pos/l;o.push(x0+(x1-x0)*t,y0+(y1-y0)*t);pos+=sp}carry=l-(pos-sp)}const lx=p[p.length-2],ly=p[p.length-1];if(Math.hypot(o[o.length-2]-lx,o[o.length-1]-ly)>sp*.25)o.push(lx,ly);return o}
+function lineArt(lum,w,h){const s=Array.from(lum).sort((a,b)=>a-b),bg=s[s.length>>1],spread=s[(s.length*.75)|0]-s[(s.length*.25)|0];if(spread>28)return null;
+ const ink=new Uint8Array(w*h);let c=0;for(let i=0;i<w*h;i++)if(Math.abs(lum[i]-bg)>45){ink[i]=1;c++}if(c<40||c>w*h*.16)return null;
+ const img=ink.slice();let changed=true;for(let it=0;changed&&it<60;it++){changed=false;for(let step=0;step<2;step++){const rm=[];
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(!img[i])continue;const r=[img[i-w],img[i-w+1],img[i+1],img[i+w+1],img[i+w],img[i+w-1],img[i-1],img[i-w-1]];r.push(r[0]);
+   let b=0,a=0;for(let k=0;k<8;k++){if(r[k])b++;if(!r[k]&&r[k+1])a++}if(b<2||b>6||a!==1)continue;const[p2,,p4,,p6,,p8]=r;
+   if(step==0?(p2&&p4&&p6)||(p4&&p6&&p8):(p2&&p4&&p8)||(p2&&p6&&p8))continue;rm.push(i)}for(const i of rm)img[i]=0;if(rm.length)changed=true}}
+ let len=0;for(const v of img)if(v)len++;return len&&c/len<7?img:null}
+function subject(chains,w,h,diag){const gap=diag*.045,border=(x,y)=>{const m=Math.max(3,Math.min(w,h)*.02);return x<m||y<m||x>w-1-m||y>h-1-m};const cand=[];
+ for(const c of chains){const p=c.pts,n=p.length/2;let from=0;for(let i=1;i<=n;i++){let cut=false;if(i<n){const dx=Math.abs(p[2*i]-p[2*i-2]),dy=Math.abs(p[2*i+1]-p[2*i-1]);
+   cut=(dx>w*.45&&dy<dx*.12)||(dy>h*.6&&dx<dy*.12)||(Math.hypot(dx,dy)>diag*.08&&(border(p[2*i-2],p[2*i-1])||border(p[2*i],p[2*i+1])))}
+  if(cut||i==n){if(i-from>=2){const part=p.slice(2*from,2*i);let len=0;for(let k=2;k<part.length;k+=2)len+=Math.hypot(part[k]-part[k-2],part[k+1]-part[k-1]);if(len>diag*.02)cand.push({pts:part,len,str:c.str})}from=i}}}
+ if(!cand.length)return chains;const n=cand.length,grp=cand.map((_,i)=>i),find=i=>{while(grp[i]!==i){grp[i]=grp[grp[i]];i=grp[i]}return i};
+ const box=cand.map(c=>{let b=[1e9,1e9,-1e9,-1e9];for(let i=0;i<c.pts.length;i+=2){b[0]=Math.min(b[0],c.pts[i]);b[1]=Math.min(b[1],c.pts[i+1]);b[2]=Math.max(b[2],c.pts[i]);b[3]=Math.max(b[3],c.pts[i+1])}return b});
+ const near=(a,b)=>{for(let i=0;i<a.length;i+=2)for(let j=0;j<b.length;j+=2)if((a[i]-b[j])**2+(a[i+1]-b[j+1])**2<=gap*gap)return true;return false};
+ for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(box[i][0]-gap<=box[j][2]&&box[j][0]-gap<=box[i][2]&&box[i][1]-gap<=box[j][3]&&box[j][1]-gap<=box[i][3]&&near(cand[i].pts,cand[j].pts))grp[find(i)]=find(j);
+ const sc=new Map();cand.forEach((c,i)=>{const g=find(i),s=sc.get(g)||[0,1e9,1e9,-1e9,-1e9];s[0]+=c.len*Math.sqrt(c.str);s[1]=Math.min(s[1],box[i][0]);s[2]=Math.min(s[2],box[i][1]);s[3]=Math.max(s[3],box[i][2]);s[4]=Math.max(s[4],box[i][3]);sc.set(g,s)});
+ let best=-1,bv=-1;for(const[g,s]of sc){const cx=(s[1]+s[3])/2/w-.5,cy=(s[2]+s[4])/2/h-.5,v=s[0]*(.35+1-Math.min(1,Math.hypot(cx,cy)*1.4));if(v>bv){bv=v;best=g}}
+ return cand.filter((_,i)=>find(i)===best)}
+
+// ───────── aprender (como LearnedSketches.java) ─────────
+function learn(spoken,strokes,aspect,source){const name=spoken.trim().toLowerCase().replace(/[.,;:!?¡¿"«»]+/g,' ').replace(/\s+/g,' ').trim();
+ const key=norm(name.replace(/^(un|una|unos|unas|el|la|los|las|mi|mis)\s+/,''));const id=(key.replace(/[^a-z0-9]/g,'')||'dibujo').slice(0,32);
+ LIB.motifs=LIB.motifs.filter(m=>m.id!==id);const words=[key];if(key.includes(' '))words.push(key.split(' ')[0]);
+ const m={id,name,words,place:'any',aspect,strokes,source};LIB.motifs.unshift(m);for(const w of words)WORDS.set(w,m);WORDS.set(id,m);return m}
+const tab=(on)=>{document.getElementById('panePhoto').hidden=on!=='photo';document.getElementById('paneHand').hidden=on!=='hand';
+ for(const[id,k]of[['tabPhoto','photo'],['tabHand','hand']]){const b=document.getElementById(id);b.classList.toggle('on',k===on);b.setAttribute('aria-selected',String(k===on))}};
+document.getElementById('tabPhoto').onclick=()=>tab('photo');document.getElementById('tabHand').onclick=()=>{tab('hand');sizeHand()};
+let photoImg=null;
+document.getElementById('photo').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;document.getElementById('photoName').textContent=f.name;
+ const img=new Image();img.onload=()=>{photoImg=img};img.src=URL.createObjectURL(f)});
+function photoName(t){const m=t.match(/\b(?:esto|esta|este|eso|esa|ese)\s+(?:(?:es|son)\s+(?=(?:un|una|unos|unas|el|la|los|las|mi|mis)\s)|se llama\s+)((?:(?:un|una|unos|unas|el|la|los|las|mi|mis)\s+)?[\p{L}][\p{L} -]{1,40}?)(?=\s*(?:[,.;:!?]|\by\b|\bque\b|\bdibuj|$))/iu);
+ return m?m[1].toLowerCase().trim():''}
+document.getElementById('photoGo').addEventListener('click',()=>{
+ if(!photoImg){say('Salve','Elige una foto y te la trazo.');return}
+ const said=document.getElementById('photoSay').value.trim()||'Dibújalo';
+ const d=say('Tú',said);const thumb=document.createElement('img');thumb.src=photoImg.src;thumb.alt='Foto enviada';thumb.style.cssText='display:block;max-height:140px;border-radius:10px;margin-top:6px';d.append(thumb);
+ think(1.4);
+ setTimeout(()=>{const s=Math.min(1,320/Math.max(photoImg.naturalWidth,photoImg.naturalHeight)),w=Math.max(8,Math.round(photoImg.naturalWidth*s)),h=Math.max(8,Math.round(photoImg.naturalHeight*s));
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(photoImg,0,0,w,h);const name=photoName(said);
+  const r=traceImage(x.getImageData(0,0,w,h).data,w,h,!!name);
+  if(!r||!r.strokes.length){say('Salve','En esta foto no encuentro líneas claras. Prueba con el objeto más grande y el fondo liso.');return}
+  const m=learn(name||('tu foto de las '+new Date().toTimeString().slice(0,5)),r.strokes,r.aspect,'photo');
+  const g=say('Salve',(name?'Aprendido: ya sé dibujar '+m.name+'. ':'')+'He analizado sus líneas: ');const geo=document.createElement('span');geo.className='geo';geo.textContent=r.geo;g.append(geo,'\nMira cómo lo trazo.');
+  speak(3);sketchBlock(scene([m.id]),()=>{if(name)say('Salve','Pídeme «dibújame '+m.name.replace(/^(un|una|el|la|mi)\s+/,'')+'» cuando quieras.')});
+ },500)});
+// lienzo a mano
+const hand=document.getElementById('hand'),hx=hand.getContext('2d');let handStrokes=[],cur=null;
+function sizeHand(){const r=hand.getBoundingClientRect();if(!r.width)return;const d=Math.min(2,devicePixelRatio||1);hand.width=r.width*d;hand.height=r.height*d;drawHand()}
+function drawHand(){const d=Math.min(2,devicePixelRatio||1);hx.clearRect(0,0,hand.width,hand.height);hx.strokeStyle='#d8fbff';hx.lineWidth=3*d;hx.lineCap=hx.lineJoin='round';
+ for(const s of handStrokes.concat(cur?[cur]:[])){hx.beginPath();hx.moveTo(s[0],s[1]);for(let i=2;i<s.length;i+=2)hx.lineTo(s[i],s[i+1]);if(s.length===2)hx.lineTo(s[0]+.1,s[1]);hx.stroke()}}
+const pos=e=>{const r=hand.getBoundingClientRect(),d=hand.width/r.width;return[(e.clientX-r.left)*d,(e.clientY-r.top)*d]};
+hand.addEventListener('pointerdown',e=>{hand.setPointerCapture(e.pointerId);cur=pos(e);drawHand()});
+hand.addEventListener('pointermove',e=>{if(!cur)return;const[x,y]=pos(e);if(Math.hypot(x-cur[cur.length-2],y-cur[cur.length-1])>2){cur.push(x,y);drawHand()}});
+const endStroke=()=>{if(cur){handStrokes.push(cur);cur=null;drawHand()}};hand.addEventListener('pointerup',endStroke);hand.addEventListener('pointercancel',endStroke);
+document.getElementById('handClear').onclick=()=>{handStrokes=[];drawHand()};
+document.getElementById('handGo').onclick=()=>{const name=document.getElementById('handName').value.trim();
+ if(!handStrokes.length){say('Salve','Dibuja algo primero en el lienzo.');return}if(!name){document.getElementById('handName').focus();return}
+ let mnx=1e9,mny=1e9,mxx=-1e9,mxy=-1e9;const sm=handStrokes.map(s=>{if(s.length<4)s=[s[0],s[1],s[0]+1.5,s[1]+1.5];const r=s.slice();for(let i=2;i<s.length-2;i+=2){r[i]=(s[i-2]+2*s[i]+s[i+2])/4;r[i+1]=(s[i-1]+2*s[i+1]+s[i+3])/4}return r});
+ for(const s of sm)for(let i=0;i<s.length;i+=2){mnx=Math.min(mnx,s[i]);mxx=Math.max(mxx,s[i]);mny=Math.min(mny,s[i+1]);mxy=Math.max(mxy,s[i+1])}
+ const w=Math.max(1,mxx-mnx),h=Math.max(1,mxy-mny),k=1000/Math.max(w,h),ox=(1000-w*k)/2,oy=(1000-h*k)/2;
+ let tot=0;for(const s of sm)for(let i=2;i<s.length;i+=2)tot+=Math.hypot(s[i]-s[i-2],s[i+1]-s[i-1]);
+ const strokes=sm.map(s=>resample(s,Math.max(.5,tot/1600)).map((v,i)=>i%2?(v-mny)*k+oy:(v-mnx)*k+ox));
+ const m=learn(name,strokes,w/h,'hand');say('Tú','Te enseño a dibujar '+m.name+' (dibujo a mano)');handStrokes=[];drawHand();document.getElementById('handName').value='';think(1);
+ setTimeout(()=>{say('Salve','Gracias por enseñarme. Ya sé dibujar '+m.name+': así lo trazo yo, con mis círculos de luz.');speak(2.5);sketchBlock(scene([m.id]),()=>{})},600)};
+addEventListener('resize',sizeHand);
 
 let last=performance.now(),senseAt=0;
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;

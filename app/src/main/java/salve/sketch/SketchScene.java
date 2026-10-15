@@ -20,7 +20,13 @@ public final class SketchScene {
         this.key = key; this.title = title; this.width = width; this.height = height;
         this.strokes = Collections.unmodifiableList(strokes);
         this.motifs = Collections.unmodifiableList(motifs);
+        int hash = 17;
+        for (float[] s : strokes) hash = 31 * hash + java.util.Arrays.hashCode(s);
+        this.cacheKey = key + "#" + Integer.toHexString(hash);
     }
+
+    /** Clave + huella de las líneas: si vuelve a aprender «mueble», no reutiliza el trazado viejo. */
+    public final String cacheKey;
 
     public boolean isSelfPortrait() { return motifs.size() == 1 && motifs.get(0).self; }
 
