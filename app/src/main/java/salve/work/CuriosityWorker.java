@@ -37,6 +37,7 @@ public class CuriosityWorker extends Worker {
     private static final String TAG = "Salve/Curiosity";
     private static final String PERIODIC = "salve_curiosity";
     private static final String NOW = "salve_curiosity_now";
+    private static final String IDLE = "salve_curiosity_idle";
     private static final String CHANNEL = "salve_curiosity";
     private static final String FORCE = "force";
 
@@ -92,6 +93,19 @@ public class CuriosityWorker extends Worker {
                 .setConstraints(constraints()).setInitialDelay(30, TimeUnit.MINUTES).build();
         WorkManager.getInstance(context.getApplicationContext())
                 .enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request);
+    }
+
+    /**
+     * Bryan ha dejado el móvil (la app sigue abierta o la pantalla se ha apagado): un intento en
+     * 10 minutos. Respeta el intervalo de 3 h y no sustituye un intento ya programado. Android
+     * puede retrasarlo si el móvil entra en reposo profundo; cargando, suele ser puntual.
+     */
+    public static void enqueueWhenIdle(Context context) {
+        try {
+            OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(CuriosityWorker.class).setConstraints(constraints())
+                    .setInitialDelay(10, TimeUnit.MINUTES).build();
+            WorkManager.getInstance(context.getApplicationContext()).enqueueUniqueWork(IDLE, ExistingWorkPolicy.KEEP, request);
+        } catch (RuntimeException unavailable) { /* El ciclo periódico sigue activo. */ }
     }
 
     /** «Investiga por tu cuenta»: ahora, aunque haya investigado hace poco. */
