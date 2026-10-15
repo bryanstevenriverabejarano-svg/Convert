@@ -35,7 +35,7 @@ public class PeopleGraphPromptTest {
         s.onBiometricSuccess(1);
         String p = IdentityPrompt.render(s, PeopleGraph.build("Bryan", FAMILY), true, 2);
         assertTrue(p.startsWith("INTERLOCUTOR: Bryan"));
-        assertTrue(p.contains("segunda persona"));
+        assertTrue(p.contains("Háblale de tú"));
         assertTrue(p.contains("tu hermana Ana"));
         // Sin frases de ejemplo: un modelo pequeño las copia («Veo que estás bien…»).
         assertFalse(p.contains("te veo"));

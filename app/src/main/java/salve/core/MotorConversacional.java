@@ -709,18 +709,29 @@ public class MotorConversacional {
         VisualMemoryRecord recalled = creatorSide() ? visualMemories.store.recall(entrada) : null;
         if (recalled != null) setActivePhoto(recalled);
         boolean hasPriorContext = conversationSession.hasPriorContext() || activePhoto != null;
+        // Historias interactivas: mientras hay una en marcha, lo que escribe Bryan es ficción.
+        salve.core.conversation.StoryMode.State story = storyState();
+        if (story.active && salve.core.conversation.StoryMode.endsStory(entrada)) {
+            story.active = false;
+            saveStory(story);
+            conversationSession.addUser(entrada);
+            hablar("Cerramos aquí la historia. La guardo tal como quedó: cuando quieras, di «continuemos la historia».");
+            return;
+        }
+        final boolean storyTurn = salve.core.conversation.StoryMode.enter(story, entrada, System.currentTimeMillis());
+        if (storyTurn) saveStory(story);
         conversationSession.addUser(entrada);
         // «¿Sabes quién soy?» se responde con la memoria del perfil, no con el modelo: los modelos
         // pequeños confunden la pregunta con «¿quién eres?» y hablan de sí mismos.
-        String userIdentity = mind().userIdentityAnswer(entrada);
-        if (userIdentity == null) userIdentity = mind().familyAnswer(entrada);
-        if (userIdentity == null && creatorSide()) userIdentity = mind().curiosityAnswer(entrada);
-        if (userIdentity == null) userIdentity = mind().playAnswer(entrada);
+        String userIdentity = storyTurn ? null : mind().userIdentityAnswer(entrada);
+        if (userIdentity == null && !storyTurn) userIdentity = mind().familyAnswer(entrada);
+        if (userIdentity == null && !storyTurn && creatorSide()) userIdentity = mind().curiosityAnswer(entrada);
+        if (userIdentity == null && !storyTurn) userIdentity = mind().playAnswer(entrada);
         if (userIdentity != null) {
             deliverResponse(userIdentity, AvatarMotionProtocol.parse(""), true, true, false);
             return;
         }
-        String selfConfirmed = confirmarQueEsElCreador(entrada);
+        String selfConfirmed = storyTurn ? null : confirmarQueEsElCreador(entrada);
         if (selfConfirmed != null) {
             deliverResponse(selfConfirmed, AvatarMotionProtocol.parse(""), true, true, false);
             return;
@@ -1092,13 +1103,13 @@ public class MotorConversacional {
         // DetectorEmociones is a placeholder, not an emotion inference model.
         String emocionDetectada = "no evaluada";
 
-        if (researchRoute.kind != salve.core.research.ResearchConversation.Kind.NONE) {
+        if (!storyTurn && researchRoute.kind != salve.core.research.ResearchConversation.Kind.NONE) {
             responderInvestigacionPublica(researchRoute);
             return;
         }
 
         ConversationAnalysis conversationAnalysis = ConversationRequestAnalyzer.analyze(entrada, hasPriorContext);
-        if (conversationAnalysis.needsClarification()) {
+        if (!storyTurn && conversationAnalysis.needsClarification()) {
             if (avatarSession != null) AvatarMotionController.get().clarification(avatarSession, currentAvatarTurn());
             hablar("¿Puedes concretar a qué te refieres? No tengo un turno anterior que me permita interpretarlo con seguridad.");
             return;
@@ -1106,7 +1117,7 @@ public class MotorConversacional {
 
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
         // Legacy explicit search aliases also produce a completed tool reply, never a promise.
-        if (intent.type == IntentType.BUSCAR_WEB) {
+        if (!storyTurn && intent.type == IntentType.BUSCAR_WEB) {
             deliverResponse(manejarBuscarWeb(intent), AvatarMotionProtocol.parse(""), true);
             return;
         }
@@ -1118,8 +1129,10 @@ public class MotorConversacional {
         String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
                 + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext();
         // Si quien habla se presenta como otra persona, cambia el estado y no se pisa el perfil de Bryan.
-        boolean otherSpeaker = registrarIdentidadDeclarada(entrada);
-        if (intent.type != IntentType.GUARDAR_RECUERDO && !otherSpeaker && creatorSide()) {
+        // En una historia, «soy el explorador Aric» es su personaje: no cambia quién habla ni su perfil.
+        boolean otherSpeaker = !storyTurn && registrarIdentidadDeclarada(entrada);
+        if (storyTurn) responseContext += salve.core.conversation.StoryMode.promptBlock(story, entrada);
+        if (!storyTurn && intent.type != IntentType.GUARDAR_RECUERDO && !otherSpeaker && creatorSide()) {
             MemoryProfileFact profileFact = MemoryWritePolicy.extractProfileFact(entrada);
             if (!entrada.trim().endsWith("?") && salve.core.mind.Interlocutor.declaresCreator(entrada)) {
                 // Declarado, no verificado: se guarda como presentación del usuario.
@@ -1139,7 +1152,7 @@ public class MotorConversacional {
             }
         }
         mind().indexNewMemoriesAsync();
-        String resumenAccion = procesarIntencion(intent, entrada, emocionDetectada);
+        String resumenAccion = storyTurn ? null : procesarIntencion(intent, entrada, emocionDetectada);
 
         if (diario != null) {
             diario.escribirAutoCritica("Turno analizado. Intención operativa: " + intent.type.name()
@@ -1149,8 +1162,8 @@ public class MotorConversacional {
         }
 
         // Exact facts are read from their source. Quoted memories never enter the tool parser.
-        String directAnswer = deviceClock.directReply(entrada);
-        ConversationMemoryGrounding.Result evidence = directAnswer == null
+        String directAnswer = storyTurn ? null : deviceClock.directReply(entrada);
+        ConversationMemoryGrounding.Result evidence = directAnswer == null && !storyTurn
                 && reasoningPlan.shouldRetrieveLongTermMemory() && creatorSide()
                 ? memoria.recuperarContextoConversacional(entrada) : null;
         if (directAnswer == null && evidence != null) directAnswer = evidence.getDirectAnswer();
@@ -1231,6 +1244,12 @@ public class MotorConversacional {
         // Muletillas que el modelo pequeño repite aunque el prompt las prohíba, y frases que ya dijo.
         if (inference.isSuccess()) respuesta = salve.core.conversation.ReplyStyle.dropEchoes(
                 salve.core.conversation.ReplyStyle.clean(respuesta, recientes), recientes);
+        if (inference.isSuccess() && storyTurn) {
+            // Sin eco del mensaje de Bryan al empezar la escena (hasta dos frases de eco/relleno).
+            respuesta = salve.core.conversation.StoryMode.stripEcho(salve.core.conversation.StoryMode.stripEcho(respuesta, entrada), entrada);
+            salve.core.conversation.StoryMode.addBeat(story, respuesta);
+            saveStory(story);
+        }
 
         // 🟡 3. FRENO DE ALUCINACIONES
         if (respuesta.contains("USUARIO:") || respuesta.contains("Bryan:")) {
@@ -1263,7 +1282,7 @@ public class MotorConversacional {
         TurnQualityAssessment assessment = ConversationQualityEvaluator.evaluate(
                 respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
         responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse, entradaPorVoz);
-        if (inference.isSuccess() && !entradaPorVoz) buscarPorSuCuentaSiNoLoSabe(entrada, respuesta);
+        if (inference.isSuccess() && !entradaPorVoz && !storyTurn) buscarPorSuCuentaSiNoLoSabe(entrada, respuesta);
     }
 
     /**
@@ -2008,6 +2027,23 @@ public class MotorConversacional {
         String t = salve.core.memory.TypoTolerantText.normalize(entrada).replaceFirst("^salve ", "");
         return t.matches("(?:empecemos|empezamos|empieza|vamos a empezar) de (?:nuevo|cero)|"
                 + "(?:borra|limpia|olvida) (?:la |esta )?conversacion(?: reciente| de hoy)?|nueva conversacion");
+    }
+
+    private static final String STORY_PREFS = "salve_story";
+
+    private salve.core.conversation.StoryMode.State storyState() {
+        try {
+            String raw = context.getSharedPreferences(STORY_PREFS, Context.MODE_PRIVATE).getString("state", null);
+            salve.core.conversation.StoryMode.State state = raw == null ? null
+                    : new com.google.gson.Gson().fromJson(raw, salve.core.conversation.StoryMode.State.class);
+            if (state != null && state.beats != null) return state;
+        } catch (RuntimeException unreadable) { /* Se empieza una historia nueva. */ }
+        return new salve.core.conversation.StoryMode.State();
+    }
+
+    private void saveStory(salve.core.conversation.StoryMode.State state) {
+        context.getSharedPreferences(STORY_PREFS, Context.MODE_PRIVATE).edit()
+                .putString("state", new com.google.gson.Gson().toJson(state)).apply();
     }
 
     private boolean liveHintGiven;
