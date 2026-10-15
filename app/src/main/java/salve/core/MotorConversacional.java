@@ -385,6 +385,8 @@ public class MotorConversacional {
     /** A live session owns its callbacks; normal chat/history and private routes remain shared. */
     public synchronized void procesarEntradaVoz(String entrada, long token, VoiceConversationListener listener) {
         if (closed || entrada == null || entrada.trim().isEmpty()) return;
+        // La voz puede venir de cualquiera en la habitación: sin verificación reciente, hay duda.
+        salve.core.identity.IdentityManager.get(context).session().onVoiceSession(System.currentTimeMillis());
         cancelarTurnoVoz();
         salve.core.voice.LiveVoiceChannel.Ticket ticket = liveVoiceChannel.open(token, listener);
         salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch = new salve.core.voice.VoiceReplyBatch<>(response ->
@@ -650,6 +652,8 @@ public class MotorConversacional {
             deliverResponse(motion.text, motion, false, true, true);
             return;
         }
+        String identityResponse = comandoIdentidad(entrada);
+        if (identityResponse != null) { hablar(identityResponse); return; }
         String mindResponse = mind().handleCommand(entrada);
         if (mindResponse != null) {
             deliverResponse(mindResponse, AvatarMotionProtocol.parse(""), false, true, true);
@@ -687,7 +691,8 @@ public class MotorConversacional {
             return;
         }
         long turnStartedAtNanos = System.nanoTime();
-        VisualMemoryRecord recalled = visualMemories.store.recall(entrada);
+        // Las fotos guardadas y los recuerdos son de Bryan: solo se abren a su lado de la sesión.
+        VisualMemoryRecord recalled = creatorSide() ? visualMemories.store.recall(entrada) : null;
         if (recalled != null) setActivePhoto(recalled);
         boolean hasPriorContext = conversationSession.hasPriorContext() || activePhoto != null;
         conversationSession.addUser(entrada);
@@ -1091,7 +1096,9 @@ public class MotorConversacional {
         );
         String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
                 + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext();
-        if (intent.type != IntentType.GUARDAR_RECUERDO) {
+        // Si quien habla se presenta como otra persona, cambia el estado y no se pisa el perfil de Bryan.
+        boolean otherSpeaker = registrarIdentidadDeclarada(entrada);
+        if (intent.type != IntentType.GUARDAR_RECUERDO && !otherSpeaker && creatorSide()) {
             MemoryProfileFact profileFact = MemoryWritePolicy.extractProfileFact(entrada);
             if (!entrada.trim().endsWith("?") && salve.core.mind.Interlocutor.declaresCreator(entrada)) {
                 // Declarado, no verificado: se guarda como presentación del usuario.
@@ -1123,7 +1130,7 @@ public class MotorConversacional {
         // Exact facts are read from their source. Quoted memories never enter the tool parser.
         String directAnswer = deviceClock.directReply(entrada);
         ConversationMemoryGrounding.Result evidence = directAnswer == null
-                && reasoningPlan.shouldRetrieveLongTermMemory()
+                && reasoningPlan.shouldRetrieveLongTermMemory() && creatorSide()
                 ? memoria.recuperarContextoConversacional(entrada) : null;
         if (directAnswer == null && evidence != null) directAnswer = evidence.getDirectAnswer();
         if (directAnswer != null) {
@@ -1563,7 +1570,7 @@ public class MotorConversacional {
     private Map<String, CognitiveTurn.Tool> cognitiveTools(String input, boolean photoAnalysis) {
         Map<String, CognitiveTurn.Tool> tools = new LinkedHashMap<>();
         if (photoAnalysis) return tools; // A photo description cannot mutate the phone or the wardrobe.
-        tools.put("memory.lookup", new CognitiveTurn.Tool("{}: recupera recuerdos de la petición actual", args -> {
+        if (creatorSide()) tools.put("memory.lookup", new CognitiveTurn.Tool("{}: recupera recuerdos de la petición actual", args -> {
             CognitiveReply.fields(args);
             ConversationMemoryGrounding.Result result = memoria.recuperarContextoConversacional(input);
             return new CognitiveTurn.Receipt(result.getStatus().name() + "\n" + result.getDataContext());
@@ -1822,8 +1829,59 @@ public class MotorConversacional {
         return local ? llm != null && llm.supportsVision() : true;
     }
 
+    private boolean creatorSide() {
+        return salve.core.identity.IdentityManager.get(context).session().isCreatorSide();
+    }
+
+    private static final java.util.regex.Pattern VERIFY_REQUEST = java.util.regex.Pattern.compile(
+            "^\\s*(?:salve[, ]+)?(?:verif[ií]ca(?:me)?|comprueba que soy yo|confirma que soy yo|pon(?:go)? (?:mi )?huella|"
+                    + "quiero verificarme|verif[ií]came con (?:la )?(?:huella|cara|rostro))\\b.*",
+            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
+    private static final java.util.regex.Pattern NOT_CREATOR = java.util.regex.Pattern.compile(
+            "\\b(?:no soy (?:bryan|tu creador)|te (?:est[aá] )?habla(?:ndo)? otra persona|soy otra persona|"
+                    + "no es bryan quien (?:te )?habla)\\b",
+            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
+
+    /**
+     * Órdenes explícitas sobre quién habla. La verificación usa el diálogo del sistema (huella,
+     * rostro o PIN): es ligero y no compite con el modelo, y solo se abre cuando se pide.
+     */
+    private String comandoIdentidad(String entrada) {
+        salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
+        String first = mind().peopleGraph().creator().name.split(" ")[0];
+        if (NOT_CREATOR.matcher(entrada).find()) {
+            identity.session().onNotCreator();
+            identity.clearVerification();
+            return "De acuerdo, no eres " + first + ". Encantada; ¿cómo te llamas?";
+        }
+        if (!VERIFY_REQUEST.matcher(entrada).matches()) return null;
+        if (!identity.biometricAvailable())
+            return "Este teléfono no tiene huella, rostro ni PIN configurados, así que no puedo verificarte con él. "
+                    + "Puedes activarlo en los ajustes de seguridad de Android.";
+        identity.requestVerification("Confirma que eres " + first, ok -> toolHandler.post(() -> hablar(ok
+                ? "Ya está, " + first + ": eres tú. Puedo hablarte con toda confianza."
+                : "No he podido confirmarlo. Si eres " + first + ", inténtalo de nuevo cuando quieras; mientras, guardo tus recuerdos.")));
+        return "Abro la verificación del teléfono: pon tu huella o mira a la pantalla.";
+    }
+
+    /**
+     * Un nombre declarado distinto del creador conocido cambia el estado (familiar o invitado) en
+     * lugar de sobrescribir el perfil. Devuelve true si quien habla no es el creador.
+     */
+    private boolean registrarIdentidadDeclarada(String entrada) {
+        if (entrada == null || entrada.trim().endsWith("?")) return !creatorSide();
+        String declared = salve.core.mind.Interlocutor.extractName(entrada);
+        String known = mind().interlocutor().name;
+        salve.core.identity.SessionIdentity session = salve.core.identity.IdentityManager.get(context).session();
+        if (declared != null && (known != null || !session.isCreatorSide())) {
+            salve.core.identity.PeopleGraph graph = mind().peopleGraph();
+            session.onDeclaredName(declared, graph.creator().name, graph.familyPairs(), System.currentTimeMillis());
+        }
+        return !session.isCreatorSide();
+    }
+
     private void rememberDeclaredSelf(VisualMemoryRecord record) {
-        if (record.identifiesUser()) memoria.guardarDatoPerfil("Mi nombre es " + record.personName, "name");
+        if (record.identifiesUser() && creatorSide()) memoria.guardarDatoPerfil("Mi nombre es " + record.personName, "name");
     }
 
     private ModelResult generateWithConversationPhoto(String prompt) {

@@ -1025,6 +1025,12 @@ public class MainActivity extends AppCompatActivity {
             catch (RuntimeException unavailable) { android.util.Log.w("Salve/Agent", "Planes no disponibles; se conservan sus datos."); }
         });
         activityResumed = true;
+        // Verificación del dueño (rostro/huella/PIN) solo si el sistema está libre: nunca durante
+        // un turno de conversación ni mientras se carga el modelo.
+        salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(this);
+        identity.attach(this);
+        identity.verifyOnStartIfIdle(() -> salve.core.GoalAutonomyRuntime.get(getApplicationContext()).hasActiveConversation()
+                || salve.core.SalveLLM.getInstance(getApplicationContext()).isLoading());
         modelStatusHandler.removeCallbacks(refreshModelStatus);
         modelStatusHandler.post(refreshModelStatus);
         if (motorConversacional != null) motorConversacional.setConversationForeground(true);
@@ -1553,6 +1559,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         activityResumed = false;
+        salve.core.identity.IdentityManager.get(this).detach(this);
         modelStatusHandler.removeCallbacks(refreshModelStatus);
         pendingLiveVoiceStart = false;
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);

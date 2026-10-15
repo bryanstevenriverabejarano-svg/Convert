@@ -494,6 +494,12 @@ public class SalveLLM {
         runtimeStatus = ModelRuntimeInfo.name(modelPath) + " · " + phase
                 + (isGguf && engineInitialized ? " · contexto " + ggufContextTokens + " tokens" : "");
     }
+    /** true mientras se carga o activa un modelo: momento en que no conviene lanzar otras tareas. */
+    public boolean isLoading() {
+        String status = runtimeStatus;
+        return activationInProgress || (status != null && status.endsWith(" · cargando"));
+    }
+
     public String getStatusDescription() {
         String reason = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(LocalModelPolicy.REASON_KEY, "");
