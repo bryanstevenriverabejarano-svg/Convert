@@ -78,6 +78,55 @@ public final class ReplyStyle {
         return result.length() < 12 ? trimmed : result;
     }
 
+    /** true si la mayoría de sus frases ya las dijo en respuestas recientes (recita en bucle). */
+    public static boolean mostlyEchoes(String reply, java.util.List<String> previousReplies) {
+        List<String> own = sentences(reply == null ? "" : reply.trim());
+        if (own.size() < 2 || previousReplies == null) return false;
+        int echoed = 0;
+        for (String sentence : own) if (echoes(sentence, previousReplies)) echoed++;
+        return echoed * 10 >= own.size() * 6;
+    }
+
+    /**
+     * Quita las frases casi idénticas a otras que ya dijo («Recuerda que mi intención es ser un
+     * apoyo…» en cada respuesta). Nunca deja la respuesta vacía.
+     */
+    public static String dropEchoes(String reply, java.util.List<String> previousReplies) {
+        if (reply == null || previousReplies == null) return reply;
+        List<String> own = sentences(reply.trim());
+        if (own.size() < 2) return reply;
+        StringBuilder out = new StringBuilder();
+        for (String sentence : own) {
+            if (echoes(sentence, previousReplies)) continue;
+            if (out.length() > 0) out.append(' ');
+            out.append(sentence);
+        }
+        String result = out.toString().trim();
+        return result.length() < 12 ? reply.trim() : result;
+    }
+
+    private static boolean echoes(String sentence, java.util.List<String> previousReplies) {
+        java.util.Set<String> words = words(sentence);
+        if (words.size() < 5) return false;
+        for (String previous : previousReplies) {
+            if (previous == null) continue;
+            for (String old : sentences(previous.trim())) {
+                java.util.Set<String> other = words(old);
+                if (other.size() < 5) continue;
+                java.util.Set<String> common = new java.util.HashSet<>(words); common.retainAll(other);
+                java.util.Set<String> union = new java.util.HashSet<>(words); union.addAll(other);
+                if (common.size() * 10 >= union.size() * 7) return true;
+            }
+        }
+        return false;
+    }
+
+    private static java.util.Set<String> words(String sentence) {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        for (String w : normalize(sentence).split(" ")) if (w.length() >= 3) out.add(w);
+        return out;
+    }
+
     private static List<String> sentences(String text) {
         List<String> out = new ArrayList<>();
         Matcher m = SENTENCE.matcher(text);

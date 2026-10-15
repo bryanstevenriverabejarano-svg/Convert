@@ -8,8 +8,8 @@ public final class CloudMemoryCommand {
     public enum Action { RESTORE, STATUS, ASK }
     private CloudMemoryCommand() { }
     public static Action parse(String input) {
-        String text = Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "").replaceAll("[¿?¡!.,]", " ").replaceAll("\\s+", " ").trim()
+        // Con erratas de teclado corregidas («rexupera tus recuerdos»).
+        String text = TypoTolerantText.forRouting(input).replace('ñ', 'n')
                 .replaceFirst("^salve ", "").replaceFirst(" por favor$", "");
         if (text.matches("(?:recupera|restaura|sincroniza) (?:tus |los |mis )?recuerdos(?: (?:de|desde|con) (?:la nube|pcloud))?")) return Action.RESTORE;
         if (text.matches("(?:estado de (?:tus |los |mis )?recuerdos|estado de (?:la nube|pcloud)|como va (?:la sincronizacion|la recuperacion))")) return Action.STATUS;

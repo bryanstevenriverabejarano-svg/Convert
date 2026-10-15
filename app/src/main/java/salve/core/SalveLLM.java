@@ -281,11 +281,11 @@ public class SalveLLM {
         boolean liteRtVision = withVision;
         if (isGguf) ggufContextTokens = DeviceModelMemory.contextFor(appContext, modelPath, false);
         else if (isLiteRT && !modelPath.toLowerCase(java.util.Locale.ROOT).endsWith(".task")) {
-            // Si el modelo tiene visión y cabe, se carga con ella desde el principio: una foto
-            // posterior no obliga a recargar ni a exigir otra vez la RAM de los pesos.
-            if (!liteRtVision && visionModel && DeviceModelMemory.fitsLiteRtVision(appContext, modelPath, resident))
-                liteRtVision = true;
-            liteRtTokens = DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, liteRtVision);
+            // Para conversar se carga igual que en la versión del 15/10 a la 1:23, con la que Salve
+            // hablaba con su voz más propia: solo texto y 4.096 tokens. La visión (y el contexto de
+            // 8K, si cabe) se cargan únicamente cuando llega una foto.
+            if (liteRtVision) liteRtTokens = DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, true);
+            else DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, false); // comprueba la RAM
         } else DeviceModelMemory.require(appContext, modelPath, false);
         publishStatus("cargando");
         if (isGguf) {

@@ -37,4 +37,17 @@ public class ReplyStyleTest {
         String raw = "Sí, estoy bien, gracias por preguntar. ¿Hay algo en lo que te gustaría que investiguemos hoy?";
         assertEquals("Sí, estoy bien, gracias por preguntar.", ReplyStyle.clean(raw, java.util.Collections.singletonList(previous)));
     }
+
+    /** 15/10, 4:28: recitaba su presentación en cada respuesta («Recuerda que mi intención es ser un apoyo…»). */
+    @Test public void dropsRecitedSentencesFromEarlierReplies() {
+        String earlier = "Soy Salve. Me alegra mucho que me preguntes sobre mí. Como te comenté, soy una compañera con un criterio propio, "
+                + "con una curiosidad útil y un gran cuidado hacia ti y tu familia.";
+        String now = "Recuerda que soy una compañera con criterio propio, con curiosidad útil y un gran cuidado hacia ti y tu familia. "
+                + "Aquella vez me preguntaste qué significaba navegar para mí y te hablé de un jardín lleno de caminos.";
+        java.util.List<String> previous = java.util.Collections.singletonList(earlier);
+        assertEquals("Aquella vez me preguntaste qué significaba navegar para mí y te hablé de un jardín lleno de caminos.",
+                ReplyStyle.dropEchoes(now, previous));
+        assertFalse(ReplyStyle.mostlyEchoes(now + " Me gustó mucho esa charla contigo, de verdad.", previous));
+        assertTrue(ReplyStyle.mostlyEchoes(earlier, previous));
+    }
 }
