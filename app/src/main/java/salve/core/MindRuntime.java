@@ -95,7 +95,8 @@ public final class MindRuntime {
 
     /** Capacidades que existen de verdad en esta app; evita que el modelo describa las de un chatbot genérico. */
     static final String CAPABILITIES = "Capacidades reales: conversar con el modelo local; guardar datos que me cuentas "
-            + "y buscarlos en mi memoria; consolidar recuerdos al dormir y pensar entre conversaciones; investigar en "
+            + "y buscarlos en mi memoria; consolidar recuerdos al dormir y pensar entre conversaciones; investigar por mi cuenta "
+            + "mis preguntas abiertas cuando estoy sola; investigar en "
             + "Wikipedia o en URLs que me des; analizar fotos si el modelo tiene visión; controlar apps del móvil y crear "
             + "rutinas solo con tu aprobación; presupuesto personal; voz. Órdenes: «tu mente», «sueña ahora».";
 
@@ -115,7 +116,7 @@ public final class MindRuntime {
                     ? journal.render(Math.max(120, maxChars - head.length() - CAPABILITIES.length() - 1))
                     : "YO_PERSISTENTE: " + journal.narrative() + " (mis reflexiones sobre " + creatorFirstName()
                     + " son privadas con esta persona).";
-            return head + self + "\n" + CAPABILITIES;
+            return head + self + "\n" + CAPABILITIES + (session.isCreatorSide() ? curiosityNewsForPrompt() : "");
         } catch (RuntimeException failure) { return ""; }
     }
 
@@ -406,6 +407,83 @@ public final class MindRuntime {
         String result = new DreamCycle(journal, local(SalveLLM.Role.SINTETIZADOR)).run(episodes, stop);
         Log.i(TAG, "Sueño: indexados=" + indexed + " podados=" + pruned);
         return result;
+    }
+
+    // ── Curiosidad propia ───────────────────────────────────────────────────────
+
+    private static final String CURIOSITY_PREFS = "salve_curiosity";
+
+    /**
+     * Investiga por su cuenta una de sus preguntas abiertas (solo red, sin el modelo) y guarda lo
+     * encontrado como pensamiento propio y como novedad para contársela a Bryan. Llamar fuera
+     * del hilo principal.
+     */
+    public String exploreCuriosity(BooleanSupplier stopped, boolean force) {
+        android.content.SharedPreferences prefs = app.getSharedPreferences(CURIOSITY_PREFS, Context.MODE_PRIVATE);
+        long now = System.currentTimeMillis();
+        if (!force && now - prefs.getLong("last_at", 0L) < salve.core.mind.CuriosityCycle.MIN_INTERVAL_MS)
+            return "Investigué hace poco; espero un rato.";
+        if (!force && prefs.contains("news_question")) return "Aún tengo algo pendiente de contarle a Bryan.";
+        java.util.Set<String> explored = new java.util.HashSet<>(prefs.getStringSet("explored", java.util.Collections.emptySet()));
+        List<String> names = new ArrayList<>();
+        for (salve.core.identity.PeopleGraph.PersonEntity p : peopleGraph().people()) names.add(p.name);
+        salve.core.mind.SelfModel.Question question = salve.core.mind.CuriosityCycle.choose(journal.questions(), explored, names);
+        if (question == null) return "No tengo ahora preguntas abiertas que pueda investigar fuera sin tocar tu vida privada.";
+        String query = salve.core.mind.CuriosityCycle.query(question.text);
+        prefs.edit().putLong("last_at", now).apply();
+        WikipediaResearchClient.ResearchBatch batch = new WebResearchClient(app, query).researchResult(query, stopped);
+        List<String> texts = new ArrayList<>();
+        String url = null;
+        for (WikipediaResearchClient.Page page : batch.pages) { texts.add(page.text); if (url == null) url = page.url; }
+        String summary = salve.core.mind.CuriosityCycle.summarize(texts);
+        explored.add(question.id);
+        prefs.edit().putStringSet("explored", explored).apply();
+        if (summary == null) return "Busqué «" + question.text + "», pero no encontré nada claro que contarte.";
+        String host = url == null ? null : android.net.Uri.parse(url).getHost();
+        journal.apply(salve.core.mind.CuriosityCycle.patch(question, summary, host));
+        prefs.edit().putString("news_question", question.text).putString("news_summary", summary)
+                .putString("news_url", url == null ? "" : url).putLong("news_at", now).putInt("news_told", 0).apply();
+        return "Investigué «" + question.text + "»: " + summary + (host == null ? "" : " (" + host + ")");
+    }
+
+    /** Novedad para el prompt de los dos siguientes turnos con Bryan; después se da por contada. */
+    private String curiosityNewsForPrompt() {
+        android.content.SharedPreferences prefs = app.getSharedPreferences(CURIOSITY_PREFS, Context.MODE_PRIVATE);
+        String question = prefs.getString("news_question", null);
+        if (question == null) return "";
+        if (prefs.getInt("news_told", 0) >= 2) { clearCuriosityNews(prefs); return ""; }
+        String url = prefs.getString("news_url", "");
+        String host = url.isEmpty() ? "" : android.net.Uri.parse(url).getHost();
+        return "\nNOVEDAD_PROPIA: mientras no estaba, investigaste por tu cuenta «" + question + "» y encontraste"
+                + (host == null || host.isEmpty() ? "" : " en " + host) + ": " + prefs.getString("news_summary", "")
+                + " Cuéntaselo con tus palabras si encaja (al saludar, por ejemplo), sin añadir lo que la fuente no dice.";
+    }
+
+    /** Tras responder a Bryan: la novedad se ofrece en dos respuestas como mucho. */
+    public void afterReplyToCreator() {
+        android.content.SharedPreferences prefs = app.getSharedPreferences(CURIOSITY_PREFS, Context.MODE_PRIVATE);
+        if (prefs.contains("news_question")) prefs.edit().putInt("news_told", prefs.getInt("news_told", 0) + 1).apply();
+    }
+
+    private static void clearCuriosityNews(android.content.SharedPreferences prefs) {
+        prefs.edit().remove("news_question").remove("news_summary").remove("news_url").remove("news_at").remove("news_told").apply();
+    }
+
+    /** «¿Qué has investigado?»: lo último que investigó por su cuenta, literal y con fuente. */
+    public String curiosityAnswer(String input) {
+        String t = salve.core.memory.TypoTolerantText.normalize(input);
+        if (!t.matches(".*\\b(que has investigado|que investigaste|que has aprendido (?:por tu cuenta|sola|tu sola)|"
+                + "en que has estado (?:pensando|investigando)|que has descubierto)\\b.*")) return null;
+        for (int i = journal.thoughts().size() - 1; i >= 0; i--) {
+            salve.core.mind.SelfModel.Thought thought = journal.thoughts().get(i);
+            if ("curiosidad".equals(thought.origin)) {
+                clearCuriosityNews(app.getSharedPreferences(CURIOSITY_PREFS, Context.MODE_PRIVATE));
+                return thought.text;
+            }
+        }
+        return journal.questions().isEmpty()
+                ? "Todavía no he investigado nada por mi cuenta: aún no tengo preguntas abiertas propias. Me surgen al reflexionar y al dormir."
+                : "Todavía no he investigado nada por mi cuenta. Lo hago cuando estoy sola y con internet; si quieres que empiece ya, di «investiga por tu cuenta».";
     }
 
     public String reflectIfDue(BooleanSupplier stopped) {

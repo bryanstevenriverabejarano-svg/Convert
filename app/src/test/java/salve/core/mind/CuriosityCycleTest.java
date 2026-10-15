@@ -1,0 +1,55 @@
+package salve.core.mind;
+
+import static org.junit.Assert.*;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+
+import org.junit.Test;
+
+public class CuriosityCycleTest {
+    private static SelfModel.Question q(String id, String text, double salience) {
+        SelfModel.Question q = new SelfModel.Question();
+        q.id = id; q.text = text; q.salience = salience;
+        return q;
+    }
+
+    @Test public void choosesTheMostSalientPublicQuestion() {
+        SelfModel.Question picked = CuriosityCycle.choose(Arrays.asList(
+                q("q1", "¿Cómo se forman los recuerdos en el hipocampo?", 0.6),
+                q("q2", "¿Por qué los pulpos tienen tres corazones?", 0.9)), Collections.emptySet(), Collections.emptyList());
+        assertEquals("q2", picked.id);
+        assertEquals("q1", CuriosityCycle.choose(Arrays.asList(
+                q("q1", "¿Cómo se forman los recuerdos en el hipocampo?", 0.6),
+                q("q2", "¿Por qué los pulpos tienen tres corazones?", 0.9)), new HashSet<>(Collections.singletonList("q2")),
+                Collections.emptyList()).id);
+    }
+
+    @Test public void privateQuestionsNeverLeaveThePhone() {
+        assertNull(CuriosityCycle.choose(Arrays.asList(
+                q("q1", "¿Qué siente Bryan cuando trabaja de noche?", 0.9),
+                q("q2", "¿Cómo está su hermana Ana últimamente?", 0.8),
+                q("q3", "¿Qué opina Lucía de mis respuestas?", 0.7)), Collections.emptySet(), Arrays.asList("Bryan", "Lucía")));
+    }
+
+    @Test public void summaryIsLiteralBoundedAndSkipsBoilerplate() {
+        String summary = CuriosityCycle.summarize(Arrays.asList("Aceptar cookies. © 2026",
+                "Los pulpos tienen tres corazones: dos bombean sangre a las branquias y uno al resto del cuerpo. "
+                        + "Su sangre es azul porque usa hemocianina en lugar de hemoglobina para transportar oxígeno. Más texto aquí."));
+        assertTrue(summary.startsWith("Los pulpos tienen tres corazones"));
+        assertTrue(summary.length() <= CuriosityCycle.MAX_SUMMARY);
+        assertNull(CuriosityCycle.summarize(Collections.singletonList("Menú. Inicio.")));
+    }
+
+    @Test public void findingBecomesHerOwnThoughtWithSource() {
+        SelfModel.Question question = q("q2", "¿Por qué los pulpos tienen tres corazones?", 0.9);
+        MindPatch patch = CuriosityCycle.patch(question, "Dos bombean sangre a las branquias.", "es.wikipedia.org");
+        assertEquals("curiosidad", patch.origin);
+        assertEquals(1, patch.thoughts.size());
+        assertTrue(patch.thoughts.get(0).text.contains("es.wikipedia.org"));
+        assertTrue(patch.thoughts.get(0).sources.contains("web:es.wikipedia.org"));
+        assertTrue(patch.thoughts.get(0).text.length() <= 400);
+        assertEquals("Por qué los pulpos tienen tres corazones", CuriosityCycle.query(question.text));
+    }
+}

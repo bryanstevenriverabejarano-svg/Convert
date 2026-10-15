@@ -650,6 +650,11 @@ public class MotorConversacional {
         }
         String identityResponse = comandoIdentidad(entrada);
         if (identityResponse != null) { hablar(identityResponse); return; }
+        if (pideInvestigarPorSuCuenta(entrada)) {
+            salve.work.CuriosityWorker.enqueueNow(context);
+            hablar("Vale: elijo una de mis preguntas abiertas y la investigo por mi cuenta. Cuando tenga algo, te lo cuento.");
+            return;
+        }
         if (pideEmpezarDeNuevo(entrada)) {
             limpiarContextoConversacional();
             hablar("Hecho: empiezo la conversación en limpio. Mis recuerdos y lo que sé de ti siguen intactos.");
@@ -703,6 +708,7 @@ public class MotorConversacional {
         // pequeños confunden la pregunta con «¿quién eres?» y hablan de sí mismos.
         String userIdentity = mind().userIdentityAnswer(entrada);
         if (userIdentity == null) userIdentity = mind().familyAnswer(entrada);
+        if (userIdentity == null && creatorSide()) userIdentity = mind().curiosityAnswer(entrada);
         if (userIdentity != null) {
             deliverResponse(userIdentity, AvatarMotionProtocol.parse(""), true, true, false);
             return;
@@ -1938,6 +1944,12 @@ public class MotorConversacional {
                 ? " Si quieres abrir mis reflexiones contigo, di «verifícame»." : "");
     }
 
+    private static boolean pideInvestigarPorSuCuenta(String entrada) {
+        String t = salve.core.memory.TypoTolerantText.normalize(entrada).replaceFirst("^salve ", "");
+        return t.matches("(?:investiga|explora|aprende algo) (?:por tu cuenta|tu sola|sola)(?: ahora)?|"
+                + "(?:sigue|investiga) (?:una de )?tus (?:propias )?preguntas");
+    }
+
     /** «Empecemos de nuevo»: limpia el historial reciente (no la memoria) si arrastra respuestas raras. */
     private static boolean pideEmpezarDeNuevo(String entrada) {
         String t = salve.core.memory.TypoTolerantText.normalize(entrada).replaceFirst("^salve ", "");
@@ -2398,6 +2410,7 @@ public class MotorConversacional {
                                             boolean entradaPorVoz) {
         hablarPreparado(respuesta, motion);
         mensajesEnSesion++;
+        if (creatorSide()) mind().afterReplyToCreator();
         // Solo se cuenta la experiencia; los rasgos ya no se inflan por volumen de mensajes.
         identidad.integrarExperiencia("conversacion", entrada, 0.7f, null);
         // Anticipa la siguiente intervención para medir sorpresa. En voz se omite: la latencia manda.

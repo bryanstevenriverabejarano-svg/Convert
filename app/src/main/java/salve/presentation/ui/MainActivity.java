@@ -996,6 +996,7 @@ public class MainActivity extends AppCompatActivity {
 
         ThinkWorker.schedule(this);
         salve.work.DreamWorker.schedule(this);
+        salve.work.CuriosityWorker.schedule(this);
         // Carga el modelo interno y el índice de recuerdos fuera del hilo principal.
         final android.content.Context mindContext = getApplicationContext();
         new Thread(() -> salve.core.MindRuntime.get(mindContext).warmUpEmbeddings(), "salve-mind-init").start();
