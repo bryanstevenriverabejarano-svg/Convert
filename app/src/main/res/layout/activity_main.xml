@@ -137,6 +137,7 @@
                 <Button android:id="@+id/btnMenuVoice" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/salve_voice" />
                 <Button android:id="@+id/btnEscuchar" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dictar un mensaje" />
                 <Button android:id="@+id/btnAvatar" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Vestuario y habitación" />
+                <Button android:id="@+id/btnTeachDrawing" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Enséñale a dibujar" />
                 <Button android:id="@+id/btnDispositivos" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Mi móvil y dispositivos" />
                 <Button android:id="@+id/btnMostrarReflexion" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Reflexiones" />
                 <Button android:id="@+id/btnReflexiones" style="@style/SalveStageAction" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Recuerdos y galería" />

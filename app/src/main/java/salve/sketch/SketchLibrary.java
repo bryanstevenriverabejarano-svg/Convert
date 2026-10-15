@@ -24,49 +24,35 @@ public final class SketchLibrary {
         public final Place place;
         public final float aspect;
         public final boolean self;
+        /** De dónde salió: "builtin", "photo" (foto), "hand" (dibujado por Bryan) o "model" (lo compuso ella). */
+        public final String source;
         final List<String> words;
         final float[][] strokes;
         Motif(String id, String name, Place place, float aspect, boolean self, List<String> words, float[][] strokes) {
+            this(id, name, place, aspect, self, words, strokes, "builtin");
+        }
+        Motif(String id, String name, Place place, float aspect, boolean self, List<String> words, float[][] strokes,
+              String source) {
             this.id = id; this.name = name; this.place = place; this.aspect = aspect; this.self = self;
-            this.words = words; this.strokes = strokes;
+            this.words = words; this.strokes = strokes; this.source = source == null ? "builtin" : source;
         }
         public int strokeCount() { return strokes.length; }
         public float[] stroke(int i) { return strokes[i].clone(); }
+        public List<String> words() { return words; }
+        public boolean learned() { return !"builtin".equals(source); }
     }
 
     private final Map<String, Motif> byId = new LinkedHashMap<>();
     private final Map<String, Motif> byWord = new LinkedHashMap<>();
     private int longestWord = 1;
 
-    private SketchLibrary(JsonObject root) {
-        JsonArray motifs = root.getAsJsonArray("motifs");
-        if (motifs == null || motifs.size() == 0) throw new IllegalArgumentException("Biblioteca de trazos vacía");
-        for (JsonElement element : motifs) {
-            JsonObject m = element.getAsJsonObject();
-            String id = m.get("id").getAsString();
-            if (!id.matches("[a-z]{2,24}")) throw new IllegalArgumentException("Identificador de motivo inválido");
-            List<String> words = new ArrayList<>();
-            for (JsonElement w : m.getAsJsonArray("words")) words.add(normalize(w.getAsString()));
-            JsonArray raw = m.getAsJsonArray("strokes");
-            float[][] strokes = new float[raw.size()][];
-            for (int i = 0; i < raw.size(); i++) {
-                JsonArray s = raw.get(i).getAsJsonArray();
-                if (s.size() < 4 || s.size() % 2 != 0 || s.size() > 4000) throw new IllegalArgumentException("Trazo inválido en " + id);
-                strokes[i] = new float[s.size()];
-                for (int k = 0; k < s.size(); k++) {
-                    float v = s.get(k).getAsFloat();
-                    if (!Float.isFinite(v) || v < -1 || v > 1001) throw new IllegalArgumentException("Coordenada fuera del lienzo en " + id);
-                    strokes[i][k] = v;
-                }
-            }
-            String place = m.has("place") ? m.get("place").getAsString() : "any";
-            Motif motif = new Motif(id, m.get("name").getAsString(),
-                    "sky".equals(place) ? Place.SKY : "ground".equals(place) ? Place.GROUND : Place.ANY,
-                    m.has("aspect") ? m.get("aspect").getAsFloat() : 1f,
-                    m.has("self") && m.get("self").getAsBoolean(), Collections.unmodifiableList(words), strokes);
-            byId.put(id, motif);
-            byWord.putIfAbsent(id, motif);
-            for (String w : words) {
+    private SketchLibrary(List<Motif> motifs) {
+        if (motifs.isEmpty()) throw new IllegalArgumentException("Biblioteca de trazos vacía");
+        for (Motif motif : motifs) {
+            if (byId.containsKey(motif.id)) continue;
+            byId.put(motif.id, motif);
+            byWord.putIfAbsent(motif.id, motif);
+            for (String w : motif.words) {
                 byWord.putIfAbsent(w, motif);
                 longestWord = Math.max(longestWord, w.split(" ").length);
             }
@@ -74,7 +60,48 @@ public final class SketchLibrary {
     }
 
     public static SketchLibrary parse(String json) {
-        return new SketchLibrary(JsonParser.parseString(json).getAsJsonObject());
+        JsonArray motifs = JsonParser.parseString(json).getAsJsonObject().getAsJsonArray("motifs");
+        if (motifs == null || motifs.size() == 0) throw new IllegalArgumentException("Biblioteca de trazos vacía");
+        List<Motif> list = new ArrayList<>();
+        for (JsonElement element : motifs) list.add(parseMotif(element.getAsJsonObject(), "builtin"));
+        return new SketchLibrary(list);
+    }
+
+    /** Lo aprendido va delante: si Bryan le enseña «casa», su casa sustituye a la de serie. */
+    public SketchLibrary withLearned(List<Motif> learned) {
+        if (learned == null || learned.isEmpty()) return this;
+        List<Motif> all = new ArrayList<>(learned);
+        for (Motif m : byId.values()) if (!m.learned()) all.add(m);
+        return new SketchLibrary(all);
+    }
+
+    static Motif parseMotif(JsonObject m, String defaultSource) {
+        String id = m.get("id").getAsString();
+        if (!id.matches("[a-z0-9]{2,32}")) throw new IllegalArgumentException("Identificador de motivo inválido");
+        List<String> words = new ArrayList<>();
+        for (JsonElement w : m.getAsJsonArray("words")) {
+            String n = normalize(w.getAsString());
+            if (!n.isEmpty()) words.add(n);
+        }
+        JsonArray raw = m.getAsJsonArray("strokes");
+        if (raw == null || raw.size() == 0 || raw.size() > 400) throw new IllegalArgumentException("Motivo sin trazos: " + id);
+        float[][] strokes = new float[raw.size()][];
+        for (int i = 0; i < raw.size(); i++) {
+            JsonArray s = raw.get(i).getAsJsonArray();
+            if (s.size() < 4 || s.size() % 2 != 0 || s.size() > 4000) throw new IllegalArgumentException("Trazo inválido en " + id);
+            strokes[i] = new float[s.size()];
+            for (int k = 0; k < s.size(); k++) {
+                float v = s.get(k).getAsFloat();
+                if (!Float.isFinite(v) || v < -1 || v > 1001) throw new IllegalArgumentException("Coordenada fuera del lienzo en " + id);
+                strokes[i][k] = v;
+            }
+        }
+        String place = m.has("place") ? m.get("place").getAsString() : "any";
+        return new Motif(id, m.get("name").getAsString(),
+                "sky".equals(place) ? Place.SKY : "ground".equals(place) ? Place.GROUND : Place.ANY,
+                m.has("aspect") ? m.get("aspect").getAsFloat() : 1f,
+                m.has("self") && m.get("self").getAsBoolean(), Collections.unmodifiableList(words), strokes,
+                m.has("source") ? m.get("source").getAsString() : defaultSource);
     }
 
     public Motif byId(String id) { return id == null ? null : byId.get(id); }

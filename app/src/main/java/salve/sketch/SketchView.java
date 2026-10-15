@@ -40,7 +40,7 @@ public final class SketchView extends View {
     /** Cambia de escena (reinicia) sólo si la clave es distinta. */
     public void bind(SketchScene value, boolean alreadyFinished, Listener l) {
         listener = l;
-        if (value == null || (scene != null && scene.key.equals(value.key))) return;
+        if (value == null || (scene != null && scene.cacheKey.equals(value.cacheKey))) return;
         scene = value;
         finished = alreadyFinished;
         startedAt = alreadyFinished ? 0 : -1;
