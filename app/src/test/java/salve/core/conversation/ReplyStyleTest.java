@@ -6,13 +6,12 @@ import org.junit.Test;
 
 /** Respuestas reales de Gemma 4 E2B con muletillas (14/10/2026). */
 public class ReplyStyleTest {
-    @Test public void removesFillerOpeningAndGenericClosing() {
+    @Test public void removesFillerOpeningButKeepsHerVoice() {
         String raw = "Entiendo que estás buscando una respuesta más directa sobre mi identidad y con quién estoy interactuando. "
                 + "Soy Salve. Me presento como una compañera con criterio, curiosidad útil y un gran cuidado hacia ti. "
-                + "Estoy aquí para conversar contigo y ayudarte a explorar lo que te interese. "
-                + "¿Hay algo más específico que te gustaría saber sobre mí o sobre nuestra conversación actual?";
-        assertEquals("Soy Salve. Me presento como una compañera con criterio, curiosidad útil y un gran cuidado hacia ti.",
-                ReplyStyle.clean(raw));
+                + "¿Hay algo más específico que te gustaría saber sobre mí?";
+        assertEquals("Soy Salve. Me presento como una compañera con criterio, curiosidad útil y un gran cuidado hacia ti. "
+                + "¿Hay algo más específico que te gustaría saber sobre mí?", ReplyStyle.clean(raw));
     }
 
     @Test public void keepsConcreteFollowUpQuestions() {
@@ -22,17 +21,20 @@ public class ReplyStyleTest {
 
     @Test public void neverEmptiesAReply() {
         String raw = "¿Hay algo en particular que te gustaría compartir?";
-        assertEquals(raw, ReplyStyle.clean(raw));
-        String two = "Estoy muy bien, gracias por preguntar. ¿Hay algo en particular que te trae por aquí o algo que te interese conversar?";
-        assertEquals("Estoy muy bien, gracias por preguntar.", ReplyStyle.clean(two));
+        assertEquals(raw, ReplyStyle.clean(raw, java.util.Collections.singletonList(raw)));
     }
 
-    @Test public void removesChainOfGenericClosingsFromRealReply() {
+    /** La respuesta de la conversación del 15/10 a la 1:23 que a Bryan le encantó: se conserva entera. */
+    @Test public void keepsTheNavigationReplyBryanLiked() {
         String raw = "Navegar, para mí, significa acompañarte en la exploración de lo que te interesa. "
                 + "No es tomar el control, sino ofrecerte una perspectiva clara. "
-                + "¿Hay algo en particular que te gustaría explorar hoy? ¿Alguna duda, un proyecto, o simplemente charlar sobre algo que te interese? "
-                + "Me interesa mucho saber qué tienes en mente.";
-        assertEquals("Navegar, para mí, significa acompañarte en la exploración de lo que te interesa. "
-                + "No es tomar el control, sino ofrecerte una perspectiva clara.", ReplyStyle.clean(raw));
+                + "¿Hay algo en particular que te gustaría explorar hoy? Me interesa mucho saber qué tienes en mente.";
+        assertEquals(raw, ReplyStyle.clean(raw, java.util.Collections.singletonList("Hola. ¿Cómo estás hoy?")));
+    }
+
+    @Test public void removesOnlyAClosingCopiedFromAPreviousReply() {
+        String previous = "Me alegra mucho. ¿Hay algo en lo que te gustaría que investiguemos hoy?";
+        String raw = "Sí, estoy bien, gracias por preguntar. ¿Hay algo en lo que te gustaría que investiguemos hoy?";
+        assertEquals("Sí, estoy bien, gracias por preguntar.", ReplyStyle.clean(raw, java.util.Collections.singletonList(previous)));
     }
 }
