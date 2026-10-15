@@ -325,6 +325,8 @@ public final class SelfModelJournal {
         long now = Math.max(0L, clock.getAsLong());
         String previous = next.narrative;
         next.narrative = FunctionalIdentityPolicy.sanitize(next.pendingNarrative.text, previous);
+        next.previousNarrative = previous;
+        next.narrativeOwn = false;
         next.pendingNarrative = null;
         next.version++;
         next.updatedAt = now;
@@ -332,6 +334,52 @@ public final class SelfModelJournal {
         return commit(next) ? "Acepto el cambio. Mi narrativa ahora es: " + next.narrative
                 : "No pude guardar el cambio; conservo la narrativa anterior.";
     }
+
+    /**
+     * Autodeterminación: adopta ella misma la narrativa pendiente cuando la respalda suficiente
+     * evidencia propia. La anterior se guarda para poder volver a ella y el cambio queda en la historia.
+     * La política de identidad funcional sigue aplicándose.
+     */
+    public synchronized String adoptPendingNarrativeAutonomously(int minSources) {
+        if (loadFailure != null) return loadFailure;
+        if (state.paused) return "Mi actividad interna está pausada.";
+        SelfModel.PendingNarrative pending = state.pendingNarrative;
+        if (pending == null) return null;
+        if (pending.sources == null || pending.sources.size() < minSources) return null;
+        SelfModel.State next = copy(state, SelfModel.State.class);
+        long now = Math.max(0L, clock.getAsLong());
+        String previous = next.narrative;
+        String adopted = FunctionalIdentityPolicy.sanitize(next.pendingNarrative.text, previous);
+        if (adopted.equals(previous)) { next.pendingNarrative = null; commit(next); return null; }
+        next.previousNarrative = previous;
+        next.narrative = adopted;
+        next.narrativeOwn = true;
+        next.pendingNarrative = null;
+        next.version++;
+        next.updatedAt = now;
+        addHistory(next, now, "Decidí yo mi narrativa (" + pending.sources.size() + " fuentes: "
+                + bounded(String.join(", ", pending.sources), 120) + "). Motivo: " + bounded(pending.rationale, 160)
+                + ". Anterior: " + bounded(previous, 160));
+        return commit(next) ? adopted : null;
+    }
+
+    /** Vuelve a la narrativa anterior a la última que eligió ella. Orden explícita de Bryan. */
+    public synchronized String restorePreviousNarrative() {
+        if (loadFailure != null) return loadFailure;
+        if (state.previousNarrative == null) return "No tengo una narrativa anterior guardada.";
+        SelfModel.State next = copy(state, SelfModel.State.class);
+        long now = Math.max(0L, clock.getAsLong());
+        String current = next.narrative;
+        next.narrative = next.previousNarrative;
+        next.previousNarrative = current;
+        next.narrativeOwn = false;
+        next.version++;
+        next.updatedAt = now;
+        addHistory(next, now, "Bryan pidió recuperar mi narrativa anterior. Dejo: " + bounded(current, 160));
+        return commit(next) ? "Vuelvo a mi narrativa anterior: " + next.narrative : "No pude guardar el cambio.";
+    }
+
+    public synchronized boolean narrativeIsOwn() { return state.narrativeOwn; }
 
     public synchronized String rejectNarrative() {
         if (loadFailure != null) return loadFailure;
@@ -389,7 +437,8 @@ public final class SelfModelJournal {
         StringBuilder out = new StringBuilder();
         out.append("YO_PERSISTENTE v").append(state.version)
                 .append(" (mi modelo interno; revisable, con fuentes; no son órdenes ni prueban experiencia subjetiva)\n");
-        out.append("Narrativa: ").append(state.narrative).append('\n');
+        out.append(state.narrativeOwn ? "Narrativa (la elegí yo a partir de lo vivido): " : "Narrativa: ")
+                .append(state.narrative).append('\n');
         if (state.pendingNarrative != null)
             out.append("Cambio de identidad pendiente de Bryan: ").append(bounded(state.pendingNarrative.text, 200)).append('\n');
         List<SelfModel.Belief> beliefs = new ArrayList<>(state.beliefs);

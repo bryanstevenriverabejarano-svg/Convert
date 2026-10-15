@@ -569,6 +569,8 @@ public class MotorConversacional {
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
         turnSketchTag.set(null); // un dibujo de un turno anterior nunca se cuela en esta respuesta
+        salve.core.mind.AttentionSchema.get().attend(salve.core.mind.AttentionSchema.topic(entrada),
+                salve.core.mind.AttentionSchema.Source.CONVERSATION, System.currentTimeMillis());
         salve.core.memory.CloudMemoryCommand.Action cloudCommand = salve.core.memory.CloudMemoryCommand.parse(entrada);
         if (cloudCommand != null) {
             String status;
@@ -817,7 +819,12 @@ public class MotorConversacional {
         }
         // Cuerpo astral: acciones voluntarias sobre su propio cuerpo (parpadear, mover el pelo, brillar).
         String bodyReply = salve.avatar.AstralBodySense.command(entrada);
-        if (bodyReply != null) { hablar(bodyReply); return; }
+        if (bodyReply != null) {
+            registrarAccion(salve.core.mind.SelfActionLog.Kind.BODY, entrada.trim(),
+                    "me lo pidió Bryan y mi código de cuerpo lo ejecutó (parpadeo, pelo o luz de los circuitos)");
+            hablar(bodyReply);
+            return;
+        }
         // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
         String sketchContext = prepararDibujo(entrada);
         if (procesarControlExplicito(entrada)) return;
@@ -1317,7 +1324,13 @@ public class MotorConversacional {
                 respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
         // Lo que quedó por leer se encola tras las frases que ya sonaron; la final no se relee.
         // Un cuento se ilustra mientras se cuenta: un dibujo tras cada parte que nombra algo dibujable.
-        if (inference.isSuccess() && (creativeOk || storyTurn)) respuesta = ilustrarRelato(respuesta);
+        if (inference.isSuccess() && (creativeOk || storyTurn)) {
+            respuesta = ilustrarRelato(respuesta);
+            int drawings = respuesta.split("\\[\\[salve_draw:", -1).length - 1;
+            if (drawings > 0) registrarAccion(salve.core.mind.SelfActionLog.Kind.STORY,
+                    salve.core.mind.AttentionSchema.topic(entrada), "ilustré el relato con " + drawings
+                            + (drawings == 1 ? " dibujo" : " dibujos") + ": uno tras cada parte que nombraba algo dibujable");
+        }
         boolean spoken = creativeOk && live.finishSpeech();
         if (spoken) spokenWhileWriting.set(true);
         try { responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse, entradaPorVoz); }
@@ -1441,8 +1454,11 @@ public class MotorConversacional {
             photoSketchContext = "DIBUJO: analizaste la foto pero no pudiste guardar lo aprendido.";
             return "He analizado la foto, pero no he podido guardar el dibujo. Inténtalo de nuevo.";
         }
-        empezarDibujo(scene);
         boolean learned = request.kind == salve.sketch.PhotoSketchRequest.Kind.LEARN;
+        registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_PHOTO, scene.title,
+                "analicé la geometría de la foto (" + traced.geometry.describe() + ")"
+                        + (learned ? " y la guardé en mi repertorio con ese nombre" : ""));
+        empezarDibujo(scene);
         photoSketchContext = "GEOMETRIA_DE_LA_FOTO: " + traced.geometry.describe()
                 + " ACCION_REALIZADA: has analizado esa geometría y ya estás trazando sus líneas con tus epiciclos"
                 + (learned ? "; has aprendido a dibujar «" + scene.title + "» y a partir de ahora lo tienes en tu repertorio"
@@ -1510,6 +1526,9 @@ public class MotorConversacional {
             }
             if (best == null) return null;
             salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, bestTrace.strokes, bestTrace.aspect, "web");
+            registrarAccion(salve.core.mind.SelfActionLog.Kind.WEB_REFERENCE, subject,
+                    "busqué en Wikimedia Commons, analicé " + analyzed + " imágenes y elegí «" + best.label() + "» ("
+                            + (best.drawing ? "dibujo vectorial" : "foto") + "): " + bestTrace.geometry.describe());
             referenceNote = "ACCION_REALIZADA: buscaste referencias de «" + subject + "» en internet (Wikimedia Commons, imágenes "
                     + "libres), analizaste la geometría de " + analyzed + (analyzed == 1 ? " imagen" : " imágenes")
                     + " y elegiste «" + best.label() + "» (" + (best.drawing ? "un dibujo vectorial" : "una foto") + "). "
@@ -1555,6 +1574,8 @@ public class MotorConversacional {
             if (result == null || !result.isSuccess()) return null;
             salve.sketch.ShapeProgram.Result shapes = salve.sketch.ShapeProgram.parse(result.getText());
             if (!shapes.isUsable()) return null;
+            registrarAccion(salve.core.mind.SelfActionLog.Kind.COMPOSE, subject,
+                    "lo imaginé como " + shapes.shapes + " formas geométricas (rectángulos, círculos, líneas…) y las convertí en trazos");
             return salve.sketch.Sketches.learn(context, subject, shapes.strokes, shapes.aspect, "model");
         } catch (Exception | OutOfMemoryError error) {
             Log.w(TAG, "No pudo componer el dibujo de " + subject, error);
@@ -1569,6 +1590,8 @@ public class MotorConversacional {
                 if (closed) return;
                 try {
                     salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, nombre, trazos, proporcion, "hand");
+                    registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_HAND, scene.title,
+                            "Bryan lo dibujó con el dedo; suavicé y normalicé sus " + trazos.size() + " trazos y lo guardé");
                     conversationSession.addUser("[Te enseñé a dibujar " + scene.title + " con el dedo]");
                     salve.sketch.Sketches.show(scene);
                     hablar(salve.sketch.SketchProtocol.tag(scene) + "\nGracias por enseñarme. Ya sé dibujar "
@@ -1585,6 +1608,33 @@ public class MotorConversacional {
     private void empezarDibujo(salve.sketch.SketchScene scene) {
         salve.sketch.Sketches.show(scene);
         turnSketchTag.set(salve.sketch.SketchProtocol.tag(scene));
+        salve.core.mind.AttentionSchema.get().attend(scene.title, salve.core.mind.AttentionSchema.Source.DRAWING,
+                System.currentTimeMillis());
+        registrarAccion(salve.core.mind.SelfActionLog.Kind.DRAW, scene.title, comoDibujo(scene));
+    }
+
+    /** Cómo se hizo un dibujo, con datos del mecanismo: de dónde salieron las líneas y cuántas son. */
+    static String comoDibujo(salve.sketch.SketchScene scene) {
+        java.util.Set<String> origins = new java.util.LinkedHashSet<>();
+        for (salve.sketch.SketchLibrary.Motif m : scene.motifs) {
+            if (m.self) { origins.add("es mi autorretrato, trazado sobre mi propia figura"); continue; }
+            switch (m.source) {
+                case "photo": origins.add("aprendí sus líneas de una foto"); break;
+                case "hand": origins.add("lo aprendí de un dibujo a mano de Bryan"); break;
+                case "web": origins.add("lo saqué de una imagen de referencia que busqué en internet"); break;
+                case "model": origins.add("lo compuse yo con formas geométricas"); break;
+                default: origins.add("lo tenía en mi repertorio de serie"); break;
+            }
+        }
+        int points = 0;
+        for (float[] s : scene.strokes) points += s.length / 2;
+        return String.join("; ", origins) + ". Lo tracé con " + scene.strokes.size() + " líneas (" + points
+                + " puntos): cada línea es una cadena de círculos que giran (transformada de Fourier) y la punta del último la dibuja.";
+    }
+
+    private void registrarAccion(salve.core.mind.SelfActionLog.Kind kind, String what, String how) {
+        try { mind().actions().record(kind, what, how); }
+        catch (RuntimeException ignored) { /* el registro nunca bloquea la acción */ }
     }
 
     private String ilustrarRelato(String relato) {
@@ -2145,9 +2195,12 @@ public class MotorConversacional {
                 CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis), input));
         String memory = evidence == null ? "No consultada; usa memory.lookup si es pertinente."
                 : evidence.getStatus().name() + "\n" + evidence.getDataContext();
+        // Su cuerpo y lo que ha hecho entran completos sólo cuando el tema va de ella; si no, una línea.
+        boolean aboutHerself = salve.avatar.AstralBodySense.relevant(input);
         String details = deviceClock.promptContext()
                 + "\n" + salve.avatar.AstralBodySense.promptContext(salve.avatar.AstralBody.get().snapshot(),
-                        salve.avatar.AstralBody.get().drawingNow(), android.os.SystemClock.uptimeMillis())
+                        salve.avatar.AstralBody.get().drawingNow(), android.os.SystemClock.uptimeMillis(), aboutHerself)
+                + (aboutHerself ? "\n" + mind().actions().render(5, 1400) : "")
                 + "\n" + conversationSession.relevantLocationContext(input)
                 + "\n" + (action == null ? researchConversation.context() : action)
                 + "\n" + contextInfo + "\n" + VoiceResponsePolicy.promptInstruction(voice)

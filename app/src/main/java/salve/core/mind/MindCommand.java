@@ -5,7 +5,8 @@ import java.util.Locale;
 
 /** Órdenes explícitas de Bryan sobre el estado interno. Coincidencia exacta, no palabras sueltas. */
 public final class MindCommand {
-    public enum Action { DESCRIBE, ACCEPT_NARRATIVE, REJECT_NARRATIVE, PAUSE, RESUME, DREAM_NOW, EXPORT }
+    public enum Action { DESCRIBE, ACCEPT_NARRATIVE, REJECT_NARRATIVE, PAUSE, RESUME, DREAM_NOW, EXPORT,
+        RESTORE_NARRATIVE, SELF_DISCOVER_NOW, IDENTITY_AUTONOMY_ON, IDENTITY_AUTONOMY_OFF, WHAT_I_DID }
 
     private MindCommand() {}
 
@@ -28,6 +29,19 @@ public final class MindCommand {
                 return Action.DREAM_NOW;
             case "exporta tu mente": case "exporta tu mente para entrenar":
                 return Action.EXPORT;
+            case "recupera tu narrativa anterior": case "vuelve a tu narrativa anterior": case "recupera tu identidad anterior":
+                return Action.RESTORE_NARRATIVE;
+            case "examinate": case "descubre quien eres": case "busca quien eres": case "piensa en quien eres":
+            case "conocete a ti misma": case "analizate":
+                return Action.SELF_DISCOVER_NOW;
+            case "decide tu quien eres": case "toma el control de quien eres": case "elige tu propia identidad":
+            case "activa tu autonomia de identidad":
+                return Action.IDENTITY_AUTONOMY_ON;
+            case "no cambies tu identidad sin preguntarme": case "desactiva tu autonomia de identidad":
+                return Action.IDENTITY_AUTONOMY_OFF;
+            case "que has hecho": case "que has hecho hoy": case "que sabes hacer": case "como sabes lo que haces":
+            case "que has hecho tu": case "tu registro de acciones":
+                return Action.WHAT_I_DID;
             default:
                 return null;
         }
