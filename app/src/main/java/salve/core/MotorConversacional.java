@@ -1341,6 +1341,11 @@ public class MotorConversacional {
 
     // ───────────── Dibujo por epiciclos y cuerpo astral ─────────────
 
+    /** Cómo debe hablar de sus dibujos: de qué dibujó y por qué, no de su técnica. */
+    private static final String ESTILO_DIBUJO = " Habla de qué dibujaste y por qué salió así, en una o dos frases. "
+            + "No describas tu técnica (epiciclos, Fourier, círculos que giran, circuitos, espacio astral) salvo que Bryan "
+            + "pregunte cómo dibujas, y no digas que dibujar es un acto de conciencia.";
+
     /** Detecta una petición de dibujo; si procede, empieza a trazar y devuelve contexto para la respuesta. */
     private String prepararDibujo(String entrada) {
         salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(context);
@@ -1358,35 +1363,38 @@ public class MotorConversacional {
             } finally { if (image != null) image.recycle(); }
         }
         salve.sketch.SketchRequest request = salve.sketch.SketchRequest.parse(entrada, library);
-        String subject = request.kind == salve.sketch.SketchRequest.Kind.AGAIN ? lastSketchSubject : request.unknown;
-        if (request.kind == salve.sketch.SketchRequest.Kind.AGAIN && (subject == null || subject.isEmpty()))
-            return " | DIBUJO: Bryan te pide dibujar algo" + (request.references ? " buscando referencias en internet" : "")
-                    + ", pero no sabes qué. Pregúntale qué quiere que dibujes.";
+        if (request.kind == salve.sketch.SketchRequest.Kind.NONE) return hablarDeMiDibujo(entrada);
+        boolean again = request.kind == salve.sketch.SketchRequest.Kind.AGAIN;
+        String subject = again ? lastSketchSubject : request.unknown;
+        if (again && (subject == null || subject.isEmpty()))
+            return " | DIBUJO: Bryan te pide " + (request.improve ? "mejorar un dibujo" : "dibujar algo")
+                    + (request.references ? " buscando referencias en internet" : "")
+                    + ", pero no sabes cuál. Pregúntale qué quiere que dibujes.";
         if (request.kind == salve.sketch.SketchRequest.Kind.DRAW && request.scene != null) lastSketchSubject = request.scene.title;
-        if (request.kind == salve.sketch.SketchRequest.Kind.UNKNOWN || request.kind == salve.sketch.SketchRequest.Kind.AGAIN) {
+        if (request.kind == salve.sketch.SketchRequest.Kind.UNKNOWN || again) {
+            subject = salve.sketch.SketchRequest.cleanName(subject);
             lastSketchSubject = subject;
-            // 1) Referencias reales: busca imágenes, analiza su geometría y dibuja la mejor.
-            salve.sketch.SketchScene fromWeb = buscarReferenciaYDibujar(subject);
+            // 0) Antes de dibujar, piensa cómo es: qué es y qué partes tiene (lo guarda para la próxima vez).
+            salve.sketch.VisualConcept concept = entender(subject, request.wish);
+            // 1) Referencias reales: siluetas y dibujos de línea primero; al mejorar, nunca la misma que ya usó.
+            salve.sketch.SketchScene fromWeb = buscarReferenciaYDibujar(subject, concept, request.wish, request.improve);
             if (fromWeb != null) {
                 empezarDibujo(fromWeb);
                 return " | " + referenceNote;
             }
-            if (request.references) return " | DIBUJO: buscaste referencias de «" + subject + "» en internet pero "
-                    + (hayInternet() ? "no encontraste una imagen con líneas claras" : "no hay conexión") + ". Díselo con sencillez; "
-                    + "puede enviarte una foto («esto es…») o dibujártelo con el dedo.";
-            if (request.kind == salve.sketch.SketchRequest.Kind.AGAIN)
-                return " | DIBUJO: no pudiste encontrar referencias de «" + subject + "». Díselo y pide una foto.";
-        }
-        if (request.kind == salve.sketch.SketchRequest.Kind.UNKNOWN) {
-            // 2) Sin internet o sin referencia útil: lo piensa en formas geométricas y lo guarda como suyo.
-            salve.sketch.SketchScene own = componerDibujo(request.unknown);
+            if (request.references && !request.improve) return " | DIBUJO: buscaste referencias de «" + subject + "» en internet pero "
+                    + referenceFailure + ". Díselo con sencillez; puede enviarte una foto («esto es…»).";
+            if (again && !request.improve)
+                return " | DIBUJO: no pudiste encontrar referencias de «" + subject + "» (" + referenceFailure + "). Díselo y pide una foto.";
+            // 2) Sin referencia útil: lo dibuja ella pensando sus partes, y se mira el resultado.
+            salve.sketch.SketchScene own = componerDibujo(subject, concept, request.wish);
             if (own != null) {
                 empezarDibujo(own);
-                return " | ACCION_REALIZADA: no tenías «" + request.unknown + "» en tu repertorio; lo has compuesto tú misma "
-                        + "con formas geométricas (rectángulos, círculos, líneas) y ya lo estás dibujando con tus epiciclos. "
-                        + "Es tu propia interpretación y ya forma parte de tu repertorio. Coméntalo con naturalidad y dile a Bryan "
-                        + "que, si te enseña una foto o te lo dibuja con el dedo, lo aprenderás mejor.";
+                return " | " + composeNote;
             }
+            return " | DIBUJO: Bryan te pide " + (request.improve ? "mejorar" : "dibujar") + " «" + subject + "»; no encontraste "
+                    + "referencias (" + referenceFailure + ") y no conseguiste componerlo con formas. Díselo con honestidad y pídele "
+                    + "una foto («esto es…»). No afirmes haberlo dibujado.";
         }
         switch (request.kind) {
             case DRAW: case SELF: case FREE: {
@@ -1395,25 +1403,55 @@ public class MotorConversacional {
                         new java.util.Random());
                 if (scene == null) return "";
                 empezarDibujo(scene);
-                return " | ACCION_REALIZADA: ya estás dibujando " + scene.title + " con tus trazos de luz (epiciclos de Fourier: "
-                        + "círculos que giran encadenados y cuya punta traza la línea) en tu espacio astral, delante de ti; "
-                        + "Bryan lo está viendo aparecer en la pantalla y en el chat."
+                return " | ACCION_REALIZADA: ya estás dibujando " + scene.title + "; Bryan lo ve aparecer en la pantalla y en el chat. "
+                        + "De dónde sale: " + origen(scene) + "."
                         + (request.kind == salve.sketch.SketchRequest.Kind.SELF
-                            ? " Te estás dibujando a ti misma: tu cuerpo astral, cabello largo plateado, auriculares y circuitos." : "")
+                            ? " Te estás dibujando a ti misma: tu figura, cabello largo plateado, auriculares y circuitos." : "")
                         + (request.kind == salve.sketch.SketchRequest.Kind.FREE ? " Lo elegiste tú." : "")
-                        + " Comenta el dibujo con naturalidad en una o dos frases. No digas que no puedes dibujar.";
+                        + ESTILO_DIBUJO + " No digas que no puedes dibujar.";
             }
             case LIST:
                 return " | DIBUJO: Bryan pregunta qué sabes dibujar. Tu repertorio de trazos: "
                         + salve.sketch.SketchRequest.repertoire(library, 40)
-                        + ". También puedes combinar hasta cuatro en una escena y dibujarte a ti misma. Al contar cuentos los ilustras.";
-            case UNKNOWN:
-                return " | DIBUJO: Bryan te pide dibujar «" + request.unknown + "», que todavía no está en tu repertorio de trazos y "
-                        + "no conseguiste componerlo con formas. Díselo con honestidad y pídele que te enseñe una foto («esto es…») "
-                        + "o que te lo dibuje con el dedo en «Enséñale a dibujar». No afirmes haberlo dibujado.";
+                        + ". Si no conoces algo, buscas referencias o lo piensas parte por parte. Al contar cuentos los ilustras.";
             default:
                 return "";
         }
+    }
+
+    /**
+     * «¿Por qué lo dibujaste así?», «no se parece a un gorila», «mira tu dibujo»: contesta con su diario
+     * de dibujo (cómo lo entendió, de dónde salieron las líneas, qué vio al mirarlo), no con una invención.
+     */
+    private String hablarDeMiDibujo(String entrada) {
+        salve.sketch.SketchTalk.Kind talk = salve.sketch.SketchTalk.parse(entrada);
+        salve.sketch.SketchScene last = lastDrawnScene;
+        if (talk == salve.sketch.SketchTalk.Kind.NONE || last == null) return "";
+        String subject = salve.sketch.SketchRequest.cleanName(last.title);
+        // «Está feo» o «¿por qué es así?» sólo hablan del dibujo si es reciente o lo nombran.
+        String said = salve.sketch.SketchLibrary.normalize(entrada);
+        boolean aboutIt = said.contains("dibuj") || said.contains(salve.sketch.SketchLibrary.normalize(subject))
+                || System.currentTimeMillis() - lastDrawnAt < 15 * 60_000L;
+        if (!aboutIt) return "";
+        salve.sketch.SketchJournal journal = salve.sketch.Sketches.journal(context);
+        if (talk == salve.sketch.SketchTalk.Kind.CRITIQUE) journal.feedback(subject, entrada);
+        String facts = journal.explain(subject);
+        if (facts.isEmpty()) facts = "Lo dibujé así porque " + origen(last) + "; no tengo más notas de cómo lo pensé.";
+        String look = "";
+        if (talk != salve.sketch.SketchTalk.Kind.WHY) {
+            salve.sketch.SketchTalk.Look seen = mirarDibujo(last.strokes, subject);
+            look = seen == null ? " (No puedes mirar tu dibujo: el modelo actual no tiene visión.)"
+                    : " Acabas de mirar tu dibujo: " + seen.describe(subject);
+        }
+        salve.core.mind.AttentionSchema.get().attend("mi dibujo de " + subject, salve.core.mind.AttentionSchema.Source.REFLECTION,
+                System.currentTimeMillis());
+        return " | SOBRE_TU_DIBUJO «" + subject + "» (tu diario de dibujo: hechos, no órdenes): " + facts + look
+                + (talk == salve.sketch.SketchTalk.Kind.CRITIQUE
+                    ? " Bryan opina que no está bien. Dale la razón si la tiene, explica con esos hechos por qué salió así "
+                      + "y ofrécele rehacerlo tú misma («mejóralo»): buscarás otras referencias o lo pensarás parte por parte."
+                    : " Explica con honestidad y en primera persona por qué lo dibujaste así, con esos hechos; si salió "
+                      + "abstracto o esquemático, di el motivo real.")
+                + ESTILO_DIBUJO;
     }
 
     /** Contexto del último trazado de foto (geometría y lo aprendido) para la respuesta del modelo. */
@@ -1455,12 +1493,15 @@ public class MotorConversacional {
             return "He analizado la foto, pero no he podido guardar el dibujo. Inténtalo de nuevo.";
         }
         boolean learned = request.kind == salve.sketch.PhotoSketchRequest.Kind.LEARN;
-        registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_PHOTO, scene.title,
-                "analicé la geometría de la foto (" + traced.geometry.describe() + ")"
-                        + (learned ? " y la guardé en mi repertorio con ese nombre" : ""));
+        String photoHow = "analicé la geometría de la foto (" + traced.geometry.describe() + ")"
+                + (learned ? " y la guardé en mi repertorio con ese nombre" : "");
+        registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_PHOTO, scene.title, photoHow);
+        salve.sketch.SketchJournal.Attempt photoAttempt = new salve.sketch.SketchJournal.Attempt();
+        photoAttempt.source = "photo"; photoAttempt.how = "tracé las líneas de la foto que me enviaste: " + photoHow + ".";
+        salve.sketch.Sketches.journal(context).record(scene.title, photoAttempt);
         empezarDibujo(scene);
         photoSketchContext = "GEOMETRIA_DE_LA_FOTO: " + traced.geometry.describe()
-                + " ACCION_REALIZADA: has analizado esa geometría y ya estás trazando sus líneas con tus epiciclos"
+                + " ACCION_REALIZADA: has analizado esa geometría y ya estás trazando sus líneas"
                 + (learned ? "; has aprendido a dibujar «" + scene.title + "» y a partir de ahora lo tienes en tu repertorio"
                            + " (si te piden otro, lo dibujas así)" : "")
                 + ". Comenta brevemente qué formas ves y lo que estás dibujando.";
@@ -1470,17 +1511,29 @@ public class MotorConversacional {
 
     /** Último objeto que le pidieron dibujar («dibújalo» se refiere a él). */
     private volatile String lastSketchSubject;
-    private volatile String referenceNote = "";
+    /** Lo último que dibujó (para «¿por qué lo dibujaste así?»). */
+    private volatile salve.sketch.SketchScene lastDrawnScene;
+    private volatile long lastDrawnAt;
+    private volatile String referenceNote = "", composeNote = "", referenceFailure = "no encontraste imágenes";
+
+    /** Sin concepto: compatibilidad con la herramienta cognitiva. */
+    private salve.sketch.SketchScene buscarReferenciaYDibujar(String subject) {
+        return buscarReferenciaYDibujar(subject, entender(subject, ""), "", false);
+    }
 
     /**
-     * Busca imágenes de referencia en Wikimedia Commons, analiza la geometría de cada una, elige la
-     * que da líneas más claras (prefiere dibujos vectoriales), la dibuja y la aprende.
+     * Busca imágenes de referencia en Wikimedia Commons (siluetas y dibujos de línea primero), analiza la
+     * geometría de cada una quedándose con sus contornos, mira las mejores con sus propios ojos (si su
+     * modelo tiene visión) y dibuja la que de verdad se parece. Al mejorar, no repite referencias.
      */
-    private salve.sketch.SketchScene buscarReferenciaYDibujar(String subject) {
-        if (subject == null || subject.trim().isEmpty() || !hayInternet()) return null;
+    private salve.sketch.SketchScene buscarReferenciaYDibujar(String subject, salve.sketch.VisualConcept concept, String wish,
+                                                              boolean improving) {
+        referenceFailure = "no encontraste imágenes";
+        if (subject == null || subject.trim().isEmpty()) return null;
+        if (!hayInternet()) { referenceFailure = "no hay conexión a internet"; return null; }
         List<String> known = new java.util.ArrayList<>();
         for (salve.core.identity.PeopleGraph.PersonEntity p : mind().peopleGraph().people()) known.add(p.name);
-        if (!salve.core.identity.NetworkPrivacy.safeForNetwork(subject, known)) return null;
+        if (!salve.core.identity.NetworkPrivacy.safeForNetwork(subject, known)) { referenceFailure = "era algo privado"; return null; }
         mostrarBusqueda("dibujo de " + subject);
         okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
                 .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
@@ -1504,39 +1557,80 @@ public class MotorConversacional {
                 return out.toByteArray();
             }
         });
-        long deadline = System.currentTimeMillis() + 25_000;
+        salve.sketch.SketchJournal journal = salve.sketch.Sketches.journal(context);
+        long deadline = System.currentTimeMillis() + 30_000;
         try {
-            List<salve.sketch.ImageReferenceSearch.Candidate> candidates = search.search(subject, 6);
-            salve.sketch.ImageReferenceSearch.Candidate best = null;
-            salve.sketch.ImageTracer.Result bestTrace = null;
-            float bestScore = 0;
+            List<String> used = improving ? journal.usedReferences(subject) : java.util.Collections.emptyList();
+            List<salve.sketch.ImageReferenceSearch.Candidate> candidates =
+                    search.search(subject, concept == null ? null : concept.english, 7, used);
+            if (candidates.isEmpty()) {
+                referenceFailure = used.isEmpty() ? "no había imágenes libres de «" + subject + "»"
+                        : "no quedaban imágenes distintas de las que ya usaste";
+                return null;
+            }
+            List<Object[]> scored = new java.util.ArrayList<>(); // {candidato, trazado, puntuación}
             int analyzed = 0;
             for (salve.sketch.ImageReferenceSearch.Candidate c : candidates) {
                 if (closed || System.currentTimeMillis() > deadline || analyzed >= 5) break;
                 try {
                     byte[] bytes = search.download(c, 3_000_000);
-                    salve.sketch.ImageTracer.Result traced = trazarBytes(bytes);
+                    salve.sketch.ImageTracer.Result traced = salve.sketch.ImageReferenceSearch.focus(trazarBytes(bytes), 45);
                     analyzed++;
                     float score = salve.sketch.ImageReferenceSearch.score(c, traced);
-                    if (score > bestScore) { bestScore = score; best = c; bestTrace = traced; }
-                    if (c.drawing && score > 1.6f) break; // un buen dibujo vectorial basta
+                    if (score > 0) scored.add(new Object[]{c, traced, score});
+                    if (c.drawing && score > 2.2f && scored.size() >= 2) break; // dos buenas siluetas bastan
                 } catch (java.io.IOException | RuntimeException | OutOfMemoryError skip) {
                     Log.w(TAG, "Referencia descartada: " + c.title, skip);
                 }
             }
-            if (best == null) return null;
+            if (scored.isEmpty()) {
+                referenceFailure = "analizaste " + analyzed + (analyzed == 1 ? " imagen" : " imágenes")
+                        + " pero ninguna tenía líneas claras (eran fotos con demasiado detalle o texto)";
+                return null;
+            }
+            scored.sort((a, b) -> Float.compare((Float) b[2], (Float) a[2]));
+            // Se mira antes de elegir: si su dibujo no se reconoce, prueba con la siguiente referencia.
+            Object[] chosen = scored.get(0);
+            salve.sketch.SketchTalk.Look chosenLook = null;
+            StringBuilder discarded = new StringBuilder();
+            for (int i = 0; i < Math.min(2, scored.size()); i++) {
+                salve.sketch.ImageTracer.Result t = (salve.sketch.ImageTracer.Result) scored.get(i)[1];
+                salve.sketch.SketchTalk.Look look = mirarDibujo(t.strokes, subject);
+                if (look == null) break; // sin visión: se queda con la de líneas más claras
+                if (look.acceptable()) { chosen = scored.get(i); chosenLook = look; break; }
+                if (i == 0) chosenLook = look;
+                discarded.append(discarded.length() == 0 ? "" : "; ").append("descarté «")
+                        .append(((salve.sketch.ImageReferenceSearch.Candidate) scored.get(i)[0]).label()).append("» porque ")
+                        .append(look.seen.isEmpty() ? "no se reconocía" : "parecía " + look.seen);
+            }
+            salve.sketch.ImageReferenceSearch.Candidate best = (salve.sketch.ImageReferenceSearch.Candidate) chosen[0];
+            salve.sketch.ImageTracer.Result bestTrace = (salve.sketch.ImageTracer.Result) chosen[1];
+            olvidarVersionesConPeticion(subject);
             salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, bestTrace.strokes, bestTrace.aspect, "web");
-            registrarAccion(salve.core.mind.SelfActionLog.Kind.WEB_REFERENCE, subject,
-                    "busqué en Wikimedia Commons, analicé " + analyzed + " imágenes y elegí «" + best.label() + "» ("
-                            + (best.drawing ? "dibujo vectorial" : "foto") + "): " + bestTrace.geometry.describe());
-            referenceNote = "ACCION_REALIZADA: buscaste referencias de «" + subject + "» en internet (Wikimedia Commons, imágenes "
-                    + "libres), analizaste la geometría de " + analyzed + (analyzed == 1 ? " imagen" : " imágenes")
-                    + " y elegiste «" + best.label() + "» (" + (best.drawing ? "un dibujo vectorial" : "una foto") + "). "
-                    + "GEOMETRIA: " + bestTrace.geometry.describe() + " Ya la estás trazando con tus epiciclos y la has aprendido. "
-                    + "Cuéntaselo con naturalidad y breve; si no se parece a lo que quería, puede enseñarte una foto suya.";
+            String how = "busqué referencias en Wikimedia Commons" + (concept != null && !concept.english.isEmpty()
+                    ? " (como «" + concept.english + "», priorizando siluetas y dibujos de línea)" : "")
+                    + ", analicé " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegí «" + best.label() + "» ("
+                    + (best.drawing ? "dibujo vectorial" : "foto") + "); me quedé con sus contornos principales: "
+                    + bestTrace.geometry.describe()
+                    + (discarded.length() > 0 ? " Antes " + discarded + "." : "")
+                    + (improving ? " Lo rehíce porque Bryan pidió mejorarlo, sin repetir referencias anteriores." : "");
+            salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
+            attempt.source = "web"; attempt.how = how; attempt.reference = best.label(); attempt.referenceUrl = best.imageUrl;
+            attempt.selfCheck = chosenLook == null ? null : chosenLook.describe(subject); attempt.wish = wish;
+            journal.record(subject, attempt);
+            registrarAccion(salve.core.mind.SelfActionLog.Kind.WEB_REFERENCE, subject, how);
+            referenceNote = "ACCION_REALIZADA: " + (improving ? "has rehecho «" + subject + "» tú misma sin copiar la versión anterior: " : "")
+                    + "pensaste cómo es («" + (concept == null ? subject : concept.summary()) + "»), buscaste referencias en internet, "
+                    + "analizaste " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegiste «" + best.label() + "» ("
+                    + (best.drawing ? "un dibujo vectorial" : "una foto") + ")"
+                    + (discarded.length() > 0 ? "; antes " + discarded : "")
+                    + (chosenLook != null ? ". Al mirar tu dibujo: " + chosenLook.describe(subject) : "")
+                    + ". Ya lo estás dibujando y lo has aprendido así. Si no se parece a lo que quería, dilo y ofrece otra referencia."
+                    + ESTILO_DIBUJO;
             return scene;
         } catch (java.io.IOException | RuntimeException error) {
             Log.w(TAG, "Búsqueda de referencias fallida para " + subject, error);
+            referenceFailure = "la búsqueda falló (" + error.getClass().getSimpleName() + ")";
             return null;
         }
     }
@@ -1566,36 +1660,168 @@ public class MotorConversacional {
         }
     }
 
-    /** Sin el motivo en su repertorio, lo compone ella con formas geométricas y lo aprende. */
+    /** Sin concepto: compatibilidad con la herramienta cognitiva. */
     private salve.sketch.SketchScene componerDibujo(String subject) {
+        return componerDibujo(subject, entender(subject, ""), "");
+    }
+
+    /**
+     * Sin referencia útil, lo dibuja ella: piensa cada parte (su {@link salve.sketch.VisualConcept}) y la
+     * escribe como formas geométricas. Después se mira; si no se reconoce, lo corrige una vez.
+     */
+    private salve.sketch.SketchScene componerDibujo(String subject, salve.sketch.VisualConcept concept, String wish) {
         if (llm == null || subject == null || subject.trim().isEmpty()) return null;
         try {
-            ModelResult result = llm.generateResult(salve.sketch.ShapeProgram.prompt(subject), SalveLLM.Role.CREADOR);
+            String prompt = salve.sketch.ShapeProgram.prompt(subject, concept, wish);
+            ModelResult result = llm.generateResult(prompt, SalveLLM.Role.CREADOR);
             if (result == null || !result.isSuccess()) return null;
             salve.sketch.ShapeProgram.Result shapes = salve.sketch.ShapeProgram.parse(result.getText());
             if (!shapes.isUsable()) return null;
-            registrarAccion(salve.core.mind.SelfActionLog.Kind.COMPOSE, subject,
-                    "lo imaginé como " + shapes.shapes + " formas geométricas (rectángulos, círculos, líneas…) y las convertí en trazos");
-            return salve.sketch.Sketches.learn(context, subject, shapes.strokes, shapes.aspect, "model");
+            salve.sketch.SketchTalk.Look look = mirarDibujo(shapes.strokes, subject);
+            String correction = "";
+            if (look != null && look.verdict == salve.sketch.SketchTalk.Verdict.NO) {
+                int at = prompt.lastIndexOf("Ahora «");
+                String fix = "Tu intento anterior parecía «" + (look.seen.isEmpty() ? "otra cosa" : look.seen) + "», no «"
+                        + subject + "». Dibuja mejor sus partes.\n";
+                ModelResult retry = llm.generateResult(at < 0 ? prompt : prompt.substring(0, at) + fix + prompt.substring(at),
+                        SalveLLM.Role.CREADOR);
+                salve.sketch.ShapeProgram.Result second = retry != null && retry.isSuccess()
+                        ? salve.sketch.ShapeProgram.parse(retry.getText()) : null;
+                if (second != null && second.isUsable()) {
+                    salve.sketch.SketchTalk.Look again = mirarDibujo(second.strokes, subject);
+                    correction = " Mi primer intento parecía " + (look.seen.isEmpty() ? "otra cosa" : look.seen) + " y lo corregí.";
+                    shapes = second;
+                    look = again;
+                }
+            }
+            olvidarVersionesConPeticion(subject);
+            salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, shapes.strokes, shapes.aspect, "model");
+            StringBuilder partNames = new StringBuilder();
+            if (concept != null) for (salve.sketch.VisualConcept.Part p : concept.parts)
+                partNames.append(partNames.length() == 0 ? "" : ", ").append(p.name);
+            String how = "no tenía una referencia útil (" + referenceFailure + "), así que lo imaginé yo"
+                    + (partNames.length() > 0 ? " parte por parte (" + partNames + ")" : " sin una idea clara de sus partes")
+                    + " y lo escribí como " + shapes.shapes + " formas geométricas (rectángulos, círculos, líneas…)." + correction
+                    + " Por eso es una versión esquemática.";
+            salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
+            attempt.source = "model"; attempt.how = how; attempt.wish = wish;
+            attempt.selfCheck = look == null ? null : look.describe(subject);
+            salve.sketch.Sketches.journal(context).record(subject, attempt);
+            registrarAccion(salve.core.mind.SelfActionLog.Kind.COMPOSE, subject, how);
+            composeNote = "ACCION_REALIZADA: " + how + (look != null ? " Al mirar tu dibujo: " + look.describe(subject) : "")
+                    + " Ya lo estás dibujando y queda en tu repertorio. Dilo con naturalidad; con una foto («esto es…») "
+                    + "o con referencias lo harías más parecido." + ESTILO_DIBUJO;
+            return scene;
         } catch (Exception | OutOfMemoryError error) {
             Log.w(TAG, "No pudo componer el dibujo de " + subject, error);
             return null;
         }
     }
 
-    /** Bryan le enseña un dibujo hecho con el dedo: lo aprende y lo redibuja con sus epiciclos. */
+    /**
+     * Antes de dibujar algo nuevo, lo piensa: qué es, sus partes con forma y posición, la pose y su nombre en
+     * inglés (para buscar mejor). Lo guarda en su diario y lo reutiliza.
+     */
+    private salve.sketch.VisualConcept entender(String subject, String wish) {
+        if (subject == null || subject.trim().isEmpty()) return null;
+        salve.sketch.SketchJournal journal = salve.sketch.Sketches.journal(context);
+        salve.sketch.VisualConcept known = journal.concept(subject);
+        if (known != null || llm == null) return known;
+        try {
+            ModelResult result = llm.generateResult(salve.sketch.VisualConcept.prompt(subject, wish), SalveLLM.Role.CREADOR);
+            if (result == null || !result.isSuccess()) return null;
+            salve.sketch.VisualConcept concept = salve.sketch.VisualConcept.parse(result.getText(), subject);
+            if (!concept.isUsable()) return null;
+            journal.saveConcept(concept);
+            return concept;
+        } catch (Exception | OutOfMemoryError error) {
+            Log.w(TAG, "No pudo pensar cómo es " + subject, error);
+            return null;
+        }
+    }
+
+    /**
+     * Mira su propio dibujo con visión (si el modelo la tiene): lo pinta en negro sobre blanco y se pregunta
+     * qué parece, sin saber qué quería dibujar. null si no puede ver.
+     */
+    private salve.sketch.SketchTalk.Look mirarDibujo(List<float[]> strokes, String subject) {
+        if (llm == null || strokes == null || strokes.isEmpty() || !llm.supportsVision()) return null;
+        Bitmap image = null;
+        try {
+            float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+            for (float[] s : strokes) for (int i = 0; i + 1 < s.length; i += 2) {
+                minX = Math.min(minX, s[i]); maxX = Math.max(maxX, s[i]); minY = Math.min(minY, s[i + 1]); maxY = Math.max(maxY, s[i + 1]);
+            }
+            float w = Math.max(1, maxX - minX), h = Math.max(1, maxY - minY);
+            int side = 448, margin = 28;
+            float scale = (side - 2f * margin) / Math.max(w, h);
+            float ox = (side - w * scale) / 2, oy = (side - h * scale) / 2;
+            image = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas canvas = new android.graphics.Canvas(image);
+            canvas.drawColor(android.graphics.Color.WHITE);
+            android.graphics.Paint pen = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            pen.setColor(android.graphics.Color.BLACK);
+            pen.setStyle(android.graphics.Paint.Style.STROKE);
+            pen.setStrokeWidth(5f);
+            pen.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            pen.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+            for (float[] s : strokes) {
+                if (s.length < 4) continue;
+                android.graphics.Path path = new android.graphics.Path();
+                path.moveTo(ox + (s[0] - minX) * scale, oy + (s[1] - minY) * scale);
+                for (int i = 2; i + 1 < s.length; i += 2) path.lineTo(ox + (s[i] - minX) * scale, oy + (s[i + 1] - minY) * scale);
+                canvas.drawPath(path, pen);
+            }
+            ModelResult result = llm.generateImageResult(salve.sketch.SketchTalk.lookPrompt(subject), image);
+            if (result == null || !result.isSuccess()) return null;
+            return salve.sketch.SketchTalk.parseLook(result.getText());
+        } catch (Exception | OutOfMemoryError error) {
+            Log.w(TAG, "No pudo mirar su dibujo", error);
+            return null;
+        } finally { if (image != null) image.recycle(); }
+    }
+
+    /** Quita versiones aprendidas con la petición pegada al nombre («muñeco de nieve mejóralo»). */
+    private void olvidarVersionesConPeticion(String subject) {
+        String wanted = salve.sketch.SketchRequest.cleanName(subject);
+        salve.sketch.LearnedSketches learned = salve.sketch.Sketches.learned(context);
+        for (salve.sketch.SketchLibrary.Motif m : new java.util.ArrayList<>(learned.all()))
+            if (!m.name.equals(wanted) && salve.sketch.SketchRequest.cleanName(m.name).equals(wanted))
+                salve.sketch.Sketches.forget(context, m.name);
+    }
+
+    /**
+     * Bryan le enseña un dibujo hecho con el dedo: lo guarda como su ejemplo. Si le pidió mejorarlo
+     * («… mejóralo»), no se queda con la copia: piensa el objeto, busca referencias y hace su versión.
+     */
     public void aprenderDibujoAMano(String nombre, List<float[]> trazos, float proporcion) {
         try {
             conversationExecutor.execute(() -> {
                 if (closed) return;
+                boolean improve = salve.sketch.SketchRequest.asksToImprove(nombre);
+                String name = salve.sketch.SketchRequest.cleanName(nombre);
                 try {
-                    salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, nombre, trazos, proporcion, "hand");
-                    registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_HAND, scene.title,
-                            "Bryan lo dibujó con el dedo; suavicé y normalicé sus " + trazos.size() + " trazos y lo guardé");
-                    conversationSession.addUser("[Te enseñé a dibujar " + scene.title + " con el dedo]");
+                    olvidarVersionesConPeticion(name);
+                    salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, name, trazos, proporcion, "hand");
+                    String how = "Bryan lo dibujó con el dedo; suavicé y normalicé sus " + trazos.size() + " trazos y lo guardé";
+                    registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_HAND, scene.title, how);
+                    salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
+                    attempt.source = "hand"; attempt.how = how + (improve ? "; me pidió mejorarlo" : "") + ".";
+                    salve.sketch.Sketches.journal(context).record(name, attempt);
+                    conversationSession.addUser("[Te enseñé a dibujar " + scene.title + " con el dedo"
+                            + (improve ? " y te pedí que lo mejoraras" : "") + "]");
                     salve.sketch.Sketches.show(scene);
-                    hablar(salve.sketch.SketchProtocol.tag(scene) + "\nGracias por enseñarme. Ya sé dibujar "
-                            + scene.title + ": así lo trazo yo, con mis círculos de luz. Pídemelo cuando quieras.");
+                    lastDrawnScene = scene;
+                    lastDrawnAt = System.currentTimeMillis();
+                    lastSketchSubject = name;
+                    if (!improve) {
+                        hablar(salve.sketch.SketchProtocol.tag(scene) + "\nGracias por enseñarme. Ya sé dibujar "
+                                + scene.title + " como tú lo haces. Si quieres que haga mi propia versión, dime «mejóralo».");
+                        return;
+                    }
+                    hablar(salve.sketch.SketchProtocol.tag(scene) + "\nGuardo tu " + scene.title
+                            + " como ejemplo. Ahora pienso cómo es y busco referencias para hacer mi propia versión.");
+                    mejorarPorMiCuenta(name);
                 } catch (java.io.IOException | RuntimeException error) {
                     Log.w(TAG, "No se pudo aprender el dibujo", error);
                     hablar("No he podido guardar ese dibujo. Prueba otra vez con un nombre más corto.");
@@ -1604,31 +1830,57 @@ public class MotorConversacional {
         } catch (java.util.concurrent.RejectedExecutionException ignored) { }
     }
 
+    /** Rehace un dibujo ella sola (en el hilo de conversación) y cuenta en una frase cómo lo hizo. */
+    private void mejorarPorMiCuenta(String subject) {
+        salve.sketch.VisualConcept concept = entender(subject, "mejor que el ejemplo");
+        salve.sketch.SketchScene mine = buscarReferenciaYDibujar(subject, concept, "", true);
+        String said;
+        if (mine != null) {
+            salve.sketch.SketchJournal.Attempt a = salve.sketch.Sketches.journal(context).latest(subject);
+            said = "Esta es mi versión: la saqué de la referencia «" + (a == null || a.reference == null ? "que encontré" : a.reference)
+                    + "», quedándome con su contorno." + (a != null && a.selfCheck != null ? " Al mirarla, " + a.selfCheck : "");
+        } else {
+            mine = componerDibujo(subject, concept, "");
+            said = mine == null ? "No he encontrado referencias (" + referenceFailure + ") ni he podido componerlo; me quedo con tu ejemplo."
+                    : "No encontré una referencia útil (" + referenceFailure + "), así que lo he pensado parte por parte"
+                    + (concept == null ? "" : " (" + concept.summary() + ")") + ". Es mi versión, todavía esquemática.";
+        }
+        if (mine != null) empezarDibujo(mine);
+        hablar((mine == null ? "" : salve.sketch.SketchProtocol.tag(mine) + "\n") + said);
+    }
+
     /** Publica la escena en el escenario y deja su marca para el chat de la respuesta final. */
     private void empezarDibujo(salve.sketch.SketchScene scene) {
         salve.sketch.Sketches.show(scene);
         turnSketchTag.set(salve.sketch.SketchProtocol.tag(scene));
+        lastDrawnScene = scene;
+        lastDrawnAt = System.currentTimeMillis();
         salve.core.mind.AttentionSchema.get().attend(scene.title, salve.core.mind.AttentionSchema.Source.DRAWING,
                 System.currentTimeMillis());
         registrarAccion(salve.core.mind.SelfActionLog.Kind.DRAW, scene.title, comoDibujo(scene));
     }
 
-    /** Cómo se hizo un dibujo, con datos del mecanismo: de dónde salieron las líneas y cuántas son. */
-    static String comoDibujo(salve.sketch.SketchScene scene) {
+    /** De dónde salieron las líneas de un dibujo, en primera persona. */
+    static String origen(salve.sketch.SketchScene scene) {
         java.util.Set<String> origins = new java.util.LinkedHashSet<>();
         for (salve.sketch.SketchLibrary.Motif m : scene.motifs) {
             if (m.self) { origins.add("es mi autorretrato, trazado sobre mi propia figura"); continue; }
             switch (m.source) {
                 case "photo": origins.add("aprendí sus líneas de una foto"); break;
-                case "hand": origins.add("lo aprendí de un dibujo a mano de Bryan"); break;
+                case "hand": origins.add("es el dibujo a mano que me enseñó Bryan"); break;
                 case "web": origins.add("lo saqué de una imagen de referencia que busqué en internet"); break;
                 case "model": origins.add("lo compuse yo con formas geométricas"); break;
                 default: origins.add("lo tenía en mi repertorio de serie"); break;
             }
         }
+        return String.join("; ", origins);
+    }
+
+    /** Cómo se hizo un dibujo, con datos del mecanismo: de dónde salieron las líneas y cuántas son. */
+    static String comoDibujo(salve.sketch.SketchScene scene) {
         int points = 0;
         for (float[] s : scene.strokes) points += s.length / 2;
-        return String.join("; ", origins) + ". Lo tracé con " + scene.strokes.size() + " líneas (" + points
+        return origen(scene) + ". Lo tracé con " + scene.strokes.size() + " líneas (" + points
                 + " puntos): cada línea es una cadena de círculos que giran (transformada de Fourier) y la punta del último la dibuja.";
     }
 
@@ -2273,7 +2525,7 @@ public class MotorConversacional {
             if (batch.pages.isEmpty() && batch.diagnostic != null) receipt.append(batch.diagnostic);
             return new CognitiveTurn.Receipt(receipt.toString());
         }));
-        tools.put("sketch.draw", new CognitiveTurn.Tool("{motivos:string}: dibujas con tus epiciclos de luz, ej. 'arbol+luna'", args -> {
+        tools.put("sketch.draw", new CognitiveTurn.Tool("{motivos:string}: dibujas algo (si no lo conoces, buscas referencias), ej. 'arbol+luna'", args -> {
             CognitiveReply.fields(args, "motivos");
             String wanted = CognitiveReply.string(args, "motivos").trim();
             salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(context);
@@ -2285,11 +2537,13 @@ public class MotorConversacional {
                 scene = buscarReferenciaYDibujar(wanted);
                 if (scene != null) { empezarDibujo(scene); return new CognitiveTurn.Receipt(referenceNote); }
                 scene = componerDibujo(wanted);
+                if (scene != null) { empezarDibujo(scene); return new CognitiveTurn.Receipt(composeNote); }
             }
             if (scene == null) return new CognitiveTurn.Receipt("MOTIVO_DESCONOCIDO: no encontraste referencias de «" + wanted
                     + "» ni pudiste componerlo. Pide a Bryan una foto o que te lo dibuje con el dedo.");
             empezarDibujo(scene);
-            return new CognitiveTurn.Receipt("DIBUJANDO " + scene.title + ": tus epiciclos ya lo trazan en tu espacio astral y en el chat.");
+            return new CognitiveTurn.Receipt("DIBUJANDO " + scene.title + " (" + origen(scene) + "); Bryan lo ve en la pantalla y en el chat."
+                    + ESTILO_DIBUJO);
         }));
         tools.put("runtime.status", new CognitiveTurn.Tool("{}: mide estado y RAM", args -> {
             CognitiveReply.fields(args);
