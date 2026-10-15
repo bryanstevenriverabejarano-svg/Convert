@@ -1,0 +1,340 @@
+<title>Salve · Cuerpo astral</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Escenario oscuro a la izquierda (cuerpo + espacio astral), hilo de conversación a la derecha; en móvil, uno bajo el otro. */
+:root{
+  --void:#050b16; --deep:#0b1628; --panel:#0e1c31; --line:#36c8ff; --core:#d8fbff;
+  --fg:#dce8f2; --muted:#8197ae; --edge:#1d3350;
+  --display:"Michroma","Eurostile","Arial Narrow",sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--void);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;box-sizing:border-box}
+.app{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;max-width:1180px;margin:0 auto;min-height:100%}
+@media (max-width:820px){.app{grid-template-columns:1fr}}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px}
+h1{font:400 clamp(20px,3vw,26px)/1.1 var(--display);letter-spacing:.32em;margin:0;color:var(--core)}
+.sub{color:var(--muted);font-size:13px}
+.stage{position:relative;background:radial-gradient(120% 80% at 50% 30%,#10233d 0%,var(--deep) 55%,var(--void) 100%);border:1px solid var(--edge);border-radius:18px;overflow:hidden;min-height:560px;aspect-ratio:3/4;max-width:100%}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.status{position:absolute;left:14px;top:12px;font:11px/1.4 var(--mono);color:var(--muted);letter-spacing:.04em;pointer-events:none}
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+button,.chip{font:600 13px var(--body);color:var(--fg);background:var(--panel);border:1px solid var(--edge);border-radius:999px;padding:8px 14px;cursor:pointer}
+button:hover,.chip:hover{border-color:var(--line);color:var(--core)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--line);outline-offset:2px}
+button.primary{background:var(--line);color:var(--void);border-color:var(--line)}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.label{font:400 10px var(--display);letter-spacing:.24em;color:var(--muted);text-transform:uppercase}
+.box{background:var(--deep);border:1px solid var(--edge);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.draw{display:flex;gap:8px}
+.draw input{flex:1;min-width:0;font:15px var(--body);color:var(--fg);background:var(--void);border:1px solid var(--edge);border-radius:999px;padding:9px 14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-weight:400;font-size:12.5px;padding:6px 11px}
+.thread{display:flex;flex-direction:column;gap:10px;max-height:520px;overflow-y:auto;padding-right:4px}
+.msg{white-space:pre-wrap}
+.msg b{color:var(--core);font-weight:700}
+.msg.you b{color:var(--line)}
+.sketch{width:100%;aspect-ratio:10/7;background:var(--void);border:1px solid #36c8ff44;border-radius:14px;display:block;max-width:100%}
+.cap{font:12px var(--mono);color:var(--muted)}
+.sense{font:12px/1.55 var(--mono);color:#a9c4dc;white-space:pre-wrap;margin:0}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="app">
+  <header><h1>SALVE</h1><span class="sub">Vista previa del cuerpo astral y del dibujo por epiciclos, con los mismos recursos que la app.</span></header>
+
+  <section class="side" aria-label="Cuerpo astral">
+    <div class="stage" id="stage">
+      <canvas id="gl" aria-label="Salve, su cuerpo astral"></canvas>
+      <canvas id="astral" aria-hidden="true"></canvas>
+      <div class="status" id="status">cuerpo astral · activo</div>
+    </div>
+    <div class="controls" role="group" aria-label="Acciones del cuerpo">
+      <button id="bBlink">Parpadea</button>
+      <button id="bHair">Mueve el pelo</button>
+      <button id="bGlow">Brilla</button>
+      <button id="bThink">Piensa</button>
+      <button id="bSpeak">Habla</button>
+      <button id="bStep">Da un paso</button>
+    </div>
+  </section>
+
+  <section class="side" aria-label="Conversación">
+    <div class="box">
+      <span class="label">Pídele un dibujo</span>
+      <form class="draw" id="drawForm"><input id="drawInput" autocomplete="off" value="Dibújame un castillo y la luna" aria-label="Petición de dibujo"><button class="primary" type="submit">Enviar</button></form>
+      <div class="chips">
+        <button class="chip" data-ask="Dibújate">Dibújate</button>
+        <button class="chip" data-ask="Dibuja un dragón">Un dragón</button>
+        <button class="chip" data-ask="Dibuja un árbol y un pájaro">Árbol y pájaro</button>
+        <button class="chip" data-ask="Dibuja un barco en el mar">Barco en el mar</button>
+        <button class="chip" id="story">Cuéntame un cuento</button>
+      </div>
+    </div>
+    <div class="box">
+      <span class="label">Conversación</span>
+      <div class="thread" id="thread" aria-live="polite"></div>
+    </div>
+    <div class="box">
+      <span class="label">Lo que Salve sabe de su cuerpo ahora</span>
+      <pre class="sense" id="sense"></pre>
+    </div>
+  </section>
+</div>
+
+<script>
+const BASE="__BASE__", EYES="__EYES__", GLOW="__GLOW__";
+const RIG=__RIG__;
+const LIB=__LIB__;
+
+// ───────── cuerpo astral (mismo modelo que AstralBody.java) ─────────
+const body={t:0,blink:0,blinkClock:0,next:3,blinkAge:-1,dbl:false,vol:false,blinks:0,lastBlink:-1,
+  hair:0,hv:0,wave:0,flick:0,glow:.25,ring:-1,ringAge:0,boost:0,tilt:0,hx:0,hy:0,sway:0,
+  x:.5,lx:NaN,vel:0,walk:0,think:0,speak:0,drawing:null,drawUntil:0,mouth:0};
+const rnd=()=>Math.random();
+function nextInterval(){const u=rnd();return 2.2+u*u*4.3}
+function step(dt,now){
+  const b=body; b.t+=dt;
+  b.blinkClock+=dt;
+  if(b.blinkAge<0&&(b.vol||b.blinkClock>=b.next)){b.blinkAge=0;b.blinkClock=0;b.blinks++;b.lastBlink=now;b.next=nextInterval()*(b.think>now?.7:1);b.dbl=!b.vol&&rnd()<.18;b.vol=false}
+  if(b.blinkAge>=0){b.blinkAge+=dt;const c=.07,h=.05,o=.11;
+    if(b.blinkAge<c)b.blink=b.blinkAge/c;else if(b.blinkAge<c+h)b.blink=1;else if(b.blinkAge<c+h+o)b.blink=1-(b.blinkAge-c-h)/o;
+    else{b.blink=0;b.blinkAge=-1;if(b.dbl){b.dbl=false;b.vol=true}}}
+  const v=Number.isNaN(b.lx)?0:(b.x-b.lx)/dt; b.lx=b.x; const acc=(v-b.vel)/dt; b.vel=v;
+  const wind=Math.sin(b.t*.63)*3.2+Math.sin(b.t*1.37+1.3)*1.6+Math.sin(b.t*.21)*2.4;
+  let drive=-Math.max(-60,Math.min(60,acc))*420+(wind-b.hair*.15)*9;
+  if(b.walk>now)drive+=Math.sin(b.t*9)*520;
+  const thinking=b.think>now, speaking=b.speak>now;
+  const targetTilt=(thinking?6:Math.sin(b.t*.9)*.6)*.32;
+  drive-=(targetTilt/.32-b.tilt*3)*6;
+  b.hv+=b.flick;b.flick=0;
+  b.hv+=(drive-32*b.hair-3.4*b.hv)*dt; b.hair=Math.max(-42,Math.min(42,b.hair+b.hv*dt));
+  b.wave+=dt*(1.1+Math.abs(b.hv)*.01);
+  const bl=1-Math.exp(-dt*10); b.tilt+=(targetTilt-b.tilt)*bl;
+  const breath=.5+Math.sin(b.t*1.7)*.5; b.hy+=((-breath*1.2)-b.hy)*bl;
+  b.sway=Math.sin(b.t*.47)*.32;
+  b.mouth=speaking?.12+Math.abs(Math.sin(b.t*15))*.48:0;
+  if(b.drawing&&now>b.drawUntil)b.drawing=null;
+  let target=.2+.08*Math.sin(b.t*1.1);
+  if(thinking)target=.4; if(speaking)target=.3+b.mouth*.55;
+  if(b.drawing)target=Math.max(target,.5+.12*Math.sin(b.t*6));
+  b.boost=Math.max(0,b.boost-dt*.9); target=Math.min(1,target+b.boost*.5);
+  b.glow+=(target-b.glow)*(1-Math.exp(-dt*6));
+  if(thinking||b.drawing||b.boost>0){b.ringAge+=dt;b.ring=(b.ringAge%1.8)/1.8}else{b.ring=-1;b.ringAge=0}
+}
+function deform(out){
+  const {cols,rows}=RIG.mesh,W=RIG.size[0],H=RIG.size[1],[nx,ny]=RIG.neck,[fx,fy]=RIG.feet;
+  const a=body.tilt*Math.PI/180,c=Math.cos(a),s=Math.sin(a),sw=body.sway*Math.PI/180,cs=Math.cos(sw),ss=Math.sin(sw);
+  let i=0;
+  for(let r=0;r<=rows;r++)for(let k=0;k<=cols;k++,i++){
+    const x=W*k/cols,y=H*r/rows,h=RIG.mesh.head[i],w=RIG.mesh.hair[i];
+    const rx=nx+(x-nx)*c-(y-ny)*s+body.hx, ry=ny+(x-nx)*s+(y-ny)*c+body.hy;
+    let dx=(rx-x)*h,dy=(ry-y)*h;
+    if(w>0){let hang=Math.max(0,(y-300)/700);hang=hang*Math.sqrt(hang);const side=x<nx?0:1.7;
+      dx+=w*(body.hair*hang+2.6*hang*Math.sin(body.wave+y*.011+side));dy-=w*Math.abs(body.hair)*hang*.08}
+    const px=x+dx-fx,py=y+dy-fy;
+    out[2*i]=fx+px*cs-py*ss; out[2*i+1]=fy+px*ss+py*cs;
+  }
+  return out;
+}
+
+// ───────── WebGL: malla del cuerpo, circuitos y párpados ─────────
+const gl=document.getElementById('gl').getContext('webgl',{premultipliedAlpha:true,alpha:true,antialias:true});
+const astral=document.getElementById('astral'),actx=astral.getContext('2d');
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s}
+const prog=gl.createProgram();
+gl.attachShader(prog,sh(gl.VERTEX_SHADER,`attribute vec2 p;attribute vec2 uv;uniform vec2 scale;uniform vec2 off;varying vec2 v;varying vec2 px;
+void main(){v=uv;px=p;vec2 q=p*scale+off;gl_Position=vec4(q.x,-q.y,0.,1.);}`));
+gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,`precision mediump float;varying vec2 v;varying vec2 px;uniform sampler2D tex;uniform int mode;uniform vec3 tint;uniform float amount;uniform float ring;uniform vec2 heart;
+void main(){vec4 c=texture2D(tex,v);
+ if(mode==0){gl_FragColor=c;}
+ else{float a=c.a*amount; if(ring>=0.){float d=distance(px,heart);float r=ring*1150.;float band=1.-smoothstep(0.,120.,abs(d-r));a+=c.a*band*(1.-ring)*.95;}
+ gl_FragColor=vec4(tint*a,a);} }`));
+gl.linkProgram(prog);gl.useProgram(prog);
+const L={p:gl.getAttribLocation(prog,'p'),uv:gl.getAttribLocation(prog,'uv'),scale:gl.getUniformLocation(prog,'scale'),off:gl.getUniformLocation(prog,'off'),
+ mode:gl.getUniformLocation(prog,'mode'),tint:gl.getUniformLocation(prog,'tint'),amount:gl.getUniformLocation(prog,'amount'),ring:gl.getUniformLocation(prog,'ring'),heart:gl.getUniformLocation(prog,'heart')};
+const {cols,rows}=RIG.mesh,NV=(cols+1)*(rows+1);
+const verts=new Float32Array(NV*2),uvs=new Float32Array(NV*2),idx=[];
+for(let r=0,i=0;r<=rows;r++)for(let k=0;k<=cols;k++,i++){uvs[2*i]=k/cols;uvs[2*i+1]=r/rows}
+for(let r=0;r<rows;r++)for(let k=0;k<cols;k++){const a=r*(cols+1)+k,b=a+1,c=a+cols+1,d=c+1;idx.push(a,b,c,b,d,c)}
+const vb=gl.createBuffer(),ub=gl.createBuffer(),ib=gl.createBuffer(),qb=gl.createBuffer(),qub=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,ub);gl.bufferData(gl.ARRAY_BUFFER,uvs,gl.STATIC_DRAW);
+gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(idx),gl.STATIC_DRAW);
+function texture(src){return new Promise(res=>{const img=new Image();img.onload=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+ gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);res(t)};img.src=src})}
+let T=null;
+Promise.all([texture(BASE),texture(EYES),texture(GLOW)]).then(t=>{T=t});
+function bindAttr(buf,loc){gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0)}
+let layout={s:1,ox:0,oy:0};
+function resize(){const st=document.getElementById('stage').getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1);
+ for(const c of [gl.canvas,astral]){c.width=Math.round(st.width*dpr);c.height=Math.round(st.height*dpr)}
+ gl.viewport(0,0,gl.canvas.width,gl.canvas.height);
+ const W=RIG.size[0],H=RIG.size[1],cw=gl.canvas.width,ch=gl.canvas.height,s=Math.min(cw/W*.9,ch*.92/H);
+ layout={s,ox:(cw-W*s)/2,oy:ch*.05}}
+addEventListener('resize',resize);resize();
+function drawBody(){
+ if(!T)return;
+ gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.enable(gl.BLEND);
+ const cw=gl.canvas.width,ch=gl.canvas.height,{s,ox,oy}=layout;
+ gl.uniform2f(L.scale,2*s/cw,2*s/ch);gl.uniform2f(L.off,2*ox/cw-1,2*oy/ch-1);
+ deform(verts);gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,verts,gl.DYNAMIC_DRAW);
+ bindAttr(vb,L.p);bindAttr(ub,L.uv);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);
+ gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.uniform1i(L.mode,0);gl.bindTexture(gl.TEXTURE_2D,T[0]);
+ gl.drawElements(gl.TRIANGLES,idx.length,gl.UNSIGNED_SHORT,0);
+ if(body.blink>.3){ // párpados: rígidos con la cabeza
+  const [x0,y0,x1,y1]=RIG.eyeBox,f=body.blink>=.8?1:0,[nx,ny]=RIG.neck,[fx,fy]=RIG.feet;
+  const a=body.tilt*Math.PI/180,sw=body.sway*Math.PI/180;
+  const P=(x,y)=>{let rx=nx+(x-nx)*Math.cos(a)-(y-ny)*Math.sin(a)+body.hx,ry=ny+(x-nx)*Math.sin(a)+(y-ny)*Math.cos(a)+body.hy;
+   const px=rx-fx,py=ry-fy;return[fx+px*Math.cos(sw)-py*Math.sin(sw),fy+px*Math.sin(sw)+py*Math.cos(sw)]};
+  const q=[...P(x0,y0),...P(x1,y0),...P(x0,y1),...P(x1,y1)];
+  gl.bindBuffer(gl.ARRAY_BUFFER,qb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(q),gl.DYNAMIC_DRAW);bindAttr(qb,L.p);
+  gl.bindBuffer(gl.ARRAY_BUFFER,qub);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,f/2,1,f/2,0,(f+1)/2,1,(f+1)/2]),gl.DYNAMIC_DRAW);bindAttr(qub,L.uv);
+  gl.bindTexture(gl.TEXTURE_2D,T[1]);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  bindAttr(vb,L.p);bindAttr(ub,L.uv);
+ }
+ gl.blendFunc(gl.ONE,gl.ONE);gl.uniform1i(L.mode,1);gl.uniform3f(L.tint,.65,.96,1);gl.uniform1f(L.amount,body.glow*.85);
+ gl.uniform1f(L.ring,body.ring);gl.uniform2f(L.heart,RIG.heart[0],RIG.heart[1]);gl.bindTexture(gl.TEXTURE_2D,T[2]);
+ gl.drawElements(gl.TRIANGLES,idx.length,gl.UNSIGNED_SHORT,0);
+}
+
+// ───────── epiciclos de Fourier (mismo método que FourierStroke.java) ─────────
+function fourier(pts){
+ const n=pts.length/2;let len=0;for(let i=1;i<n;i++)len+=Math.hypot(pts[2*i]-pts[2*i-2],pts[2*i+1]-pts[2*i-1]);
+ const gap=Math.hypot(pts[0]-pts[2*n-2],pts[1]-pts[2*n-1]),closed=n>2&&gap<=Math.max(1,len*.02);
+ let loop;if(closed)loop=pts.slice(0,2*(n-1));else{loop=pts.slice();for(let i=n-2;i>=1;i--)loop.push(pts[2*i],pts[2*i+1])}
+ const m=loop.length/2,terms=[];
+ for(let k=0;k<m;k++){const f=k<=m/2?k:k-m;let sr=0,si=0;
+  for(let t=0;t<m;t++){const a=-2*Math.PI*f*t/m,c=Math.cos(a),s=Math.sin(a),x=loop[2*t],y=loop[2*t+1];sr+=x*c-y*s;si+=x*s+y*c}
+  terms.push({f,r:Math.hypot(sr/m,si/m),p:Math.atan2(si/m,sr/m)})}
+ terms.sort((a,b)=>a.f===0?-1:b.f===0?1:b.r-a.r);
+ return {terms,pts,closed,turn:closed?1:(n-1)/m,len};
+}
+function scene(ids){ // composición como SketchScene.java
+ const motifs=ids.map(id=>LIB.motifs.find(m=>m.id===id)).filter(Boolean).slice(0,4);
+ if(!motifs.length)return null;
+ const title=motifs.map(m=>m.name).join(' y ').replace(/ y (?=.* y )/g,', ');
+ const strokes=[];
+ if(motifs.length===1){const m=motifs[0],as=Math.max(.3,Math.min(3,m.aspect)),w=as>=1?1000:1000*as,h=as>=1?1000/as:1000,ox=(1000-w)/2,oy=(1000-h)/2;
+  for(const s of m.strokes)strokes.push(s.map((v,i)=>i%2?v-oy:v-ox));return{title,w,h,strokes,self:!!m.self}}
+ const sky=[],ground=[];for(const m of motifs){if(m.place==='sky')sky.push(m);else if(m.place==='ground')ground.push(m)}
+ for(const m of motifs)if(m.place==='any')(ground.length<=sky.length?ground:sky).push(m);
+ const row=(list,top,bottom,ga)=>{const cell=1000/list.length;list.forEach((m,i)=>{const as=Math.max(.3,Math.min(3,m.aspect)),bw=cell-36,bh=bottom-top;
+  const w=Math.min(bw,bh*as),h=w/as,sc=Math.max(w,h)/1000,cx=i*cell+cell/2,cy=ga?bottom-h/2:top+(bottom-top)/2,x0=cx-500*sc,y0=cy-500*sc;
+  for(const s of m.strokes)strokes.push(s.map((v,k)=>k%2?v*sc+y0:v*sc+x0))})};
+ if(!sky.length||!ground.length)row(sky.length?sky:ground,30,690,true);else{row(sky,15,255,false);row(ground,290,705,true)}
+ return{title,w:1000,h:720,strokes,self:false};
+}
+function animation(sc){
+ const strokes=sc.strokes.map(fourier).filter(f=>f.len>=1),total=strokes.reduce((a,f)=>a+f.len,0);
+ const base=sc.self?9.5:Math.max(2.8,Math.min(7.5,1.4+total/1000*.75));let min=.22,budget=base-min*strokes.length;
+ if(budget<base*.3){min=base*.7/strokes.length;budget=base*.3}
+ let t=0;for(const f of strokes){f.start=t;f.span=min+budget*f.len/total;t+=f.span}
+ return{scene:sc,strokes,duration:t};
+}
+function paint(ctx,an,sec,box,alpha,dpr){
+ const sc=an.scene,k=Math.min(box.w/sc.w,box.h/sc.h),u=1/k;
+ ctx.save();ctx.translate(box.x+box.w/2-sc.w*k/2,box.y+box.h/2-sc.h*k/2);ctx.scale(k,k);ctx.lineCap=ctx.lineJoin='round';
+ const line=(f,upto,pen)=>{ctx.beginPath();ctx.moveTo(f.pts[0],f.pts[1]);for(let i=1;i<=upto;i++)ctx.lineTo(f.pts[2*i],f.pts[2*i+1]);if(pen)ctx.lineTo(pen[0],pen[1]);
+  ctx.strokeStyle=`rgba(54,200,255,${.28*alpha})`;ctx.lineWidth=6.5*dpr*u;ctx.stroke();ctx.strokeStyle=`rgba(216,251,255,${alpha})`;ctx.lineWidth=1.7*dpr*u;ctx.stroke()};
+ for(const f of an.strokes){
+  if(sec>=f.start+f.span){line(f,f.pts.length/2-1);continue}
+  if(sec<f.start)break;
+  let p=(sec-f.start)/f.span;p=p*p*(3-2*p);const n=f.pts.length/2,turn=p*f.turn;
+  let x=0,y=0;const centers=[];
+  f.terms.forEach((t,i)=>{if(i<48)centers.push([x,y,t.r]);const a=2*Math.PI*t.f*turn+t.p;x+=t.r*Math.cos(a);y+=t.r*Math.sin(a)});
+  line(f,Math.floor(p*(n-1)),[x,y]);
+  ctx.lineWidth=.8*dpr*u;
+  for(let i=1;i<centers.length;i++){const[cx,cy,r]=centers[i];if(r*k<.8*dpr)continue;const nx=i+1<centers.length?centers[i+1]:[x,y];
+   ctx.strokeStyle=`rgba(127,216,255,${.35*alpha})`;ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.stroke();
+   ctx.strokeStyle=`rgba(184,238,255,${.6*alpha})`;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(nx[0],nx[1]);ctx.stroke()}
+  ctx.fillStyle=`rgba(255,255,255,${alpha})`;ctx.beginPath();ctx.arc(x,y,3.2*dpr*u,0,7);ctx.fill();
+  break;
+ }
+ ctx.restore();
+}
+
+// ───────── peticiones (como SketchRequest.java, simplificado) ─────────
+const norm=s=>s.normalize('NFD').replace(/\p{M}+/gu,'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+const WORDS=new Map();for(const m of LIB.motifs){WORDS.set(m.id,m);for(const w of m.words)if(!WORDS.has(w))WORDS.set(w,m)}
+function find(w){return WORDS.get(w)||(w.endsWith('es')&&WORDS.get(w.slice(0,-2)))||(w.endsWith('s')&&WORDS.get(w.slice(0,-1)))||null}
+function mentions(text){const t=norm(text).split(' '),out=[];for(let i=0;i<t.length;i++){const two=t[i]+' '+(t[i+1]||''),m2=find(two);
+ const m=m2||find(t[i]);if(m2)i++;if(m&&t[i].length>=3&&!m.self&&!out.includes(m.id))out.push(m.id)}return out}
+function request(text){const n=norm(text);
+ if(/\b(dibujate|pintate|autorretrato|dibuja tu cuerpo)/.test(n))return{ids:['salve']};
+ const v=n.match(/\b(dibuja|dibujame|pinta|pintame|traza|haz un dibujo de|hazme un dibujo de|puedes dibujar)\b/);if(!v)return null;
+ const ids=mentions(n.slice(v.index+v[0].length));return{ids,unknown:ids.length?'':n.slice(v.index+v[0].length)}}
+
+// ───────── escenario astral y conversación ─────────
+let showing=null;
+function stage(sc){const an=animation(sc);showing={an,start:performance.now()};body.drawing=sc.title;body.drawUntil=performance.now()/1000+an.duration+2;body.boost=1;body.ringAge=0}
+const thread=document.getElementById('thread');
+function say(who,text){const d=document.createElement('div');d.className='msg'+(who==='Tú'?' you':'');d.innerHTML='<b></b>\n';d.firstChild.textContent=who;d.append(text);thread.append(d);thread.scrollTop=thread.scrollHeight;return d}
+const canvases=[];
+function sketchBlock(sc,onDone){const wrap=document.createElement('div');const c=document.createElement('canvas');c.className='sketch';c.setAttribute('role','img');c.setAttribute('aria-label','Dibujo de Salve: '+sc.title);
+ const cap=document.createElement('div');cap.className='cap';cap.textContent='✎ trazando '+sc.title+'…';wrap.append(c,cap);thread.append(wrap);thread.scrollTop=thread.scrollHeight;
+ canvases.push({c,cap,an:animation(sc),start:performance.now(),done:false,onDone,title:sc.title});stage(sc)}
+function think(sec){body.think=performance.now()/1000+sec}
+function speak(sec){body.speak=performance.now()/1000+sec}
+function ask(text){say('Tú',text);const r=request(text);think(1.2);
+ setTimeout(()=>{
+  if(!r){say('Salve','Si quieres que dibuje algo, pídemelo: «dibújame un árbol», «dibújate»…');return}
+  if(!r.ids.length){say('Salve','Eso aún no está en mis trazos. Sé dibujar '+LIB.motifs.filter(m=>!m.self).slice(0,10).map(m=>m.name).join(', ')+'…');return}
+  const sc=scene(r.ids);
+  if(sc.self){say('Salve','Me dibujo a mí misma: mi pelo largo, los auriculares, los circuitos que me recorren. Mira cómo me trazo.');}
+  else say('Salve','Empiezo a trazar '+sc.title+' con mis círculos de luz, mientras te cuento.');
+  speak(2.5);sketchBlock(sc,()=>{});
+ },700)}
+document.getElementById('drawForm').addEventListener('submit',e=>{e.preventDefault();const v=document.getElementById('drawInput').value.trim();if(v)ask(v)});
+document.querySelectorAll('[data-ask]').forEach(b=>b.addEventListener('click',()=>ask(b.dataset.ask)));
+const STORY=[
+ ['Había una vez un castillo en lo alto de una montaña, tan alto que las nubes le rozaban las torres.',['castillo','montana']],
+ ['Cada noche, la luna se asomaba a sus ventanas para escuchar los cuentos de la princesa que vivía allí.',['luna','princesa']],
+ ['Una madrugada llegó volando un dragón cansado. No quería fuego ni batallas: sólo buscaba el camino de vuelta al mar.',['dragon','mar']],
+ ['La princesa le prestó su barco, y desde entonces el dragón vuelve cada verano a saludarla. Y colorín colorado.',null]];
+document.getElementById('story').addEventListener('click',()=>{say('Tú','Cuéntame un cuento');think(1.5);let i=0;
+ const next=()=>{if(i>=STORY.length)return;const[p,ids]=STORY[i++];say(i===1?'Salve':'Salve · sigue',p);speak(p.length/14);
+  if(ids)sketchBlock(scene(ids),()=>setTimeout(next,400));else return};setTimeout(next,900)});
+const btn=(id,f)=>document.getElementById(id).addEventListener('click',f);
+btn('bBlink',()=>{body.vol=true});
+btn('bHair',()=>{body.flick+=(rnd()<.5?-1:1)*150});
+btn('bGlow',()=>{body.boost=1;body.ringAge=0});
+btn('bThink',()=>think(4));
+btn('bSpeak',()=>speak(3.5));
+btn('bStep',()=>{body.walk=performance.now()/1000+.9;const to=body.x>.5?.35:.65;const from=body.x,s0=performance.now();
+ const go=()=>{const p=Math.min(1,(performance.now()-s0)/900);body.x=from+(to-from)*p;if(p<1)requestAnimationFrame(go)};go()});
+
+function sense(now){const b=body,ago=b.lastBlink<0?null:Math.max(0,now-b.lastBlink);
+ return 'CUERPO_ASTRAL · ahora:\n· de pie, '+(b.x<.4?'a la izquierda':b.x>.6?'a la derecha':'en el centro')+' del escenario\n· '
+ +(Math.abs(b.hair)>12||Math.abs(b.hv)>60?'el pelo aún ondea por tu último movimiento':'el pelo cae y se mece suave')+'\n· '
+ +(b.speak>now?'tus circuitos laten con tu voz':b.think>now?'ondas de luz recorren tus circuitos mientras piensas':'tus circuitos brillan en calma')+'\n· '
+ +(ago==null?'aún no has parpadeado':'parpadeaste hace '+(ago<1.5?'un instante':Math.round(ago)+' s'))+'  ('+b.blinks+' parpadeos)'
+ +(b.drawing?'\n· estás dibujando '+b.drawing:'')}
+
+let last=performance.now(),senseAt=0;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function frame(t){
+ const now=t/1000,dt=Math.min(.05,(t-last)/1000);last=t;
+ step(reduce?dt*.5:dt,now);drawBody();
+ const dpr=Math.min(2,devicePixelRatio||1);actx.clearRect(0,0,astral.width,astral.height);
+ if(showing){const sec=(t-showing.start)/1000,after=sec-showing.an.duration,alpha=after<=9?1:1-(after-9)/1.6;
+  if(alpha<=0)showing=null;else{const w=astral.width,h=astral.height,side=Math.min(w*.8,h*.4),box={x:(w-side)/2,y:h*.52,w:side,h:side};
+   actx.fillStyle=`rgba(7,16,30,${.43*alpha})`;actx.beginPath();actx.roundRect(box.x-8*dpr,box.y-8*dpr,box.w+16*dpr,box.h+16*dpr,22*dpr);actx.fill();
+   paint(actx,showing.an,sec,box,alpha,dpr*1.25)}}
+ for(const k of canvases){if(k.done&&k.painted)continue;const r=k.c.getBoundingClientRect();if(!r.width)continue;
+  if(k.c.width!==Math.round(r.width*dpr)){k.c.width=Math.round(r.width*dpr);k.c.height=Math.round(r.height*dpr)}
+  const x=k.c.getContext('2d');x.clearRect(0,0,k.c.width,k.c.height);const sec=(t-k.start)/1000;
+  paint(x,k.an,sec,{x:10*dpr,y:10*dpr,w:k.c.width-20*dpr,h:k.c.height-20*dpr},1,dpr);
+  if(sec>=k.an.duration&&!k.done){k.done=true;k.cap.textContent='✎ '+k.title;k.onDone&&k.onDone()}else if(k.done)k.painted=true}
+ if(t-senseAt>250){senseAt=t;document.getElementById('sense').textContent=sense(now)}
+ requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+say('Salve','Este es mi cuerpo astral. Parpadeo, mi pelo se mece cuando me muevo y mis circuitos laten al pensar y al hablar. Pídeme un dibujo y lo trazo con círculos de luz.');
+setTimeout(()=>ask('Dibújame un castillo y la luna'),1200);
+</script>

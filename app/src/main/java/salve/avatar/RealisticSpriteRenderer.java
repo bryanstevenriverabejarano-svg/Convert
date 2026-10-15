@@ -33,6 +33,8 @@ final class RealisticSpriteRenderer {
     private static final class Assets {
         final List<Runnable> listeners = new ArrayList<>();
         volatile Map<String, Sheet> sheets;
+        /** Capa viva del cuerpo astral (opcional: sin ella se dibuja el PNG tal cual). */
+        volatile Astral astral;
         Assets(Context context) {
             Handler main = new Handler(Looper.getMainLooper());
             ExecutorService worker = Executors.newSingleThreadExecutor();
@@ -69,7 +71,8 @@ final class RealisticSpriteRenderer {
                                 throw new java.io.IOException("Invalid sprite region " + name);
                         }
                     }
-                    main.post(() -> { sheets = ready; for (Runnable listener : new ArrayList<>(listeners)) listener.run(); });
+                    Astral living = loadAstral(context, ready.get("base"));
+                    main.post(() -> { sheets = ready; astral = living; for (Runnable listener : new ArrayList<>(listeners)) listener.run(); });
                 } catch (Exception | OutOfMemoryError error) {
                     for (Sheet sheet : ready.values()) sheet.bitmap.recycle();
                     Log.e("SalveSprites", "No se pudieron cargar los sprites; se conserva el respaldo ilustrado", error);
@@ -77,10 +80,50 @@ final class RealisticSpriteRenderer {
             });
         }
     }
+    private static final class Astral {
+        final AstralBodyRig rig;
+        final Bitmap eyes, glow;
+        Astral(AstralBodyRig rig, Bitmap eyes, Bitmap glow) { this.rig = rig; this.eyes = eyes; this.glow = glow; }
+    }
+
+    private static Astral loadAstral(Context context, Sheet base) {
+        if (base == null) return null;
+        try (InputStream input = context.getAssets().open("avatar/realistic/astral.json")) {
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            byte[] buffer = new byte[8192]; int count;
+            while ((count = input.read(buffer)) != -1) bytes.write(buffer, 0, count);
+            AstralBodyRig rig = AstralBodyRig.parse(bytes.toString("UTF-8"));
+            if (rig.width != base.bitmap.getWidth() || rig.height != base.bitmap.getHeight()) return null;
+            Bitmap eyes = decode(context, "avatar/realistic/astral_eyes.png");
+            Bitmap glow = decode(context, "avatar/realistic/astral_glow.png");
+            if (eyes == null || glow == null) return null;
+            return new Astral(rig, eyes, glow);
+        } catch (Exception | OutOfMemoryError error) {
+            Log.w("SalveSprites", "Cuerpo astral sin capa viva; se dibuja la ilustración fija", error);
+            return null;
+        }
+    }
+
+    private static Bitmap decode(Context context, String path) throws java.io.IOException {
+        try (InputStream file = context.getAssets().open(path)) {
+            BitmapFactory.Options options = new BitmapFactory.Options(); options.inScaled = false;
+            return BitmapFactory.decodeStream(file, null, options);
+        }
+    }
+
     private static Assets shared;
     private final Assets assets;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final RectF destination = new RectF();
+    private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final Rect eyeSource = new Rect();
+    private final RectF eyeDestination = new RectF();
+    private final android.graphics.Path ring = new android.graphics.Path();
+    private float[] vertices;
+    private static final android.graphics.ColorFilter CIRCUIT =
+            new android.graphics.PorterDuffColorFilter(0xFFA6F4FF, android.graphics.PorterDuff.Mode.SRC_IN);
+    private static final android.graphics.ColorFilter WAVE =
+            new android.graphics.PorterDuffColorFilter(0xFFFFFFFF, android.graphics.PorterDuff.Mode.SRC_IN);
     RealisticSpriteRenderer(Context context) {
         synchronized (RealisticSpriteRenderer.class) {
             if (shared == null) shared = new Assets(context.getApplicationContext());
@@ -106,6 +149,11 @@ final class RealisticSpriteRenderer {
     }
     boolean draw(Canvas canvas, AvatarState state, AvatarMotion.Snapshot motion, float height,
                  float gaitPhase, float time, boolean sleeping) {
+        return draw(canvas, state, motion, null, height, gaitPhase, time, sleeping);
+    }
+
+    boolean draw(Canvas canvas, AvatarState state, AvatarMotion.Snapshot motion, AstralBody.Snapshot body, float height,
+                 float gaitPhase, float time, boolean sleeping) {
         Map<String, Sheet> sheets = assets.sheets;
         if (sheets == null) return false;
         RealisticSpriteAnimation.Frame selected = RealisticSpriteAnimation.select(state, motion, gaitPhase, time, sleeping);
@@ -123,8 +171,54 @@ final class RealisticSpriteRenderer {
         if (selected.mirror) canvas.scale(-1, 1);
         float breath = sleeping ? 0 : motion.breath * height * .0015f;
         destination.set(-width / 2, -drawnHeight - breath, width / 2, -breath);
-        canvas.drawBitmap(sheet.bitmap, source, destination, paint);
+        Astral living = assets.astral;
+        if (body != null && living != null && "base".equals(selected.sheet) && !selected.mirror)
+            drawLiving(canvas, sheet.bitmap, living, body, drawnHeight / source.height());
+        else canvas.drawBitmap(sheet.bitmap, source, destination, paint);
         canvas.restore();
         return true;
+    }
+
+    /** La ilustración base como cuerpo vivo: malla de pelo y cabeza, párpados y circuitos de luz. */
+    private void drawLiving(Canvas canvas, Bitmap base, Astral living, AstralBody.Snapshot body, float scale) {
+        AstralBodyRig rig = living.rig;
+        canvas.save();
+        canvas.translate(destination.left, destination.top);
+        canvas.scale(scale, scale);
+        canvas.rotate(body.sway, rig.feetX, rig.feetY);
+        vertices = rig.deform(body, vertices);
+        canvas.drawBitmapMesh(base, rig.cols, rig.rows, vertices, 0, null, 0, paint);
+        if (body.blink > .3f) {
+            int frame = body.blink >= .8f ? 1 : 0;
+            int h = rig.eyeBottom - rig.eyeTop;
+            eyeSource.set(0, frame * h, rig.eyeRight - rig.eyeLeft, (frame + 1) * h);
+            eyeDestination.set(rig.eyeLeft, rig.eyeTop, rig.eyeRight, rig.eyeBottom);
+            canvas.save();
+            canvas.translate(body.headShiftX, body.headShiftY);
+            canvas.rotate(body.headTilt, rig.neckX, rig.neckY);
+            canvas.drawBitmap(living.eyes, eyeSource, eyeDestination, paint);
+            canvas.restore();
+        }
+        float glow = Math.max(0, Math.min(1, body.glow));
+        if (glow > .02f) {
+            glowPaint.setColorFilter(CIRCUIT);
+            glowPaint.setAlpha(Math.round(glow * 210));
+            canvas.drawBitmapMesh(living.glow, rig.cols, rig.rows, vertices, 0, null, 0, glowPaint);
+            if (body.glowRing >= 0) {
+                // Una onda de energía sale del corazón y recorre los circuitos.
+                float radius = body.glowRing * rig.height * .62f, band = 120f;
+                ring.reset();
+                ring.setFillType(android.graphics.Path.FillType.EVEN_ODD);
+                ring.addCircle(rig.heartX, rig.heartY, radius + band, android.graphics.Path.Direction.CW);
+                ring.addCircle(rig.heartX, rig.heartY, Math.max(0, radius - band), android.graphics.Path.Direction.CW);
+                canvas.save();
+                canvas.clipPath(ring);
+                glowPaint.setColorFilter(WAVE);
+                glowPaint.setAlpha(Math.round(230 * (1 - body.glowRing)));
+                canvas.drawBitmapMesh(living.glow, rig.cols, rig.rows, vertices, 0, null, 0, glowPaint);
+                canvas.restore();
+            }
+        }
+        canvas.restore();
     }
 }
