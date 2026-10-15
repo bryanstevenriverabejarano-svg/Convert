@@ -119,7 +119,7 @@ public final class VisualConcept {
         return clip(b.toString(), 420);
     }
 
-    static String clip(String s, int max) {
+    public static String clip(String s, int max) {
         String t = s == null ? "" : s.replaceAll("[\\p{Cntrl}]+", " ").replaceAll("\\s+", " ").trim();
         return t.length() <= max ? t : t.substring(0, max - 1).trim() + "…";
     }
