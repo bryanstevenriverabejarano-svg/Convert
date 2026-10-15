@@ -60,6 +60,13 @@ public class SyncWorker extends Worker {
                 new OneTimeWorkRequest.Builder(SyncWorker.class).setConstraints(constraints).build());
     }
 
+    /** Sustituye un trabajo pendiente (quizá en espera por reintentos) por uno inmediato. */
+    public static void restartNow(Context ctx) {
+        Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
+        WorkManager.getInstance(ctx).enqueueUniqueWork(UNIQUE_NAME, ExistingWorkPolicy.REPLACE,
+                new OneTimeWorkRequest.Builder(SyncWorker.class).setConstraints(constraints).build());
+    }
+
     /**
      * Programa un flush cuando haya Internet disponible.
      * Usa enqueueUniqueWork para evitar trabajos duplicados.

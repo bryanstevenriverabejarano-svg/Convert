@@ -207,6 +207,33 @@ public final class CloudSyncManager {
         SyncWorker.enqueueWhenOnline(ctx.getApplicationContext());
     }
 
+    /**
+     * Recuperación pedida por el usuario: se ejecuta ya, por lotes, contando el progreso, en vez
+     * de esperar a un trabajo de WorkManager que puede estar aplazado por reintentos anteriores.
+     * Llamar fuera del hilo principal. Devuelve un resumen honesto (incluido el error real).
+     */
+    public static String restoreNow(Context ctx, java.util.function.BooleanSupplier cancelled,
+                                    java.util.function.Consumer<String> progress) {
+        if (!isPCloudConfigured(ctx)) return "pCloud no está conectada en esta instalación.";
+        if (!isEnabled(ctx)) return "La sincronización con pCloud está en pausa.";
+        try { indexLocalJournal(ctx); } catch (RuntimeException ignored) { }
+        int restored = 0;
+        RestoreBatch batch = null;
+        for (int round = 0; round < 80; round++) {
+            if (cancelled != null && cancelled.getAsBoolean()) break;
+            batch = restoreMemoryBatch(ctx, 150);
+            restored += batch.restored;
+            if (progress != null && batch.more) progress.accept(memoryStatus(ctx));
+            if (batch.retry || !batch.more) break;
+        }
+        // Reinicia el trabajo en segundo plano sin el retraso acumulado de reintentos antiguos.
+        try { SyncWorker.restartNow(ctx.getApplicationContext()); } catch (RuntimeException ignored) { }
+        String status = memoryStatus(ctx);
+        return (restored > 0 ? "He traído " + restored + " recuerdos nuevos de pCloud. "
+                : batch != null && !batch.retry ? "No había recuerdos nuevos que traer de pCloud. " : "")
+                + status;
+    }
+
     private static void restoreStatus(Context ctx, String status, boolean complete) {
         ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE).edit()
                 .putString("status", status).putBoolean("complete", complete).apply();

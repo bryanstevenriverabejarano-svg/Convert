@@ -26,6 +26,8 @@ import salve.presentation.ui.DeviceControlActivity;
 /** Visible, explicitly started workspace. Web pages have no bridge to Android actions or memory. */
 public final class MobileWorkspaceService extends Service {
     public static final String QUERY = "mobile_query";
+    public static final String MEDIA = "mobile_media";
+    public static final String MEDIA_AUTOPLAY = "mobile_media_autoplay";
     private static final String STOP = "salve.mobile.STOP";
     private static final String CHANNEL = "salve_mobile_workspace";
     private static final int NOTIFICATION = 3103;
@@ -34,7 +36,26 @@ public final class MobileWorkspaceService extends Service {
     private WindowManager manager;
     private WindowManager.LayoutParams layout;
     private LinearLayout panel, body, browserPage, controlPage;
-    private TextView status, observation;
+    private TextView status, observation, trace;
+    private final java.util.ArrayDeque<String> readings = new java.util.ArrayDeque<>();
+    /** Búsqueda de YouTube cuyo primer vídeo hay que abrir; null si no hay reproducción pendiente. */
+    private String mediaQuery;
+    private boolean mediaAutoplay;
+    private int mediaAttempts;
+    private final salve.core.web.SearchLive.Listener live = new salve.core.web.SearchLive.Listener() {
+        @Override public void onSearch(String value) {
+            if (destroyed || query == null) return;
+            readings.clear(); showReadings();
+            query.setText(value); search(); report("Salve está buscando: " + value);
+        }
+        @Override public void onReading(String url, String title) {
+            if (destroyed) return;
+            String host = Uri.parse(url).getHost();
+            readings.addLast("· " + (host == null ? url : host) + (title.isEmpty() ? "" : " — " + title));
+            while (readings.size() > 4) readings.removeFirst();
+            showReadings();
+        }
+    };
     private EditText query, text, label;
     private volatile WebView web;
     private boolean added, collapsed, destroyed, receiverRegistered, networkRegistered, reviewing;
@@ -53,6 +74,19 @@ public final class MobileWorkspaceService extends Service {
     private final Runnable clock = new Runnable() {
         @Override public void run() { if (!destroyed) { tick(); main.postDelayed(this, 1000); } }
     };
+    /** Abre YouTube en la mini ventana; con autoplay pone el primer resultado. */
+    public static boolean openMedia(Context context, String query, boolean autoplay) {
+        if (!Settings.canDrawOverlays(context)) return false;
+        try {
+            context.startForegroundService(new Intent(context, MobileWorkspaceService.class)
+                    .putExtra(MEDIA, query).putExtra(MEDIA_AUTOPLAY, autoplay));
+            return true;
+        } catch (RuntimeException unavailable) { return false; }
+    }
+    public static void close(Context context) {
+        try { context.startService(new Intent(context, MobileWorkspaceService.class).setAction(STOP)); }
+        catch (RuntimeException notRunning) { /* No estaba abierta. */ }
+    }
     public static boolean open(Context context, String query) {
         if (!Settings.canDrawOverlays(context)) return false;
         try {
@@ -65,9 +99,11 @@ public final class MobileWorkspaceService extends Service {
         if (intent != null && STOP.equals(intent.getAction())) { stopSelf(); return START_NOT_STICKY; }
         if (!Settings.canDrawOverlays(this)) { stopSelf(); return START_NOT_STICKY; }
         try {
-            if (panel == null) { notification(); createPanel(); observeEnvironment(); }
+            if (panel == null) { notification(); createPanel(); observeEnvironment(); salve.core.web.SearchLive.register(live); }
+            String media = intent == null ? null : intent.getStringExtra(MEDIA);
             String search = intent == null ? null : intent.getStringExtra(QUERY);
-            if (search != null && !search.trim().isEmpty()) { query.setText(search); search(); }
+            if (media != null && !media.trim().isEmpty()) playMedia(media, intent.getBooleanExtra(MEDIA_AUTOPLAY, true));
+            else if (search != null && !search.trim().isEmpty()) { mediaQuery = null; query.setText(search); search(); }
         } catch (RuntimeException unavailable) {
             Toast.makeText(this, "No pude abrir la ventana. Revisa el permiso y Android System WebView.", Toast.LENGTH_LONG).show();
             stopSelf();
@@ -105,6 +141,7 @@ public final class MobileWorkspaceService extends Service {
         button(searchButtons, "Buscar", this::search);
         button(searchButtons, "Atrás web", () -> { recovery.pause(); if (web != null && web.canGoBack()) { paused = false; web.goBack(); } });
         button(searchButtons, "Navegador", this::externalBrowser);
+        trace = message(browserPage, ""); trace.setTextSize(12); trace.setMaxLines(4); trace.setVisibility(View.GONE);
         createWebView();
         controlPage = column(); body.addView(controlPage, new LinearLayout.LayoutParams(-1, 0, 1)); controlPage.setVisibility(View.GONE);
         ScrollView scroll = new ScrollView(this); controlPage.addView(scroll, new LinearLayout.LayoutParams(-1, -1));
@@ -140,7 +177,8 @@ public final class MobileWorkspaceService extends Service {
         settings.setAllowFileAccess(false); settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setJavaScriptCanOpenWindowsAutomatically(false); settings.setSupportMultipleWindows(false);
-        settings.setMediaPlaybackRequiresUserGesture(true); settings.setGeolocationEnabled(false); settings.setSaveFormData(false);
+        // Solo la reproducción pedida a Salve («pon música…») puede sonar sin tocar la pantalla.
+        settings.setMediaPlaybackRequiresUserGesture(mediaQuery == null); settings.setGeolocationEnabled(false); settings.setSaveFormData(false);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, false);
         web.setOnTouchListener((v, event) -> { if (event.getActionMasked() == MotionEvent.ACTION_DOWN) { recovery.userInteraction(); paused = false; focus(); } return false; });
         web.setWebChromeClient(new WebChromeClient() {
@@ -173,7 +211,10 @@ public final class MobileWorkspaceService extends Service {
             @Override public void onPageFinished(WebView view, String url) {
                 if (view != web || pageFailed || paused || recovery.state() == BrowserRecovery.State.WAITING_NETWORK
                         || recovery.state() == BrowserRecovery.State.FAILED) return;
-                recovery.ready(); report("Página cargada · " + Uri.parse(url).getHost() + ". Puedes abrir los resultados. Si pide verificación, complétala aquí o en tu navegador.");
+                recovery.ready();
+                if (mediaQuery != null && mediaAutoplay && url.contains("/results")) { mediaAttempts = 0; findFirstVideo(); return; }
+                if (mediaQuery != null && url.contains("/watch")) { startVideo(); return; }
+                report("Página cargada · " + Uri.parse(url).getHost() + ". Puedes abrir los resultados. Si pide verificación, complétala aquí o en tu navegador.");
             }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (view != web || !request.isForMainFrame() || paused) return;
@@ -202,6 +243,7 @@ public final class MobileWorkspaceService extends Service {
     private void search() {
         if (reviewing || locked()) { report("Termina la acción pendiente y desbloquea el móvil para buscar."); return; }
         try {
+            mediaQuery = null; // Una búsqueda normal nunca reproduce sola.
             String value = query.getText().toString();
             String url = MobileBrowserPolicy.searchUrl(WebSearchSettings.load(this, value), value);
             disposeBrowser(); createWebView(); // Isolates callbacks from the old search and any old forms.
@@ -212,6 +254,42 @@ public final class MobileWorkspaceService extends Service {
             else report("Sin conexión. Buscaré cuando vuelva la red durante los próximos 2 minutos.");
         } catch (IllegalArgumentException invalid) { report(invalid.getMessage()); }
         catch (RuntimeException unavailable) { recovery.pause(); report("No pude iniciar WebView. Comprueba que Android System WebView esté instalado y actualizado."); }
+    }
+    private void showReadings() {
+        if (trace == null) return;
+        trace.setVisibility(readings.isEmpty() ? View.GONE : View.VISIBLE);
+        trace.setText(readings.isEmpty() ? "" : "Salve está leyendo:\n" + String.join("\n", readings));
+    }
+    /** YouTube en la ventana: busca y, si se pidió reproducir, abre el primer vídeo. */
+    private void playMedia(String value, boolean autoplay) {
+        if (reviewing || locked()) { report("Desbloquea el móvil para poner música."); return; }
+        String url = salve.core.web.MediaRequest.searchUrl(value);
+        mediaQuery = value; mediaAutoplay = autoplay; readings.clear(); showReadings();
+        disposeBrowser(); createWebView();
+        paused = false; pageFailed = false;
+        recovery.begin(url, online(), SystemClock.elapsedRealtime());
+        tab(true); collapse(false); releaseFocus(); query.setText(value);
+        if (recovery.state() == BrowserRecovery.State.LOADING) { web.loadUrl(url); report("Buscando en YouTube: " + value); }
+        else report("Sin conexión. Pondré «" + value + "» cuando vuelva la red.");
+    }
+    /** Los resultados de YouTube se dibujan tras cargar: se reintenta unos segundos. */
+    private void findFirstVideo() {
+        WebView view = web;
+        if (view == null || destroyed || mediaQuery == null) return;
+        view.evaluateJavascript("(function(){var a=document.querySelector('a[href*=\"/watch?v=\"]');return a?a.getAttribute('href'):'';})()", value -> {
+            if (destroyed || web != view || mediaQuery == null) return;
+            String id = salve.core.web.MediaRequest.videoId(value == null ? "" : value.replace("\\u0026", "&").replace("\"", ""));
+            if (id != null) { report("Abriendo el primer resultado de «" + mediaQuery + "»…"); view.loadUrl("https://m.youtube.com/watch?v=" + id); return; }
+            if (++mediaAttempts < 12) main.postDelayed(this::findFirstVideo, 700);
+            else report("Estos son los resultados de «" + mediaQuery + "». Toca el que quieras.");
+        });
+    }
+    private void startVideo() {
+        WebView view = web;
+        if (view == null) return;
+        report("Sonando: " + mediaQuery + ". Puedes minimizar la ventana y seguir usando el móvil; × la cierra.");
+        main.postDelayed(() -> { if (web == view && !destroyed)
+            view.evaluateJavascript("(function(){var v=document.querySelector('video');if(v){v.play();return 'ok';}return '';})()", null); }, 1500);
     }
     private void observeEnvironment() {
         connectivity = getSystemService(ConnectivityManager.class);
@@ -372,7 +450,7 @@ public final class MobileWorkspaceService extends Service {
     }
     @Override public void onConfigurationChanged(Configuration configuration) { super.onConfigurationChanged(configuration); if (layout != null) { bounds(); update(); } }
     @Override public void onDestroy() {
-        destroyed = true; main.removeCallbacksAndMessages(null); recovery.pause();
+        destroyed = true; main.removeCallbacksAndMessages(null); recovery.pause(); salve.core.web.SearchLive.unregister(live);
         if (receiverRegistered) unregisterReceiver(screen);
         if (networkRegistered) try { connectivity.unregisterNetworkCallback(network); } catch (RuntimeException ignored) { }
         if (reviewing && SalveAccessibilityService.getInstance() != null) SalveAccessibilityService.getInstance().cancelarConfirmacion();

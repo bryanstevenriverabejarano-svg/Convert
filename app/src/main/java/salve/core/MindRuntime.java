@@ -187,6 +187,16 @@ public final class MindRuntime {
             default:
                 break;
         }
+        if (interlocutor().name == null) {
+            // Sin nombre guardado, en su propio teléfono: se presume Bryan y se dice por qué falta el dato.
+            boolean cloudPending = salve.data.sync.CloudSyncManager.isPCloudConfigured(app)
+                    && !salve.data.sync.CloudSyncManager.memoryRestoreComplete(app);
+            return "Estás en el teléfono de " + first + ", así que lo más probable es que seas tú, " + first
+                    + ", quien me creó. Aun así, en esta instalación no tengo tu nombre guardado"
+                    + (cloudPending ? " porque todavía no he recuperado mis recuerdos de pCloud (di «recupera tus recuerdos»)" : "")
+                    + ". " + (identity.biometricAvailable() ? "Si quieres que lo confirme, di «verifícame». " : "")
+                    + "Si eres tú, dime «sí, soy yo» y lo recordaré.";
+        }
         List<salve.core.mind.SelfModel.Belief> aboutUser = new ArrayList<>();
         for (salve.core.mind.SelfModel.Belief b : journal.beliefs())
             if (salve.core.mind.SelfModel.ABOUT_BRYAN.equals(b.about) && b.contradictions.isEmpty()) aboutUser.add(b);
