@@ -105,12 +105,24 @@ public final class MindRuntime {
      */
     public String selfModelForPrompt(int maxChars) {
         try {
-            List<String> family = familyFacts();
-            String head = Interlocutor.promptLine(interlocutor()) + "\n"
-                    + (family.isEmpty() ? "" : "Familia del interlocutor (dicho por él): " + String.join(" ", family) + "\n")
-                    + CAPABILITIES + "\n";
-            return head + journal.render(Math.max(120, maxChars - head.length()));
+            salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(app);
+            String head = salve.core.identity.IdentityPrompt.render(identity.session(), peopleGraph(),
+                    identity.biometricAvailable(), System.currentTimeMillis()) + "\n" + CAPABILITIES + "\n";
+            // Reflexiones y creencias sobre Bryan son su espacio íntimo: solo con acceso privado.
+            String self = identity.privateAccess() ? journal.render(Math.max(120, maxChars - head.length()))
+                    : "YO_PERSISTENTE: " + journal.narrative() + " (mis recuerdos y reflexiones sobre Bryan quedan reservados "
+                    + "hasta que se verifique que es él).";
+            return head + self;
         } catch (RuntimeException failure) { return ""; }
+    }
+
+    /** Árbol de personas calculado desde el perfil guardado (una sola fuente de verdad). */
+    public salve.core.identity.PeopleGraph peopleGraph() {
+        List<String[]> family = new ArrayList<>();
+        for (String statement : familyFacts())
+            for (salve.core.mind.FamilyFacts.Member m : salve.core.mind.FamilyFacts.parse(statement))
+                family.add(new String[]{m.relation, m.name});
+        return salve.core.identity.PeopleGraph.build(interlocutor().name, family);
     }
 
     /** Lo que consta del usuario: nombre declarado y si se presentó como creador. */
@@ -141,17 +153,48 @@ public final class MindRuntime {
     /** Respuesta directa a «¿quién es mi familia?», «¿cómo se llama mi madre?», o null. */
     public String familyAnswer(String input) {
         if (!salve.core.mind.FamilyFacts.asksAboutFamily(input)) return null;
+        salve.core.identity.SessionIdentity session = salve.core.identity.IdentityManager.get(app).session();
+        if (!session.isCreatorSide()) {
+            String own = peopleGraph().familyFor(session.state(), session.name());
+            return own.isEmpty() ? "Eso forma parte de la vida privada de " + creatorFirstName()
+                    + "; no lo comparto sin saber que eres él." : own;
+        }
         return salve.core.mind.FamilyFacts.answer(input, familyFacts());
+    }
+
+    private String creatorFirstName() {
+        return peopleGraph().creator().name.split(" ")[0];
     }
 
     /** Respuesta directa a «¿sabes quién soy?», o null si la entrada no pregunta eso. */
     public String userIdentityAnswer(String input) {
         if (!Interlocutor.asksWhoUserIs(input)) return null;
+        salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(app);
+        salve.core.identity.SessionIdentity session = identity.session();
+        String first = creatorFirstName();
+        switch (session.state()) {
+            case GUEST:
+                return session.name() == null ? "No lo sé: me dijiste que no eres " + first + ". ¿Cómo te llamas?"
+                        : "Te presentaste como " + session.name() + ". No te tengo entre las personas que conozco, pero encantada.";
+            case FAMILY:
+                return "Eres " + session.name() + ", " + salve.core.identity.PeopleGraph.display(session.relation())
+                        + " de " + first + ", según te presentaste.";
+            case UNCERTAIN:
+                return (session.claimedCreator() ? "Dices que eres " + first + ", pero no he podido confirmarlo. "
+                        : "No estoy segura de quién eres. ")
+                        + (identity.biometricAvailable() ? "Si eres " + first + ", di «verifícame» y confírmalo con tu huella o tu rostro."
+                        : "¿Me dices quién eres?");
+            default:
+                break;
+        }
         List<salve.core.mind.SelfModel.Belief> aboutUser = new ArrayList<>();
         for (salve.core.mind.SelfModel.Belief b : journal.beliefs())
             if (salve.core.mind.SelfModel.ABOUT_BRYAN.equals(b.about) && b.contradictions.isEmpty()) aboutUser.add(b);
         aboutUser.sort((a, b) -> Double.compare(b.confidence, a.confidence));
-        return Interlocutor.answer(interlocutor(), "Bryan", aboutUser);
+        String answer = Interlocutor.answer(interlocutor(), "Bryan", aboutUser);
+        if (session.state() == salve.core.identity.SessionIdentity.State.VERIFIED_CREATOR && answer.startsWith("Eres "))
+            answer += " Te he verificado con el teléfono.";
+        return answer;
     }
 
     // ── Órdenes de Bryan ────────────────────────────────────────────────────────
@@ -160,6 +203,9 @@ public final class MindRuntime {
     public String handleCommand(String input) {
         MindCommand.Action action = MindCommand.parse(input);
         if (action == null) return null;
+        if (!salve.core.identity.IdentityManager.get(app).privateAccess())
+            return "Mi mente guarda reflexiones sobre " + creatorFirstName() + "; solo la abro cuando sé que es él. "
+                    + "Di «verifícame» y confírmalo con tu huella o tu rostro.";
         switch (action) {
             case DESCRIBE: {
                 EmbeddingCalibration.Result c = calibration;

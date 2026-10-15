@@ -8,6 +8,12 @@ public class VisualIdentityContextTest {
         assertTrue(VisualMemoryRecord.create("Foto", "Bryan", "yo", "única persona", true).identifiesUser());
         assertFalse(VisualMemoryRecord.create("Soy yo", "", "yo", "única persona", true).identifiesUser());
         assertFalse(VisualMemoryRecord.create("Foto", "Diego", "hermano", "izquierda", true).identifiesUser());
+        assertTrue(VisualMemoryRecord.create("Foto", "Bryan", "Yo mismo( tu creador)", "centro", true).identifiesUser());
+        assertTrue(VisualMemoryRecord.create("Foto", "Bryan", "Yo mismo( tu creador)", "centro", true)
+                .promptContext().contains("segunda persona"));
+        assertFalse(VisualMemoryRecord.create("Foto", "Diego", "hermano", "izquierda", true)
+                .promptContext().contains("segunda persona"));
+        assertFalse(VisualMemoryRecord.create("Foto", "Ana", "yo y mi hermana", "izquierda", true).showsInterlocutor());
         assertFalse(VisualMemoryRecord.create("Foto", "Bryan", "yo", "", true).identifiesUser());
     }
 
