@@ -650,6 +650,12 @@ public class MotorConversacional {
         }
         String identityResponse = comandoIdentidad(entrada);
         if (identityResponse != null) { hablar(identityResponse); return; }
+        if (salve.core.memory.TypoTolerantText.normalize(entrada).replaceFirst("^salve ", "")
+                .matches("(?:juega|ponte a jugar|vete a jugar)(?: un rato| un poco)?(?: tu sola| sola| por tu cuenta)?")) {
+            salve.work.PlayWorker.enqueueNow(context);
+            hablar("¡Voy! Me invento unos retos y los resuelvo. Luego pregúntame «¿a qué has jugado?».");
+            return;
+        }
         if (pideInvestigarPorSuCuenta(entrada)) {
             salve.work.CuriosityWorker.enqueueNow(context);
             hablar("Vale: elijo una de mis preguntas abiertas y la investigo por mi cuenta. Cuando tenga algo, te lo cuento.");
@@ -709,6 +715,7 @@ public class MotorConversacional {
         String userIdentity = mind().userIdentityAnswer(entrada);
         if (userIdentity == null) userIdentity = mind().familyAnswer(entrada);
         if (userIdentity == null && creatorSide()) userIdentity = mind().curiosityAnswer(entrada);
+        if (userIdentity == null) userIdentity = mind().playAnswer(entrada);
         if (userIdentity != null) {
             deliverResponse(userIdentity, AvatarMotionProtocol.parse(""), true, true, false);
             return;
