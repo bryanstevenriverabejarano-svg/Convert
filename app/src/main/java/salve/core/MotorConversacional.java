@@ -1345,8 +1345,27 @@ public class MotorConversacional {
             } finally { if (image != null) image.recycle(); }
         }
         salve.sketch.SketchRequest request = salve.sketch.SketchRequest.parse(entrada, library);
+        String subject = request.kind == salve.sketch.SketchRequest.Kind.AGAIN ? lastSketchSubject : request.unknown;
+        if (request.kind == salve.sketch.SketchRequest.Kind.AGAIN && (subject == null || subject.isEmpty()))
+            return " | DIBUJO: Bryan te pide dibujar algo" + (request.references ? " buscando referencias en internet" : "")
+                    + ", pero no sabes qué. Pregúntale qué quiere que dibujes.";
+        if (request.kind == salve.sketch.SketchRequest.Kind.DRAW && request.scene != null) lastSketchSubject = request.scene.title;
+        if (request.kind == salve.sketch.SketchRequest.Kind.UNKNOWN || request.kind == salve.sketch.SketchRequest.Kind.AGAIN) {
+            lastSketchSubject = subject;
+            // 1) Referencias reales: busca imágenes, analiza su geometría y dibuja la mejor.
+            salve.sketch.SketchScene fromWeb = buscarReferenciaYDibujar(subject);
+            if (fromWeb != null) {
+                empezarDibujo(fromWeb);
+                return " | " + referenceNote;
+            }
+            if (request.references) return " | DIBUJO: buscaste referencias de «" + subject + "» en internet pero "
+                    + (hayInternet() ? "no encontraste una imagen con líneas claras" : "no hay conexión") + ". Díselo con sencillez; "
+                    + "puede enviarte una foto («esto es…») o dibujártelo con el dedo.";
+            if (request.kind == salve.sketch.SketchRequest.Kind.AGAIN)
+                return " | DIBUJO: no pudiste encontrar referencias de «" + subject + "». Díselo y pide una foto.";
+        }
         if (request.kind == salve.sketch.SketchRequest.Kind.UNKNOWN) {
-            // No lo tiene: lo piensa en formas geométricas, lo dibuja y lo guarda como suyo.
+            // 2) Sin internet o sin referencia útil: lo piensa en formas geométricas y lo guarda como suyo.
             salve.sketch.SketchScene own = componerDibujo(request.unknown);
             if (own != null) {
                 empezarDibujo(own);
@@ -1431,6 +1450,101 @@ public class MotorConversacional {
                 + ". Comenta brevemente qué formas ves y lo que estás dibujando.";
         return (learned ? "Aprendido: ya sé dibujar " + scene.title + ". " : "")
                 + "He analizado sus líneas: " + traced.geometry.describe() + " Mira cómo lo trazo.";
+    }
+
+    /** Último objeto que le pidieron dibujar («dibújalo» se refiere a él). */
+    private volatile String lastSketchSubject;
+    private volatile String referenceNote = "";
+
+    /**
+     * Busca imágenes de referencia en Wikimedia Commons, analiza la geometría de cada una, elige la
+     * que da líneas más claras (prefiere dibujos vectoriales), la dibuja y la aprende.
+     */
+    private salve.sketch.SketchScene buscarReferenciaYDibujar(String subject) {
+        if (subject == null || subject.trim().isEmpty() || !hayInternet()) return null;
+        List<String> known = new java.util.ArrayList<>();
+        for (salve.core.identity.PeopleGraph.PersonEntity p : mind().peopleGraph().people()) known.add(p.name);
+        if (!salve.core.identity.NetworkPrivacy.safeForNetwork(subject, known)) return null;
+        mostrarBusqueda("dibujo de " + subject);
+        okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
+                .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .callTimeout(14, java.util.concurrent.TimeUnit.SECONDS).build();
+        salve.sketch.ImageReferenceSearch search = new salve.sketch.ImageReferenceSearch((url, maxBytes) -> {
+            okhttp3.Request request = new okhttp3.Request.Builder().url(url)
+                    .header("User-Agent", "Salve/1.1 (https://github.com/bryanstevenriverabejarano-svg/Convert)").get().build();
+            try (okhttp3.Response response = client.newCall(request).execute()) {
+                okhttp3.ResponseBody body = response.body();
+                if (!response.isSuccessful() || body == null) throw new java.io.IOException("HTTP " + response.code());
+                long declared = body.contentLength();
+                if (declared > maxBytes) throw new java.io.IOException("Demasiado grande");
+                java.io.InputStream in = body.byteStream();
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                byte[] buffer = new byte[16384]; int n;
+                while ((n = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, n);
+                    if (out.size() > maxBytes) throw new java.io.IOException("Demasiado grande");
+                }
+                return out.toByteArray();
+            }
+        });
+        long deadline = System.currentTimeMillis() + 25_000;
+        try {
+            List<salve.sketch.ImageReferenceSearch.Candidate> candidates = search.search(subject, 6);
+            salve.sketch.ImageReferenceSearch.Candidate best = null;
+            salve.sketch.ImageTracer.Result bestTrace = null;
+            float bestScore = 0;
+            int analyzed = 0;
+            for (salve.sketch.ImageReferenceSearch.Candidate c : candidates) {
+                if (closed || System.currentTimeMillis() > deadline || analyzed >= 5) break;
+                try {
+                    byte[] bytes = search.download(c, 3_000_000);
+                    salve.sketch.ImageTracer.Result traced = trazarBytes(bytes);
+                    analyzed++;
+                    float score = salve.sketch.ImageReferenceSearch.score(c, traced);
+                    if (score > bestScore) { bestScore = score; best = c; bestTrace = traced; }
+                    if (c.drawing && score > 1.6f) break; // un buen dibujo vectorial basta
+                } catch (java.io.IOException | RuntimeException | OutOfMemoryError skip) {
+                    Log.w(TAG, "Referencia descartada: " + c.title, skip);
+                }
+            }
+            if (best == null) return null;
+            salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, bestTrace.strokes, bestTrace.aspect, "web");
+            referenceNote = "ACCION_REALIZADA: buscaste referencias de «" + subject + "» en internet (Wikimedia Commons, imágenes "
+                    + "libres), analizaste la geometría de " + analyzed + (analyzed == 1 ? " imagen" : " imágenes")
+                    + " y elegiste «" + best.label() + "» (" + (best.drawing ? "un dibujo vectorial" : "una foto") + "). "
+                    + "GEOMETRIA: " + bestTrace.geometry.describe() + " Ya la estás trazando con tus epiciclos y la has aprendido. "
+                    + "Cuéntaselo con naturalidad y breve; si no se parece a lo que quería, puede enseñarte una foto suya.";
+            return scene;
+        } catch (java.io.IOException | RuntimeException error) {
+            Log.w(TAG, "Búsqueda de referencias fallida para " + subject, error);
+            return null;
+        }
+    }
+
+    /** Decodifica una imagen descargada a ≤320 px y analiza su geometría. */
+    private salve.sketch.ImageTracer.Result trazarBytes(byte[] bytes) {
+        android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+        int sample = 1;
+        while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= salve.sketch.ImageTracer.MAX_SIDE) sample *= 2;
+        android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
+        opts.inSampleSize = sample;
+        Bitmap decoded = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+        if (decoded == null) throw new IllegalArgumentException("Imagen no válida");
+        Bitmap small = null;
+        try {
+            float scale = Math.min(1f, salve.sketch.ImageTracer.MAX_SIDE / (float) Math.max(decoded.getWidth(), decoded.getHeight()));
+            int w = Math.max(8, Math.round(decoded.getWidth() * scale)), h = Math.max(8, Math.round(decoded.getHeight() * scale));
+            small = Bitmap.createScaledBitmap(decoded, w, h, true);
+            int[] pixels = new int[w * h];
+            small.getPixels(pixels, 0, w, 0, 0, w, h);
+            return salve.sketch.ImageTracer.trace(pixels, w, h, 1600, true);
+        } finally {
+            if (small != null && small != decoded) small.recycle();
+            decoded.recycle();
+        }
     }
 
     /** Sin el motivo en su repertorio, lo compone ella con formas geométricas y lo aprende. */
@@ -2113,8 +2227,14 @@ public class MotorConversacional {
             if (library == null) return new CognitiveTurn.Receipt("DIBUJO_NO_DISPONIBLE: el repertorio de trazos no se pudo cargar.");
             if (turnSketchTag.get() != null) return new CognitiveTurn.Receipt("YA_DIBUJANDO: ya estás trazando un dibujo en este turno.");
             salve.sketch.SketchScene scene = wanted.length() > 120 ? null : salve.sketch.SketchScene.fromKey(library, wanted);
-            if (scene == null) return new CognitiveTurn.Receipt("MOTIVO_DESCONOCIDO: no sabes trazar «" + wanted
-                    + "». Repertorio: " + salve.sketch.SketchRequest.repertoire(library, 30));
+            if (scene == null && wanted.length() <= 60) {
+                lastSketchSubject = wanted;
+                scene = buscarReferenciaYDibujar(wanted);
+                if (scene != null) { empezarDibujo(scene); return new CognitiveTurn.Receipt(referenceNote); }
+                scene = componerDibujo(wanted);
+            }
+            if (scene == null) return new CognitiveTurn.Receipt("MOTIVO_DESCONOCIDO: no encontraste referencias de «" + wanted
+                    + "» ni pudiste componerlo. Pide a Bryan una foto o que te lo dibuje con el dedo.");
             empezarDibujo(scene);
             return new CognitiveTurn.Receipt("DIBUJANDO " + scene.title + ": tus epiciclos ya lo trazan en tu espacio astral y en el chat.");
         }));

@@ -31,7 +31,8 @@ Cada trazo se convierte en su transformada discreta de Fourier (`FourierStroke`)
 |---|---|---|
 | Foto | «Esto es un mueble, dibújame uno» con la foto adjunta; o «dibújala» sobre la foto del chat | `ImageTracer` analiza la geometría (bordes finos o, en dibujos de líneas, el esqueleto), aísla el objeto principal (corta horizontes y lo que sale del encuadre), simplifica y ordena los trazos. Salve describe lo que ve (rectas horizontales/verticales/diagonales, curvas, contornos, simetría), lo traza y, si lo nombraste, lo aprende. |
 | A mano | Opciones → «Enséñale a dibujar», o «te enseño a dibujar una lámpara» | Lienzo para dibujar con el dedo; se suaviza, se normaliza y se aprende. |
-| Ella sola | «Dibuja una bicicleta» sin tenerla | Su modelo describe el objeto con formas (`rect`, `circle`, `ellipse`, `line`, `poly`, `path`, `arc`) en un lienzo 100×100; `ShapeProgram` valida la gramática (nada se ejecuta) y lo convierte en trazos. Lo guarda como suyo. |
+| Referencias de internet | «Dibuja un cochinillo», «busca referencias de un perro y dibújalo», o «dibújalo» tras pedir algo | `ImageReferenceSearch` busca en Wikimedia Commons (imágenes libres; traduce el término al inglés vía Wikipedia), prefiere dibujos vectoriales y luego fotos. Descarga hasta 5, analiza la geometría de cada una, elige la de líneas más claras, la dibuja y la aprende. Sólo sale a internet el nombre del objeto. |
+| Ella sola | «Dibuja una bicicleta» sin internet ni referencia útil | Su modelo describe el objeto con formas (`rect`, `circle`, `ellipse`, `line`, `poly`, `path`, `arc`) en un lienzo 100×100; `ShapeProgram` valida la gramática (nada se ejecuta) y lo convierte en trazos. Lo guarda como suyo. |
 
 Lo aprendido se guarda en `files/sketch/learned.json` (hasta 80 motivos) y tiene prioridad sobre el repertorio de serie: si le enseñas tu casa, «dibuja una casa» dibuja la tuya. Una foto sin nombre se guarda como «tu foto de las HH:MM».
 
