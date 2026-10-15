@@ -1197,10 +1197,15 @@ public class MotorConversacional {
             responseContext += " | TAREA: Bryan te pide en español lo que le dijiste antes en inglés. Tu respuesta anterior fue: «"
                     + (anteriorEnIngles.length() > 700 ? anteriorEnIngles.substring(0, 700) + "…" : anteriorEnIngles)
                     + "». Dile lo mismo en español, con su contenido, y si quieres explica que se te cruzó el idioma.";
-        CognitiveTurn.Outcome cognitive = runCognitiveTurn(entrada, responseContext, resumenAccion,
+        // Cuentos, poemas y escenas de historia: texto libre, sin el JSON que les cortaba el texto.
+        boolean creativeTurn = activePhoto == null
+                && (storyTurn || salve.core.conversation.CreativeRequest.isCreative(entrada, recentAssistantReplies(2)));
+        ModelResult creativeResult = creativeTurn ? generarTextoCreativo(entrada, storyTurn ? story : null) : null;
+        boolean creativeOk = creativeUsable(creativeResult);
+        CognitiveTurn.Outcome cognitive = creativeOk ? null : runCognitiveTurn(entrada, responseContext, resumenAccion,
                 entradaPorVoz, evidence, false);
         // Si se le cruza el inglés sin que se lo pidan, rehace la respuesta en español.
-        if (cognitive.result != null && cognitive.result.isSuccess() && !cognitive.handedOff
+        if (cognitive != null && cognitive.result != null && cognitive.result.isSuccess() && !cognitive.handedOff
                 && salve.core.conversation.LanguageGuard.isMostlyEnglish(cognitive.result.getText())
                 && !salve.core.conversation.LanguageGuard.isMostlyEnglish(entrada)
                 && !entrada.toLowerCase(Locale.ROOT).matches(".*\\b(en ingles|en inglés|in english|traduce al ingles|traduce al inglés)\\b.*")) {
@@ -1211,10 +1216,17 @@ public class MotorConversacional {
             if (spanish.result != null && spanish.result.isSuccess()
                     && !salve.core.conversation.LanguageGuard.isMostlyEnglish(spanish.result.getText())) cognitive = spanish;
         }
-        if (cognitive.handedOff) return;
-        ModelResult inference = cognitive.result;
+        if (cognitive != null && cognitive.handedOff) return;
+        // Red de seguridad: «Aquí tienes uno corto…» sin el texto detrás → lo escribe en texto libre.
+        if (!creativeOk && activePhoto == null && cognitive.result.isSuccess()
+                && salve.core.conversation.CreativeRequest.promisedWithoutDelivering(cognitive.result.getText())) {
+            creativeResult = generarTextoCreativo(entrada, storyTurn ? story : null);
+            creativeOk = creativeUsable(creativeResult);
+        }
+        ModelResult inference = creativeOk ? creativeResult : cognitive.result;
         fallbackUsed = !inference.isSuccess();
-        respuesta = inference.isSuccess() ? inference.getText()
+        respuesta = inference.isSuccess() ? (creativeOk ? salve.core.conversation.CreativeRequest.stripPreamble(inference.getText())
+                : inference.getText())
                 : (resumenAccion == null ? "" : resumenAccion + "\n") + modelFailureMessage(inference)
                 + (activePhoto != null && gemini.isAvailable()
                     ? " Si quieres, di «analízala en la nube» y la enviaré a Gemini solo esta vez." : "");
@@ -1232,7 +1244,7 @@ public class MotorConversacional {
         // Una respuesta idéntica a otra anterior suele significar que el modelo ignoró el mensaje
         // nuevo («Es un placer conocerte…» dos veces). Se reintenta una vez avisándolo.
         java.util.List<String> recientes = recentAssistantReplies(3);
-        if (inference.isSuccess() && (salve.core.conversation.ReplyStyle.repeats(respuesta, recientes)
+        if (inference.isSuccess() && !creativeOk && (salve.core.conversation.ReplyStyle.repeats(respuesta, recientes)
                 || salve.core.conversation.ReplyStyle.mostlyEchoes(respuesta, recientes))) {
             CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext
                             + " | EVITA_REPETIR: estabas repitiendo frases de respuestas anteriores; responde con palabras nuevas y concretas al mensaje actual.",
@@ -1242,7 +1254,8 @@ public class MotorConversacional {
                 respuesta = retry.result.getText();
         }
         // Muletillas que el modelo pequeño repite aunque el prompt las prohíba, y frases que ya dijo.
-        if (inference.isSuccess()) respuesta = salve.core.conversation.ReplyStyle.dropEchoes(
+        // (Un cuento conserva sus párrafos: la limpieza de muletillas une el texto en una línea.)
+        if (inference.isSuccess() && !creativeOk) respuesta = salve.core.conversation.ReplyStyle.dropEchoes(
                 salve.core.conversation.ReplyStyle.clean(respuesta, recientes), recientes);
         if (inference.isSuccess() && storyTurn) {
             // Sin eco del mensaje de Bryan al empezar la escena (hasta dos frases de eco/relleno).
@@ -1262,7 +1275,8 @@ public class MotorConversacional {
         }
 
         // 🟡 4. GOBERNADOR DE LONGITUD
-        int maxResponseChars = VoiceResponsePolicy.maxResponseChars(entradaPorVoz);
+        int maxResponseChars = creativeOk ? salve.core.conversation.CreativeRequest.MAX_CHARS
+                : VoiceResponsePolicy.maxResponseChars(entradaPorVoz);
         if (respuesta.length() > maxResponseChars) {
             truncated = true;
             Log.w(TAG, "Respuesta extensa; aplicando límite por frase.");
@@ -1561,6 +1575,45 @@ public class MotorConversacional {
                 .replaceAll("\\p{M}+", "").replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
         return t.matches("(salve )?(analiza(la)?|mira(la)?|revisa(la)?|procesa(la)?|usa gemini|usa la nube)( la foto| esta foto| esa foto)?( en| con| para| desde)? ?(la nube|gemini|esta foto|la foto)?( por favor)?")
                 && t.matches(".*\\b(nube|gemini)\\b.*");
+    }
+
+    /**
+     * Cuento, poema o escena en texto libre (rol NARRADOR: sin gramática JSON, 1024 tokens).
+     * Si sale en inglés, lo reescribe una vez en español.
+     */
+    private ModelResult generarTextoCreativo(String entrada, salve.core.conversation.StoryMode.State story) {
+        String self = "";
+        try { self = mind().selfModelForPrompt(700); } catch (RuntimeException ignored) { }
+        String listener = null;
+        if (creatorSide()) {
+            String name = mind().interlocutor().name;
+            listener = name == null || name.trim().isEmpty() ? null : name.trim().split("\\s+")[0];
+        }
+        String storyBlock = story == null ? null : salve.core.conversation.StoryMode.promptBlock(story, entrada);
+        java.util.List<salve.core.conversation.ChatMessage> history = conversationSession.snapshot();
+        ModelResult result = generarCreativo(salve.core.conversation.CreativeRequest.prompt(entrada, self, storyBlock, history, listener));
+        if (result.isSuccess() && salve.core.conversation.LanguageGuard.isMostlyEnglish(result.getText())
+                && !salve.core.conversation.LanguageGuard.isMostlyEnglish(entrada)) {
+            ModelResult spanish = generarCreativo(salve.core.conversation.CreativeRequest.prompt(
+                    entrada + " (escríbelo SOLO en español)", self, storyBlock, history, listener));
+            if (spanish.isSuccess() && !salve.core.conversation.LanguageGuard.isMostlyEnglish(spanish.getText())) return spanish;
+        }
+        return result;
+    }
+
+    private ModelResult generarCreativo(String prompt) {
+        return ConversationModelRouter.generate(false, llm != null && llm.isLocalOnly(), false,
+                gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
+                () -> {
+                    if (llm == null) return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Sin modelo local", 0L);
+                    return rememberProvider(llm.generateResult(prompt, SalveLLM.Role.NARRADOR));
+                });
+    }
+
+    private static boolean creativeUsable(ModelResult result) {
+        if (result == null || !result.isSuccess() || result.getText() == null) return false;
+        String text = salve.core.conversation.CreativeRequest.stripPreamble(result.getText());
+        return text.length() >= 60 && !salve.core.conversation.CreativeRequest.promisedWithoutDelivering(text);
     }
 
     private java.util.List<String> recentAssistantReplies(int max) {

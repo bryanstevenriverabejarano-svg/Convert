@@ -42,7 +42,8 @@ public class SalveLLM {
         SINTETIZADOR,   // consolidar conocimiento disperso
         EVALUADOR,      // juzgar decisiones propias — autocrítica profunda
         CREADOR,         // ideas originales no solicitadas — exploración creativa
-        CURIOSO         // investigar internet por iniciativa propia
+        CURIOSO,        // investigar internet por iniciativa propia
+        NARRADOR        // cuentos, poemas, escenas: texto libre (sin JSON), largo y con más temperatura
     }
 
     private static final String TAG = "Salve/LLM";
@@ -381,8 +382,10 @@ public class SalveLLM {
                 }
             } else {
                 decorated = salve.core.cognition.CognitivePrompt.withEngine(decorated, ModelRuntimeInfo.name(modelPath), true, null);
-                text = isLiteRT ? LiteRTLlm.generate(identity + decorated, salve.core.cognition.CognitivePrompt.isCognitive(decorated),
-                        salve.core.cognition.CognitivePrompt.isFormatRepair(decorated)) : BasicLocalLlm.chatSinglePrompt(identity + decorated);
+                boolean structured = salve.core.cognition.CognitivePrompt.isCognitive(decorated);
+                text = isLiteRT ? LiteRTLlm.generate(identity + decorated, structured,
+                        salve.core.cognition.CognitivePrompt.isFormatRepair(decorated), role == Role.NARRADOR && !structured)
+                        : BasicLocalLlm.chatSinglePrompt(identity + decorated);
             }
             long latency = (System.nanoTime() - start) / 1_000_000L;
             if (text == null || text.trim().isEmpty()) {

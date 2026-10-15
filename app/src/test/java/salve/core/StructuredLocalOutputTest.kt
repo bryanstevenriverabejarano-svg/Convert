@@ -25,4 +25,14 @@ class StructuredLocalOutputTest {
         assertEquals(512, LiteRTLlm.conversationConfig(true).maxOutputToken!!)
         assertEquals(256, LiteRTLlm.conversationConfig(true, true).maxOutputToken!!)
     }
+    @Test fun creativeTextIsFreeLongerAndWarmer() {
+        val config = LiteRTLlm.conversationConfig(false, false, true)
+        assertFalse(config.enableResponseFormat)
+        assertEquals(LiteRTLlm.CREATIVE_OUTPUT_TOKENS, config.maxOutputToken!!)
+        assertEquals(0.8, config.samplerConfig!!.temperature, 0.000001)
+        // A structured turn never becomes creative: the JSON contract keeps its budget.
+        assertEquals(512, LiteRTLlm.conversationConfig(true, false, true).maxOutputToken!!)
+        assertEquals(180L, LiteRTLlm.timeoutSeconds(false, true))
+        assertEquals(90L, LiteRTLlm.timeoutSeconds(false, false))
+    }
 }
