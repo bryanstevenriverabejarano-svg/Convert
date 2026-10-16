@@ -19,7 +19,9 @@ public class SelfUpdatesTest {
         assertTrue(SelfUpdates.asksAbout("qué te han cambiado"));
         assertFalse(SelfUpdates.asksAbout("¿Qué tiempo hace?"));
         String text = SelfUpdates.render(all, 5, 1500);
-        assertTrue("las más recientes primero", text.indexOf("Sé qué me han cambiado") < text.indexOf("Me leo antes de hablar"));
+        String newest = all.get(all.size() - 1).title, older = all.get(all.size() - 2).title;
+        assertTrue(text.contains(newest) && text.contains(older));
+        assertTrue("las más recientes primero", text.indexOf(newest) < text.indexOf(older));
         assertTrue(text.length() <= 1500);
     }
 

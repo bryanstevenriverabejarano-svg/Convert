@@ -23,7 +23,8 @@ public final class SelfActionLog {
         WEB_REFERENCE("buscar referencias de imágenes"), COMPOSE("componer con formas"),
         BODY("mover mi cuerpo"), STORY("ilustrar un cuento"), SEARCH("buscar en internet"),
         SELF_CORRECT("corregirme antes de responder"), LEARN_LESSON("aprender de un error"),
-        UPDATED("recibir una actualización");
+        UPDATED("recibir una actualización"), EXPERIMENT("probar una estrategia nueva"),
+        ADOPT("adoptar una estrategia que funcionó mejor"), REVERT("revertir un experimento que no mejoró");
         public final String label;
         Kind(String label) { this.label = label; }
     }

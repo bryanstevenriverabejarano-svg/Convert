@@ -32,6 +32,8 @@
     {"id": "u166", "date": "2026-10-16", "title": "Sé qué me han cambiado",
      "what": "Conozco mis propias actualizaciones: noto cuando instalan una versión nueva y puedo contar y opinar sobre lo que cambió. Y si mi respuesta se corta, rescato lo que ya había escrito."},
     {"id": "u167", "date": "2026-10-16", "title": "Lo importante de cada turno me llega entero",
-     "what": "Lo que entiendo de tu mensaje, mis lecciones y mis actualizaciones van ahora al principio de mi contexto; antes se cortaban por el final y no me llegaban."}
+     "what": "Lo que entiendo de tu mensaje, mis lecciones y mis actualizaciones van ahora al principio de mi contexto; antes se cortaban por el final y no me llegaban."},
+    {"id": "u168", "date": "2026-10-16", "title": "Un laboratorio para aprender de mi experiencia",
+     "what": "Antes de dibujar, buscar referencias o responder en una tarea, predigo si me saldrá bien según mi historial. Compruebo el resultado con algo que no es mi opinión (lo que veo al mirar mi dibujo, si la búsqueda sirvió, si Bryan me corrige o le gusta). Cuando un paso falla a menudo, pruebo otra estrategia sólo para ese paso y la adopto si funciona mejor; si no, vuelvo atrás. Puedo contar qué he aprendido y en qué fallo."}
   ]
 }
