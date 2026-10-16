@@ -827,7 +827,7 @@ public class MotorConversacional {
             return;
         }
         // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
-        String sketchContext = prepararDibujo(entrada) + nubeContexto();
+        String sketchContext = prepararDibujo(entrada) + nubeContexto() + entenderHilo(entrada);
         if (procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
@@ -1357,6 +1357,29 @@ public class MotorConversacional {
             return " | NUBE: por tu cuenta, sin que nadie pulsara nada, has recuperado " + restored + " recuerdos de pCloud desde "
                     + "la última conversación. " + salve.data.sync.CloudSyncManager.memoryStatus(context)
                     + " Si viene al caso, menciónalo en una frase.";
+        } catch (RuntimeException ignored) { return ""; }
+    }
+
+    /** Hilo de la conversación: tarea en curso y opciones que ofreció en su última pregunta. */
+    private final salve.core.conversation.DialogueFocus.State dialogueFocus = new salve.core.conversation.DialogueFocus.State();
+
+    /**
+     * Qué significa lo que acaba de decir Bryan respecto a lo que se estaba haciendo: «dale, hazlo»
+     * acepta su propuesta; «el orden de las palabras» elige una de sus opciones. Se lo dice al modelo
+     * y su atención pasa a la tarea, para que no vuelva a preguntar ni se vaya a un relato.
+     */
+    private String entenderHilo(String entrada) {
+        try {
+            long now = System.currentTimeMillis();
+            java.util.List<String> last = recentAssistantReplies(1);
+            salve.core.conversation.DialogueFocus.observeUser(dialogueFocus, entrada, now);
+            salve.core.conversation.DialogueFocus.Reading reading = salve.core.conversation.DialogueFocus.read(
+                    dialogueFocus, entrada, last.isEmpty() ? null : last.get(0), now);
+            if (!reading.task.isEmpty())
+                salve.core.mind.AttentionSchema.get().attend(reading.kind == salve.core.conversation.DialogueFocus.Kind.CHOOSE
+                                ? reading.task + ": " + reading.choice : reading.task,
+                        salve.core.mind.AttentionSchema.Source.CONVERSATION, now);
+            return reading.prompt();
         } catch (RuntimeException ignored) { return ""; }
     }
 
