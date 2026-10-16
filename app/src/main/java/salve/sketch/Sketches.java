@@ -101,9 +101,15 @@ public final class Sketches {
      */
     public static SketchScene learn(Context context, String name, List<float[]> strokes, float aspect, String source)
             throws java.io.IOException {
+        return learn(context, name, strokes, aspect, source, null);
+    }
+
+    /** Con sus partes («cabeza», «brazos»…) para trazarlas y contarlas una a una. */
+    public static SketchScene learn(Context context, String name, List<float[]> strokes, float aspect, String source,
+                                    List<SketchLibrary.Part> parts) throws java.io.IOException {
         SketchLibrary base = library(context);
         if (base == null) throw new java.io.IOException("Repertorio no disponible");
-        SketchLibrary.Motif motif = learned(context).learn(name, strokes, aspect, source);
+        SketchLibrary.Motif motif = learned(context).learn(name, strokes, aspect, source, parts);
         synchronized (Sketches.class) {
             library = builtIn.withLearned(learned(context).all());
             version++;

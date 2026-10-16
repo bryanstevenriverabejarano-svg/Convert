@@ -47,8 +47,11 @@ public final class ShapeProgram {
                 + "Para seres vivos y ropa usa blob y curve, no rectángulos.\n"
                 + "Piensa en las partes reales del objeto, su forma y su posición.\n"
                 + "Ejemplo «casa»:\nrect 20 45 60 45\npoly 14 47 50 15 86 47\nrect 44 65 12 25\nrect 27 55 11 10\nrect 62 55 11 10\n"
-                + "Ejemplo «gato sentado»:\nblob 40 55 52 48 64 56 66 78 58 92 40 92 32 78\nblob 44 30 52 26 62 30 62 42 53 48 44 42\n"
-                + "poly 46 30 47 20 52 27\npoly 56 27 61 20 61 31\ncurve 62 88 80 88 86 70 78 58\nline 50 37 52 37\nline 56 37 58 37\n"
+                + "Antes de cada parte escribe una línea «# parte: lo que trazas».\n"
+                + "Ejemplo «gato sentado»:\n# cuerpo: un óvalo sentado\nblob 40 55 52 48 64 56 66 78 58 92 40 92 32 78\n"
+                + "# cabeza: redonda sobre el cuerpo\nblob 44 30 52 26 62 30 62 42 53 48 44 42\n"
+                + "# orejas: dos triángulos arriba\npoly 46 30 47 20 52 27\npoly 56 27 61 20 61 31\n"
+                + "# cola: curva que sube por detrás\ncurve 62 88 80 88 86 70 78 58\n# ojos\nline 50 37 52 37\nline 56 37 58 37\n"
                 + "Ejemplo «gafas»:\ncircle 32 50 14\ncircle 68 50 14\narc 50 52 6 200 340\nline 18 46 6 40\nline 82 46 94 40\n"
                 + "Ejemplo «mesa»:\nrect 10 40 80 6\nline 16 46 16 85\nline 84 46 84 85\nline 26 46 24 80\nline 74 46 76 80\n"
                 + "Ahora «" + what + "»:\n";
@@ -58,6 +61,10 @@ public final class ShapeProgram {
         public final List<float[]> strokes;
         public final int shapes, rejected;
         public final float aspect;
+        /** Partes con nombre en orden de trazado (vacío si no las escribió). */
+        public List<SketchLibrary.Part> parts = new ArrayList<>();
+        /** Lo que pensó antes de dibujar («thoughtSummary»), si lo dio. */
+        public String summary = "";
         Result(List<float[]> strokes, int shapes, int rejected, float aspect) {
             this.strokes = strokes; this.shapes = shapes; this.rejected = rejected; this.aspect = aspect;
         }
@@ -65,11 +72,23 @@ public final class ShapeProgram {
         public boolean isUsable() { return shapes >= 3 && rejected <= shapes; }
     }
 
+    /** «# cabeza: redonda sobre el cuerpo» abre una parte; lo que sigue le pertenece. */
+    private static final Pattern HEADER = Pattern.compile(
+            "^\\s*(?:#+|parte|part)\\s*[:.-]?\\s*([\\p{L}][\\p{L} ]{1,38}?)\\s*(?:[:\\-–]\\s*(.{0,140}))?\\s*$",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
     public static Result parse(String text) {
         List<float[]> strokes = new ArrayList<>();
         int shapes = 0, rejected = 0;
         if (text == null) return new Result(strokes, 0, 0, 1);
+        List<String[]> headers = new ArrayList<>(); // {nombre, descripción, desdeTrazo}
         for (String raw : text.split("\\r?\\n")) {
+            Matcher h = HEADER.matcher(raw.replace("**", ""));
+            if (h.matches() && !LINE.matcher(raw.trim().toLowerCase(Locale.ROOT)).matches()) {
+                headers.add(new String[]{h.group(1).trim().toLowerCase(Locale.ROOT), h.group(2) == null ? "" : h.group(2).trim(),
+                        String.valueOf(strokes.size())});
+                continue;
+            }
             String line = raw.trim().toLowerCase(Locale.ROOT).replace("rectángulo", "rectangulo").replace("círculo", "circulo")
                     .replace("línea", "linea").replace("polígono", "poligono");
             if (line.isEmpty() || line.startsWith("```") || line.startsWith("ahora") || line.startsWith("ejemplo")) continue;
@@ -82,6 +101,20 @@ public final class ShapeProgram {
             strokes.add(stroke);
             shapes++;
         }
+        Result result = normalize(strokes, shapes, rejected);
+        for (int i = 0; i < headers.size(); i++) {
+            int from = Integer.parseInt(headers.get(i)[2]);
+            int to = i + 1 < headers.size() ? Integer.parseInt(headers.get(i + 1)[2]) : strokes.size();
+            if (to > from) result.parts.add(new SketchLibrary.Part(headers.get(i)[0], headers.get(i)[1], from, to));
+        }
+        // Formas antes del primer encabezado: parte sin nombre al principio.
+        if (!result.parts.isEmpty() && result.parts.get(0).from > 0)
+            result.parts.add(0, new SketchLibrary.Part("base", "", 0, result.parts.get(0).from));
+        return result;
+    }
+
+    /** Centra las líneas en el lienzo 0..1000 conservando la proporción. */
+    static Result normalize(List<float[]> strokes, int shapes, int rejected) {
         float aspect = 1;
         if (!strokes.isEmpty()) {
             float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;

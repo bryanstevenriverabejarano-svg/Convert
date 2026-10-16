@@ -78,8 +78,12 @@ public final class SketchView extends View {
         float seconds = startedAt == 0 ? 1e6f : startedAt < 0 ? 0 : (now - startedAt) / 1000f;
         if (animation != null) painter.draw(canvas, animation, seconds, box, 1f, true);
         boolean done = animation != null && animation.finished(seconds);
-        canvas.drawText(done ? "✎ " + scene.title : "✎ trazando " + scene.title + "…",
-                frame.left + 12 * density, frame.bottom - 9 * density, label);
+        String caption = done || animation == null ? null : animation.caption(seconds);
+        String text = done ? "✎ " + scene.title : caption != null ? "✎ " + caption : "✎ trazando " + scene.title + "…";
+        float room = frame.width() - 24 * density;
+        int fits = label.breakText(text, true, room, null);
+        if (fits < text.length()) text = text.substring(0, Math.max(1, fits - 1)) + "…";
+        canvas.drawText(text, frame.left + 12 * density, frame.bottom - 9 * density, label);
         if (!done) postInvalidateOnAnimation();
         else if (!finished) {
             finished = true;

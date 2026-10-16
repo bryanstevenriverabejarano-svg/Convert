@@ -36,10 +36,25 @@ public final class SketchLibrary {
             this.id = id; this.name = name; this.place = place; this.aspect = aspect; this.self = self;
             this.words = words; this.strokes = strokes; this.source = source == null ? "builtin" : source;
         }
+        /** Partes con sentido («cabeza», «brazos»…): trazos [from, to). Vacío = una sola parte. */
+        public List<Part> parts = Collections.emptyList();
         public int strokeCount() { return strokes.length; }
         public float[] stroke(int i) { return strokes[i].clone(); }
         public List<String> words() { return words; }
         public boolean learned() { return !"builtin".equals(source); }
+    }
+
+    /** Una parte con sentido de un dibujo: nombre, qué hace al trazarla y sus trazos [from, to). */
+    public static final class Part {
+        public final String name, description;
+        public final int from, to;
+        public Part(String name, String description, int from, int to) {
+            this.name = clip(name, 40); this.description = clip(description, 140); this.from = from; this.to = to;
+        }
+        private static String clip(String s, int max) {
+            String t = s == null ? "" : s.replaceAll("[\\p{Cntrl}]+", " ").replaceAll("\\s+", " ").trim();
+            return t.length() <= max ? t : t.substring(0, max - 1).trim() + "…";
+        }
     }
 
     private final Map<String, Motif> byId = new LinkedHashMap<>();
@@ -97,11 +112,30 @@ public final class SketchLibrary {
             }
         }
         String place = m.has("place") ? m.get("place").getAsString() : "any";
-        return new Motif(id, m.get("name").getAsString(),
+        Motif motif = new Motif(id, m.get("name").getAsString(),
                 "sky".equals(place) ? Place.SKY : "ground".equals(place) ? Place.GROUND : Place.ANY,
                 m.has("aspect") ? m.get("aspect").getAsFloat() : 1f,
                 m.has("self") && m.get("self").getAsBoolean(), Collections.unmodifiableList(words), strokes,
                 m.has("source") ? m.get("source").getAsString() : defaultSource);
+        motif.parts = parseParts(m.getAsJsonArray("parts"), strokes.length);
+        return motif;
+    }
+
+    static List<Part> parseParts(JsonArray raw, int strokeCount) {
+        if (raw == null || raw.size() == 0) return Collections.emptyList();
+        List<Part> parts = new ArrayList<>();
+        int last = 0;
+        for (JsonElement e : raw) {
+            try {
+                JsonObject p = e.getAsJsonObject();
+                int from = p.get("from").getAsInt(), to = p.get("to").getAsInt();
+                if (from < last || to <= from || to > strokeCount || parts.size() >= 24) continue;
+                parts.add(new Part(p.has("name") ? p.get("name").getAsString() : "parte",
+                        p.has("description") ? p.get("description").getAsString() : "", from, to));
+                last = to;
+            } catch (RuntimeException skip) { /* una parte mal escrita no invalida el dibujo */ }
+        }
+        return Collections.unmodifiableList(parts);
     }
 
     public Motif byId(String id) { return id == null ? null : byId.get(id); }

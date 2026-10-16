@@ -14,10 +14,15 @@ public final class SketchScene {
     public final float width, height;
     public final List<float[]> strokes;
     public final List<SketchLibrary.Motif> motifs;
+    /** Partes en orden de trazado (siempre al menos una que cubre todo). */
+    public final List<SketchLibrary.Part> parts;
 
     private SketchScene(String key, String title, float width, float height, List<float[]> strokes,
-                        List<SketchLibrary.Motif> motifs) {
+                        List<SketchLibrary.Motif> motifs, List<SketchLibrary.Part> parts) {
         this.key = key; this.title = title; this.width = width; this.height = height;
+        this.parts = parts == null || parts.isEmpty()
+                ? Collections.singletonList(new SketchLibrary.Part(title, "", 0, strokes.size()))
+                : Collections.unmodifiableList(parts);
         this.strokes = Collections.unmodifiableList(strokes);
         this.motifs = Collections.unmodifiableList(motifs);
         int hash = 17;
@@ -61,7 +66,7 @@ public final class SketchScene {
             float w = aspect >= 1 ? 1000 : 1000 * aspect, h = aspect >= 1 ? 1000 / aspect : 1000;
             float ox = (1000 - w) / 2, oy = (1000 - h) / 2;
             for (float[] s : m.strokes) strokes.add(place(s, -ox, -oy, 1, 0, 0));
-            return new SketchScene(key.toString(), title.toString(), w, h, strokes, motifs);
+            return new SketchScene(key.toString(), title.toString(), w, h, strokes, motifs, m.parts);
         }
         float width = 1000, height = 720;
         List<SketchLibrary.Motif> sky = new ArrayList<>(), ground = new ArrayList<>();
@@ -71,14 +76,25 @@ public final class SketchScene {
         }
         for (SketchLibrary.Motif m : motifs)
             if (m.place == SketchLibrary.Place.ANY) (ground.size() <= sky.size() ? ground : sky).add(m);
+        List<SketchLibrary.Motif> drawOrder = new ArrayList<>();
         if (sky.isEmpty() || ground.isEmpty()) {
             List<SketchLibrary.Motif> row = sky.isEmpty() ? ground : sky;
+            drawOrder.addAll(row);
             layoutRow(row, strokes, 30, 690, width, true);
         } else {
+            drawOrder.addAll(sky);
+            drawOrder.addAll(ground);
             layoutRow(sky, strokes, 15, 255, width, false);
             layoutRow(ground, strokes, 290, 705, width, true);
         }
-        return new SketchScene(key.toString(), title.toString(), width, height, strokes, motifs);
+        // Cada motivo es una parte de la escena, en el orden en que se traza.
+        List<SketchLibrary.Part> parts = new ArrayList<>();
+        int at = 0;
+        for (SketchLibrary.Motif m : drawOrder) {
+            parts.add(new SketchLibrary.Part(m.name, "", at, at + m.strokes.length));
+            at += m.strokes.length;
+        }
+        return new SketchScene(key.toString(), title.toString(), width, height, strokes, motifs, parts);
     }
 
     private static void layoutRow(List<SketchLibrary.Motif> row, List<float[]> out, float top, float bottom,

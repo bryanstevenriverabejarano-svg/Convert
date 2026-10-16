@@ -76,6 +76,82 @@ public final class FourierStroke {
         }
     }
 
+    /**
+     * Remuestreo uniforme: puntos equiespaciados (la pluma avanza a velocidad constante) sin perder
+     * las esquinas; si hay demasiados, reparte exactamente {@code maxPoints} por longitud de arco.
+     */
+    public static float[] uniform(float[] pts, float step, int maxPoints) {
+        if (pts == null || pts.length < 4) return pts;
+        int n = pts.length / 2;
+        float total = 0;
+        float[] seg = new float[n - 1];
+        for (int i = 0; i < n - 1; i++) {
+            seg[i] = (float) Math.hypot(pts[2 * i + 2] - pts[2 * i], pts[2 * i + 3] - pts[2 * i + 1]);
+            total += seg[i];
+        }
+        if (total <= 0 || step <= 0) return pts.clone();
+        int count = 1;
+        for (float l : seg) count += Math.max(1, (int) Math.ceil(l / step));
+        if (count <= maxPoints) {
+            float[] out = new float[2 * count];
+            int k = 0;
+            out[k++] = pts[0]; out[k++] = pts[1];
+            for (int i = 0; i < n - 1; i++) {
+                int parts = Math.max(1, (int) Math.ceil(seg[i] / step));
+                for (int j = 1; j <= parts; j++) {
+                    float t = j / (float) parts;
+                    out[k++] = pts[2 * i] + (pts[2 * i + 2] - pts[2 * i]) * t;
+                    out[k++] = pts[2 * i + 1] + (pts[2 * i + 3] - pts[2 * i + 1]) * t;
+                }
+            }
+            return out;
+        }
+        int m = Math.max(2, maxPoints);
+        float[] out = new float[2 * m];
+        float spacing = total / (m - 1), walked = 0;
+        int i = 0;
+        for (int j = 0; j < m; j++) {
+            float target = j == m - 1 ? total : j * spacing;
+            while (i < n - 2 && walked + seg[i] < target) { walked += seg[i]; i++; }
+            float t = seg[i] <= 0 ? 0 : Math.max(0, Math.min(1, (target - walked) / seg[i]));
+            out[2 * j] = pts[2 * i] + (pts[2 * i + 2] - pts[2 * i]) * t;
+            out[2 * j + 1] = pts[2 * i + 1] + (pts[2 * i + 3] - pts[2 * i + 1]) * t;
+        }
+        return out;
+    }
+
+    /**
+     * Filtro de armónicos (paso bajo): rehace la línea sólo con las frecuencias más lentas, hasta
+     * {@code harmonics} círculos. Quita el temblor de un calco (que son frecuencias altas aunque tengan
+     * radio grande) y conserva la forma, como dibujar «a pulso firme».
+     */
+    public static float[] lowPass(float[] pts, int harmonics) {
+        if (pts == null || pts.length < 6 || harmonics <= 0) return pts;
+        FourierStroke f = new FourierStroke(pts);
+        if (harmonics >= f.terms()) return pts.clone();
+        int n = pts.length / 2;
+        float[] out = new float[pts.length];
+        float[] p = new float[2];
+        for (int i = 0; i < n; i++) {
+            f.band(f.visibleTurn * i / (n - 1f), harmonics / 2, p);
+            out[2 * i] = p[0]; out[2 * i + 1] = p[1];
+        }
+        if (f.closed) { out[2 * n - 2] = out[0]; out[2 * n - 1] = out[1]; }
+        return out;
+    }
+
+    /** Punta usando sólo las frecuencias |f| ≤ maxFrequency. */
+    void band(float turn, int maxFrequency, float[] out) {
+        double x = 0, y = 0;
+        for (int i = 0; i < frequency.length; i++) {
+            if (Math.abs(frequency[i]) > maxFrequency) continue;
+            double a = 2 * Math.PI * frequency[i] * turn + phase[i];
+            x += radius[i] * Math.cos(a);
+            y += radius[i] * Math.sin(a);
+        }
+        out[0] = (float) x; out[1] = (float) y;
+    }
+
     public int terms() { return frequency.length; }
     public float radius(int i) { return radius[i]; }
     public int frequency(int i) { return frequency[i]; }

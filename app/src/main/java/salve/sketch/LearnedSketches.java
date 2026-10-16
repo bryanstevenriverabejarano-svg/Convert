@@ -51,6 +51,31 @@ public final class LearnedSketches {
      */
     public synchronized SketchLibrary.Motif learn(String spokenName, List<float[]> strokes, float aspect, String source)
             throws IOException {
+        return learn(spokenName, strokes, aspect, source, null);
+    }
+
+    /** @param parts partes con sentido sobre los índices de {@code strokes} (o null) */
+    public synchronized SketchLibrary.Motif learn(String spokenName, List<float[]> strokes, float aspect, String source,
+                                                  List<SketchLibrary.Part> parts) throws IOException {
+        if (strokes != null && parts != null && !parts.isEmpty()) {
+            // Quita trazos vacíos sin descolocar las partes.
+            List<float[]> clean = new ArrayList<>();
+            int[] newIndex = new int[strokes.size() + 1];
+            for (int i = 0; i < strokes.size(); i++) {
+                newIndex[i] = clean.size();
+                float[] st = strokes.get(i);
+                if (st != null && st.length >= 4) clean.add(st);
+            }
+            newIndex[strokes.size()] = clean.size();
+            List<SketchLibrary.Part> moved = new ArrayList<>();
+            for (SketchLibrary.Part p : parts) {
+                if (p.from < 0 || p.to > strokes.size() || p.to <= p.from) continue;
+                int from = newIndex[p.from], to = newIndex[p.to];
+                if (to > from) moved.add(new SketchLibrary.Part(p.name, p.description, from, to));
+            }
+            strokes = clean;
+            parts = moved;
+        }
         String name = displayName(spokenName);
         String key = SketchLibrary.normalize(stripArticle(name));
         if (key.length() < 2 || key.length() > 40) throw new IllegalArgumentException("Nombre de dibujo no válido");
@@ -79,6 +104,7 @@ public final class LearnedSketches {
             lines.add(a);
         }
         json.add("strokes", lines);
+        if (parts != null && !parts.isEmpty() && kept.size() == strokes.size()) json.add("parts", partsJson(parts));
         SketchLibrary.Motif motif = SketchLibrary.parseMotif(json, "photo");
         current.add(0, motif);
         write(current, json);
@@ -124,7 +150,21 @@ public final class LearnedSketches {
         JsonArray lines = new JsonArray();
         for (float[] s : m.strokes) { JsonArray a = new JsonArray(); for (float v : s) a.add(v); lines.add(a); }
         json.add("strokes", lines);
+        if (!m.parts.isEmpty()) json.add("parts", partsJson(m.parts));
         return json;
+    }
+
+    static JsonArray partsJson(List<SketchLibrary.Part> parts) {
+        JsonArray out = new JsonArray();
+        for (SketchLibrary.Part p : parts) {
+            JsonObject o = new JsonObject();
+            o.addProperty("name", p.name);
+            o.addProperty("description", p.description);
+            o.addProperty("from", p.from);
+            o.addProperty("to", p.to);
+            out.add(o);
+        }
+        return out;
     }
 
     /** Recorta puntos (quitando los trazos más cortos primero) para que la DFT siga siendo ligera. */
