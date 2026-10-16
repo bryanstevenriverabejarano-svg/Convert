@@ -21,7 +21,8 @@ public final class SelfActionLog {
     public enum Kind {
         DRAW("dibujar"), LEARN_PHOTO("aprender de una foto"), LEARN_HAND("aprender de un dibujo a mano"),
         WEB_REFERENCE("buscar referencias de imágenes"), COMPOSE("componer con formas"),
-        BODY("mover mi cuerpo"), STORY("ilustrar un cuento"), SEARCH("buscar en internet");
+        BODY("mover mi cuerpo"), STORY("ilustrar un cuento"), SEARCH("buscar en internet"),
+        SELF_CORRECT("corregirme antes de responder"), LEARN_LESSON("aprender de un error");
         public final String label;
         Kind(String label) { this.label = label; }
     }

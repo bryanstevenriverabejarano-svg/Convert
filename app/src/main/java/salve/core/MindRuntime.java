@@ -48,6 +48,7 @@ public final class MindRuntime {
     private final SelfModelJournal journal;
     /** Lo que ha hecho de verdad y cómo: base de su autoconocimiento. */
     private final salve.core.mind.SelfActionLog actions;
+    private final salve.core.mind.LessonBook lessons;
     private final File vectorFile;
     private final MemoryVectorStore vectors;
     private final ExecutorService background = Executors.newSingleThreadExecutor(r -> {
@@ -69,6 +70,7 @@ public final class MindRuntime {
         File dir = new File(app.getNoBackupFilesDir(), "mind");
         journal = new SelfModelJournal(new MindFileStore(new File(dir, "self_model.json")), System::currentTimeMillis);
         actions = new salve.core.mind.SelfActionLog(new MindFileStore(new File(dir, "actions.json")), System::currentTimeMillis);
+        lessons = new salve.core.mind.LessonBook(new MindFileStore(new File(dir, "lessons.json")), System::currentTimeMillis);
         // Same dimension does not mean the same vector space. Rebuild from Room for this contract.
         vectorFile = new File(dir, "memory_vectors_" + salve.core.embeddings.EmbeddingArtifacts.ID + ".bin");
         vectors = MemoryVectorStore.load(vectorFile);
@@ -99,6 +101,8 @@ public final class MindRuntime {
 
     public SelfModelJournal journal() { return journal; }
     public salve.core.mind.SelfActionLog actions() { return actions; }
+    /** Lo que aprendió de sus errores (correcciones de Bryan y su autocrítica). */
+    public salve.core.mind.LessonBook lessons() { return lessons; }
 
     private static final String SELF_PREFS = "salve_self";
 
