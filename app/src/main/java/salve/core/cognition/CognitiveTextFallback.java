@@ -41,6 +41,43 @@ final class CognitiveTextFallback {
         return TOOL.matcher(normalized).find();
     }
     static boolean brokenEnvelope(String text) { return ENVELOPE.matcher(text).find(); }
+
+    private static final Pattern MESSAGE_START = Pattern.compile("(?i)[\\\"']message[\\\"']\\s*:\\s*\\\"");
+
+    /**
+     * El texto de «message» de un sobre JSON cortado a medias (se acabaron los tokens): hasta la
+     * comilla de cierre o, si no llegó, hasta la última frase completa. null si no hay nada útil.
+     * Sólo texto inerte: nunca recupera una acción.
+     */
+    static String partialMessage(String text) {
+        if (text == null || toolAttempt(text)) return null;
+        Matcher m = MESSAGE_START.matcher(text);
+        if (!m.find()) return null;
+        StringBuilder out = new StringBuilder();
+        boolean closed = false;
+        for (int i = m.end(); i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '"') { closed = true; break; }
+            if (c == '\\' && i + 1 < text.length()) {
+                char n = text.charAt(++i);
+                if (n == 'n') out.append('\n');
+                else if (n == 't') out.append(' ');
+                else if (n == 'u' && i + 4 < text.length()) {
+                    try { out.append((char) Integer.parseInt(text.substring(i + 1, i + 5), 16)); i += 4; }
+                    catch (NumberFormatException bad) { out.append('u'); }
+                } else out.append(n);
+                continue;
+            }
+            out.append(c);
+        }
+        String message = out.toString().trim();
+        if (!closed) {
+            int end = Math.max(Math.max(message.lastIndexOf(". "), message.lastIndexOf("? ")), message.lastIndexOf("! "));
+            if (message.endsWith(".") || message.endsWith("?") || message.endsWith("!")) end = message.length() - 1;
+            message = end > 0 ? message.substring(0, end + 1).trim() : message;
+        }
+        return message.replaceAll("\\s+", " ").length() >= 20 ? message : null;
+    }
     static String unwrapFence(String text) {
         if (text.startsWith("```json\n") && text.endsWith("```")) return text.substring(8, text.length() - 3).trim();
         if (text.startsWith("```\n") && text.endsWith("```")) return text.substring(4, text.length() - 3).trim();
