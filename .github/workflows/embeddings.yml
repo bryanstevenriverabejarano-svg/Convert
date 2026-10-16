@@ -1,0 +1,29 @@
+name: Multilingual memory contract
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: embeddings-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  parity:
+    name: Official tokenizer and production Java ONNX parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install pinned reference implementations
+        run: python3 -m pip install -r scripts/embeddings/requirements.txt
+      - name: Check tokenizer, prefixes, pooling and Spanish retrieval
+        run: bash scripts/embeddings/verify.sh

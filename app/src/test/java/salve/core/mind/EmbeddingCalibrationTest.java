@@ -55,6 +55,18 @@ public class EmbeddingCalibrationTest {
         assertTrue(r.describe().contains("IllegalStateException"));
     }
 
+    @Test public void retrievalKeepsQueriesAndPassagesSeparate() {
+        MindEmbedder semantic = understanding();
+        java.util.List<String> queryCalls = new java.util.ArrayList<>();
+        java.util.List<String> passageCalls = new java.util.ArrayList<>();
+        EmbeddingCalibration.Result r = EmbeddingCalibration.run(
+                text -> { queryCalls.add(text); return semantic.embed(text); },
+                text -> { passageCalls.add(text); return semantic.embed(text); });
+        assertTrue(r.passed);
+        assertEquals(java.util.Arrays.asList(EmbeddingCalibration.QUERIES), queryCalls);
+        assertEquals(java.util.Arrays.asList(EmbeddingCalibration.DOCS), passageCalls);
+    }
+
     @Test public void observeIsSkippedWhenScaleRejectsMeasurement() {
         MindTestSupport.MemoryStore store = new MindTestSupport.MemoryStore();
         MindTestSupport.Clock clock = new MindTestSupport.Clock();

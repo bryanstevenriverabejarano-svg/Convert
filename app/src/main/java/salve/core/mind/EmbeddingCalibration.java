@@ -43,7 +43,7 @@ public final class EmbeddingCalibration {
         public final double relatedMean;
         /** Media del coseno entre frases no relacionadas. */
         public final double unrelatedMean;
-        /** Umbral de recuperación: punto medio entre la paráfrasis y el mejor distractor. */
+        /** Punto medio diagnóstico del conjunto de calibración; no es un umbral universal de relevancia. */
         public final double threshold;
         public final String error;
 
@@ -75,12 +75,17 @@ public final class EmbeddingCalibration {
     public static Result failed(String error) { return new Result(false, 0, 0, 0, 0, 1, error); }
 
     public static Result run(MindEmbedder embedder) {
-        if (embedder == null) return failed("sin modelo");
+        return run(embedder, embedder);
+    }
+
+    /** Retrieval uses query:/passage:; symmetric similarity uses query:/query: separately. */
+    public static Result run(MindEmbedder queriesEmbedder, MindEmbedder passagesEmbedder) {
+        if (queriesEmbedder == null || passagesEmbedder == null) return failed("sin modelo");
         try {
             float[][] docs = new float[DOCS.length][];
             float[][] queries = new float[QUERIES.length][];
-            for (int i = 0; i < DOCS.length; i++) docs[i] = embedder.embed(DOCS[i]);
-            for (int i = 0; i < QUERIES.length; i++) queries[i] = embedder.embed(QUERIES[i]);
+            for (int i = 0; i < DOCS.length; i++) docs[i] = passagesEmbedder.embed(DOCS[i]);
+            for (int i = 0; i < QUERIES.length; i++) queries[i] = queriesEmbedder.embed(QUERIES[i]);
             int correct = 0;
             double margins = 0, related = 0, unrelated = 0, bestWrong = 0;
             int unrelatedCount = 0;

@@ -1,0 +1,122 @@
+{
+  "model": "e5",
+  "runtime": "onnxruntime 1.24.2",
+  "device": "Linux x86_64 host, NOT Samsung S24 Ultra",
+  "onnx_file": "model.onnx",
+  "sha256": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665",
+  "tokenizer": "XLMRobertaTokenizer",
+  "max_tokens": 256,
+  "threads": 2,
+  "overall": {
+    "count": 32,
+    "top1_correct": 26,
+    "recall_at_3": 30
+  },
+  "categories": {
+    "contradicciones": {
+      "count": 2,
+      "top1_correct": 2,
+      "recall_at_3": 2
+    },
+    "errores": {
+      "count": 4,
+      "top1_correct": 3,
+      "recall_at_3": 4
+    },
+    "fechas": {
+      "count": 4,
+      "top1_correct": 4,
+      "recall_at_3": 4
+    },
+    "idiomas": {
+      "count": 4,
+      "top1_correct": 3,
+      "recall_at_3": 3
+    },
+    "negaciones": {
+      "count": 4,
+      "top1_correct": 4,
+      "recall_at_3": 4
+    },
+    "parafrasis": {
+      "count": 8,
+      "top1_correct": 5,
+      "recall_at_3": 7
+    },
+    "personas": {
+      "count": 6,
+      "top1_correct": 5,
+      "recall_at_3": 6
+    }
+  },
+  "lexical_overlap_baseline": {
+    "top1_correct": 12,
+    "count": 32
+  },
+  "load_seconds": 0.6136148309999498,
+  "median_encode_ms": 8.901694499968471,
+  "process_peak_rss_kib": 964360,
+  "peak_before_session_kib": 256172,
+  "failures": [
+    {
+      "id": 0,
+      "query": "¿Dónde dejé la copia para abrir la puerta?",
+      "expected": 0,
+      "top3": [
+        4,
+        26,
+        10
+      ]
+    },
+    {
+      "id": 3,
+      "query": "¿Qué problema noté al reducir la velocidad del vehículo?",
+      "expected": 3,
+      "top3": [
+        19,
+        3,
+        1
+      ]
+    },
+    {
+      "id": 6,
+      "query": "¿Para qué estoy reservando dinero?",
+      "expected": 6,
+      "top3": [
+        27,
+        5,
+        6
+      ]
+    },
+    {
+      "id": 10,
+      "query": "donde puse el movl a cargar",
+      "expected": 10,
+      "top3": [
+        4,
+        0,
+        10
+      ]
+    },
+    {
+      "id": 13,
+      "query": "¿Qué estudia Lucía, mi amiga, no mi hermana?",
+      "expected": 13,
+      "top3": [
+        12,
+        13,
+        31
+      ]
+    },
+    {
+      "id": 26,
+      "query": "Where did I leave the umbrella?",
+      "expected": 26,
+      "top3": [
+        25,
+        4,
+        13
+      ]
+    }
+  ]
+}

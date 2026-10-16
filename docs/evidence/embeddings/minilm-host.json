@@ -1,0 +1,130 @@
+{
+  "model": "minilm",
+  "runtime": "onnxruntime 1.24.2",
+  "device": "Linux x86_64 host, NOT Samsung S24 Ultra",
+  "tokenizer": "PreTrainedTokenizerFast",
+  "max_tokens": 256,
+  "threads": 2,
+  "overall": {
+    "count": 32,
+    "top1_correct": 25,
+    "recall_at_3": 31
+  },
+  "categories": {
+    "contradicciones": {
+      "count": 2,
+      "top1_correct": 1,
+      "recall_at_3": 2
+    },
+    "errores": {
+      "count": 4,
+      "top1_correct": 2,
+      "recall_at_3": 3
+    },
+    "fechas": {
+      "count": 4,
+      "top1_correct": 4,
+      "recall_at_3": 4
+    },
+    "idiomas": {
+      "count": 4,
+      "top1_correct": 4,
+      "recall_at_3": 4
+    },
+    "negaciones": {
+      "count": 4,
+      "top1_correct": 3,
+      "recall_at_3": 4
+    },
+    "parafrasis": {
+      "count": 8,
+      "top1_correct": 6,
+      "recall_at_3": 8
+    },
+    "personas": {
+      "count": 6,
+      "top1_correct": 5,
+      "recall_at_3": 6
+    }
+  },
+  "lexical_overlap_baseline": {
+    "top1_correct": 12,
+    "count": 32
+  },
+  "load_seconds": 0.29978522800001883,
+  "median_encode_ms": 4.394423500116318,
+  "process_peak_rss_kib": 584000,
+  "peak_before_session_kib": 422616,
+  "failures": [
+    {
+      "id": 4,
+      "query": "¿Dónde está el justificante de compra del electrodoméstico?",
+      "expected": 4,
+      "top3": [
+        14,
+        4,
+        0
+      ]
+    },
+    {
+      "id": 5,
+      "query": "¿Cómo me gusta que me enseñen algo nuevo?",
+      "expected": 5,
+      "top3": [
+        6,
+        5,
+        12
+      ]
+    },
+    {
+      "id": 9,
+      "query": "donde miro la clabe del guifi",
+      "expected": 9,
+      "top3": [
+        0,
+        23,
+        28
+      ]
+    },
+    {
+      "id": 10,
+      "query": "donde puse el movl a cargar",
+      "expected": 10,
+      "top3": [
+        4,
+        10,
+        0
+      ]
+    },
+    {
+      "id": 13,
+      "query": "¿Qué estudia Lucía, mi amiga, no mi hermana?",
+      "expected": 13,
+      "top3": [
+        12,
+        13,
+        27
+      ]
+    },
+    {
+      "id": 24,
+      "query": "¿A qué alimento dije que no soy alérgico?",
+      "expected": 24,
+      "top3": [
+        25,
+        24,
+        22
+      ]
+    },
+    {
+      "id": 30,
+      "query": "¿Dónde vivía antes de mudarme en 2025?",
+      "expected": 30,
+      "top3": [
+        31,
+        30,
+        27
+      ]
+    }
+  ]
+}

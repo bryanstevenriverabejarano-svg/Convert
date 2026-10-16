@@ -143,7 +143,8 @@ public final class ConversationMemoryGrounding {
             else out.memory(record, "recuerdo", query);
         }
         if (!semanticOnly.isEmpty()) out.note(
-                "COINCIDENCIA_POR_SIGNIFICADO: algunos registros se recuperaron por similitud semántica, no por palabras; comprueba que respondan a la pregunta.");
+                "COINCIDENCIA_POR_SIGNIFICADO: son candidatos, no respuestas confirmadas. Comprueba en el texto original "
+                        + "la persona, fecha y negación de la pregunta; si ninguno la responde, dilo. No mezcles personas del mismo nombre.");
         if (search.expanded && !search.records.isEmpty()) out.note(
                 "BUSQUEDA_AMPLIADA: se probaron variantes de vocabulario; confirma su pertinencia con el texto original.");
         // The graph has no reliable authorship/deletion lineage. Never use it to reconstruct personal history.

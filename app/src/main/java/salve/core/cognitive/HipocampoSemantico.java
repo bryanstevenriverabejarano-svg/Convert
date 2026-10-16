@@ -41,7 +41,7 @@ public class HipocampoSemantico {
         }
         
         cargarRecuerdosGuardados();
-        inyectarConocimientoAbsoluto();
+        // Do not run ONNX/seed embeddings while constructing a screen or conversational controller.
     }
 
     /**
@@ -54,7 +54,7 @@ public class HipocampoSemantico {
         for (java.util.Map.Entry<String, String> entry : EnciclopediaUniversal.obtenerTodoElConocimiento().entrySet()) {
             if (!conoceConcepto(entry.getKey())) {
                 try {
-                    float[] vectorSemantico = embeddingsIndex.embed(entry.getKey() + ": " + entry.getValue());
+                    float[] vectorSemantico = embeddingsIndex.embedPassage(entry.getKey() + ": " + entry.getValue());
                     RecuerdoMultimodal engrama = new RecuerdoMultimodal(
                             entry.getKey(),
                             entry.getValue(),
@@ -86,7 +86,7 @@ public class HipocampoSemantico {
 
             // 2. Generar el "Significado" matemático (Vector Semántico / Embedding)
             String textoAEmbeber = nombreConcepto + ": " + teoriaODefinicion;
-            float[] vectorSemantico = embeddingsIndex.embed(textoAEmbeber);
+            float[] vectorSemantico = embeddingsIndex.embedPassage(textoAEmbeber);
 
             // 3. Crear el Engrama (Recuerdo Multimodal)
             RecuerdoMultimodal nuevoRecuerdo = new RecuerdoMultimodal(
@@ -115,7 +115,7 @@ public class HipocampoSemantico {
         List<RecuerdoConSimilitud> resultados = new ArrayList<>();
         try {
             // Convertimos la consulta en un vector matemático
-            float[] vectorConsulta = embeddingsIndex.embed(consultaTexto);
+            float[] vectorConsulta = embeddingsIndex.embedQuery(consultaTexto);
 
             // Buscamos los recuerdos más cercanos en el espacio semántico
             for (RecuerdoMultimodal recuerdo : memoriaInfinita) {

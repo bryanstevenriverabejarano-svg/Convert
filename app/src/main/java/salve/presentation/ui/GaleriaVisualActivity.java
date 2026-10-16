@@ -111,7 +111,7 @@ public class GaleriaVisualActivity extends AppCompatActivity {
     private void cargarRecuerdos() {
         try {
             // Inicializar/Recuperar el Hipocampo
-            EmbeddingsIndex index = new EmbeddingsIndex(this);
+            EmbeddingsIndex index = EmbeddingsIndex.get(this);
             HipocampoSemantico hipocampo = new HipocampoSemantico(this, index);
             recuerdos = hipocampo.obtenerTodosLosRecuerdos();
             

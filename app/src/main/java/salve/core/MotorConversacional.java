@@ -353,7 +353,7 @@ public class MotorConversacional {
         this.cortexSeguridad = new CortexSeguridad(this.llm, this.memoria);
 
         try {
-            EmbeddingsIndex index = new EmbeddingsIndex(context);
+            EmbeddingsIndex index = EmbeddingsIndex.get(context);
             this.hipocampo = new HipocampoSemantico(context, index);
         } catch (Exception e) {
             Log.e(TAG, "Fallo al inicializar Hipocampo", e);

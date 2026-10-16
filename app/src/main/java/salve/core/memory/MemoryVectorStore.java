@@ -85,6 +85,14 @@ public final class MemoryVectorStore {
 
     public synchronized List<Integer> ids() { return new ArrayList<>(entries.keySet()); }
 
+    /**
+     * Bounded candidates for hybrid retrieval, not confirmed facts. E5 is trained for relative
+     * ranking: a cutoff fitted to eight calibration phrases rejects valid unseen paraphrases.
+     */
+    public List<Hit> candidates(float[] query, int k) {
+        return nearest(query, Math.min(k, 16), -1.000001);
+    }
+
     /** Los k recuerdos más cercanos con similitud coseno >= minScore, de mayor a menor. */
     public synchronized List<Hit> nearest(float[] query, int k, double minScore) {
         List<Hit> out = new ArrayList<>();

@@ -1,0 +1,197 @@
+{
+  "scope": "Synthetic holdout, separate from the eight on-device calibration pairs. Frozen before evaluation.",
+  "cases": [
+    {
+      "id": 0,
+      "category": "parafrasis",
+      "document": "Las llaves de repuesto están dentro del cajón azul de la entrada.",
+      "query": "¿Dónde dejé la copia para abrir la puerta?"
+    },
+    {
+      "id": 1,
+      "category": "parafrasis",
+      "document": "El pedido se retrasó porque la carretera estaba cortada por nieve.",
+      "query": "¿Por qué no llegó a tiempo la entrega?"
+    },
+    {
+      "id": 2,
+      "category": "parafrasis",
+      "document": "El router recuperó la conexión después de cambiar el cable Ethernet.",
+      "query": "¿Qué solucionó la falta de internet por red?"
+    },
+    {
+      "id": 3,
+      "category": "parafrasis",
+      "document": "El coche vibra al pisar el pedal de freno.",
+      "query": "¿Qué problema noté al reducir la velocidad del vehículo?"
+    },
+    {
+      "id": 4,
+      "category": "parafrasis",
+      "document": "Guardé el recibo de la lavadora en la carpeta de garantías.",
+      "query": "¿Dónde está el justificante de compra del electrodoméstico?"
+    },
+    {
+      "id": 5,
+      "category": "parafrasis",
+      "document": "Prefiero explicaciones cortas con un ejemplo práctico.",
+      "query": "¿Cómo me gusta que me enseñen algo nuevo?"
+    },
+    {
+      "id": 6,
+      "category": "parafrasis",
+      "document": "Quiero ahorrar para estudiar programación el próximo año.",
+      "query": "¿Para qué estoy reservando dinero?"
+    },
+    {
+      "id": 7,
+      "category": "parafrasis",
+      "document": "La reunión del equipo se hará por videollamada.",
+      "query": "¿Tenemos que desplazarnos para hablar con los compañeros?"
+    },
+    {
+      "id": 8,
+      "category": "errores",
+      "document": "El dentista me atiende el jueves a las nueve.",
+      "query": "cuando tngo sita para mirarme los dientes"
+    },
+    {
+      "id": 9,
+      "category": "errores",
+      "document": "La contraseña del Wi-Fi está en la etiqueta debajo del router.",
+      "query": "donde miro la clabe del guifi"
+    },
+    {
+      "id": 10,
+      "category": "errores",
+      "document": "Dejé el teléfono cargando en la cocina.",
+      "query": "donde puse el movl a cargar"
+    },
+    {
+      "id": 11,
+      "category": "errores",
+      "document": "El supermercado cierra a las diez de la noche.",
+      "query": "a q ora sierra la tienda de comida"
+    },
+    {
+      "id": 12,
+      "category": "personas",
+      "document": "Mi hermana Lucía estudia enfermería.",
+      "query": "¿Qué carrera cursa mi hermana Lucía?"
+    },
+    {
+      "id": 13,
+      "category": "personas",
+      "document": "Mi amiga Lucía estudia arquitectura.",
+      "query": "¿Qué estudia Lucía, mi amiga, no mi hermana?"
+    },
+    {
+      "id": 14,
+      "category": "personas",
+      "document": "Mi hermano Andrés trabaja como electricista.",
+      "query": "¿A qué se dedica mi hermano Andrés?"
+    },
+    {
+      "id": 15,
+      "category": "personas",
+      "document": "Mi padre Andrés está jubilado.",
+      "query": "¿Mi padre Andrés sigue trabajando?"
+    },
+    {
+      "id": 16,
+      "category": "personas",
+      "document": "La hija de Marta se llama Elena.",
+      "query": "¿Cómo se llama la niña de Marta?"
+    },
+    {
+      "id": 17,
+      "category": "personas",
+      "document": "La hija de Laura se llama Irene.",
+      "query": "¿Quién es la hija de Laura?"
+    },
+    {
+      "id": 18,
+      "category": "fechas",
+      "document": "El cumpleaños de Elena es el 12 de abril.",
+      "query": "¿En qué fecha celebra Elena su cumpleaños?"
+    },
+    {
+      "id": 19,
+      "category": "fechas",
+      "document": "La revisión del coche está reservada para el 18 de noviembre.",
+      "query": "¿Cuándo llevaré el vehículo al taller para revisarlo?"
+    },
+    {
+      "id": 20,
+      "category": "fechas",
+      "document": "La factura de internet vence el día 20 de cada mes.",
+      "query": "¿Cuál es el último día para pagar la conexión?"
+    },
+    {
+      "id": 21,
+      "category": "fechas",
+      "document": "El curso de inglés empieza el lunes 7 de septiembre.",
+      "query": "¿Cuándo comienzo las clases de idioma?"
+    },
+    {
+      "id": 22,
+      "category": "negaciones",
+      "document": "No quiero azúcar en el café.",
+      "query": "¿Qué ingrediente debo evitar al prepararme café?"
+    },
+    {
+      "id": 23,
+      "category": "negaciones",
+      "document": "Sí quiero leche en el café.",
+      "query": "¿Qué quiero añadir a mi taza de café?"
+    },
+    {
+      "id": 24,
+      "category": "negaciones",
+      "document": "No tengo alergia al huevo.",
+      "query": "¿A qué alimento dije que no soy alérgico?"
+    },
+    {
+      "id": 25,
+      "category": "negaciones",
+      "document": "Tengo alergia al cacahuete.",
+      "query": "¿Qué alimento me provoca una reacción alérgica?"
+    },
+    {
+      "id": 26,
+      "category": "idiomas",
+      "document": "El paraguas está junto a la puerta.",
+      "query": "Where did I leave the umbrella?"
+    },
+    {
+      "id": 27,
+      "category": "idiomas",
+      "document": "Tengo una reserva de hotel a nombre de Elena.",
+      "query": "À quel nom est la réservation de l’hôtel ?"
+    },
+    {
+      "id": 28,
+      "category": "idiomas",
+      "document": "Mi perro necesita un paseo por la tarde.",
+      "query": "What does my dog need this afternoon?"
+    },
+    {
+      "id": 29,
+      "category": "idiomas",
+      "document": "El tren sale desde el andén cuatro.",
+      "query": "¿Desde qué plataforma parte el ferrocarril?"
+    },
+    {
+      "id": 30,
+      "category": "contradicciones",
+      "document": "Hasta enero de 2025 vivía en Bilbao.",
+      "query": "¿Dónde vivía antes de mudarme en 2025?"
+    },
+    {
+      "id": 31,
+      "category": "contradicciones",
+      "document": "Desde febrero de 2025 vivo en Vitoria; ya no vivo en Bilbao.",
+      "query": "¿Dónde vivo ahora después del cambio de residencia?"
+    }
+  ]
+}
