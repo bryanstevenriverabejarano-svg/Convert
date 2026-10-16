@@ -33,9 +33,14 @@ public class SyncWorker extends Worker {
         try {
             if (!CloudSyncManager.isEnabled(getApplicationContext()) || !CloudSyncManager.isPCloudConfigured(getApplicationContext()))
                 return Result.success();
+            android.content.SharedPreferences prefs = getApplicationContext()
+                    .getSharedPreferences(CloudAutoSync.PREFS, Context.MODE_PRIVATE);
+            prefs.edit().putLong("worker_run_at", System.currentTimeMillis()).apply();
             CloudSyncManager.indexLocalJournal(getApplicationContext());
             // Recover history before a slow upload queue consumes the whole worker window.
             CloudSyncManager.RestoreBatch restored = CloudSyncManager.restoreMemoryBatch(getApplicationContext(), 200);
+            CloudAutoSync.noteRestored(getApplicationContext(), restored.restored);
+            CloudSyncManager.syncKnowledge(getApplicationContext());
             boolean memoriesPending = CloudSyncManager.enqueueExistingMemories(getApplicationContext());
             CloudSyncManager.enqueueExistingProfiles(getApplicationContext());
             CloudSyncManager.enqueueArchivedPhotos(getApplicationContext());
@@ -44,6 +49,7 @@ public class SyncWorker extends Worker {
             CloudSyncManager.uploadMind(getApplicationContext());
             Log.d(TAG, "Flush completado. Enviados=" + enviados);
             boolean outboxPending = CloudSyncManager.hasPending(getApplicationContext());
+            prefs.edit().putLong("worker_done_at", System.currentTimeMillis()).apply();
             // Backoff is for network failures. Successful history pages continue immediately,
             // otherwise thousands of old memories would take days as retry delays grow.
             if (restored.retry || (outboxPending && enviados == 0)) return Result.retry();

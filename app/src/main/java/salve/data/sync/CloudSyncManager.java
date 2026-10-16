@@ -49,11 +49,69 @@ public final class CloudSyncManager {
         return ctx != null && new PCloudProvider(ctx).isConfigured();
     }
 
-    public static void setEnabled(Context ctx, boolean enabled) {
+    /** Cambio hecho por Bryan: pausar aquí impide que Salve la reactive sola. */
+    public static void setEnabled(Context ctx, boolean enabled) { setEnabled(ctx, enabled, true); }
+
+    public static void setEnabled(Context ctx, boolean enabled, boolean byUser) {
         if (ctx == null) return;
-        ctx.getSharedPreferences(PRIVACY_PREFS, Context.MODE_PRIVATE).edit()
-                .putBoolean(CLOUD_SYNC_ENABLED, enabled).apply();
-        if (enabled) requestRestore(ctx);
+        android.content.SharedPreferences.Editor e = ctx.getSharedPreferences(PRIVACY_PREFS, Context.MODE_PRIVATE).edit()
+                .putBoolean(CLOUD_SYNC_ENABLED, enabled);
+        if (byUser) e.putBoolean("cloud_sync_paused_by_user", !enabled);
+        e.apply();
+        if (enabled) {
+            requestRestore(ctx);
+            try { CloudAutoSync.schedulePeriodic(ctx); } catch (RuntimeException ignored) { }
+        }
+    }
+
+    public static boolean pausedByUser(Context ctx) {
+        return ctx.getSharedPreferences(PRIVACY_PREFS, Context.MODE_PRIVATE).getBoolean("cloud_sync_paused_by_user", false);
+    }
+
+    // ── Lo que aprende fuera de los recuerdos: dibujos, su diario de dibujo y sus acciones ──
+
+    /** {archivo local relativo, ruta en pCloud}; base "files" o "nobackup". */
+    static final String[][] KNOWLEDGE = {
+            {"files", "sketch/learned.json", ROOT + "/sketch/learned.json"},
+            {"files", "sketch/journal.json", ROOT + "/sketch/journal.json"},
+            {"nobackup", "mind/actions.json", ROOT + "/mind/actions.json"},
+    };
+
+    /**
+     * Sube los que cambiaron y, en una instalación nueva, descarga los que faltan. Fuera del hilo
+     * principal. @return cuántos archivos movió
+     */
+    public static int syncKnowledge(Context ctx) {
+        if (!isEnabled(ctx) || !isPCloudConfigured(ctx)) return 0;
+        android.content.SharedPreferences prefs = ctx.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE);
+        PCloudProvider provider = new PCloudProvider(ctx);
+        int moved = 0;
+        for (String[] k : KNOWLEDGE) {
+            File local = new File("files".equals(k[0]) ? ctx.getFilesDir() : ctx.getNoBackupFilesDir(), k[1]);
+            try {
+                if (local.isFile()) {
+                    byte[] bytes = java.nio.file.Files.readAllBytes(local.toPath());
+                    String hash = Integer.toHexString(java.util.Arrays.hashCode(bytes));
+                    if (hash.equals(prefs.getString("hash:" + k[2], null))) continue;
+                    if (provider.uploadJson(k[2], new String(bytes, StandardCharsets.UTF_8))) {
+                        prefs.edit().putString("hash:" + k[2], hash).apply();
+                        moved++;
+                    }
+                } else {
+                    byte[] remote = provider.downloadBounded(k[2], 4 * 1024 * 1024);
+                    if (remote == null || remote.length == 0) continue;
+                    com.google.gson.JsonParser.parseString(new String(remote, StandardCharsets.UTF_8)); // sólo JSON válido
+                    File dir = local.getParentFile();
+                    if (dir != null && !dir.isDirectory() && !dir.mkdirs()) continue;
+                    File tmp = new File(dir, local.getName() + ".tmp");
+                    java.nio.file.Files.write(tmp.toPath(), remote);
+                    java.nio.file.Files.move(tmp.toPath(), local.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    prefs.edit().putString("hash:" + k[2], Integer.toHexString(java.util.Arrays.hashCode(remote))).apply();
+                    moved++;
+                }
+            } catch (Exception skip) { /* uno que falle no frena los demás */ }
+        }
+        return moved;
     }
 
     public static void enqueue(Context ctx, String jsonPayload) {

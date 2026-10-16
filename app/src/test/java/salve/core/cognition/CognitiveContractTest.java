@@ -187,4 +187,15 @@ public class CognitiveContractTest {
         assertTrue(CognitivePrompt.limitTools(CognitivePrompt.prioritize(tools, "Diseña un pijama lavanda")).containsKey("AVATAR_CREATE"));
         assertEquals(tools.keySet(), CognitivePrompt.prioritize(tools, "hola").keySet());
     }
+
+    @Test public void drawingADressIsADrawingAndCloudGoesToItsTool() {
+        Map<String,CognitiveTurn.Tool> tools=new java.util.LinkedHashMap<>();
+        tools.put("AVATAR_CREATE",new CognitiveTurn.Tool("{}: crea ropa", a->null));
+        tools.put("sketch.draw",new CognitiveTurn.Tool("{motivos:string}: dibujas", a->null));
+        tools.put("cloud.sync",new CognitiveTurn.Tool("{}: sincronizas", a->null));
+        tools.put("runtime.status",new CognitiveTurn.Tool("{}: mide", a->null));
+        assertEquals("sketch.draw", CognitivePrompt.prioritize(tools, "Dibuja un vestido de verano").keySet().iterator().next());
+        assertEquals("AVATAR_CREATE", CognitivePrompt.prioritize(tools, "Diseña un vestido lavanda").keySet().iterator().next());
+        assertEquals("cloud.sync", CognitivePrompt.prioritize(tools, "sincroniza tus recuerdos de pcloud").keySet().iterator().next());
+    }
 }

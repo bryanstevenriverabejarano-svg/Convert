@@ -827,7 +827,7 @@ public class MotorConversacional {
             return;
         }
         // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
-        String sketchContext = prepararDibujo(entrada);
+        String sketchContext = prepararDibujo(entrada) + nubeContexto();
         if (procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
@@ -1194,8 +1194,11 @@ public class MotorConversacional {
                 && ConversationMemoryGrounding.chronologyDirection(entrada) < 0
                 && salve.data.sync.CloudSyncManager.isPCloudConfigured(context)
                 && !salve.data.sync.CloudSyncManager.memoryRestoreComplete(context))
+        {
+            salve.data.sync.CloudAutoSync.kick(context, "recuerdo antiguo");
             directAnswer += " Ojo: todavía no he terminado de recuperar mi historia de pCloud, así que puede haber recuerdos "
-                    + "más antiguos. Di «recupera tus recuerdos» y te enseño el progreso.";
+                    + "más antiguos. Ya lo estoy recuperando yo sola; pregúntamelo otra vez en un rato.";
+        }
         if (directAnswer != null) {
             String answer = ResponseLimiter.limit(directAnswer, VoiceResponsePolicy.maxResponseChars(entradaPorVoz));
             TurnQualityAssessment quality = ConversationQualityEvaluator.evaluate(answer, false,
@@ -1341,6 +1344,21 @@ public class MotorConversacional {
 
 
     // ───────────── Dibujo por epiciclos y cuerpo astral ─────────────
+
+    /**
+     * La nube trabaja sola: despierta la sincronización (como mucho cada 10 min) y, si mientras tanto
+     * trajo recuerdos, se lo cuenta a Bryan una vez.
+     */
+    private String nubeContexto() {
+        try {
+            salve.data.sync.CloudAutoSync.kick(context, "conversación");
+            int restored = salve.data.sync.CloudAutoSync.takeUnannounced(context);
+            if (restored <= 0) return "";
+            return " | NUBE: por tu cuenta, sin que nadie pulsara nada, has recuperado " + restored + " recuerdos de pCloud desde "
+                    + "la última conversación. " + salve.data.sync.CloudSyncManager.memoryStatus(context)
+                    + " Si viene al caso, menciónalo en una frase.";
+        } catch (RuntimeException ignored) { return ""; }
+    }
 
     /** Cómo debe hablar de sus dibujos: de qué dibujó y por qué, no de su técnica. */
     private static final String ESTILO_DIBUJO = " Habla de qué dibujaste y por qué salió así, en una o dos frases. "
@@ -2266,9 +2284,9 @@ public class MotorConversacional {
             return "pCloud está conectada pero la sincronización está en pausa; solo consulto lo guardado aquí" + since
                     + ". Reactívala en IA y cámara → Nube pCloud y di «recupera tus recuerdos».";
         if (!salve.data.sync.CloudSyncManager.memoryRestoreComplete(context)) {
-            salve.data.sync.CloudSyncManager.requestRestore(context);
+            salve.data.sync.CloudAutoSync.kick(context, "pregunta por la nube");
             return "Todavía no he terminado de recuperar tus recuerdos de pCloud, así que mi recuerdo más antiguo aquí puede no ser el real. "
-                    + salve.data.sync.CloudSyncManager.memoryStatus(context);
+                    + "Ya los estoy trayendo yo sola. " + salve.data.sync.CloudSyncManager.memoryStatus(context);
         }
         return null;
     }
@@ -2674,6 +2692,24 @@ public class MotorConversacional {
             empezarDibujo(scene);
             return new CognitiveTurn.Receipt("DIBUJANDO " + scene.title + " (" + origen(scene) + "); Bryan lo ve en la pantalla y en el chat."
                     + ESTILO_DIBUJO);
+        }));
+        tools.put("cloud.sync", new CognitiveTurn.Tool("{}: sincronizas tú misma con pCloud (traes recuerdos, fotos, dibujos y tu mente; subes lo nuevo)", args -> {
+            CognitiveReply.fields(args);
+            if (!salve.data.sync.CloudSyncManager.isPCloudConfigured(context))
+                return new CognitiveTurn.Receipt("NUBE_SIN_CONECTAR: pCloud no está conectada; Bryan debe autorizarla una vez en IA y cámara → Nube pCloud.");
+            if (!salve.data.sync.CloudSyncManager.isEnabled(context) && salve.data.sync.CloudSyncManager.pausedByUser(context))
+                return new CognitiveTurn.Receipt("NUBE_EN_PAUSA: Bryan la pausó; no la reactives sin que te lo pida.");
+            if (!salve.data.sync.CloudSyncManager.isEnabled(context)) salve.data.sync.CloudSyncManager.setEnabled(context, true, false);
+            salve.data.sync.CloudSyncManager.RestoreBatch batch = salve.data.sync.CloudSyncManager.restoreMemoryBatch(context, 120);
+            int files = salve.data.sync.CloudSyncManager.syncKnowledge(context);
+            boolean mind = salve.data.sync.CloudSyncManager.restoreMind(context, false);
+            salve.data.sync.SyncWorker.restartNow(context);
+            registrarAccion(salve.core.mind.SelfActionLog.Kind.SEARCH, "sincronizar con pCloud",
+                    "traje " + batch.restored + " recuerdos y moví " + files + " archivos de lo que aprendí");
+            return new CognitiveTurn.Receipt("NUBE_SINCRONIZADA: " + batch.restored + " recuerdos nuevos; " + files
+                    + " archivos de dibujos/acciones sincronizados" + (mind ? "; mente restaurada" : "") + ". "
+                    + salve.data.sync.CloudSyncManager.memoryStatus(context)
+                    + (batch.more ? " Quedan más: sigo en segundo plano." : ""));
         }));
         tools.put("runtime.status", new CognitiveTurn.Tool("{}: mide estado y RAM", args -> {
             CognitiveReply.fields(args);

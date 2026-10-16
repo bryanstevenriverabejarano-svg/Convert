@@ -1073,7 +1073,9 @@ public class MainActivity extends AppCompatActivity {
             abrirModoVoz();
         }
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(true);
-        SyncWorker.enqueueWhenOnline(getApplicationContext());
+        // Salve se sincroniza sola: despierta la sincronización aunque un intento anterior la dejara aplazada.
+        if (!salve.data.sync.CloudAutoSync.kick(getApplicationContext(), "app abierta"))
+            SyncWorker.enqueueWhenOnline(getApplicationContext());
 
         updateAudioPermissionState();
 
@@ -2102,6 +2104,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void mostrarFotosGuardadas() {
+        salve.data.sync.CloudAutoSync.kick(getApplicationContext(), "fotos guardadas");
         inferenceChecks.execute(() -> {
             java.util.List<salve.core.visual.VisualMemoryRecord> photos = new salve.core.visual.VisualMemoryRepository(this).store.list();
             String[] labels = new String[photos.size()];

@@ -241,9 +241,10 @@ public final class MindRuntime {
             // Sin nombre guardado, en su propio teléfono: se presume Bryan y se dice por qué falta el dato.
             boolean cloudPending = salve.data.sync.CloudSyncManager.isPCloudConfigured(app)
                     && !salve.data.sync.CloudSyncManager.memoryRestoreComplete(app);
+            if (cloudPending) salve.data.sync.CloudAutoSync.kick(app, "quién soy");
             return "Estás en el teléfono de " + first + ", así que lo más probable es que seas tú, " + first
                     + ", quien me creó. Aun así, en esta instalación no tengo tu nombre guardado"
-                    + (cloudPending ? " porque todavía no he recuperado mis recuerdos de pCloud (di «recupera tus recuerdos»)" : "")
+                    + (cloudPending ? " porque todavía no he recuperado todos mis recuerdos de pCloud (los estoy trayendo yo sola)" : "")
                     + ". " + (identity.biometricAvailable() ? "Si quieres que lo confirme, di «verifícame». " : "")
                     + "Si eres tú, dime «sí, soy yo» y lo recordaré.";
         }
