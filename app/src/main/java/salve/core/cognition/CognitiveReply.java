@@ -43,7 +43,13 @@ public final class CognitiveReply {
                 if (reply.name == null) return reply;
                 throw invalid;
             }
-            if (isToolAttempt(text) || CognitiveTextFallback.brokenEnvelope(text)) throw invalid;
+            if (isToolAttempt(text)) throw invalid;
+            if (CognitiveTextFallback.brokenEnvelope(text)) {
+                // Sobre cortado a medias: se rescata el mensaje ya escrito en vez de perder la respuesta.
+                String partial = CognitiveTextFallback.partialMessage(text);
+                if (partial == null) throw invalid;
+                return new CognitiveReply(partial, null, null);
+            }
             return new CognitiveReply(text, null, null);
         }
     }

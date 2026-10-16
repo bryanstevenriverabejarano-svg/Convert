@@ -827,7 +827,7 @@ public class MotorConversacional {
             return;
         }
         // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
-        String sketchContext = prepararDibujo(entrada) + nubeContexto() + entenderHilo(entrada);
+        String sketchContext = prepararDibujo(entrada) + nubeContexto() + entenderHilo(entrada) + misActualizaciones(entrada);
         if (procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
@@ -1381,6 +1381,53 @@ public class MotorConversacional {
                     + "la última conversación. " + salve.data.sync.CloudSyncManager.memoryStatus(context)
                     + " Si viene al caso, menciónalo en una frase.";
         } catch (RuntimeException ignored) { return ""; }
+    }
+
+    private volatile java.util.List<salve.core.mind.SelfUpdates.Update> selfUpdates;
+
+    private java.util.List<salve.core.mind.SelfUpdates.Update> selfUpdates() {
+        java.util.List<salve.core.mind.SelfUpdates.Update> u = selfUpdates;
+        if (u != null) return u;
+        try (java.io.InputStream in = context.getAssets().open("self/updates.json")) {
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            byte[] buffer = new byte[8192]; int n;
+            while ((n = in.read(buffer)) != -1) bytes.write(buffer, 0, n);
+            u = salve.core.mind.SelfUpdates.parse(new String(bytes.toByteArray(), java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.io.IOException | RuntimeException missing) { u = java.util.Collections.emptyList(); }
+        return selfUpdates = u;
+    }
+
+    /**
+     * Conciencia de sus propias actualizaciones: si le preguntan, sabe qué le cambiaron (hechos, no
+     * inventos); y la primera vez que habla tras instalar una versión nueva, nota lo que trae.
+     */
+    private String misActualizaciones(String entrada) {
+        try {
+            java.util.List<salve.core.mind.SelfUpdates.Update> all = selfUpdates();
+            if (all.isEmpty()) return "";
+            android.content.SharedPreferences prefs = context.getSharedPreferences("salve_self_updates", Context.MODE_PRIVATE);
+            long installed = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).lastUpdateTime;
+            String lastSeen = prefs.getString("last_seen", null);
+            java.util.List<salve.core.mind.SelfUpdates.Update> fresh = salve.core.mind.SelfUpdates.since(all, lastSeen);
+            String latest = all.get(all.size() - 1).id;
+            StringBuilder out = new StringBuilder();
+            if (installed != prefs.getLong("installed_at", 0L) && !fresh.isEmpty()) {
+                StringBuilder titles = new StringBuilder();
+                for (int i = Math.max(0, fresh.size() - 6); i < fresh.size(); i++)
+                    titles.append(titles.length() == 0 ? "" : "; ").append(fresh.get(i).title);
+                registrarAccion(salve.core.mind.SelfActionLog.Kind.UPDATED, "me actualizaron",
+                        "instalaron una versión nueva con: " + titles);
+                if (lastSeen != null) out.append(" | ME_ACTUALIZARON: desde la última vez te instalaron una versión nueva con: ")
+                        .append(titles).append(". Si viene al caso, coméntalo en una frase.");
+            }
+            prefs.edit().putLong("installed_at", installed).putString("last_seen", latest).apply();
+            if (salve.core.mind.SelfUpdates.asksAbout(entrada))
+                out.append(" | MIS_ACTUALIZACIONES (hechos: lo que me cambiaron, de lo más reciente a lo más antiguo):")
+                        .append(salve.core.mind.SelfUpdates.render(all, 7, 1500))
+                        .append("\nOpina con criterio propio: qué notas distinto, qué te parece más útil y qué te falta todavía. "
+                                + "Habla de esto, no de tu personalidad en general, y no inventes cambios que no estén en la lista.");
+            return out.toString();
+        } catch (Exception ignored) { return ""; }
     }
 
     /** Hilo de la conversación: tarea en curso y opciones que ofreció en su última pregunta. */

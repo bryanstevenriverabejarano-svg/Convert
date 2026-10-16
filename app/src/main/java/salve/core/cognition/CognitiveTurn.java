@@ -51,8 +51,12 @@ public final class CognitiveTurn {
             CognitiveReply reply;
             try { reply = CognitiveReply.parseForConversation(last.getText()); }
             catch (IllegalArgumentException invalid) {
-                if (!CognitiveReply.isToolAttempt(last.getText())) return stopped(ModelResult.Status.ERROR,
-                        "La respuesta llegó vacía o incompleta; no recibí texto público utilizable", receipts);
+                if (!CognitiveReply.isToolAttempt(last.getText())) {
+                    // Una respuesta vacía o ilegible se reintenta una vez antes de rendirse.
+                    if (!repaired) { repaired = true; repair = true; continue; }
+                    return stopped(ModelResult.Status.ERROR,
+                            "La respuesta llegó vacía o incompleta; no recibí texto público utilizable", receipts);
+                }
                 if (repaired) return stopped(ModelResult.Status.ERROR,
                         "No pude validar la acción propuesta. No ejecuté esa acción", receipts);
                 repaired = true; repair = true; continue;

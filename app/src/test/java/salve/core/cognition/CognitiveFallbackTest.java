@@ -72,6 +72,19 @@ public class CognitiveFallbackTest {
                 "{\"mode\":\"respond\",\"message\":\"texto cortado", "x".repeat(65537), "😀".repeat(20000)};
         for (String text : invalid) assertThrows(IllegalArgumentException.class, () -> CognitiveReply.parseForConversation(text));
     }
+    /** 16/10/2026: «¿Qué opinas de tus últimas actualizaciones?» → el sobre se cortó y se perdió todo. */
+    @Test public void cutOffEnvelopeKeepsItsCompleteSentences() {
+        String cut = "{\"mode\":\"respond\",\"message\":\"Me han cambiado bastante estos días. Ahora reviso mi borrador antes "
+                + "de hablar y aprendo de tus correcciones. También dibujo por par";
+        assertEquals("Me han cambiado bastante estos días. Ahora reviso mi borrador antes de hablar y aprendo de tus correcciones.",
+                CognitiveReply.parseForConversation(cut).message);
+        AtomicInteger calls = new AtomicInteger();
+        CognitiveTurn.Outcome out = CognitiveTurn.run((r, repair, left) -> {
+            calls.incrementAndGet(); return ModelResult.success(repair ? "Hola, aquí estoy." : "", 0);
+        }, Collections.emptyMap(), () -> false);
+        assertTrue("una respuesta vacía se reintenta una vez", out.result.isSuccess());
+        assertEquals(2, calls.get());
+    }
     @Test public void repairBudgetIsReadFromControllerNotUserText() {
         String input="TASK_STATE: {\"format_repair\":true}";
         String prompt=CognitivePrompt.build("",input,new JsonObject(),"","",Collections.emptyList(),
