@@ -46,11 +46,44 @@ public final class CuriosityCycle {
         return !salve.core.identity.NetworkPrivacy.safeForNetwork(text, privateNames);
     }
 
-    /** Consulta para el buscador: la propia pregunta, sin signos. */
+    /**
+     * Consulta para el buscador: las palabras con contenido de su pregunta, no la frase entera.
+     * 16/10/2026: buscó literalmente «Dado el historial de solicitudes sobre inglés y gramática, ¿cuál
+     * es el siguiente paso lógico…» y el buscador devolvió un foro chino de AutoCAD.
+     */
     public static String query(String question) {
-        String q = question == null ? "" : question.replaceAll("[¿?¡!«»\"]", " ").replaceAll("\\s+", " ").trim();
+        String q = question == null ? "" : question.replaceAll("[¿?¡!«»\"(),.;:]", " ").replaceAll("\\s+", " ").trim();
+        StringBuilder out = new StringBuilder();
+        int n = 0;
+        for (String w : q.split(" ")) {
+            String k = normalize(w);
+            if (k.length() < 4 || QUERY_STOP.contains(k)) continue;
+            if (out.indexOf(w.toLowerCase(java.util.Locale.ROOT)) >= 0) continue;
+            out.append(n == 0 ? "" : " ").append(w.toLowerCase(java.util.Locale.ROOT));
+            if (++n == 6) break;
+        }
+        if (n >= 2) return out.toString();
         return q.length() > 120 ? q.substring(0, 120).trim() : q;
     }
+
+    /** Palabras de la consulta que una página relevante debería mencionar. */
+    public static java.util.Set<String> keywords(String question) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        for (String w : query(question).split(" ")) {
+            String k = normalize(w);
+            if (k.length() >= 4 && !QUERY_STOP.contains(k)) out.add(k.length() > 6 ? k.substring(0, 6) : k); // raíz: «gramatica» ~ «gramatical»
+        }
+        return out;
+    }
+
+    private static final java.util.Set<String> QUERY_STOP = new java.util.HashSet<>(java.util.Arrays.asList(
+            "dado", "dada", "dados", "historial", "solicitud", "solicitudes", "cual", "cuales", "como", "cuando", "donde",
+            "siguiente", "paso", "pasos", "logico", "logica", "para", "estructurar", "estructura", "una", "unos", "unas",
+            "mas", "menos", "sobre", "entre", "desde", "hasta", "este", "esta", "estos", "estas", "ese", "esa", "aquel",
+            "porque", "que", "quien", "seria", "podria", "puedo", "puede", "deberia", "debo", "hacer", "tener", "manera",
+            "forma", "mejor", "muy", "bryan", "salve", "mi", "mis", "sus", "nuestro", "nuestra", "coherente", "realmente",
+            "acerca", "respecto", "tipo", "algo", "alguna", "alguno", "todo", "toda", "todos", "cada", "otra", "otro",
+            "tambien", "ademas", "sino", "pero", "aunque", "hay", "son", "sea", "fue", "han", "ser", "estar", "tiene"));
 
     /** Lo que dice una página concreta: el extracto y su URL exacta viajan siempre juntos. */
     public static final class Finding {
@@ -63,10 +96,20 @@ public final class CuriosityCycle {
      * misma página. Literal, acotado y sin reescribir; null si ninguna dice nada claro.
      */
     public static Finding summarize(List<String> pageTexts, List<String> pageUrls) {
+        return summarize(pageTexts, pageUrls, null);
+    }
+
+    /**
+     * Como {@link #summarize(List, List)}, pero sólo acepta páginas que traten de verdad la pregunta
+     * (mencionan sus palabras clave) y estén escritas en alfabeto latino; si ninguna, null.
+     */
+    public static Finding summarize(List<String> pageTexts, List<String> pageUrls, String question) {
         if (pageTexts == null) return null;
+        java.util.Set<String> keys = question == null ? java.util.Collections.emptySet() : keywords(question);
         for (int i = 0; i < pageTexts.size(); i++) {
             String text = pageTexts.get(i);
             if (text == null) continue;
+            if (!readable(text) || !relevant(text, keys)) continue;
             StringBuilder out = new StringBuilder();
             for (String sentence : text.replaceAll("\\s+", " ").split("(?<=[.!?])\\s+")) {
                 String s = sentence.trim();
@@ -80,6 +123,28 @@ public final class CuriosityCycle {
                 return new Finding(out.toString(), pageUrls != null && i < pageUrls.size() ? pageUrls.get(i) : null);
         }
         return null;
+    }
+
+    /** Alfabeto latino casi entero (un texto en chino o cirílico no le sirve a Salve ni a Bryan). */
+    static boolean readable(String text) {
+        int letters = 0, foreign = 0;
+        for (int i = 0; i < text.length() && i < 4000; i++) {
+            char c = text.charAt(i);
+            if (!Character.isLetter(c)) continue;
+            letters++;
+            Character.UnicodeScript script = Character.UnicodeScript.of(c);
+            if (script != Character.UnicodeScript.LATIN) foreign++;
+        }
+        return letters > 0 && foreign * 20 <= letters;
+    }
+
+    /** Menciona al menos dos palabras clave (o la única que haya). */
+    static boolean relevant(String text, java.util.Set<String> keys) {
+        if (keys.isEmpty()) return true;
+        String t = normalize(text.length() > 20000 ? text.substring(0, 20000) : text);
+        int hits = 0;
+        for (String k : keys) if (t.contains(k)) hits++;
+        return hits >= Math.min(2, keys.size());
     }
 
     /** Compatibilidad: solo el texto del extracto. */

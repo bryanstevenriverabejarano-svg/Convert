@@ -558,7 +558,7 @@ public final class MindRuntime {
         }
         if (journal.isPaused() || (stopped != null && stopped.getAsBoolean())) return "Exploración interrumpida; la retomaré.";
         // El extracto y su URL salen juntos de la misma página (antes podían no coincidir).
-        salve.core.mind.CuriosityCycle.Finding finding = salve.core.mind.CuriosityCycle.summarize(texts, urls);
+        salve.core.mind.CuriosityCycle.Finding finding = salve.core.mind.CuriosityCycle.summarize(texts, urls, question.text);
         android.content.SharedPreferences.Editor edit = prefs.edit().putStringSet("visited", limitSet(visited, 200));
         if (finding == null) {
             // Un fallo no la descarta: la pregunta se reintenta hasta tres veces en otras salidas.

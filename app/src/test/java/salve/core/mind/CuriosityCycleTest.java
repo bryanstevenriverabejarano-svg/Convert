@@ -50,7 +50,26 @@ public class CuriosityCycleTest {
         assertTrue(patch.thoughts.get(0).text.contains("es.wikipedia.org"));
         assertTrue(patch.thoughts.get(0).sources.contains("web:es.wikipedia.org"));
         assertTrue(patch.thoughts.get(0).text.length() <= 400);
-        assertEquals("Por qué los pulpos tienen tres corazones", CuriosityCycle.query(question.text));
+        assertEquals("pulpos tienen tres corazones", CuriosityCycle.query(question.text));
+    }
+
+    /** 16/10/2026: buscó su reflexión entera y notificó un foro chino de AutoCAD. */
+    @Test public void searchesKeywordsAndIgnoresUnrelatedPages() {
+        String reflection = "Dado el historial de solicitudes sobre inglés y gramática, ¿cuál es el siguiente paso lógico para "
+                + "estructurar una enseñanza más coherente?";
+        String q = CuriosityCycle.query(reflection);
+        assertEquals("inglés gramática enseñanza", q);
+        String spam = "「教學」 AutoCAD 黑白列印 AutoCAD顧問 還沒有註冊嗎...即日起免費註冊，所有最完整的AutoCAD討論、教學及資源都在論壇裡喔~ "
+                + "Join the forum, it's quick and easy AutoCAD顧問 還沒有註冊嗎...即日起免費註冊，所有最完整的AutoCAD討論。";
+        String offTopic = "La receta tradicional de la paella valenciana lleva arroz, pollo, conejo y judía verde. Se cocina a fuego vivo.";
+        String good = "La enseñanza del inglés a principiantes suele empezar por la gramática básica: el orden sujeto, verbo y "
+                + "complemento, y los verbos más frecuentes. Después se practican frases cortas.";
+        CuriosityCycle.Finding f = CuriosityCycle.summarize(Arrays.asList(spam, offTopic, good),
+                Arrays.asList("https://spam.example", "https://paella.example", "https://ingles.example"), reflection);
+        assertNotNull(f);
+        assertEquals("https://ingles.example", f.url);
+        assertNull("sin página que trate la pregunta, no hay hallazgo",
+                CuriosityCycle.summarize(Arrays.asList(spam, offTopic), Arrays.asList("a", "b"), reflection));
     }
 
     @Test public void followsTheMostRelatedUnvisitedThread() {
