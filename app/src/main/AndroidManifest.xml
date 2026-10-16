@@ -63,7 +63,7 @@
         <activity
             android:name="salve.presentation.ui.MainActivity"
             android:theme="@style/Theme.Salve.Stage"
-            android:windowSoftInputMode="adjustResize"
+            android:windowSoftInputMode="adjustResize|stateHidden"
             android:exported="true">
 
             <intent-filter>
