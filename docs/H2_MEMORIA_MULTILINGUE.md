@@ -160,7 +160,8 @@ El verificador también guarda y vuelve a abrir el índice INT8 real de Salve:
 mantiene 26/32 en primera posición y 29/32 entre tres candidatos. Las dos
 calibraciones independientes (recuperación y similitud) pasan 8/8.
 
-El workflow `Multilingual memory contract` repite esas comprobaciones. La CI Android
+El workflow `Multilingual memory contract` repite esas comprobaciones en Linux
+x86_64 y ARM64 nativos; el resultado ARM64 de servidor tampoco mide el teléfono. La CI Android
 ejecuta los tests de contrato (integridad, máscara/pooling, RAM y prefijos), construye
 ARM64, verifica que no haya pesos en assets y comprueba alineación nativa de 16 KiB.
 El resultado de cada ejecución de CI, no este documento, indica si la rama compila.

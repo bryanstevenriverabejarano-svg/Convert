@@ -7,6 +7,7 @@ E5 reference is canonical XLMRobertaTokenizer(use_fast=False), as in production 
 import argparse
 import hashlib
 import json
+import platform
 import re
 import resource
 import time
@@ -66,7 +67,7 @@ lexical = []
 for r in rows:
     q = words(r['query'])
     lexical.append(sorted(range(len(rows)), key=lambda i: -len(q & words(rows[i]['document'])) / max(1, len(q | words(rows[i]['document'])))))
-report = {'model': args.model, 'runtime': 'onnxruntime ' + ort.__version__, 'device': 'Linux x86_64 host, NOT Samsung S24 Ultra',
+report = {'model': args.model, 'runtime': 'onnxruntime ' + ort.__version__, 'device': platform.system() + ' ' + platform.machine() + ' host, NOT Samsung S24 Ultra',
           'onnx_file': file, 'sha256': hashlib.file_digest((args.model_dir / file).open('rb'), 'sha256').hexdigest(),
           'tokenizer': type(tokenizer).__name__, 'max_tokens': 256, 'threads': 2,
           'overall': metrics(list(range(len(rows)))),
