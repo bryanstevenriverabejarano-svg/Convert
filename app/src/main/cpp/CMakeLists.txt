@@ -2,6 +2,31 @@ cmake_minimum_required(VERSION 3.22)
 project(salve_llama LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+option(SALVE_EMBEDDINGS_ONLY "Build the embedding tokenizer without llama.cpp (host verification)" OFF)
+set(SPM_ENABLE_SHARED OFF CACHE BOOL "" FORCE)
+set(SPM_ENABLE_TCMALLOC OFF CACHE BOOL "" FORCE)
+set(SPM_BUILD_TEST OFF CACHE BOOL "" FORCE)
+set(SPM_DISABLE_EMBEDDED_DATA ON CACHE BOOL "" FORCE)
+add_subdirectory(../../../../third_party/sentencepiece sentencepiece EXCLUDE_FROM_ALL)
+add_library(salve_sentencepiece SHARED salve_sentencepiece.cpp)
+target_include_directories(salve_sentencepiece PRIVATE
+    ../../../../third_party/sentencepiece
+    ../../../../third_party/sentencepiece/src
+    ../../../../third_party/sentencepiece/src/builtin_pb
+    ../../../../third_party/sentencepiece/third_party
+    ../../../../third_party/sentencepiece/third_party/protobuf-lite
+    ${CMAKE_CURRENT_BINARY_DIR}/sentencepiece)
+target_link_libraries(salve_sentencepiece PRIVATE sentencepiece-static)
+if(ANDROID)
+    target_link_libraries(salve_sentencepiece PRIVATE log)
+    target_link_options(salve_sentencepiece PRIVATE "-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
+else()
+    find_package(JNI REQUIRED COMPONENTS JVM)
+    target_include_directories(salve_sentencepiece PRIVATE ${JNI_INCLUDE_DIRS})
+endif()
+if(SALVE_EMBEDDINGS_ONLY)
+    return()
+endif()
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
 set(GGML_OPENMP OFF CACHE BOOL "" FORCE)

@@ -43,6 +43,16 @@ public class SemanticMemoryTest {
         assertEquals(42, store.nearest(query, 1, -1).get(0).id);
     }
 
+    @Test public void candidateRankingDoesNotDiscardAParaphraseBelowTheOldAbsoluteCutoff() {
+        MemoryVectorStore store = new MemoryVectorStore();
+        store.put(1, new float[]{.8f, .6f});
+        store.put(2, new float[]{.7f, .714f});
+        assertTrue(store.nearest(new float[]{1, 0}, 3, .845).isEmpty());
+        assertEquals(1, store.candidates(new float[]{1, 0}, 1).get(0).id);
+        assertEquals(1, store.candidates(new float[]{1, 0}, 1).size());
+        assertTrue(store.candidates(new float[]{1, 0}, 0).isEmpty());
+    }
+
     @Test public void persistsAndReloads() throws Exception {
         File dir = Files.createTempDirectory("salve-vectors").toFile();
         File file = new File(dir, "v.bin");
@@ -94,6 +104,8 @@ public class SemanticMemoryTest {
         assertTrue(result.getContext(), result.getContext().contains("recuerdos:4"));
         assertTrue(result.getContext().contains("recuerdo_por_significado"));
         assertTrue(result.getContext().contains("COINCIDENCIA_POR_SIGNIFICADO"));
+        assertTrue(result.getContext().contains("no respuestas confirmadas"));
+        assertNull(result.getDirectAnswer());
     }
 
     @Test public void semanticFailureFallsBackToWordSearch() {

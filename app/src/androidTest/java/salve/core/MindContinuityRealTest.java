@@ -90,10 +90,12 @@ public class MindContinuityRealTest {
     @Test public void embeddingModelReportsSpanishCalibration() throws Exception {
         optedIn("runRealMind");
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        EmbeddingsIndex index = new EmbeddingsIndex(context);
-        EmbeddingCalibration.Result result = EmbeddingCalibration.run(index::embed);
+        assumeTrue("Prepara primero Memoria en español en IA y cámara", EmbeddingsIndex.artifacts(context).installed());
+        EmbeddingsIndex index = EmbeddingsIndex.get(context);
+        EmbeddingCalibration.Result result = EmbeddingCalibration.run(index::embedQuery, index::embedPassage);
         Log.i(TAG, result.describe() + " umbral=" + result.threshold);
         assertNull("El modelo debe ejecutarse (token_type_ids incluidos)", result.error);
+        assertTrue(result.describe(), result.passed);
     }
 
     private void optedIn(String flag) {

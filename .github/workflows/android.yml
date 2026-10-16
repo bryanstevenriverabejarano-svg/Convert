@@ -140,6 +140,8 @@ jobs:
           abis = {name.split("/")[1] for name in names if name.startswith("lib/") and name.endswith(".so")}
           assert abis == {"arm64-v8a"}, f"Unexpected APK ABIs: {abis}"
           assert "lib/arm64-v8a/libsalve_llama.so" in names, "Missing GGUF runtime"
+          assert "lib/arm64-v8a/libsalve_sentencepiece.so" in names, "Missing multilingual tokenizer"
+          assert not any(name.startswith("assets/embeddings/") for name in names), "Embedding weights must download separately"
           print("ARM64-only APK includes the Dolphin GGUF runtime")
           PYTHON
 

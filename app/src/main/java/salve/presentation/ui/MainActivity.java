@@ -1636,7 +1636,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaModeloPrincipal(); break;
                         case 1:
@@ -1667,6 +1667,7 @@ public class MainActivity extends AppCompatActivity {
                         case 13: mostrarFotosGuardadas(); break;
                         case 14: plansLauncher.launch(new Intent(this, AgentPlansActivity.class)); break;
                         case 15: mostrarBuscadoresWeb(); break;
+                        case 16: mostrarMemoriaEspanol(); break;
                         default: break;
                     }
                 })
@@ -1674,6 +1675,22 @@ public class MainActivity extends AppCompatActivity {
                         .setTitle("Estado de los motores")
                         .setMessage(motorConversacional.getModelStatusDescription() + "\n" + motorConversacional.getVoiceStatus())
                         .setPositiveButton("Cerrar", null).show())
+                .setNegativeButton("Cerrar", null).show();
+    }
+
+    private void mostrarMemoriaEspanol() {
+        new AlertDialog.Builder(this).setTitle("Memoria en español")
+                .setMessage(salve.work.EmbeddingDownloadWorker.describe(this)
+                        + "\n\nPermite recuperar recuerdos aunque uses otras palabras. Descarga única de 123,42 MB por Wi-Fi. "
+                        + "Después funciona sin conexión. La búsqueda por palabras sigue disponible durante la preparación.")
+                .setPositiveButton("Preparar / reanudar", (dialog, which) -> {
+                    salve.work.EmbeddingDownloadWorker.enqueue(this, true);
+                    Toast.makeText(this, "Puedes seguir el progreso en las notificaciones.", Toast.LENGTH_LONG).show();
+                })
+                .setNeutralButton("Pausar descarga", (dialog, which) -> {
+                    androidx.work.WorkManager.getInstance(this).cancelUniqueWork(salve.work.EmbeddingDownloadWorker.NAME);
+                    salve.work.EmbeddingDownloadWorker.status(this, "Descarga pausada; pulsa Preparar / reanudar para continuar");
+                })
                 .setNegativeButton("Cerrar", null).show();
     }
 

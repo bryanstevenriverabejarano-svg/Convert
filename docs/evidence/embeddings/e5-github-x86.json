@@ -1,0 +1,123 @@
+{
+  "model": "e5",
+  "runtime": "onnxruntime 1.24.2",
+  "device": "GitHub Actions ubuntu-24.04 x86_64, NOT Samsung S24 Ultra",
+  "onnx_file": "model_qint8_avx512_vnni.onnx",
+  "sha256": "dd476dd0c2514e9b9be83aeb3853fac0763e0bdf4a71645407587d77c48a2d88",
+  "tokenizer": "XLMRobertaTokenizer",
+  "max_tokens": 256,
+  "threads": 2,
+  "overall": {
+    "count": 32,
+    "top1_correct": 26,
+    "recall_at_3": 27
+  },
+  "categories": {
+    "contradicciones": {
+      "count": 2,
+      "top1_correct": 2,
+      "recall_at_3": 2
+    },
+    "errores": {
+      "count": 4,
+      "top1_correct": 3,
+      "recall_at_3": 3
+    },
+    "fechas": {
+      "count": 4,
+      "top1_correct": 4,
+      "recall_at_3": 4
+    },
+    "idiomas": {
+      "count": 4,
+      "top1_correct": 3,
+      "recall_at_3": 3
+    },
+    "negaciones": {
+      "count": 4,
+      "top1_correct": 4,
+      "recall_at_3": 4
+    },
+    "parafrasis": {
+      "count": 8,
+      "top1_correct": 5,
+      "recall_at_3": 5
+    },
+    "personas": {
+      "count": 6,
+      "top1_correct": 5,
+      "recall_at_3": 6
+    }
+  },
+  "lexical_overlap_baseline": {
+    "top1_correct": 12,
+    "count": 32
+  },
+  "load_seconds": 0.1789297110000092,
+  "median_encode_ms": 3.835721999998043,
+  "process_peak_rss_kib": 350356,
+  "peak_before_session_kib": 203900,
+  "failures": [
+    {
+      "id": 0,
+      "query": "¿Dónde dejé la copia para abrir la puerta?",
+      "expected": 0,
+      "top3": [
+        4,
+        26,
+        10
+      ]
+    },
+    {
+      "id": 3,
+      "query": "¿Qué problema noté al reducir la velocidad del vehículo?",
+      "expected": 3,
+      "top3": [
+        2,
+        1,
+        19
+      ]
+    },
+    {
+      "id": 6,
+      "query": "¿Para qué estoy reservando dinero?",
+      "expected": 6,
+      "top3": [
+        27,
+        5,
+        19
+      ]
+    },
+    {
+      "id": 10,
+      "query": "donde puse el movl a cargar",
+      "expected": 10,
+      "top3": [
+        4,
+        0,
+        2
+      ]
+    },
+    {
+      "id": 13,
+      "query": "¿Qué estudia Lucía, mi amiga, no mi hermana?",
+      "expected": 13,
+      "top3": [
+        12,
+        13,
+        31
+      ]
+    },
+    {
+      "id": 26,
+      "query": "Where did I leave the umbrella?",
+      "expected": 26,
+      "top3": [
+        25,
+        4,
+        31
+      ]
+    }
+  ],
+  "workflow_run": "https://github.com/bryanstevenriverabejarano-svg/Convert/actions/runs/38827823787"
+}

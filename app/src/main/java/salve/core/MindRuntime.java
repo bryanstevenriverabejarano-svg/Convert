@@ -59,6 +59,8 @@ public final class MindRuntime {
     private volatile EmbeddingsIndex embeddings;
     /** Resultado de la prueba de español del modelo de embeddings; null hasta cargarlo. */
     private volatile EmbeddingCalibration.Result calibration;
+    private volatile EmbeddingCalibration.Result similarityCalibration;
+    private long lastEmbeddingAttempt;
     private final PredictionLoop prediction;
 
     private MindRuntime(Context context) {
@@ -67,11 +69,12 @@ public final class MindRuntime {
         File dir = new File(app.getNoBackupFilesDir(), "mind");
         journal = new SelfModelJournal(new MindFileStore(new File(dir, "self_model.json")), System::currentTimeMillis);
         actions = new salve.core.mind.SelfActionLog(new MindFileStore(new File(dir, "actions.json")), System::currentTimeMillis);
-        vectorFile = new File(dir, "memory_vectors.bin");
+        // Same dimension does not mean the same vector space. Rebuild from Room for this contract.
+        vectorFile = new File(dir, "memory_vectors_" + salve.core.embeddings.EmbeddingArtifacts.ID + ".bin");
         vectors = MemoryVectorStore.load(vectorFile);
         prediction = new PredictionLoop(journal, local(SalveLLM.Role.CONVERSACIONAL), this::embedOrThrow,
                 System::currentTimeMillis, cosine -> {
-                    EmbeddingCalibration.Result c = calibration;
+                    EmbeddingCalibration.Result c = similarityCalibration;
                     return c == null ? -1 : c.surprise(cosine);
                 });
     }
@@ -271,7 +274,7 @@ public final class MindRuntime {
             case DESCRIBE: {
                 EmbeddingCalibration.Result c = calibration;
                 return journal.describe() + "\n" + (c == null
-                        ? "Memoria por significado: el modelo de embeddings aún no se ha cargado."
+                        ? salve.work.EmbeddingDownloadWorker.describe(app)
                         : c.describe());
             }
             case ACCEPT_NARRATIVE: return journal.acceptNarrative();
@@ -330,7 +333,7 @@ public final class MindRuntime {
 
     // ── Memoria por significado ─────────────────────────────────────────────────
 
-    /** Para {@link ConversationMemoryGrounding}: nunca bloquea un turno cargando el modelo de embeddings. */
+    /** Consulta fuera de la UI; prepara/calibra en segundo plano y nunca descarga durante la inferencia. */
     public ConversationMemoryGrounding.SemanticRecall semanticRecall() {
         return (query, limit) -> {
             EmbeddingsIndex index = embeddings;
@@ -339,9 +342,9 @@ public final class MindRuntime {
             // Un modelo que no distingue el español solo aportaría ruido con forma de recuerdo.
             if (!c.passed) return Collections.emptyList();
             float[] q;
-            synchronized (index) { q = index.embed(query); }
+            synchronized (index) { q = index.embedQuery(query); }
             List<Integer> ids = new ArrayList<>();
-            for (MemoryVectorStore.Hit hit : vectors.nearest(q, limit, c.threshold)) ids.add(hit.id);
+            for (MemoryVectorStore.Hit hit : vectors.candidates(q, limit)) ids.add(hit.id);
             return ids;
         };
     }
@@ -359,19 +362,46 @@ public final class MindRuntime {
         });
     }
 
+    /** Download completion is independent of app/chat lifetimes. Recalibrate and rebuild derived vectors. */
+    public void onEmbeddingsPrepared() {
+        background.execute(() -> {
+            synchronized (this) {
+                calibration = null;
+                similarityCalibration = null;
+                embeddings = null;
+                lastEmbeddingAttempt = 0;
+            }
+            loadEmbeddings();
+            indexMissing(INDEX_BATCH, () -> false);
+        });
+    }
+
     private EmbeddingsIndex loadEmbeddings() {
         EmbeddingsIndex index = embeddings;
         if (index != null) return index;
         synchronized (this) {
-            // Un fallo de carga se registra una vez; no se reintenta en cada consulta.
-            if (embeddings == null && calibration == null) {
+            // Missing download or transient pressure may recover; do not retry on every turn.
+            if (embeddings == null && (lastEmbeddingAttempt == 0
+                    || android.os.SystemClock.elapsedRealtime() - lastEmbeddingAttempt >= 60_000)) {
+                lastEmbeddingAttempt = android.os.SystemClock.elapsedRealtime();
+                if (!EmbeddingsIndex.artifacts(app).installed()) {
+                    salve.work.EmbeddingDownloadWorker.enqueue(app, false);
+                    calibration = EmbeddingCalibration.failed(salve.work.EmbeddingDownloadWorker.describe(app));
+                    return null;
+                }
                 try {
-                    EmbeddingsIndex created = new EmbeddingsIndex(app);
-                    calibration = EmbeddingCalibration.run(text -> { synchronized (created) { return created.embed(text); } });
-                    embeddings = created;
+                    EmbeddingsIndex created = EmbeddingsIndex.get(app);
+                    calibration = EmbeddingCalibration.run(created::embedQuery, created::embedPassage);
+                    similarityCalibration = calibration.passed ? EmbeddingCalibration.run(created::embedQuery) : null;
+                    if (calibration.passed) embeddings = created;
+                    else created.close();
+                    salve.work.EmbeddingDownloadWorker.status(app, calibration.describe());
                     Log.i(TAG, calibration.describe());
                 } catch (Throwable failure) {
+                    EmbeddingsIndex.get(app).close();
+                    similarityCalibration = null;
                     calibration = EmbeddingCalibration.failed(failure.getClass().getSimpleName());
+                    salve.work.EmbeddingDownloadWorker.status(app, calibration.describe());
                     Log.w(TAG, "Embeddings no disponibles: " + failure.getClass().getSimpleName());
                 }
             }
@@ -402,7 +432,7 @@ public final class MindRuntime {
                     if (vectors.contains(r.id) || r.frase == null || r.frase.trim().isEmpty()) continue;
                     if ("configuracion_sistema".equals(MemoryProvenance.kind(r))) continue;
                     float[] v;
-                    synchronized (index) { v = index.embed(r.frase); }
+                    synchronized (index) { v = index.embedPassage(r.frase); }
                     vectors.put(r.id, v);
                     created++;
                 }
@@ -777,7 +807,7 @@ public final class MindRuntime {
      */
     public void predictNextAsync(String input, String reply, boolean voice) {
         if (voice || input == null || reply == null) return;
-        EmbeddingCalibration.Result c = calibration;
+        EmbeddingCalibration.Result c = similarityCalibration;
         // Sin un modelo que mida bien el significado en español, la sorpresa no sería medible:
         // no se gasta una inferencia del modelo local en predecir.
         if (c == null || !c.passed) return;

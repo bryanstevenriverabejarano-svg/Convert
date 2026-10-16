@@ -1,167 +1,84 @@
 package salve.core;
 
+import android.content.ComponentCallbacks2;
 import android.content.Context;
-
+import android.content.res.Configuration;
+import android.os.Looper;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.LongBuffer;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import salve.core.embeddings.E5EmbeddingEngine;
+import salve.core.embeddings.EmbeddingArtifacts;
+import salve.core.embeddings.EmbeddingMemoryPolicy;
 
-import ai.onnxruntime.*;
+/** One lazy E5 session per process. No weights in the APK and no network from inference. */
+public final class EmbeddingsIndex implements AutoCloseable {
+    private static volatile EmbeddingsIndex instance;
+    private final Context app;
+    private final EmbeddingArtifacts artifacts;
+    private E5EmbeddingEngine engine;
+    private boolean verified;
+    private final ScheduledExecutorService idle = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "salve-embedding-release"); thread.setDaemon(true); return thread;
+    });
+    private ScheduledFuture<?> release;
 
-/**
- * EmbeddingsIndex administra un índice local de vectores de texto para
- * realizar búsquedas semánticas. Utiliza ONNX Runtime para ejecutar un
- * modelo de embeddings en el dispositivo. Este código carga un modelo
- * (por defecto gte-small-int8) desde la carpeta assets/embeddings, y
- * proporciona utilidades para obtener los vectores, normalizarlos y
- * serializarlos en BLOBs para almacenarlos en SQLite.
- */
-public class EmbeddingsIndex implements AutoCloseable {
-    private final OrtEnvironment env;
-    private final OrtSession session;
-    private final WordPiece tokenizer;
-    private final int dim = 384;      // dimensión de los embeddings
-    private final int maxLen = 256;   // longitud máxima del tokenizador
-
-    public EmbeddingsIndex(Context ctx) throws Exception {
-        env = OrtEnvironment.getEnvironment();
-        File m = new File(ctx.getFilesDir(), "embeddings/gte-small-int8.onnx");
-        if (!m.exists()) {
-            copyAsset(ctx, "embeddings/gte-small-int8.onnx", m);
-        }
-        session = env.createSession(m.getAbsolutePath(), new OrtSession.SessionOptions());
-        InputStream vocabStream = ctx.getAssets().open("embeddings/vocab.txt");
-        tokenizer = new WordPiece(vocabStream);
+    public static EmbeddingArtifacts artifacts(Context context) {
+        return new EmbeddingArtifacts(new File(context.getNoBackupFilesDir(), "embeddings"));
     }
-
-    public float[] embed(String text) throws Exception {
-        if (text == null) {
-            return new float[0];
+    public static EmbeddingsIndex get(Context context) {
+        if (instance == null) synchronized (EmbeddingsIndex.class) {
+            if (instance == null) instance = new EmbeddingsIndex(context.getApplicationContext());
         }
-        int[] ids = tokenizer.tokenizeToIds(text, maxLen);
-        long[] shape = new long[]{1, maxLen};
-
-        LongBuffer idsBuf = LongBuffer.allocate(maxLen);
-        for (int id : ids) idsBuf.put((long) id);
-        idsBuf.rewind();
-        OnnxTensor inputIds = OnnxTensor.createTensor(env, idsBuf, shape);
-
-        LongBuffer att = LongBuffer.allocate(maxLen);
-        int padId = 0;
-        for (int id : ids) att.put(id == padId ? 0L : 1L);
-        att.rewind();
-        OnnxTensor attMask = OnnxTensor.createTensor(env, att, shape);
-
-        Map<String, OnnxTensor> inputs = new HashMap<>();
-        inputs.put("input_ids", inputIds);
-        inputs.put("attention_mask", attMask);
-        // Los modelos tipo BERT (gte-small incluido) exigen token_type_ids. Sin esta entrada,
-        // ONNX Runtime rechaza la ejecución y ningún embedding llegaba a calcularse.
-        OnnxTensor typeIds = null;
-        if (session.getInputNames().contains("token_type_ids")) {
-            typeIds = OnnxTensor.createTensor(env, LongBuffer.allocate(maxLen), shape);
-            inputs.put("token_type_ids", typeIds);
-        }
-
-        try (OrtSession.Result r = session.run(inputs)) {
-            float[] vec = extract(r, ids);
-            l2norm(vec);
-            return vec;
-        } finally {
-            inputIds.close();
-            attMask.close();
-            if (typeIds != null) typeIds.close();
-        }
+        return instance;
     }
-
-    // Extrae el vector embebido de la salida de la red.
-    private float[] extract(OrtSession.Result r, int[] ids) throws Exception {
-        String[] names = new String[]{"sentence_embedding", "pooled_output", "last_hidden_state"};
-        for (String name : names) {
-            try {
-                // get() devuelve Optional<OnnxValue>:contentReference[oaicite:1]{index=1}
-                Optional<OnnxValue> optional = r.get(name);
-                if (optional == null || !optional.isPresent()) continue;
-                OnnxValue v = optional.get();
-
-                if (v.getValue() instanceof float[][]) {
-                    float[][] arr = (float[][]) v.getValue();
-                    return arr[0];
-                }
-                if (v.getValue() instanceof float[][][]) {
-                    float[][][] arr = (float[][][]) v.getValue();
-                    float[] mean = new float[dim];
-                    int count = 0;
-                    // Media solo sobre tokens reales: promediar el relleno (PAD) aplana
-                    // todos los vectores hacia el mismo punto y destruye la similitud.
-                    for (int t = 0; t < arr[0].length; t++) {
-                        if (t < ids.length && ids[t] == 0) continue;
-                        for (int h = 0; h < dim; h++) {
-                            mean[h] += arr[0][t][h];
-                        }
-                        count++;
-                    }
-                    for (int h = 0; h < dim; h++) {
-                        mean[h] /= Math.max(1, count);
-                    }
-                    return mean;
-                }
-            } catch (Exception ignored) {
-            }
+    private EmbeddingsIndex(Context context) {
+        app = context; artifacts = artifacts(context);
+        app.registerComponentCallbacks(new ComponentCallbacks2() {
+            @Override public void onTrimMemory(int level) { if (level >= TRIM_MEMORY_RUNNING_LOW) idle.execute(EmbeddingsIndex.this::close); }
+            @Override public void onLowMemory() { idle.execute(EmbeddingsIndex.this::close); }
+            @Override public void onConfigurationChanged(Configuration configuration) { }
+        });
+    }
+    /** Symmetric semantic similarity (prediction/surprise): E5 specifies query: on both sides. */
+    public float[] embed(String text) throws Exception { return embedQuery(text); }
+    public synchronized float[] embedQuery(String text) throws Exception { return execute(text, false); }
+    public synchronized float[] embedPassage(String text) throws Exception { return execute(text, true); }
+    private float[] execute(String text, boolean passage) throws Exception {
+        if (Looper.myLooper() == Looper.getMainLooper())
+            throw new IllegalStateException("La memoria semántica se ejecuta fuera de la interfaz");
+        ModelMemoryPolicy.Snapshot ram = DeviceModelMemory.read(app);
+        if (!EmbeddingMemoryPolicy.allows(ram.available, ram.total, ram.threshold, ram.low, engine != null)) {
+            close(); throw new ModelMemoryPolicy.PressureException("Memoria semántica pausada por RAM; búsqueda por palabras disponible");
         }
-        throw new RuntimeException("No se pudo extraer el embedding de la salida");
+        if (engine == null) {
+            if (!verified) { artifacts.verify(); verified = true; }
+            engine = new E5EmbeddingEngine(artifacts.model, artifacts.tokenizer);
+        }
+        if (release != null) release.cancel(false);
+        try { return passage ? engine.passage(text) : engine.query(text); }
+        finally { release = idle.schedule(this::close, 90, TimeUnit.SECONDS); }
     }
-
-    private void l2norm(float[] v) {
-        double sum = 0.0;
-        for (float x : v) sum += x * x;
-        float norm = (float) Math.sqrt(sum) + 1e-8f;
-        for (int i = 0; i < v.length; i++) v[i] /= norm;
+    /** Releases native memory; the lightweight shared adapter remains reusable. */
+    @Override public synchronized void close() {
+        if (release != null) { release.cancel(false); release = null; }
+        if (engine != null) { engine.close(); engine = null; }
     }
-
     public static float cosine(float[] a, float[] b) {
-        float s = 0.0f;
-        for (int i = 0; i < a.length; i++) s += a[i] * b[i];
-        return s;
+        if (a.length != b.length) throw new IllegalArgumentException("Vectores incompatibles");
+        float sum = 0; for (int i = 0; i < a.length; i++) sum += a[i] * b[i]; return sum;
     }
-
-    public static byte[] toBlob(float[] v) {
-        ByteBuffer bb = ByteBuffer.allocate(v.length * 4).order(ByteOrder.LITTLE_ENDIAN);
-        for (float x : v) bb.putFloat(x);
-        return bb.array();
+    public static byte[] toBlob(float[] vector) {
+        ByteBuffer buffer = ByteBuffer.allocate(vector.length * 4).order(ByteOrder.LITTLE_ENDIAN);
+        for (float value : vector) buffer.putFloat(value); return buffer.array();
     }
-
     public static float[] fromBlob(byte[] blob) {
-        FloatBuffer fb = ByteBuffer.wrap(blob).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
-        float[] v = new float[fb.remaining()];
-        fb.get(v);
-        return v;
-    }
-
-    private static void copyAsset(Context ctx, String asset, File dst) throws IOException {
-        dst.getParentFile().mkdirs();
-        try (InputStream in = ctx.getAssets().open(asset);
-             OutputStream out = new FileOutputStream(dst)) {
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-        }
-    }
-
-    @Override
-    public void close() {
-        try {
-            session.close();
-        } catch (Exception ignored) {
-        }
+        FloatBuffer buffer = ByteBuffer.wrap(blob).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+        float[] vector = new float[buffer.remaining()]; buffer.get(vector); return vector;
     }
 }
