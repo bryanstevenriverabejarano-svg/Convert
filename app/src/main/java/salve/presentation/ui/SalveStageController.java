@@ -88,17 +88,59 @@ final class SalveStageController {
                 else if ("options".equals(restorePanel)) showOptions();
             });
         }
+        installKeyboardInsets();
         activity.findViewById(R.id.mainLayout).addOnLayoutChangeListener((view, l, t, r, b, ol, ot, or, ob) -> {
-            // Leave room for the composer when the IME resizes a short/landscape window.
             float density = activity.getResources().getDisplayMetrics().density;
-            float heightDp = (b - t) / density;
+            int usable = b - t - topInset;
+            float heightDp = (usable - keyboardInset) / density;
             // BottomSheetBehavior adds its own top offset. Use height, never a top margin,
             // otherwise a relayout can push the composer below the window.
-            fitSheetHeight(chat, b - t - (heightDp < 480 ? 0 : Math.round(56 * density)));
-            fitSheetHeight(options, b - t - (heightDp < 480 ? 0 : Math.round(96 * density)));
-            activity.findViewById(R.id.chatActions).setVisibility(heightDp < 360 ? View.GONE : View.VISIBLE);
+            fitSheetHeight(chat, usable - (heightDp < 480 ? 0 : Math.round(56 * density)));
+            fitSheetHeight(options, usable - (heightDp < 480 ? 0 : Math.round(96 * density)));
+            activity.findViewById(R.id.chatActions).setVisibility(heightDp < 360 || keyboardVisible ? View.GONE : View.VISIBLE);
         });
         updateChrome();
+    }
+
+    private int topInset, keyboardInset;
+    private boolean keyboardVisible;
+
+    /**
+     * El teclado nunca tapa lo que escribes: la app dibuja de borde a borde y mide ella misma las
+     * barras del sistema y el teclado. La hoja del chat reserva abajo exactamente el alto del teclado,
+     * así la caja de texto queda siempre encima y ves lo que tecleas (como en otras apps de chat).
+     * Antes dependía de que Android encogiera la ventana (adjustResize), y con la hoja deslizante no
+     * siempre lo hacía.
+     */
+    private void installKeyboardInsets() {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(activity.getWindow(), false);
+        View root = activity.findViewById(R.id.mainLayout);
+        root.setFitsSystemWindows(false);
+        float density = activity.getResources().getDisplayMetrics().density;
+        int base = Math.round(16 * density);
+        View overlay = activity.findViewById(R.id.downloadOverlayContainer);
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            androidx.core.graphics.Insets bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars()
+                    | androidx.core.view.WindowInsetsCompat.Type.displayCutout());
+            androidx.core.graphics.Insets ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime());
+            boolean wasVisible = keyboardVisible;
+            keyboardVisible = insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) && ime.bottom > bars.bottom;
+            topInset = bars.top;
+            keyboardInset = keyboardVisible ? ime.bottom - bars.bottom : 0;
+            int bottom = Math.max(bars.bottom, ime.bottom);
+            stage.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            chat.setPadding(base + bars.left, base, base + bars.right, base + bottom);
+            options.setPadding(base + bars.left, base, base + bars.right, base + bars.bottom);
+            if (reflections != null) reflections.setPadding(reflections.getPaddingLeft(), reflections.getPaddingTop(),
+                    reflections.getPaddingRight(), Math.round(20 * density) + bottom);
+            if (overlay != null) overlay.setPadding(bars.left, bars.top, bars.right, bottom);
+            activity.findViewById(R.id.chatActions).setVisibility(keyboardVisible ? View.GONE : View.VISIBLE);
+            // Al abrir el teclado, el último mensaje sigue a la vista justo encima de lo que escribes.
+            if (keyboardVisible && !wasVisible) scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
+            v.requestLayout();
+            return insets;
+        });
+        androidx.core.view.ViewCompat.requestApplyInsets(root);
     }
 
     private void fitSheetHeight(View sheet, int height) {
