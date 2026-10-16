@@ -18,13 +18,18 @@ public final class SketchAnimation {
         if (scene == null) throw new IllegalArgumentException("Escena vacía");
         this.scene = scene;
         List<FourierStroke> list = new ArrayList<>();
+        List<Integer> partOf = new ArrayList<>();
         float total = 0;
-        for (float[] s : scene.strokes) {
-            FourierStroke f = new FourierStroke(s);
+        float step = Math.max(scene.width, scene.height) / 160f; // pluma a velocidad constante
+        for (int k = 0; k < scene.strokes.size(); k++) {
+            FourierStroke f = new FourierStroke(FourierStroke.uniform(scene.strokes.get(k), step, 220));
             if (f.length < 1f) continue;
             list.add(f);
+            partOf.add(partIndex(scene, k));
             total += f.length;
         }
+        strokePart = new int[partOf.size()];
+        for (int i = 0; i < strokePart.length; i++) strokePart[i] = partOf.get(i);
         if (list.isEmpty()) throw new IllegalArgumentException("Escena sin trazos");
         strokes = Collections.unmodifiableList(list);
         float base = scene.isSelfPortrait() ? 9.5f : clamp(1.4f + total / 1000f * .75f, 2.8f, 7.5f);
@@ -39,6 +44,31 @@ public final class SketchAnimation {
             t += span[i];
         }
         duration = t;
+    }
+
+    private final int[] strokePart;
+
+    private static int partIndex(SketchScene scene, int stroke) {
+        for (int i = 0; i < scene.parts.size(); i++) {
+            SketchLibrary.Part p = scene.parts.get(i);
+            if (stroke >= p.from && stroke < p.to) return i;
+        }
+        return Math.max(0, scene.parts.size() - 1);
+    }
+
+    /** Parte que se está trazando en {@code seconds} (índice en scene.parts); -1 si ya terminó. */
+    public int partAt(float seconds) {
+        int i = strokeAt(seconds);
+        return i >= strokePart.length ? -1 : strokePart[i];
+    }
+
+    /** «(2/5) Brazos: largos, apoyados en los nudillos» mientras traza; null si terminó o es una sola parte. */
+    public String caption(float seconds) {
+        int p = partAt(seconds);
+        if (p < 0 || scene.parts.size() < 2) return null;
+        SketchLibrary.Part part = scene.parts.get(p);
+        return "(" + (p + 1) + "/" + scene.parts.size() + ") " + part.name
+                + (part.description.isEmpty() ? "" : ": " + part.description);
     }
 
     public float duration() { return duration; }

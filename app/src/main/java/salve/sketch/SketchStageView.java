@@ -19,6 +19,8 @@ public final class SketchStageView extends View {
     private final float density;
     private final RectF box = new RectF();
     private final Paint veil = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private int lastPart = -1;
     private final Runnable changed = this::invalidate;
 
     public SketchStageView(Context context) { this(context, null); }
@@ -27,6 +29,10 @@ public final class SketchStageView extends View {
         density = context.getResources().getDisplayMetrics().density;
         painter = new SketchPainter(density * 1.25f);
         veil.setColor(0xFF07101E);
+        text.setColor(0xFFD8FBFF);
+        text.setTextAlign(Paint.Align.CENTER);
+        text.setTextSize(13 * density);
+        text.setShadowLayer(6 * density, 0, 0, 0xFF36C8FF);
         setClickable(false);
         setFocusable(false);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -58,6 +64,20 @@ public final class SketchStageView extends View {
         canvas.drawRoundRect(box.left - 8 * density, box.top - 8 * density, box.right + 8 * density,
                 box.bottom + 8 * density, r, r, veil);
         painter.draw(canvas, animation, seconds, box, alpha, true);
+        // Qué parte está trazando ahora, y su atención la sigue («dibujo: brazos»).
+        String caption = animation.caption(seconds);
+        if (caption != null) {
+            int fits = text.breakText(caption, true, w * .92f, null);
+            String shown = fits < caption.length() ? caption.substring(0, Math.max(1, fits - 1)) + "…" : caption;
+            text.setAlpha(Math.round(220 * alpha));
+            canvas.drawText(shown, w / 2f, box.bottom + 26 * density, text);
+            int part = animation.partAt(seconds);
+            if (part != lastPart) {
+                lastPart = part;
+                salve.core.mind.AttentionSchema.get().attend(showing.scene.title + ": " + animation.scene.parts.get(part).name,
+                        salve.core.mind.AttentionSchema.Source.DRAWING, System.currentTimeMillis());
+            }
+        } else lastPart = -1;
         postInvalidateOnAnimation();
     }
 }

@@ -1691,7 +1691,16 @@ public class MotorConversacional {
             if (pose) vectors = vectors.vary(System.currentTimeMillis(), 45f);
             List<float[]> lines = vectors.segments() >= 2 ? vectors.sample(10)
                     : mine.strokes.size() >= 2 ? mine.strokes : bestTrace.strokes;
-            salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, lines, bestTrace.aspect, "web");
+            // Partes: primero la silueta (el contorno más largo), luego los detalles interiores.
+            int longest = 0;
+            for (int i = 1; i < lines.size(); i++)
+                if (salve.sketch.SketchStyle.length(lines.get(i)) > salve.sketch.SketchStyle.length(lines.get(longest))) longest = i;
+            List<float[]> ordered = new java.util.ArrayList<>(lines);
+            ordered.add(0, ordered.remove(longest));
+            List<salve.sketch.SketchLibrary.Part> parts = new java.util.ArrayList<>();
+            parts.add(new salve.sketch.SketchLibrary.Part("silueta", "el contorno que da la forma de " + subject, 0, 1));
+            if (ordered.size() > 1) parts.add(new salve.sketch.SketchLibrary.Part("detalles", "las líneas de dentro", 1, ordered.size()));
+            salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, ordered, bestTrace.aspect, "web", parts);
             String how = "busqué referencias en Wikimedia Commons" + (concept != null && !concept.english.isEmpty()
                     ? " (como «" + concept.english + "», priorizando siluetas y dibujos de línea)" : "")
                     + ", analicé " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegí «" + best.label() + "» ("
@@ -1792,20 +1801,26 @@ public class MotorConversacional {
     private salve.sketch.SketchScene componerDibujo(String subject, salve.sketch.VisualConcept concept, String wish) {
         if (llm == null || subject == null || subject.trim().isEmpty()) return null;
         try {
-            String prompt = salve.sketch.ShapeProgram.prompt(subject, concept, wish);
+            // Con Gemini: dibujo por partes en JSON (puntos + armónicos); con su modelo local: formas con «# parte».
+            String prompt = nubeParaDibujar() ? salve.sketch.PartsProgram.prompt(subject, concept, wish)
+                    : salve.sketch.ShapeProgram.prompt(subject, concept, wish);
             ModelResult result = pensarDibujo(prompt);
-            if (result == null || !result.isSuccess()) return null;
-            salve.sketch.ShapeProgram.Result shapes = salve.sketch.ShapeProgram.parse(result.getText());
-            if (!shapes.isUsable()) return null;
+            salve.sketch.ShapeProgram.Result shapes = result == null || !result.isSuccess() ? null : interpretarDibujo(result.getText());
+            if ((shapes == null || !shapes.isUsable()) && !prompt.contains("Ahora «")) {
+                prompt = salve.sketch.ShapeProgram.prompt(subject, concept, wish);
+                result = pensarDibujo(prompt);
+                shapes = result == null || !result.isSuccess() ? null : interpretarDibujo(result.getText());
+            }
+            if (shapes == null || !shapes.isUsable()) return null;
             salve.sketch.SketchTalk.Look look = mirarDibujo(shapes.strokes, subject);
             String correction = "";
             if (look != null && look.verdict == salve.sketch.SketchTalk.Verdict.NO) {
                 int at = prompt.lastIndexOf("Ahora «");
                 String fix = "Tu intento anterior parecía «" + (look.seen.isEmpty() ? "otra cosa" : look.seen) + "», no «"
                         + subject + "». Dibuja mejor sus partes.\n";
-                ModelResult retry = pensarDibujo(at < 0 ? prompt : prompt.substring(0, at) + fix + prompt.substring(at));
+                ModelResult retry = pensarDibujo(at < 0 ? fix + prompt : prompt.substring(0, at) + fix + prompt.substring(at));
                 salve.sketch.ShapeProgram.Result second = retry != null && retry.isSuccess()
-                        ? salve.sketch.ShapeProgram.parse(retry.getText()) : null;
+                        ? interpretarDibujo(retry.getText()) : null;
                 if (second != null && second.isUsable()) {
                     salve.sketch.SketchTalk.Look again = mirarDibujo(second.strokes, subject);
                     correction = " Mi primer intento parecía " + (look.seen.isEmpty() ? "otra cosa" : look.seen) + " y lo corregí.";
@@ -1814,15 +1829,20 @@ public class MotorConversacional {
                 }
             }
             olvidarVersionesConPeticion(subject);
-            salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, shapes.strokes, shapes.aspect, "model");
+            salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, shapes.strokes, shapes.aspect, "model",
+                    shapes.parts);
             StringBuilder partNames = new StringBuilder();
-            if (concept != null) for (salve.sketch.VisualConcept.Part p : concept.parts)
+            if (!shapes.parts.isEmpty()) for (salve.sketch.SketchLibrary.Part p : shapes.parts)
+                partNames.append(partNames.length() == 0 ? "" : ", ").append(p.name);
+            else if (concept != null) for (salve.sketch.VisualConcept.Part p : concept.parts)
                 partNames.append(partNames.length() == 0 ? "" : ", ").append(p.name);
             String how = "no tenía una referencia útil (" + salve.sketch.VisualConcept.clip(referenceFailure, 220)
                     + "), así que lo imaginé yo"
                     + (partNames.length() > 0 ? " parte por parte (" + partNames + ")" : " sin una idea clara de sus partes")
                     + " con " + drawingThinker + " y lo escribí como " + shapes.shapes
-                    + " formas (curvas de Bézier, contornos curvos, líneas…)." + correction
+                    + " formas (curvas de Bézier, contornos curvos, líneas…)"
+                    + (shapes.parts.size() > 1 ? ", trazadas parte a parte" : "")
+                    + (shapes.summary.isEmpty() ? "" : ". Lo que pensé antes: «" + shapes.summary + "»") + "." + correction
                     + " Por eso es una versión esquemática.";
             salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
             attempt.source = "model"; attempt.how = how; attempt.wish = wish;
@@ -1875,8 +1895,19 @@ public class MotorConversacional {
      * Enrutador para pensar un dibujo: si hay Gemini configurado y no está en modo sólo local, lo piensa
      * allí (razona mejor formas y partes); si falla o no hay, con su modelo local.
      */
+    private boolean nubeParaDibujar() {
+        return gemini != null && gemini.isAvailable() && (llm == null || !llm.isLocalOnly()) && hayInternet();
+    }
+
+    /** Dibujo por partes (JSON) si lo trae; si no, gramática de formas. */
+    private static salve.sketch.ShapeProgram.Result interpretarDibujo(String text) {
+        salve.sketch.ShapeProgram.Result parts = salve.sketch.PartsProgram.parse(text);
+        if (parts != null && parts.isUsable()) return parts;
+        return salve.sketch.ShapeProgram.parse(text);
+    }
+
     private ModelResult pensarDibujo(String prompt) {
-        boolean cloud = gemini != null && gemini.isAvailable() && (llm == null || !llm.isLocalOnly()) && hayInternet();
+        boolean cloud = nubeParaDibujar();
         if (cloud) {
             try {
                 ModelResult r = gemini.generateResultSync(prompt, null);

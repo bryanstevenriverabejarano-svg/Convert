@@ -87,7 +87,7 @@ public final class SketchStyle {
         return Math.abs(dy * px - dx * py + bx * ay - by * ax) / len;
     }
 
-    static float length(float[] s) {
+    public static float length(float[] s) {
         float d = 0;
         for (int i = 2; i + 1 < s.length; i += 2) d += (float) Math.hypot(s[i] - s[i - 2], s[i + 1] - s[i - 1]);
         return d;

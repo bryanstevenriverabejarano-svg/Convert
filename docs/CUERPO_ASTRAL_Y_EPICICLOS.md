@@ -57,6 +57,11 @@ Lo aprendido se guarda en `files/sketch/learned.json` (hasta 80 motivos) y tiene
 | Más fuentes | Si Commons no da nada: búsqueda de Commons en dos pasos, foto principal del artículo de Wikipedia (en/es) y Openverse. El diagnóstico incluye el principio de una respuesta vacía. |
 | Enrutador | Con Gemini configurado y sin «sólo local», piensa el concepto y las formas en Gemini (Fase 1 del informe aplicada al dibujo); si no, con Gemma. Queda anotado con qué lo pensó. |
 
+| Partes con sentido | Cada dibujo puede tener partes (`SketchLibrary.Part`: nombre, descripción, trazos). Mientras traza, el chat y el escenario muestran «(2/5) cabeza: redonda sobre el cuerpo» y su atención sigue la parte. Las partes se guardan con lo aprendido. |
+| JSON por partes | `PartsProgram` (con Gemini): `thoughtSummary` y partes con puntos 0..1, `isOpenPath` y `maxHarmonics`. Con Gemma: formas con encabezados `# parte: descripción`. Las referencias se separan en «silueta» y «detalles». |
+| Pluma uniforme | `FourierStroke.uniform` remuestrea cada trazo a puntos equiespaciados (conservando esquinas, máximo 220) antes de la DFT: la pluma avanza a velocidad constante. |
+| Filtro armónico | `FourierStroke.lowPass` conserva sólo las frecuencias lentas: de pocos puntos sale una curva fluida y el temblor de un calco desaparece. |
+
 Un dibujo a mano con «mejóralo» en el nombre se guarda como ejemplo de Bryan y ella hace su propia versión. Al hablar de un dibujo cuenta qué hizo y por qué; la técnica (epiciclos, Fourier) sólo si se le pregunta cómo dibuja.
 
 ## Vista previa
