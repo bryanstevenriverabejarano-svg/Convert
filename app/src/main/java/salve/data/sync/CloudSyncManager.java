@@ -75,6 +75,7 @@ public final class CloudSyncManager {
             {"files", "sketch/learned.json", ROOT + "/sketch/learned.json"},
             {"files", "sketch/journal.json", ROOT + "/sketch/journal.json"},
             {"nobackup", "mind/actions.json", ROOT + "/mind/actions.json"},
+            {"nobackup", "mind/lessons.json", ROOT + "/mind/lessons.json"},
     };
 
     /**

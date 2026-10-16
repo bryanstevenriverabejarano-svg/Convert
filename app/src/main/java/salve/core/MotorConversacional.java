@@ -1284,6 +1284,29 @@ public class MotorConversacional {
             if (retry.result.isSuccess() && !salve.core.conversation.ReplyStyle.repeats(retry.result.getText(), recientes))
                 respuesta = retry.result.getText();
         }
+        // Se lee antes de hablar: si el borrador no hace lo que Bryan pidió, lo reescribe una vez.
+        if (inference.isSuccess() && !creativeOk && !storyTurn) {
+            java.util.List<salve.core.conversation.ResponseCritic.Problem> problems =
+                    salve.core.conversation.ResponseCritic.check(respuesta, lastReading);
+            problems.remove(salve.core.conversation.ResponseCritic.Problem.THIRD_PERSON); // se arregla sin reescribir
+            if (!problems.isEmpty()) {
+                CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext
+                        + salve.core.conversation.ResponseCritic.critique(problems), resumenAccion, entradaPorVoz, evidence, false);
+                if (retry.handedOff) return;
+                if (retry.result.isSuccess()) {
+                    java.util.List<salve.core.conversation.ResponseCritic.Problem> after =
+                            salve.core.conversation.ResponseCritic.check(retry.result.getText(), lastReading);
+                    after.remove(salve.core.conversation.ResponseCritic.Problem.THIRD_PERSON);
+                    if (after.size() < problems.size()) respuesta = retry.result.getText();
+                }
+                StringBuilder what = new StringBuilder();
+                for (salve.core.conversation.ResponseCritic.Problem p : problems) what.append(what.length() == 0 ? "" : "; ").append(p.fix);
+                registrarAccion(salve.core.mind.SelfActionLog.Kind.SELF_CORRECT, salve.core.mind.AttentionSchema.topic(entrada),
+                        "leí mi borrador antes de enviarlo y lo reescribí: " + what);
+                mind().lessons().learn("yo", lastReading == null ? "" : lastReading.task, null, what.toString());
+            }
+            respuesta = salve.core.conversation.ResponseCritic.firstPerson(respuesta);
+        }
         // Muletillas que el modelo pequeño repite aunque el prompt las prohíba, y frases que ya dijo.
         // (Un cuento conserva sus párrafos: la limpieza de muletillas une el texto en una línea.)
         if (inference.isSuccess() && !creativeOk) respuesta = salve.core.conversation.ReplyStyle.dropEchoes(
@@ -1375,12 +1398,41 @@ public class MotorConversacional {
             salve.core.conversation.DialogueFocus.observeUser(dialogueFocus, entrada, now);
             salve.core.conversation.DialogueFocus.Reading reading = salve.core.conversation.DialogueFocus.read(
                     dialogueFocus, entrada, last.isEmpty() ? null : last.get(0), now);
+            lastReading = reading;
+            // Si Bryan la corrige, aprende: qué hizo y qué esperaba él.
+            String learned = "";
+            if (!last.isEmpty() && salve.core.mind.LessonBook.isCorrection(entrada)) {
+                String did = last.get(0).split("(?<=[.!?…])\\s+")[0];
+                salve.core.mind.LessonBook.Lesson l = mind().lessons().learn("bryan",
+                        reading.task.isEmpty() ? lastUserMessageBefore(entrada) : reading.task, did,
+                        "Bryan me corrigió: «" + entrada.trim() + "»");
+                if (l != null) {
+                    registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_LESSON, "corrección de Bryan",
+                            "hice «" + did + "» y él esperaba otra cosa: «" + entrada.trim() + "»" + (l.times > 1 ? " (ya me pasó " + l.times + " veces)" : ""));
+                    learned = " | ME_CORRIGE: Bryan te está corrigiendo; reconócelo en una frase sin disculparte en exceso y haz ahora lo que pedía.";
+                }
+            }
             if (!reading.task.isEmpty())
                 salve.core.mind.AttentionSchema.get().attend(reading.kind == salve.core.conversation.DialogueFocus.Kind.CHOOSE
                                 ? reading.task + ": " + reading.choice : reading.task,
                         salve.core.mind.AttentionSchema.Source.CONVERSATION, now);
-            return reading.prompt();
+            return reading.prompt() + learned + mind().lessons().render(entrada + " " + reading.task, 3);
         } catch (RuntimeException ignored) { return ""; }
+    }
+
+    /** Lo último que leyó del hilo (para la autocrítica del borrador). */
+    private volatile salve.core.conversation.DialogueFocus.Reading lastReading;
+
+    private String lastUserMessageBefore(String current) {
+        java.util.List<salve.core.conversation.ChatMessage> history = conversationSession.snapshot();
+        boolean skipped = false;
+        for (int i = history.size() - 1; i >= 0; i--) {
+            salve.core.conversation.ChatMessage m = history.get(i);
+            if (m.getRole() != salve.core.conversation.ChatMessage.Role.USER) continue;
+            if (!skipped && m.getContent() != null && m.getContent().trim().equals(current.trim())) { skipped = true; continue; }
+            return m.getContent();
+        }
+        return "";
     }
 
     /** Cómo debe hablar de sus dibujos: de qué dibujó y por qué, no de su técnica. */
