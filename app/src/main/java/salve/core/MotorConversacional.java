@@ -827,7 +827,8 @@ public class MotorConversacional {
             return;
         }
         // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
-        String sketchContext = prepararDibujo(entrada) + nubeContexto() + entenderHilo(entrada) + misActualizaciones(entrada);
+        String sketchContext = observarExperiencia(entrada) + prepararDibujo(entrada) + nubeContexto() + entenderHilo(entrada)
+                + estrategiaRespuesta() + misActualizaciones(entrada) + misHabilidades(entrada);
         if (procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
@@ -1307,6 +1308,12 @@ public class MotorConversacional {
             }
             respuesta = salve.core.conversation.ResponseCritic.firstPerson(respuesta);
         }
+        // Laboratorio: si Bryan no la corrige en su próximo mensaje, esta forma de responder funcionó.
+        salve.core.mind.SkillLab.Plan planRespuesta = respuestaPlan;
+        respuestaPlan = null;
+        if (planRespuesta != null && inference.isSuccess())
+            try { mind().skills().await(planRespuesta, Boolean.TRUE, "sin_correccion", salve.core.mind.AttentionSchema.topic(entrada)); }
+            catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
         // Muletillas que el modelo pequeño repite aunque el prompt las prohíba, y frases que ya dijo.
         // (Un cuento conserva sus párrafos: la limpieza de muletillas une el texto en una línea.)
         if (inference.isSuccess() && !creativeOk) respuesta = salve.core.conversation.ReplyStyle.dropEchoes(
@@ -1428,6 +1435,89 @@ public class MotorConversacional {
                                 + "Habla de esto, no de tu personalidad en general, y no inventes cambios que no estén en la lista.");
             return out.toString();
         } catch (Exception ignored) { return ""; }
+    }
+
+    // ───────────── laboratorio de habilidades ─────────────
+
+    /** Lo que decidió su laboratorio en este turno (experimento, adoptar, revertir), para contarlo. */
+    private final StringBuilder labTurnNotes = new StringBuilder();
+    /** Forma de responder que está usando en este turno (o null si no es una tarea). */
+    private volatile salve.core.mind.SkillLab.Plan respuestaPlan;
+    /** Lo último que vio al mirar su propio dibujo (verificador independiente: no sabe qué quería). */
+    private volatile salve.sketch.SketchTalk.Look ultimaMirada;
+
+    /** Lo que dice Bryan verifica lo que ella hizo antes: la corrección es un fallo; el elogio, un acierto. */
+    private String observarExperiencia(String entrada) {
+        labTurnNotes.setLength(0);
+        try { for (salve.core.mind.SkillLab.Decision d : mind().skills().observe(entrada)) contarDecision(d); }
+        catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
+        return "";
+    }
+
+    private void contarDecision(salve.core.mind.SkillLab.Decision d) {
+        if (d == null) return;
+        salve.core.mind.SelfActionLog.Kind kind = "adoptado".equals(d.verdict) ? salve.core.mind.SelfActionLog.Kind.ADOPT
+                : "revertido".equals(d.verdict) ? salve.core.mind.SelfActionLog.Kind.REVERT : salve.core.mind.SelfActionLog.Kind.EXPERIMENT;
+        registrarAccion(kind, d.skill + " · " + d.step, d.why);
+        labTurnNotes.append(" | LABORATORIO (hecho de este turno, de mis resultados verificados): ")
+                .append("experimento".equals(d.verdict) ? "empiezo un experimento: " : d.verdict + ": ").append(d.why)
+                .append(". Si viene al caso, menciónalo en una frase.");
+    }
+
+    /** Resultado objetivo de una búsqueda de referencias: sólo el paso «fuente» carga con el fallo. */
+    private void aprenderFuente(salve.core.mind.SkillLab.Plan plan, boolean ok, String evidence) {
+        try { contarDecision(mind().skills().record(plan, ok, ok ? null : "fuente", "busqueda", evidence)); }
+        catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
+    }
+
+    /** Un dibujo hecho: lo verifica su visión ahora y, si Bryan opina, manda lo que diga él. */
+    private void esperarVeredicto(salve.core.mind.SkillLab.Plan plan, String subject) {
+        if (plan == null) return;
+        salve.sketch.SketchTalk.Look look = ultimaMirada;
+        try { mind().skills().await(plan, look == null ? null : look.acceptable(), "vision",
+                look == null ? "" : look.describe(subject)); }
+        catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
+    }
+
+    /**
+     * En una tarea, cómo encara la respuesta: la forma vigente o la que está probando porque la anterior
+     * fallaba (Bryan la corregía). Y, si su historial aquí es flojo, lo sabe.
+     */
+    private String estrategiaRespuesta() {
+        respuestaPlan = null;
+        try {
+            salve.core.conversation.DialogueFocus.Reading r = lastReading;
+            if (r == null || (r.task.isEmpty() && r.kind == salve.core.conversation.DialogueFocus.Kind.NONE)) return "";
+            salve.core.mind.SkillLab.Plan plan = mind().skills().plan(salve.core.mind.SkillLab.RESPONDER, "tarea");
+            respuestaPlan = plan;
+            String how;
+            switch (plan.variant("enfoque")) {
+                case "anunciar_y_hacer":
+                    how = " | ESTRATEGIA (la estoy probando porque mi forma anterior de responder en tareas fallaba): empieza con "
+                            + "media frase que diga qué vas a hacer y hazlo en este mismo mensaje.";
+                    break;
+                case "un_paso":
+                    how = " | ESTRATEGIA (la estoy probando porque mi forma anterior de responder en tareas fallaba): haz sólo el "
+                            + "siguiente paso concreto de lo que pide, breve y útil, sin introducciones.";
+                    break;
+                default: how = "";
+            }
+            String confidence = mind().skills().confidenceNote(plan);
+            return how + (confidence.isEmpty() ? "" : confidence + " Haz exactamente lo que pide, sin rodeos.");
+        } catch (RuntimeException ignored) { return ""; }
+    }
+
+    /** «¿Qué has aprendido?», «¿en qué fallas?»: responde con su laboratorio, no con una invención. */
+    private String misHabilidades(String entrada) {
+        String notes = labTurnNotes.toString();
+        labTurnNotes.setLength(0);
+        try {
+            if (!salve.core.mind.SkillLab.asksAbout(entrada)) return notes;
+            String facts = mind().skills().render(700);
+            return notes + " | MIS_HABILIDADES (hechos de mi laboratorio: resultados verificados, experimentos y decisiones)"
+                    + (facts.isEmpty() ? ": aún no tengo suficientes resultados verificados; dilo así, con honestidad."
+                    : ":" + facts + "\nCuéntalo con tus palabras y criterio propio; no inventes cifras ni habilidades.");
+        } catch (RuntimeException ignored) { return notes; }
     }
 
     /** Hilo de la conversación: tarea en curso y opciones que ofreció en su última pregunta. */
@@ -1552,22 +1642,45 @@ public class MotorConversacional {
                 subject = concept.name; // corrige erratas: «vesrido verano» → «vestido de verano»
                 lastSketchSubject = subject;
             }
+            // Su laboratorio decide qué intenta primero, según lo que le ha funcionado con este tipo de cosa.
+            // Si Bryan pidió referencias, se hace lo que pidió (y no cuenta como experimento).
+            boolean seguirPlan = !request.references;
+            salve.core.mind.SkillLab.Plan plan = null;
+            try { plan = mind().skills().plan(salve.core.mind.SkillLab.DIBUJAR, concept == null ? "" : concept.kind); }
+            catch (RuntimeException ignored) { seguirPlan = false; }
+            String confianza = plan != null && plan.lowConfidence()
+                    ? mind().skills().confidenceNote(plan) + " Si no se parece, dilo con naturalidad y pide una foto." : "";
+            if (seguirPlan && "imaginar_primero".equals(plan.variant("estrategia"))) {
+                salve.sketch.SketchScene own = componerDibujo(subject, concept, request.wish);
+                if (own != null) {
+                    esperarVeredicto(plan, subject);
+                    empezarDibujo(own);
+                    return " | " + composeNote + " (Lo imaginé primero porque, con este tipo de cosa, me ha funcionado mejor que calcar.)"
+                            + confianza;
+                }
+            }
             // 1) Referencias reales: siluetas y dibujos de línea primero; al mejorar, nunca la misma que ya usó.
             salve.sketch.SketchScene fromWeb = buscarReferenciaYDibujar(subject, concept, request.wish, request.improve);
             if (fromWeb != null) {
+                if (seguirPlan) esperarVeredicto(plan, subject);
                 empezarDibujo(fromWeb);
-                return " | " + referenceNote;
+                return " | " + referenceNote + confianza;
             }
             if (request.references && !request.improve) return " | DIBUJO: buscaste referencias de «" + subject + "» en internet pero "
                     + referenceFailure + ". Díselo con sencillez; puede enviarte una foto («esto es…»).";
             if (again && !request.improve)
                 return " | DIBUJO: no pudiste encontrar referencias de «" + subject + "» (" + referenceFailure + "). Díselo y pide una foto.";
             // 2) Sin referencia útil: lo dibuja ella pensando sus partes, y se mira el resultado.
-            salve.sketch.SketchScene own = componerDibujo(subject, concept, request.wish);
+            salve.sketch.SketchScene own = seguirPlan && "imaginar_primero".equals(plan.variant("estrategia"))
+                    ? null : componerDibujo(subject, concept, request.wish);
             if (own != null) {
+                if (seguirPlan) esperarVeredicto(plan, subject);
                 empezarDibujo(own);
-                return " | " + composeNote;
+                return " | " + composeNote + confianza;
             }
+            // Ni referencia ni composición: falla la habilidad, sin culpar a la estrategia elegida.
+            if (seguirPlan) try { contarDecision(mind().skills().record(plan, false, "ejecucion", "resultado", "no pude dibujarlo")); }
+            catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
             return " | DIBUJO: Bryan te pide " + (request.improve ? "mejorar" : "dibujar") + " «" + subject + "»; no encontraste "
                     + "referencias (" + referenceFailure + ") y no conseguiste componerlo con formas. Díselo con honestidad y pídele "
                     + "una foto («esto es…»). No afirmes haberlo dibujado.";
@@ -1745,6 +1858,13 @@ public class MotorConversacional {
                 return out.toByteArray();
             }
         });
+        // Por qué fuente empieza: la que mejor le ha funcionado con este tipo de cosa (su laboratorio).
+        salve.core.mind.SkillLab.Plan fuente = null;
+        try {
+            fuente = mind().skills().plan(salve.core.mind.SkillLab.REFERENCIAS, concept == null ? "" : concept.kind);
+            search.startWith(fuente.variant("fuente"));
+        } catch (RuntimeException ignored) { /* sigue con el orden de siempre */ }
+        ultimaMirada = null;
         salve.sketch.SketchJournal journal = salve.sketch.Sketches.journal(context);
         long deadline = System.currentTimeMillis() + 30_000;
         try {
@@ -1752,6 +1872,7 @@ public class MotorConversacional {
             List<salve.sketch.ImageReferenceSearch.Candidate> candidates =
                     search.search(subject, concept == null ? null : concept.english, 7, used);
             if (candidates.isEmpty()) {
+                if (used.isEmpty() && fuente != null) aprenderFuente(fuente, false, "0 imágenes (" + search.diagnostic() + ")");
                 referenceFailure = (used.isEmpty() ? "no había imágenes libres de «" + subject + "»"
                         : "no quedaban imágenes distintas de las que ya usaste") + " [" + search.diagnostic() + "]";
                 turnSketchStatus = "Busqué referencias de «" + subject + "» en Wikimedia Commons y no encontré imágenes ("
@@ -1778,6 +1899,7 @@ public class MotorConversacional {
                 }
             }
             if (scored.isEmpty()) {
+                if (fuente != null && analyzed > 0) aprenderFuente(fuente, false, candidates.size() + " imágenes sin líneas claras");
                 referenceFailure = "encontraste " + candidates.size() + " imágenes, analizaste " + analyzed
                         + (failed > 0 ? " (" + failed + " no se pudieron descargar)" : "")
                         + " y ninguna tenía líneas claras";
@@ -1802,6 +1924,8 @@ public class MotorConversacional {
                         .append(look.seen.isEmpty() ? "no se reconocía" : "parecía " + look.seen);
             }
             salve.sketch.ImageReferenceSearch.Candidate best = (salve.sketch.ImageReferenceSearch.Candidate) chosen[0];
+            ultimaMirada = chosenLook;
+            if (fuente != null) aprenderFuente(fuente, true, "«" + best.label() + "»");
             salve.sketch.ImageTracer.Result bestTrace = (salve.sketch.ImageTracer.Result) chosen[1];
             olvidarVersionesConPeticion(subject);
             // No se queda con el calco: hace su versión (contornos que definen la forma, redondeados a mano).
@@ -1921,6 +2045,7 @@ public class MotorConversacional {
      * escribe como formas geométricas. Después se mira; si no se reconoce, lo corrige una vez.
      */
     private salve.sketch.SketchScene componerDibujo(String subject, salve.sketch.VisualConcept concept, String wish) {
+        ultimaMirada = null;
         if (llm == null || subject == null || subject.trim().isEmpty()) return null;
         try {
             // Con Gemini: dibujo por partes en JSON (puntos + armónicos); con su modelo local: formas con «# parte».
@@ -1935,6 +2060,7 @@ public class MotorConversacional {
             }
             if (shapes == null || !shapes.isUsable()) return null;
             salve.sketch.SketchTalk.Look look = mirarDibujo(shapes.strokes, subject);
+            ultimaMirada = look;
             String correction = "";
             if (look != null && look.verdict == salve.sketch.SketchTalk.Verdict.NO) {
                 int at = prompt.lastIndexOf("Ahora «");
@@ -1948,6 +2074,7 @@ public class MotorConversacional {
                     correction = " Mi primer intento parecía " + (look.seen.isEmpty() ? "otra cosa" : look.seen) + " y lo corregí.";
                     shapes = second;
                     look = again;
+                    ultimaMirada = again;
                 }
             }
             olvidarVersionesConPeticion(subject);

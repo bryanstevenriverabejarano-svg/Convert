@@ -44,6 +44,14 @@ public final class ImageReferenceSearch {
 
     public ImageReferenceSearch(Http http) { this.http = http; }
 
+    /** Por qué fuente empezar («commons», «wikipedia», «openverse»): lo decide su laboratorio de habilidades. */
+    private volatile String first = "commons";
+
+    public ImageReferenceSearch startWith(String source) {
+        first = "wikipedia".equals(source) || "openverse".equals(source) ? source : "commons";
+        return this;
+    }
+
     /** Hasta {@code max} referencias: primero dibujos vectoriales, luego fotos. */
     public List<Candidate> search(String subject, int max) throws IOException {
         return search(subject, null, max, null);
@@ -71,12 +79,22 @@ public final class ImageReferenceSearch {
         Set<String> seen = new java.util.HashSet<>();
         if (exclude != null) seen.addAll(exclude);
         String main = terms.iterator().next();
+        IOException last = null;
+        // La fuente que mejor le ha funcionado va primero (si es otra que Commons).
+        boolean wikiDone = false, openverseDone = false;
+        if ("wikipedia".equals(first)) {
+            wikiDone = true;
+            for (String[] wiki : new String[][]{{"en", main}, {"es", es}})
+                try { addAll(out, seen, wikipediaImage(wiki[0], wiki[1]), max); } catch (IOException e) { last = e; }
+        } else if ("openverse".equals(first)) {
+            openverseDone = true;
+            try { addAll(out, seen, openverse(main, 8), max); } catch (IOException e) { last = e; }
+        }
         for (String shape : new String[]{" silhouette", " line art"}) {
             if (out.size() >= max) break;
             try { addAll(out, seen, commons(main + shape + " filetype:drawing", 6), max); }
             catch (IOException ignored) { /* seguimos con la búsqueda general */ }
         }
-        IOException last = null;
         for (String term : terms) if (out.size() < max) {
             try { addAll(out, seen, commons(term + " filetype:drawing", 8), max); } catch (IOException e) { last = e; }
         }
@@ -86,9 +104,9 @@ public final class ImageReferenceSearch {
         // Otras vías si Commons no responde bien: búsqueda simple de Commons, la foto principal del
         // artículo de Wikipedia y Openverse (imágenes libres de muchas fuentes).
         if (out.size() < 2) try { addAll(out, seen, commonsList(main, 6), max); } catch (IOException e) { last = e; }
-        if (out.size() < 2) for (String[] wiki : new String[][]{{"en", main}, {"es", es}})
+        if (out.size() < 2 && !wikiDone) for (String[] wiki : new String[][]{{"en", main}, {"es", es}})
             try { addAll(out, seen, wikipediaImage(wiki[0], wiki[1]), max); } catch (IOException e) { last = e; }
-        if (out.size() < 2) try { addAll(out, seen, openverse(main, 8), max); } catch (IOException e) { last = e; }
+        if (out.size() < 2 && !openverseDone) try { addAll(out, seen, openverse(main, 8), max); } catch (IOException e) { last = e; }
         if (out.isEmpty() && last != null) throw last; // sin red o todo caído: que se sepa
         return out;
     }
