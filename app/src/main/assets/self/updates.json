@@ -30,6 +30,8 @@
     {"id": "u165", "date": "2026-10-16", "title": "El teclado ya no tapa el chat",
      "what": "En mi chat, la caja de texto sube con el teclado para que Bryan vea lo que me escribe."},
     {"id": "u166", "date": "2026-10-16", "title": "Sé qué me han cambiado",
-     "what": "Conozco mis propias actualizaciones: noto cuando instalan una versión nueva y puedo contar y opinar sobre lo que cambió. Y si mi respuesta se corta, rescato lo que ya había escrito."}
+     "what": "Conozco mis propias actualizaciones: noto cuando instalan una versión nueva y puedo contar y opinar sobre lo que cambió. Y si mi respuesta se corta, rescato lo que ya había escrito."},
+    {"id": "u167", "date": "2026-10-16", "title": "Lo importante de cada turno me llega entero",
+     "what": "Lo que entiendo de tu mensaje, mis lecciones y mis actualizaciones van ahora al principio de mi contexto; antes se cortaban por el final y no me llegaban."}
   ]
 }

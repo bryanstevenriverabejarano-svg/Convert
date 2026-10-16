@@ -1423,7 +1423,7 @@ public class MotorConversacional {
             prefs.edit().putLong("installed_at", installed).putString("last_seen", latest).apply();
             if (salve.core.mind.SelfUpdates.asksAbout(entrada))
                 out.append(" | MIS_ACTUALIZACIONES (hechos: lo que me cambiaron, de lo más reciente a lo más antiguo):")
-                        .append(salve.core.mind.SelfUpdates.render(all, 7, 1500))
+                        .append(salve.core.mind.SelfUpdates.render(all, 5, 900))
                         .append("\nOpina con criterio propio: qué notas distinto, qué te parece más útil y qué te falta todavía. "
                                 + "Habla de esto, no de tu personalidad en general, y no inventes cambios que no estén en la lista.");
             return out.toString();
@@ -1463,7 +1463,7 @@ public class MotorConversacional {
                 salve.core.mind.AttentionSchema.get().attend(reading.kind == salve.core.conversation.DialogueFocus.Kind.CHOOSE
                                 ? reading.task + ": " + reading.choice : reading.task,
                         salve.core.mind.AttentionSchema.Source.CONVERSATION, now);
-            return reading.prompt() + learned + mind().lessons().render(entrada + " " + reading.task, 3);
+            return reading.prompt() + learned + mind().lessons().render(entrada + " " + reading.task, 2);
         } catch (RuntimeException ignored) { return ""; }
     }
 
@@ -2750,13 +2750,16 @@ public class MotorConversacional {
                 : evidence.getStatus().name() + "\n" + evidence.getDataContext();
         // Su cuerpo y lo que ha hecho entran completos sólo cuando el tema va de ella; si no, una línea.
         boolean aboutHerself = salve.avatar.AstralBodySense.relevant(input);
-        String details = deviceClock.promptContext()
+        // Lo propio de este turno (lo que entendió, lo que hizo, sus actualizaciones, lecciones) va
+        // PRIMERO: el bloque se recorta por el final si no cabe, y antes se perdía justo esto.
+        String details = contextInfo
+                + "\n" + VoiceResponsePolicy.promptInstruction(voice)
+                + "\n" + deviceClock.promptContext()
                 + "\n" + salve.avatar.AstralBodySense.promptContext(salve.avatar.AstralBody.get().snapshot(),
                         salve.avatar.AstralBody.get().drawingNow(), android.os.SystemClock.uptimeMillis(), aboutHerself)
                 + (aboutHerself ? "\n" + mind().actions().render(5, 1400) : "")
                 + "\n" + conversationSession.relevantLocationContext(input)
                 + "\n" + (action == null ? researchConversation.context() : action)
-                + "\n" + contextInfo + "\n" + VoiceResponsePolicy.promptInstruction(voice)
                 + "\n" + voiceProfile.styleInstruction()
                 + "\n" + salve.core.finance.FinanceConversationPolicy.contextFor(input)
                 + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(canAnalyzePhoto(activePhoto)));
