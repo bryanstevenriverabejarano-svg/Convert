@@ -55,6 +55,16 @@ contradicciones. Cada consulta busca entre los 32 recuerdos.
 | E5 small INT8, exportación Xenova | 118,31 MB | 26/32 | 30/32 |
 | paraphrase-multilingual-MiniLM-L12-v2 INT8 ARM64 | 118,41 MB | 25/32 | 31/32 |
 
+En una segunda máquina (GitHub Actions Linux x86_64), E5 oficial obtuvo **26/32 y
+27/32**, tanto en Python como en el índice Java persistido. Su informe también se
+conserva (`e5-github-x86.json`). La coincidencia Java/Python se mantuvo en `2,98e-8`.
+La variación observada refuerza que las cifras host no predicen exactamente las del
+móvil. La prueba automática compara el índice con la referencia en la misma máquina:
+coseno con error máximo `0,003` por la cuantización del índice y pérdida de cobertura
+de como máximo un caso, manteniendo al menos 25/32 primeras posiciones en la referencia.
+El primer intento de CI falló porque exigía 28/32 entre tres en cualquier CPU;
+no se ha ocultado ese resultado ni cambiado el corpus para hacerlo pasar.
+
 Referencias: [MiniLM](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/tree/e8f8c211226b894fcb81acc59f3b34ba3efd5f42),
 [Xenova E5](https://huggingface.co/Xenova/multilingual-e5-small/tree/761b726dd34fb83930e26aab4e9ac3899aa1fa78).
 También se revisó [EmbeddingGemma 300M](https://huggingface.co/google/embeddinggemma-300m);
