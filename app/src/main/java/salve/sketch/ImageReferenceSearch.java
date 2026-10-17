@@ -67,48 +67,76 @@ public final class ImageReferenceSearch {
             throws IOException {
         String es = clean(subject);
         if (es.isEmpty()) return new ArrayList<>();
-        Set<String> terms = new LinkedHashSet<>();
         log.clear();
-        // Primero el nombre en inglés que ella pensó (corrige erratas: «vesrido» → dress); luego Wikipedia.
-        if (englishHint != null && !clean(englishHint).isEmpty()) terms.add(clean(englishHint));
-        String english = null;
-        try { english = englishTerm(es); } catch (IOException error) { log.add("Wikipedia: " + error.getMessage()); }
-        if (english != null) terms.add(english);
-        terms.add(es);
-        List<Candidate> out = new ArrayList<>();
+        String hint = englishHint == null ? "" : clean(englishHint);
+        String main = hint.isEmpty() ? es : hint;
         Set<String> seen = new java.util.HashSet<>();
         if (exclude != null) seen.addAll(exclude);
-        String main = terms.iterator().next();
+        long deadline = System.currentTimeMillis() + budgetMs;
+        // Todas las fuentes a la vez: una que tarda o no responde ya no bloquea a las demás.
+        List<Query> wave = new ArrayList<>();
+        wave.add(new Query("es→en", () -> {
+            String en = englishTerm(es);
+            return en == null ? java.util.Collections.<Candidate>emptyList() : commons(en + " filetype:drawing", 8);
+        }));
+        wave.add(new Query("silueta", () -> commons(main + " silhouette filetype:drawing", 6)));
+        wave.add(new Query("line art", () -> commons(main + " line art filetype:drawing", 6)));
+        wave.add(new Query("dibujos", () -> commons(main + " filetype:drawing", 8)));
+        wave.add(new Query("fotos", () -> commons(main + " filetype:bitmap", 6)));
+        wave.add(new Query("commons simple", () -> commonsList(main, 6)));
+        wave.add(new Query("wikipedia en", () -> wikipediaImage("en", main)));
+        wave.add(new Query("wikipedia es", () -> wikipediaImage("es", es)));
+        wave.add(new Query("openverse", () -> openverse(main, 8)));
+        if (!hint.isEmpty() && !hint.equals(es)) wave.add(new Query("dibujos es", () -> commons(es + " filetype:drawing", 6)));
+        // Prioridad al juntar resultados: la fuente que mejor le ha funcionado (su laboratorio) va primero;
+        // después siluetas y dibujos de línea, dibujos, fotos y el resto.
+        List<Query> order = new ArrayList<>(wave);
+        if ("wikipedia".equals(first) || "openverse".equals(first))
+            order.sort((x, y) -> Boolean.compare(!x.name.startsWith(first), !y.name.startsWith(first)));
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(
+                Math.min(PARALLEL, wave.size()), r -> { Thread t = new Thread(r, "salve-referencias"); t.setDaemon(true); return t; });
         IOException last = null;
-        // La fuente que mejor le ha funcionado va primero (si es otra que Commons).
-        boolean wikiDone = false, openverseDone = false;
-        if ("wikipedia".equals(first)) {
-            wikiDone = true;
-            for (String[] wiki : new String[][]{{"en", main}, {"es", es}})
-                try { addAll(out, seen, wikipediaImage(wiki[0], wiki[1]), max); } catch (IOException e) { last = e; }
-        } else if ("openverse".equals(first)) {
-            openverseDone = true;
-            try { addAll(out, seen, openverse(main, 8), max); } catch (IOException e) { last = e; }
-        }
-        for (String shape : new String[]{" silhouette", " line art"}) {
-            if (out.size() >= max) break;
-            try { addAll(out, seen, commons(main + shape + " filetype:drawing", 6), max); }
-            catch (IOException ignored) { /* seguimos con la búsqueda general */ }
-        }
-        for (String term : terms) if (out.size() < max) {
-            try { addAll(out, seen, commons(term + " filetype:drawing", 8), max); } catch (IOException e) { last = e; }
-        }
-        for (String term : terms) if (out.size() < max) {
-            try { addAll(out, seen, commons(term + " filetype:bitmap", 6), max); } catch (IOException e) { last = e; }
-        }
-        // Otras vías si Commons no responde bien: búsqueda simple de Commons, la foto principal del
-        // artículo de Wikipedia y Openverse (imágenes libres de muchas fuentes).
-        if (out.size() < 2) try { addAll(out, seen, commonsList(main, 6), max); } catch (IOException e) { last = e; }
-        if (out.size() < 2 && !wikiDone) for (String[] wiki : new String[][]{{"en", main}, {"es", es}})
-            try { addAll(out, seen, wikipediaImage(wiki[0], wiki[1]), max); } catch (IOException e) { last = e; }
-        if (out.size() < 2 && !openverseDone) try { addAll(out, seen, openverse(main, 8), max); } catch (IOException e) { last = e; }
+        List<Candidate> out = new ArrayList<>();
+        try {
+            for (Query q : wave) q.future = pool.submit(q.call);
+            for (Query q : order) {
+                long left = deadline - System.currentTimeMillis();
+                try {
+                    List<Candidate> found = left <= 0 && !q.future.isDone() ? null
+                            : q.future.get(Math.max(1, left), java.util.concurrent.TimeUnit.MILLISECONDS);
+                    if (found == null) { log.add(q.name + ": sin tiempo"); continue; }
+                    addAll(out, seen, found, max);
+                } catch (java.util.concurrent.TimeoutException slow) {
+                    log.add(q.name + ": no respondió en " + (budgetMs / 1000) + " s");
+                    last = new IOException("las fuentes de imágenes no respondieron a tiempo");
+                } catch (java.util.concurrent.ExecutionException failed) {
+                    Throwable cause = failed.getCause();
+                    log.add(q.name + ": " + (cause == null ? "error" : cause.getClass().getSimpleName() + " " + cause.getMessage()));
+                    last = cause instanceof IOException ? (IOException) cause : new IOException(String.valueOf(cause));
+                } catch (InterruptedException stop) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        } finally { pool.shutdownNow(); }
         if (out.isEmpty() && last != null) throw last; // sin red o todo caído: que se sepa
         return out;
+    }
+
+    /** Peticiones simultáneas y presupuesto total de la búsqueda. */
+    static final int PARALLEL = 5;
+    private volatile long budgetMs = 28_000;
+
+    /** Para pruebas o redes muy lentas. */
+    public ImageReferenceSearch budget(long ms) { budgetMs = Math.max(1000, ms); return this; }
+
+    private interface Source { List<Candidate> get() throws IOException; }
+
+    private static final class Query {
+        final String name;
+        final java.util.concurrent.Callable<List<Candidate>> call;
+        java.util.concurrent.Future<List<Candidate>> future;
+        Query(String name, Source source) { this.name = name; this.call = source::get; }
     }
 
     private void addAll(List<Candidate> out, Set<String> seen, List<Candidate> found, int max) {
@@ -146,7 +174,7 @@ public final class ImageReferenceSearch {
         }
     }
 
-    private final List<String> log = new ArrayList<>();
+    private final List<String> log = java.util.Collections.synchronizedList(new ArrayList<>());
 
     /** Principio de una respuesta vacía: dice si fue un error, un límite o de verdad nada. */
     static String snippet(String body) {
@@ -215,7 +243,7 @@ public final class ImageReferenceSearch {
     }
 
     /** Qué buscó y cuántas imágenes dio cada búsqueda (para contárselo a Bryan si falla). */
-    public String diagnostic() { return String.join("; ", log); }
+    public String diagnostic() { synchronized (log) { return String.join("; ", log); } }
 
     static String esWikipediaUrl(String es) {
         return "https://es.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&generator=search&gsrlimit=1"

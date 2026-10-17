@@ -17,15 +17,16 @@ public class ImageReferenceSearchTest {
     }
 
     @Test public void searchesInEnglishAndSpanishPreferringDrawings() throws Exception {
-        List<String> asked = new ArrayList<>();
+        List<String> asked = java.util.Collections.synchronizedList(new ArrayList<>());
         ImageReferenceSearch search = new ImageReferenceSearch((url, max) -> {
             asked.add(url);
             String body = url.contains("es.wikipedia") ? ES : commons(url.contains("drawing"));
             return body.getBytes(StandardCharsets.UTF_8);
         });
         List<ImageReferenceSearch.Candidate> found = search.search("un cochinillo", 4);
-        assertTrue(asked.get(0).contains("es.wikipedia.org") && asked.get(0).contains("cochinillo"));
-        assertTrue(asked.get(1).contains("suckling+pig") && asked.get(1).contains("filetype%3Adrawing"));
+        // Las fuentes se consultan a la vez: importa qué se pidió, no en qué orden.
+        assertTrue(asked.stream().anyMatch(u -> u.contains("es.wikipedia.org") && u.contains("cochinillo")));
+        assertTrue(asked.stream().anyMatch(u -> u.contains("suckling+pig") && u.contains("filetype%3Adrawing")));
         assertEquals("mapas y orígenes ajenos se descartan", "Pig icon", found.get(0).label());
         assertTrue(found.get(0).drawing);
         for (ImageReferenceSearch.Candidate c : found) assertTrue(c.imageUrl.startsWith("https://upload.wikimedia.org/"));
@@ -52,5 +53,25 @@ public class ImageReferenceSearchTest {
         assertTrue(r.unknown.startsWith("perro"));
         assertEquals(SketchRequest.Kind.AGAIN, SketchRequest.parse("dibújalo", lib).kind);
         assertEquals(SketchRequest.Kind.DRAW, SketchRequest.parse("dibuja un perro", lib).kind);
+    }
+
+    @Test public void aSlowSourceDoesNotBlockTheOthers() throws Exception {
+        ImageReferenceSearch search = new ImageReferenceSearch((url, max) -> {
+            if (url.contains("openverse")) {
+                try { Thread.sleep(10_000); } catch (InterruptedException stop) { throw new java.io.IOException("timeout"); }
+            }
+            String body = url.contains("es.wikipedia") ? ES : commons(url.contains("drawing"));
+            return body.getBytes(StandardCharsets.UTF_8);
+        }).budget(1500);
+        long t0 = System.currentTimeMillis();
+        List<ImageReferenceSearch.Candidate> found = search.search("un cochinillo", 4);
+        assertTrue("no espera a la fuente lenta", System.currentTimeMillis() - t0 < 4000);
+        assertFalse(found.isEmpty());
+    }
+
+    @Test public void reportsWhenEverySourceFails() {
+        ImageReferenceSearch search = new ImageReferenceSearch((url, max) -> { throw new java.io.IOException("timeout"); }).budget(1000);
+        try { search.search("gorila", 4); fail(); }
+        catch (java.io.IOException expected) { assertTrue(search.diagnostic().contains("openverse")); }
     }
 }
