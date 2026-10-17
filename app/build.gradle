@@ -115,6 +115,8 @@ android {
 }
 
 dependencies {
+    // Native glTF skeletal animation and facial morph targets.
+    implementation 'com.google.android.filament:filament-utils-android:1.77.1'
     // Motor MLC para Java/Android (módulo local)
     implementation project(':mlc4j')
 
