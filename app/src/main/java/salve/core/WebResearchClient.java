@@ -11,11 +11,16 @@ import salve.core.web.*;
 public final class WebResearchClient extends WikipediaResearchClient {
     private final Context context;
     private final SearchEngine selected;
+    private final String braveKey; // clave del dueño; null si no hay
     public WebResearchClient(Context context) { this(context, ""); }
     public WebResearchClient(Context context, String question) {
         this.context = context.getApplicationContext(); selected = WebSearchSettings.load(this.context, question);
+        braveKey = WebSearchKeyStore.braveKey(this.context);
     }
-    WebResearchClient(okhttp3.OkHttpClient client, SearchEngine selected) { super(client); context = null; this.selected = selected; }
+    WebResearchClient(okhttp3.OkHttpClient client, SearchEngine selected) { this(client, selected, null); }
+    WebResearchClient(okhttp3.OkHttpClient client, SearchEngine selected, String braveKey) {
+        super(client); context = null; this.selected = selected; this.braveKey = braveKey;
+    }
     @Override public ResearchBatch researchResult(String question, BooleanSupplier stopped) {
         if (question == null || question.trim().isEmpty() || question.length() > MAX_QUERY_CHARS || question.contains("://"))
             return super.researchResult(question, stopped);
@@ -26,20 +31,33 @@ public final class WebResearchClient extends WikipediaResearchClient {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
         List<Page> pages = new ArrayList<>();
         List<String> attempts = new ArrayList<>();
-        List<SearchEngine> choices = engine.id.equals("auto") ? Arrays.asList(new SearchEngine("google", ""),
-                new SearchEngine("bing", ""), new SearchEngine("duckduckgo", "")) : Collections.singletonList(engine);
+        List<SearchEngine> choices = new ArrayList<>();
+        if (engine.id.equals("auto")) {
+            // Con clave propia, la API oficial va primero: no hay CAPTCHA ni HTML que adivinar.
+            if (braveKey != null) choices.add(new SearchEngine("brave", ""));
+            choices.add(new SearchEngine("google", "")); choices.add(new SearchEngine("bing", ""));
+            choices.add(new SearchEngine("duckduckgo", ""));
+        } else choices.add(engine);
         String lastUrl = "";
         try {
             for (SearchEngine candidate : choices) {
                 checkSearch(stopped, deadline);
                 lastUrl = candidate.url(query);
                 try {
-                    Page document = readDocument(lastUrl, stopped, deadline);
-                    if (SearchEngine.interactionRequired(document.url, document.text)) {
-                        attempts.add(candidate.id + ": requiere intervención en el navegador"); continue;
+                    List<String> urls;
+                    if (candidate.id.equals("brave")) {
+                        if (braveKey == null) { attempts.add("brave: falta tu clave de la API (Buscadores web → Brave Search API)"); continue; }
+                        Page api = readApiJson(BraveSearchApi.requestUrl(query), BraveSearchApi.KEY_HEADER, braveKey, stopped, deadline);
+                        urls = BraveSearchApi.links(api.text);
+                        if (urls.isEmpty()) { attempts.add("brave: sin resultados para esta consulta"); continue; }
+                    } else {
+                        Page document = readDocument(lastUrl, stopped, deadline);
+                        if (SearchEngine.interactionRequired(document.url, document.text)) {
+                            attempts.add(candidate.id + ": requiere intervención en el navegador"); continue;
+                        }
+                        urls = SearchEngine.links(document.text, document.url);
+                        if (urls.isEmpty()) { attempts.add(candidate.id + ": no devolvió enlaces legibles; puede requerir JavaScript o consentimiento"); continue; }
                     }
-                    List<String> urls = SearchEngine.links(document.text, document.url);
-                    if (urls.isEmpty()) { attempts.add(candidate.id + ": no devolvió enlaces legibles; puede requerir JavaScript o consentimiento"); continue; }
                     int failures = 0;
                     for (String url : urls) {
                         checkSearch(stopped, deadline);
@@ -61,8 +79,10 @@ public final class WebResearchClient extends WikipediaResearchClient {
                 } catch (java.io.IOException failed) {
                     // Our transport emits fixed messages, never credentials, response bodies or private context.
                     String reason = failed.getMessage();
-                    attempts.add(candidate.id + ": " + (reason != null && reason.matches("La fuente pública devolvió HTTP [0-9]{3}\\.")
-                            ? reason : "fallo de conexión o tiempo agotado"));
+                    boolean http = reason != null && reason.matches("La fuente pública devolvió HTTP [0-9]{3}\\.");
+                    if (candidate.id.equals("brave") && http)
+                        attempts.add(BraveSearchApi.failure(Integer.parseInt(reason.replaceAll("[^0-9]", ""))));
+                    else attempts.add(candidate.id + ": " + (http ? reason : "fallo de conexión o tiempo agotado"));
                 }
             }
             checkSearch(stopped, deadline);

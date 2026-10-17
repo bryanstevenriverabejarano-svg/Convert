@@ -10,13 +10,15 @@ import salve.core.NetworkResourcePolicy;
 
 /** Public search URLs and bounded discovery. Search pages are not article evidence. */
 public final class SearchEngine {
-    public static final String[] IDS = {"auto", "google", "bing", "duckduckgo", "wikipedia", "custom"};
-    public static final String[] LABELS = {"Automático", "Google", "Bing", "DuckDuckGo", "Wikipedia", "Otro buscador"};
+    public static final String[] IDS = {"auto", "brave", "google", "bing", "duckduckgo", "wikipedia", "custom"};
+    public static final String[] LABELS = {"Automático", "Brave Search API (tu clave)", "Google", "Bing", "DuckDuckGo", "Wikipedia", "Otro buscador"};
     public final String id, template;
     public SearchEngine(String id, String custom) {
         if (!Arrays.asList(IDS).contains(id)) throw new IllegalArgumentException("Buscador desconocido");
         this.id = id;
-        template = id.equals("custom") ? validateTemplate(custom) : id.equals("bing") ? "https://www.bing.com/search?q={query}&format=rss"
+        // Brave se consulta por su API; esta URL es la página pública para abrir la búsqueda en el navegador.
+        template = id.equals("custom") ? validateTemplate(custom) : id.equals("brave") ? "https://search.brave.com/search?q={query}"
+                : id.equals("bing") ? "https://www.bing.com/search?q={query}&format=rss"
                 : id.equals("duckduckgo") ? "https://html.duckduckgo.com/html/?q={query}"
                 : id.equals("wikipedia") ? "https://es.wikipedia.org/w/index.php?search={query}"
                 : "https://www.google.com/search?q={query}&hl=es";
@@ -43,15 +45,15 @@ public final class SearchEngine {
     }
     public static String explicitEngine(String question) {
         String text = question == null ? "" : question.toLowerCase(Locale.ROOT);
-        Matcher m = Pattern.compile("^(?:busca(?:r|me)?\\s+|investiga\\s+)?(?:en|con|usando)\\s+(google|bing|duckduckgo|wikipedia)\\b").matcher(text);
+        Matcher m = Pattern.compile("^(?:busca(?:r|me)?\\s+|investiga\\s+)?(?:en|con|usando)\\s+(google|brave|bing|duckduckgo|wikipedia)\\b").matcher(text);
         if (m.find()) return m.group(1);
-        m = Pattern.compile("\\s+(?:en|con|usando)\\s+(google|bing|duckduckgo|wikipedia)[.!? ]*$").matcher(text);
+        m = Pattern.compile("\\s+(?:en|con|usando)\\s+(google|brave|bing|duckduckgo|wikipedia)[.!? ]*$").matcher(text);
         return m.find() ? m.group(1) : null;
     }
     public static String cleanQuery(String question) {
         return question.replaceFirst("(?i)^(?:busca(?:r|me)?|investiga)\\s+", "")
-                .replaceFirst("(?i)^(?:en|con|usando)\\s+(?:google|bing|duckduckgo|wikipedia)\\s+", "")
-                .replaceFirst("(?i)\\s+(?:en|con|usando)\\s+(?:google|bing|duckduckgo|wikipedia)[.!? ]*$", "").trim();
+                .replaceFirst("(?i)^(?:en|con|usando)\\s+(?:google|brave|bing|duckduckgo|wikipedia)\\s+", "")
+                .replaceFirst("(?i)\\s+(?:en|con|usando)\\s+(?:google|brave|bing|duckduckgo|wikipedia)[.!? ]*$", "").trim();
     }
     public static boolean interactionRequired(String url, String html) {
         String text = html.toLowerCase(Locale.ROOT);

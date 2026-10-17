@@ -22,4 +22,21 @@ public class SearchEngineTest {
     @Test(timeout=2000) public void malformedHtmlHasBoundedParsing() {
         assertTrue(SearchEngine.links(String.join("",java.util.Collections.nCopies(100000,"<a ")),"https://www.google.com/search?q=x").isEmpty());
     }
+    @Test public void braveApiResultsAreFilteredLikeAnyOtherPublicLink() {
+        String json = "{\"web\":{\"results\":[{\"url\":\"https://example.org/a\"},{\"url\":\"https://example.org/a\"},"
+                + "{\"url\":\"https://127.0.0.1/x\"},{\"url\":\"http://example.org/plain\"},{\"url\":42},{\"nourl\":true}]}}";
+        assertEquals(java.util.Collections.singletonList("https://example.org/a"), BraveSearchApi.links(json));
+        assertTrue(BraveSearchApi.links("no es json").isEmpty());
+        assertTrue(BraveSearchApi.links("{\"web\":{\"results\":\"x\"}}").isEmpty());
+    }
+    @Test public void braveRequestEncodesQueryAndKeyFormatIsChecked() {
+        String url = BraveSearchApi.requestUrl("hola & adiós");
+        assertTrue(url.startsWith(BraveSearchApi.ENDPOINT + "?q=hola+%26+adi%C3%B3s&"));
+        assertTrue(BraveSearchApi.validKey("BSAabcdefghijklmnopqrstuvwx"));
+        assertFalse(BraveSearchApi.validKey("corta"));
+        assertFalse(BraveSearchApi.validKey("clave con espacios y más texto"));
+        assertEquals("brave", SearchEngine.explicitEngine("busca en brave la colada"));
+        assertEquals("la colada", SearchEngine.cleanQuery("busca en brave la colada"));
+        assertTrue(new SearchEngine("brave", "").url("x").startsWith("https://search.brave.com/search?q="));
+    }
 }
