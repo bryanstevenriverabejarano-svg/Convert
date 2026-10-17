@@ -61,6 +61,7 @@ public class SalveLLM {
     private static SalveLLM instance;
 
     private final Context appContext;
+    private final salve.core.compute.DistributedCompute distributed;
     private volatile String modelPath;   // ruta absoluta a la carpeta o archivo del modelo
     private String modelLib;    // nombre de la librería del modelo (solo MLC)
     private volatile boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
@@ -80,6 +81,7 @@ public class SalveLLM {
 
     private SalveLLM(Context context) {
         this.appContext = context.getApplicationContext();
+        this.distributed = new salve.core.compute.DistributedCompute(appContext);
         SharedPreferences startupPrefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         if (startupPrefs.getBoolean(LARGE_BUSY_KEY, false)) {
             startupPrefs.edit().remove(LARGE_BUSY_KEY).apply();
@@ -348,6 +350,18 @@ public class SalveLLM {
      * escribe (LiteRT). Otros motores lo entregan de una vez al final.
      */
     public synchronized ModelResult generateResult(String prompt, Role role, java.util.function.Consumer<String> onChunk) {
+        if (!activationInProgress && !isLocalOnly() && distributed.enabled()) {
+            ModelResult result = distributed.generate(decoratePrompt(prompt, role == null ? Role.CONVERSACIONAL : role), role == null ? "CONVERSACIONAL" : role.name(),
+                    () -> generateLocalResult(prompt, role, onChunk));
+            if (result.isSuccess() && result.getProvider() != null && result.getProvider().startsWith("Nodo ") && onChunk != null)
+                onChunk.accept(result.getText());
+            return result;
+        }
+        return generateLocalResult(prompt, role, onChunk);
+    }
+
+    /** Explicit phone-only entry point for activation, diagnostics and fallback. Never contacts nodes. */
+    public synchronized ModelResult generateLocalResult(String prompt, Role role, java.util.function.Consumer<String> onChunk) {
         long start = System.nanoTime();
         if (Thread.currentThread().isInterrupted()) return ModelResult.failure(
                 ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
@@ -355,7 +369,7 @@ public class SalveLLM {
                 ModelResult.Status.ERROR, "Prompt vacío", 0L);
         if (!activationInProgress && (LocalModelPolicy.idForPath(modelPath) != null || !modelAvailable)
                 && getPendingFallbackFrom() != null) {
-            if (tryCachedFallback()) return generateResult(prompt, role, onChunk);
+            if (tryCachedFallback()) return generateLocalResult(prompt, role, onChunk);
             if (Thread.currentThread().isInterrupted()) return ModelResult.failure(ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
             try { salve.work.ModelDownloadWorker.enqueueFallback(appContext); } catch (Exception ignored) { }
             return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
@@ -419,7 +433,7 @@ public class SalveLLM {
             Log.e(TAG, "Falló la inferencia local", e);
             boolean fallback = !activationInProgress && !Thread.currentThread().isInterrupted()
                     && requestDolphinFallback(e);
-            if (fallback && tryCachedFallback()) return generateResult(prompt, role, onChunk);
+            if (fallback && tryCachedFallback()) return generateLocalResult(prompt, role, onChunk);
             publishStatus("no disponible; consulta el respaldo");
             return ModelResult.failure(Thread.currentThread().isInterrupted()
                     ? ModelResult.Status.CANCELLED : ModelResult.Status.ERROR,
@@ -565,8 +579,22 @@ public class SalveLLM {
     }
 
     public void setLocalOnly(boolean enabled) {
-        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_LOCAL_ONLY, enabled).apply();
+        // Write phone-only first so disabling nodes never opens an intermediate Gemini route.
+        if (enabled) appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_LOCAL_ONLY, true).apply();
+        distributed.setEnabled(false);
+        if (!enabled) appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_LOCAL_ONLY, false).apply();
     }
+
+    /** Owned nodes and local inference both bypass Gemini; only explicit node mode may send text. */
+    public boolean usesOwnedInference() { return isLocalOnly() || distributed.enabled(); }
+    public boolean isDistributedEnabled() { return !isLocalOnly() && distributed.enabled(); }
+    public void setDistributedEnabled(boolean enabled) {
+        if (enabled) {
+            distributed.setEnabled(true);
+            appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putBoolean(KEY_LOCAL_ONLY, false).apply();
+        } else setLocalOnly(true);
+    }
+    public String getComputeStatus() { return distributed.status(); }
 
     public boolean supportsVision() { return modelAvailable && isLiteRT && visionModel; }
 
@@ -627,7 +655,7 @@ public class SalveLLM {
                 preferenceWriteAttempted = true;
                 SharedPreferences.Editor selection = prefs.edit()
                         .putString(KEY_MODEL_PATH, path).putString(KEY_VISION_PATH, supportsVision ? path : null)
-                        .putBoolean(KEY_LOCAL_ONLY, true);
+                        .putBoolean(KEY_LOCAL_ONLY, previousLocalOnly || !distributed.enabled());
                 selection.remove(LocalModelPolicy.PENDING_KEY);
                 if (LocalModelPolicy.isDolphin(path)) selection.remove(LocalModelPolicy.FAILURE_KEY);
                 if (LocalModelPolicy.LIGHT.equals(LocalModelPolicy.idForPath(path)))

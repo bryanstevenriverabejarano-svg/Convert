@@ -20,6 +20,13 @@ configuración de nube que ya esté habilitada.
 
 Consulta [funcionamiento, límites y pruebas de continuidad](docs/CONTINUIDAD_Y_APRENDIZAJE.md).
 
+## Nodos propios de cómputo
+
+En **IA y cámara → Nodos de cómputo** puedes registrar equipos autorizados para
+delegar cuentos, reflexiones y otras tareas de texto pesadas, con respaldo local.
+Incluye el microcomponente Python, límites y prueba de conexión.
+Consulta [instalación y alcance del cómputo distribuido](docs/COMPUTO_DISTRIBUIDO.md).
+
 ## Modelo local principal
 
 Salve prioriza Dolphin 3.0 Llama 3.2 3B Q4_K_M (2,02 GB), con llama.cpp para

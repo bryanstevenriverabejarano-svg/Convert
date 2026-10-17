@@ -16,7 +16,7 @@ public class LLMCoder {
 
     private LLMCoder(Context ctx) {
         Context context = ctx.getApplicationContext();
-        this.localOnly = () -> SalveLLM.getInstance(context).isLocalOnly();
+        this.localOnly = () -> SalveLLM.getInstance(context).usesOwnedInference();
         this.cloud = prompt -> GeminiService.getInstance(context).generateResultSync(prompt, null);
         this.local = prompt -> SalveLLM.getInstance(context)
                 .generateResult(prompt, SalveLLM.Role.PLANIFICADOR);
