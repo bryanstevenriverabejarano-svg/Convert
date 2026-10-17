@@ -53,7 +53,7 @@ public class VectorDrawingTest {
     }
 
     @Test public void referencesFallBackWhenCommonsGivesNothing() throws Exception {
-        List<String> asked = new ArrayList<>();
+        List<String> asked = java.util.Collections.synchronizedList(new ArrayList<>());
         ImageReferenceSearch search = new ImageReferenceSearch((url, max) -> {
             asked.add(url);
             String body;

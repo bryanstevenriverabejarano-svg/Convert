@@ -129,7 +129,7 @@ public class SketchUnderstandingTest {
         assertTrue(ImageReferenceSearch.score(silhouette, focused) > ImageReferenceSearch.score(skull, focused));
         assertNotNull(noisy);
 
-        List<String> asked = new ArrayList<>();
+        List<String> asked = java.util.Collections.synchronizedList(new ArrayList<>());
         ImageReferenceSearch search = new ImageReferenceSearch((url, max) -> {
             asked.add(url);
             String body = url.contains("es.wikipedia") ? "{}" : "{\"query\":{\"pages\":["
@@ -138,7 +138,9 @@ public class SketchUnderstandingTest {
             return body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         });
         List<ImageReferenceSearch.Candidate> found = search.search("gorila", "gorilla", 4, Arrays.asList("https://upload.wikimedia.org/a.png"));
-        assertTrue("usa el nombre en inglés que ella pensó", asked.get(1).contains("gorilla+silhouette"));
+        // Las fuentes se consultan a la vez: importa qué se pidió, no en qué orden.
+        assertTrue("usa el nombre en inglés que ella pensó",
+                asked.stream().anyMatch(u -> u.contains("gorilla+silhouette")));
         assertEquals(1, found.size());
         assertEquals("https://upload.wikimedia.org/b.png", found.get(0).imageUrl);
     }
