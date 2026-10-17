@@ -2178,7 +2178,7 @@ public class MotorConversacional {
      * allí (razona mejor formas y partes); si falla o no hay, con su modelo local.
      */
     private boolean nubeParaDibujar() {
-        return gemini != null && gemini.isAvailable() && (llm == null || !llm.isLocalOnly()) && hayInternet();
+        return gemini != null && gemini.isAvailable() && (llm == null || !llm.usesOwnedInference()) && hayInternet();
     }
 
     /** Dibujo por partes (JSON) si lo trae; si no, gramática de formas. */
@@ -2688,7 +2688,7 @@ public class MotorConversacional {
 
     private ModelResult generarCreativo(String prompt, LiveWriting live) {
         int before = live == null ? 0 : live.draft.received();
-        ModelResult result = ConversationModelRouter.generate(false, llm != null && llm.isLocalOnly(), false,
+        ModelResult result = ConversationModelRouter.generate(false, llm != null && llm.usesOwnedInference(), false,
                 gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
                 () -> {
                     if (llm == null) return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Sin modelo local", 0L);
@@ -2827,7 +2827,7 @@ public class MotorConversacional {
         // Already on conversationExecutor: one author and one reviewer, no extra resident model.
         String reviewerModel = getReviewerModel();
         AuthorReviewerCodeCoordinator coordinator = new AuthorReviewerCodeCoordinator(
-                () -> llm == null || llm.isLocalOnly(),
+                () -> llm == null || llm.usesOwnedInference(),
                 codeProvider(false, false, reviewerModel), codeProvider(false, true, reviewerModel),
                 gemini.isAvailable() ? codeProvider(true, false, reviewerModel) : null,
                 gemini.isAvailable() ? codeProvider(true, true, reviewerModel) : null);
@@ -3129,15 +3129,17 @@ public class MotorConversacional {
     }
 
     public String getModelStatusDescription() {
-        String routing = llm != null && llm.isLocalOnly() ? "Conversación local. "
+        String routing = llm != null && llm.isDistributedEnabled() ? "Nodos propios con respaldo en el móvil. "
+                : llm != null && llm.isLocalOnly() ? "Conversación local. "
                 : "Ruta de conversación: Gemini " + gemini.getModelName()
                     + (gemini.isAvailable() ? ", con respaldo local. " : " sin configurar; se intentará el modelo local. ");
-        return routing + (llm == null ? "Sin motor local." : llm.getStatusDescription() + ". " + llm.getMemoryDescription())
+        return routing + (llm != null && llm.isDistributedEnabled() ? llm.getComputeStatus() + ". " : "") + (llm == null ? "Sin motor local." : llm.getStatusDescription() + ". " + llm.getMemoryDescription())
                 + (lastConversationProvider == null ? ". Aún no hay una respuesta de conversación comprobada en esta sesión."
                     : ". Última respuesta de conversación: " + lastConversationProvider + ".");
     }
 
     public String getCompactModelStatus() {
+        if (llm != null && llm.isDistributedEnabled()) return llm.getComputeStatus();
         if (llm != null && llm.isLocalOnly()) return llm.getCompactStatus();
         return "Ruta: Gemini " + gemini.getModelName() + (lastConversationProvider == null
                 ? " · sin respuesta comprobada" : " · última: " + lastConversationProvider);
@@ -3182,7 +3184,7 @@ public class MotorConversacional {
         salve.core.research.PublicResearchCoordinator.Result result =
                 new salve.core.research.PublicResearchCoordinator(reader::researchResult,
                         (phase, prompt) -> ConversationModelRouter.generate(false,
-                                llm != null && llm.isLocalOnly(), false,
+                                llm != null && llm.usesOwnedInference(), false,
                                 gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
                                 () -> generarRespuestaConversacionalLocal(prompt)), budget)
                         .runConversation(question, () -> closed || !isVoiceContextCurrent());
@@ -3221,7 +3223,7 @@ public class MotorConversacional {
 
     /** The caller transfers ownership; a bounded private copy is retained as visual memory. */
     public void procesarImagen(String pregunta, Bitmap foto) {
-        procesarImagen(pregunta, foto, llm != null && llm.isLocalOnly());
+        procesarImagen(pregunta, foto, llm != null && llm.usesOwnedInference());
     }
 
     public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly) {
@@ -3289,7 +3291,7 @@ public class MotorConversacional {
     }
 
     private boolean canAnalyzePhoto(VisualMemoryRecord photo) {
-        boolean local = (llm != null && llm.isLocalOnly()) || photo.localOnly;
+        boolean local = (llm != null && llm.usesOwnedInference()) || photo.localOnly;
         return local ? llm != null && llm.supportsVision() : true;
     }
 
@@ -3477,7 +3479,7 @@ public class MotorConversacional {
         VisualMemoryRecord photo = activePhoto;
         boolean cloudOnce = cloudPhotoOnce && photo != null;
         cloudPhotoOnce = false;
-        boolean localOnly = !cloudOnce && ((llm != null && llm.isLocalOnly()) || (photo != null && photo.localOnly));
+        boolean localOnly = !cloudOnce && ((llm != null && llm.usesOwnedInference()) || (photo != null && photo.localOnly));
         if (photo == null || !canAnalyzePhoto(photo)) return ConversationModelRouter.generate(false, localOnly, false,
                 gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
                 () -> generarRespuestaConversacionalLocal(prompt));
@@ -4076,7 +4078,7 @@ public class MotorConversacional {
 
     private void reconocerEntornoVisual() {
         // Ambient camera frames never become implicit cloud uploads.
-        if (llm == null || !llm.isLocalOnly()) {
+        if (llm == null || !llm.usesOwnedInference()) {
             hablar("Usa IA y cámara para tomar una foto y confirmar su análisis con Gemini.");
             return;
         }

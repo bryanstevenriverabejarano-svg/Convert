@@ -61,6 +61,7 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts -p 'test_*.py' -v
           bash scripts/test-research-kernel.sh
+          bash scripts/test-compute-router.sh
 
       - name: Verify transparent Salve sprites and body animation
         run: |

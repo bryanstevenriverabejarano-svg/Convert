@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
             new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri == null) return;
                 String question = visualQuestion;
-                boolean localOnly = SalveLLM.getInstance(this).isLocalOnly();
+                boolean localOnly = SalveLLM.getInstance(this).usesOwnedInference();
                 inferenceChecks.execute(() -> {
                     try {
                         Bitmap photo = cargarBitmapSeguro(uri);
@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
                 String question = visualQuestion;
                 visualQuestion = null;
                 if (photo != null && this.motorConversacional != null) {
-                    mostrarFotoParaEnviar(photo, question, SalveLLM.getInstance(this).isLocalOnly());
+                    mostrarFotoParaEnviar(photo, question, SalveLLM.getInstance(this).usesOwnedInference());
                 } else {
                     if (photo != null) photo.recycle();
                     Toast.makeText(this, "No se capturó ninguna foto.", Toast.LENGTH_SHORT).show();
@@ -1642,7 +1642,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español", "Nodos de cómputo"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaModeloPrincipal(); break;
                         case 1:
@@ -1674,6 +1674,7 @@ public class MainActivity extends AppCompatActivity {
                         case 14: plansLauncher.launch(new Intent(this, AgentPlansActivity.class)); break;
                         case 15: mostrarBuscadoresWeb(); break;
                         case 16: mostrarMemoriaEspanol(); break;
+                        case 17: salve.presentation.ui.ComputeNodesDialog.show(this); break;
                         default: break;
                     }
                 })
@@ -1896,7 +1897,7 @@ public class MainActivity extends AppCompatActivity {
         info.setText("Una autora prepara Java y una revisora propone correcciones. Máximo 3 llamadas, incluyendo fallos y alternativas. "
                 + "En modo local son dos roles del mismo modelo, cargado una sola vez. Si eliges Gemini puedes configurar otro modelo revisor. "
                 + "Una revisión no demuestra que el código compile.\n\nModo actual: "
-                + (SalveLLM.getInstance(this).isLocalOnly() ? "local, sin consultas de este equipo a Gemini." : "Gemini configurado, con alternativa local."));
+                + (SalveLLM.getInstance(this).usesOwnedInference() ? "móvil o nodos propios activados, sin consultas de este equipo a Gemini." : "Gemini configurado, con alternativa local."));
         form.addView(info);
         EditText reviewer = new EditText(this);
         reviewer.setSingleLine(true); reviewer.setHint("Modelo Gemini revisor (vacío: el modelo actual)");
@@ -2060,7 +2061,7 @@ public class MainActivity extends AppCompatActivity {
                 if (local) {
                     SalveLLM engine = SalveLLM.getInstance(getApplicationContext());
                     engine.forceReloadModel();
-                    result = engine.generateResult(prompt, SalveLLM.Role.CONVERSACIONAL);
+                    result = engine.generateLocalResult(prompt, SalveLLM.Role.CONVERSACIONAL, null);
                 } else {
                     result = GeminiService.getInstance(getApplicationContext()).generateResultSync(prompt, null);
                 }
@@ -2081,7 +2082,7 @@ public class MainActivity extends AppCompatActivity {
                     if (which == 2) { mostrarFotosGuardadas(); return; }
                     if (which == 3) { mostrarMenuPdf(); return; }
                     visualQuestion = inputChat.getText().toString().trim();
-                    visualLocalOnly = SalveLLM.getInstance(this).isLocalOnly();
+                    visualLocalOnly = SalveLLM.getInstance(this).usesOwnedInference();
                     if (which == 0) chatPhotoPicker.launch(new String[]{"image/*"});
                     else solicitarFotoAnalisis();
                 }).setNegativeButton("Cancelar", null).show();
@@ -2089,7 +2090,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void solicitarFotoAnalisis() {
         visualQuestion = inputChat.getText().toString().trim();
-        visualLocalOnly = SalveLLM.getInstance(this).isLocalOnly();
+        visualLocalOnly = SalveLLM.getInstance(this).usesOwnedInference();
         if (hasCameraPermission()) launchAnalysisCamera();
         else photoPermissionLauncher.launch(Manifest.permission.CAMERA);
     }
