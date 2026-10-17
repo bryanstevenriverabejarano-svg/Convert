@@ -1201,7 +1201,7 @@ public class MotorConversacional {
         boolean recordar = directAnswer == null && !storyTurn && reasoningPlan.shouldRetrieveLongTermMemory() && creatorSide();
         if (recordar) estado("Buscando en mis recuerdos…");
         ConversationMemoryGrounding.Result evidence = recordar ? memoria.recuperarContextoConversacional(entrada) : null;
-        estado(creativeTurn ? (storyTurn ? "Imaginando la historia…" : "Creando…") : "Pensando qué responderte…");
+        estado(storyTurn ? "Imaginando la historia…" : "Pensando qué responderte…");
         if (directAnswer == null && evidence != null) directAnswer = evidence.getDirectAnswer();
         if (directAnswer != null && evidence != null && evidence.getDirectAnswer() == directAnswer
                 && ConversationMemoryGrounding.chronologyDirection(entrada) < 0
