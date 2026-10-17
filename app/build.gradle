@@ -19,7 +19,8 @@ tasks.named('preBuild').configure { dependsOn(verifyExternalLlmWeights) }
 android {
 
     namespace 'com.salve.app'
-    compileSdk 36
+    // 37: lo exige Filament (avatar 3D con animación esquelética).
+    compileSdk 37
     ndkVersion "27.2.12479018"
     externalNativeBuild {
         cmake {
