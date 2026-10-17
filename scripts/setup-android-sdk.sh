@@ -48,11 +48,6 @@ yes | "$sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
     "ndk;27.2.12479018" \
     "cmake;3.22.1"
 
-# Filament (avatar 3D) exige compilar contra Android 37. El paquete puede llamarse android-37 o
-# llevar versión menor (android-37.0); se instala el primero que exista.
-for platform in "platforms;android-37" "platforms;android-37.0"; do
-    if "$sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "$platform"; then break; fi
-done
 
 # Gradle admite barras normales incluso en local.properties y así no hay que escapar la ruta.
 escaped_sdk_dir="${ANDROID_SDK_ROOT//\\/\\\\}"

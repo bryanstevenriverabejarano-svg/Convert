@@ -19,8 +19,7 @@ tasks.named('preBuild').configure { dependsOn(verifyExternalLlmWeights) }
 android {
 
     namespace 'com.salve.app'
-    // 37: lo exige Filament (avatar 3D con animación esquelética).
-    compileSdk 37
+    compileSdk 36
     ndkVersion "27.2.12479018"
     externalNativeBuild {
         cmake {
@@ -116,9 +115,7 @@ android {
 }
 
 dependencies {
-    // Native glTF skeletal animation and facial morph targets.
-    // 1.56.0: compatible con el Kotlin del proyecto (2.2). La 1.77.x arrastra kotlin-stdlib 2.4 y no compila.
-    implementation 'com.google.android.filament:filament-utils-android:1.56.0'
+    // Avatar 3D (Filament) en pausa: el modelo está en docs/avatar3d/ hasta que se conecte a la vista.
     // Motor MLC para Java/Android (módulo local)
     implementation project(':mlc4j')
 
