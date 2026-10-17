@@ -304,6 +304,16 @@ public class MotorConversacional {
     public interface DraftListener { void onBorrador(String textoParcial); }
     private volatile DraftListener draftListener;
     public void setDraftListener(DraftListener listener) { this.draftListener = listener; }
+
+    /** Lo que Salve está haciendo ahora mismo («Buscando referencias de «gorila»…»), para enseñarlo mientras piensa. */
+    public interface ActivityListener { void onActividad(String estado); }
+    private volatile ActivityListener activityListener;
+    public void setActivityListener(ActivityListener listener) { this.activityListener = listener; }
+
+    private void estado(String what) {
+        ActivityListener l = activityListener;
+        if (l != null && what != null) try { l.onActividad(what); } catch (RuntimeException ignored) { }
+    }
     /** Frases leídas por flujo mientras se escribían → id de enunciado y turno del avatar. */
     private final java.util.Map<String, Long> streamUtterances = new java.util.concurrent.ConcurrentHashMap<>();
     /** La respuesta final ya se leyó en voz alta mientras se escribía: no se repite. */
@@ -570,6 +580,7 @@ public class MotorConversacional {
         if (entrada == null || entrada.trim().isEmpty()) return;
         turnSketchTag.set(null); // un dibujo de un turno anterior nunca se cuela en esta respuesta
         turnSketchStatus = null;
+        estado("Leyendo lo que me dices…");
         salve.core.mind.AttentionSchema.get().attend(salve.core.mind.AttentionSchema.topic(entrada),
                 salve.core.mind.AttentionSchema.Source.CONVERSATION, System.currentTimeMillis());
         salve.core.memory.CloudMemoryCommand.Action cloudCommand = salve.core.memory.CloudMemoryCommand.parse(entrada);
@@ -1187,9 +1198,10 @@ public class MotorConversacional {
 
         // Exact facts are read from their source. Quoted memories never enter the tool parser.
         String directAnswer = storyTurn ? null : deviceClock.directReply(entrada);
-        ConversationMemoryGrounding.Result evidence = directAnswer == null && !storyTurn
-                && reasoningPlan.shouldRetrieveLongTermMemory() && creatorSide()
-                ? memoria.recuperarContextoConversacional(entrada) : null;
+        boolean recordar = directAnswer == null && !storyTurn && reasoningPlan.shouldRetrieveLongTermMemory() && creatorSide();
+        if (recordar) estado("Buscando en mis recuerdos…");
+        ConversationMemoryGrounding.Result evidence = recordar ? memoria.recuperarContextoConversacional(entrada) : null;
+        estado(storyTurn ? "Imaginando la historia…" : "Pensando qué responderte…");
         if (directAnswer == null && evidence != null) directAnswer = evidence.getDirectAnswer();
         if (directAnswer != null && evidence != null && evidence.getDirectAnswer() == directAnswer
                 && ConversationMemoryGrounding.chronologyDirection(entrada) < 0
@@ -1291,6 +1303,7 @@ public class MotorConversacional {
                     salve.core.conversation.ResponseCritic.check(respuesta, lastReading);
             problems.remove(salve.core.conversation.ResponseCritic.Problem.THIRD_PERSON); // se arregla sin reescribir
             if (!problems.isEmpty()) {
+                estado("Releo mi borrador: no hacía lo que pediste, lo reescribo…");
                 CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext
                         + salve.core.conversation.ResponseCritic.critique(problems), resumenAccion, entradaPorVoz, evidence, false);
                 if (retry.handedOff) return;
@@ -1637,6 +1650,7 @@ public class MotorConversacional {
             lastSketchSubject = subject;
             lastSketchAskedAt = System.currentTimeMillis();
             // 0) Antes de dibujar, piensa cómo es: qué es y qué partes tiene (lo guarda para la próxima vez).
+            estado("Pensando cómo es «" + subject + "» y qué partes tiene…");
             salve.sketch.VisualConcept concept = entender(subject, request.wish);
             if (concept != null && !concept.name.isEmpty() && !concept.name.equals(subject)) {
                 subject = concept.name; // corrige erratas: «vesrido verano» → «vestido de verano»
@@ -1836,10 +1850,12 @@ public class MotorConversacional {
         for (salve.core.identity.PeopleGraph.PersonEntity p : mind().peopleGraph().people()) known.add(p.name);
         if (!salve.core.identity.NetworkPrivacy.safeForNetwork(subject, known)) { referenceFailure = "era algo privado"; return null; }
         mostrarBusqueda("dibujo de " + subject);
+        estado("Buscando imágenes de referencia de «" + subject + "» en internet…");
         okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
-                .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                .callTimeout(14, java.util.concurrent.TimeUnit.SECONDS).build();
+                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .callTimeout(22, java.util.concurrent.TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true).build();
         salve.sketch.ImageReferenceSearch search = new salve.sketch.ImageReferenceSearch((url, maxBytes) -> {
             okhttp3.Request request = new okhttp3.Request.Builder().url(url)
                     .header("User-Agent", "Salve/1.1 (https://github.com/bryanstevenriverabejarano-svg/Convert)").get().build();
@@ -1866,7 +1882,7 @@ public class MotorConversacional {
         } catch (RuntimeException ignored) { /* sigue con el orden de siempre */ }
         ultimaMirada = null;
         salve.sketch.SketchJournal journal = salve.sketch.Sketches.journal(context);
-        long deadline = System.currentTimeMillis() + 30_000;
+        long deadline = System.currentTimeMillis() + 45_000;
         try {
             List<String> used = improving ? journal.usedReferences(subject) : java.util.Collections.emptyList();
             List<salve.sketch.ImageReferenceSearch.Candidate> candidates =
@@ -1884,6 +1900,7 @@ public class MotorConversacional {
             for (salve.sketch.ImageReferenceSearch.Candidate c : candidates) {
                 if (closed || System.currentTimeMillis() > deadline || analyzed >= 5) break;
                 try {
+                    estado("Analizando la referencia " + (analyzed + 1) + " de " + Math.min(5, candidates.size()) + ": «" + c.label() + "»…");
                     byte[] bytes = search.download(c, 3_000_000);
                     // En una foto, primero mira dónde está el objeto y lo recorta: calca sólo eso, no el fondo.
                     float[] box = c.drawing || cropped >= 2 ? null : dondeEsta(bytes, subject);
@@ -1929,6 +1946,7 @@ public class MotorConversacional {
             salve.sketch.ImageTracer.Result bestTrace = (salve.sketch.ImageTracer.Result) chosen[1];
             olvidarVersionesConPeticion(subject);
             // No se queda con el calco: hace su versión (contornos que definen la forma, redondeados a mano).
+            estado("Calcando sus contornos y convirtiéndolos en mis propias curvas…");
             salve.sketch.SketchStyle.Result mine = salve.sketch.SketchStyle.ownVersion(bestTrace.strokes, 32);
             // Y lo pasa a sus propios vectores: curvas de Bézier que puede redibujar y variar.
             salve.sketch.BezierSketch vectors = salve.sketch.BezierSketch.fit(
@@ -2049,6 +2067,7 @@ public class MotorConversacional {
         if (llm == null || subject == null || subject.trim().isEmpty()) return null;
         try {
             // Con Gemini: dibujo por partes en JSON (puntos + armónicos); con su modelo local: formas con «# parte».
+            estado("Imaginando «" + subject + "» parte por parte…");
             String prompt = nubeParaDibujar() ? salve.sketch.PartsProgram.prompt(subject, concept, wish)
                     : salve.sketch.ShapeProgram.prompt(subject, concept, wish);
             ModelResult result = pensarDibujo(prompt);
@@ -2174,6 +2193,7 @@ public class MotorConversacional {
      */
     private salve.sketch.SketchTalk.Look mirarDibujo(List<float[]> strokes, String subject) {
         if (llm == null || strokes == null || strokes.isEmpty() || !llm.supportsVision()) return null;
+        estado("Mirando mi dibujo para ver si se parece…");
         Bitmap image = null;
         try {
             float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
@@ -3314,6 +3334,7 @@ public class MotorConversacional {
 
     /** Abre la búsqueda en la mini ventana; devuelve una pista (una vez por sesión) si no se pudo. */
     private String mostrarBusqueda(String query) {
+        estado("Buscando en internet: «" + (query.length() > 60 ? query.substring(0, 60) + "…" : query) + "»");
         String hint;
         try { hint = salve.core.web.SearchLive.begin(context, query); }
         catch (RuntimeException unavailable) { hint = null; }

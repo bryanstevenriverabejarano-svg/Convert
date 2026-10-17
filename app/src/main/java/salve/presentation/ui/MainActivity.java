@@ -184,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
             TextView chatStatus = findViewById(R.id.chatModelStatus);
             if (stageStatus != null) stageStatus.setText(status);
             if (chatStatus != null) chatStatus.setText(status);
+            conectarPCloudSola(status);
             modelStatusHandler.postDelayed(this, 2000);
         }
     };
@@ -743,6 +744,7 @@ public class MainActivity extends AppCompatActivity {
             abrirLienzoParaEnsenar(sugerido == null || sugerido.isEmpty() ? null : sugerido);
             return;
         }
+        stageController.showThinking("Pensando…");
         salve.core.tools.AssistantControlCommand sceneCommand = salve.core.tools.AssistantControlCommand.parse(limpio);
         if (sceneCommand != null) {
             switch (sceneCommand.type) {
@@ -868,6 +870,10 @@ public class MainActivity extends AppCompatActivity {
                 if (!isFinishing() && !isDestroyed()) stageController.appendMessage(true, texto);
             });
         });
+        // Mientras piensa: qué está haciendo (sólo durante un turno que Bryan pidió, no en segundo plano).
+        motorConversacional.setActivityListener(estado -> runOnUiThread(() -> {
+            if (!isFinishing() && !isDestroyed()) stageController.updateThinking(estado);
+        }));
         // Lo que Salve está escribiendo ahora (cuentos y escenas aparecen palabra a palabra).
         motorConversacional.setDraftListener(parcial -> runOnUiThread(() -> {
             if (!isFinishing() && !isDestroyed()) stageController.showDraft(parcial);
@@ -1778,14 +1784,39 @@ public class MainActivity extends AppCompatActivity {
         }, "salve-pcloud-check").start();
     }
 
+    private boolean autoPCloudChecked;
+
+    /**
+     * En cuanto su modelo está activo, si pCloud no está conectado, Salve abre ella misma la autorización
+     * (pCloud exige un toque de Bryan en su página: es la única parte que no puede hacer sola). Lo intenta
+     * como mucho dos veces por instalación y nunca si Bryan pausó la sincronización.
+     */
+    private void conectarPCloudSola(String status) {
+        if (autoPCloudChecked || status == null || !java.util.regex.Pattern.compile("(?<!\\p{L})activo").matcher(status).find()) return;
+        autoPCloudChecked = true;
+        try {
+            if (CloudSyncManager.isPCloudConfigured(this) || CloudSyncManager.pausedByUser(this)) return;
+            long installed = getPackageManager().getPackageInfo(getPackageName(), 0).firstInstallTime;
+            android.content.SharedPreferences prefs = getSharedPreferences("salve_pcloud_auto", MODE_PRIVATE);
+            int attempts = prefs.getLong("install", 0L) == installed ? prefs.getInt("attempts", 0) : 0;
+            if (attempts >= 2) return;
+            prefs.edit().putLong("install", installed).putInt("attempts", attempts + 1).apply();
+            Toast.makeText(this, "Me conecto a pCloud para recuperar mis recuerdos: autorízame en el navegador",
+                    Toast.LENGTH_LONG).show();
+            conectarPCloud();
+        } catch (Exception ignored) { /* queda el botón manual en Recuerdos */ }
+    }
+
     private void conectarPCloud() {
         try {
             if (pCloudOAuth != null) pCloudOAuth.cancel();
             pCloudOAuth = new PCloudOAuth();
             pCloudOAuth.start(this, PCloudOAuth.CLIENT_ID, error -> runOnUiThread(() -> {
+                if (error == null) try { CloudSyncManager.setEnabled(getApplicationContext(), true, false); }
+                catch (RuntimeException ignored) { /* la sincronización automática lo reintentará */ }
                 if (!isFinishing() && !isDestroyed()) {
                     new AlertDialog.Builder(this).setTitle("pCloud")
-                            .setMessage(error == null ? "Salve conectada. La carpeta /Salve se creará con la primera subida." : error)
+                            .setMessage(error == null ? "Salve conectada. Ya está recuperando sus recuerdos y se sincronizará sola." : error)
                             .setPositiveButton("Cerrar", null).show();
                 }
             }));
