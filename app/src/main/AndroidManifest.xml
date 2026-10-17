@@ -148,6 +148,11 @@
                 android:resource="@xml/acceso_salve" />
         </service>
 
+        <!-- Descarga el módulo del lector QR al instalar, no al primer escaneo -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
