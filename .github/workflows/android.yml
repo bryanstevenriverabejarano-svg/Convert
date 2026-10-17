@@ -96,7 +96,7 @@ jobs:
           if ! bash ./gradlew --no-daemon --stacktrace --console=plain --max-workers=2 \
               --init-script scripts/android-arm64.init.gradle \
               :app:test${{ matrix.task_suffix }}UnitTest :app:assemble${{ matrix.task_suffix }} 2>&1 | tee build/gradle.log; then
-            summary=$(grep -E "^e: |^w: .*error|error:|FAILED|What went wrong|Exception at|expected:<|\.(java|kt):[0-9]+" build/gradle.log | grep -v "^\s*at " | head -40)
+            summary=$( { grep -E "^e: |^w: .*error|error:|FAILED|Exception at|expected:<|\.(java|kt):[0-9]+" build/gradle.log | grep -v "^\s*at " | head -30; grep -A14 "What went wrong" build/gradle.log | head -30; } )
             summary="${summary//'%'/'%25'}"; summary="${summary//$'\n'/'%0A'}"
             echo "::error title=Gradle::${summary}"
             exit 1

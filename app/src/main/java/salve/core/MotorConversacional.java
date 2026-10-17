@@ -1852,14 +1852,26 @@ public class MotorConversacional {
         mostrarBusqueda("dibujo de " + subject);
         estado("Buscando imágenes de referencia de «" + subject + "» en internet…");
         okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
-                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                .callTimeout(22, java.util.concurrent.TimeUnit.SECONDS)
+                .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
+                .callTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                // IPv4 primero: en muchas redes móviles IPv6 no responde y cada petición agota el tiempo.
+                .dns(host -> {
+                    java.util.List<java.net.InetAddress> all = new java.util.ArrayList<>(okhttp3.Dns.SYSTEM.lookup(host));
+                    all.sort((x, y) -> Boolean.compare(!(x instanceof java.net.Inet4Address), !(y instanceof java.net.Inet4Address)));
+                    return all;
+                })
                 .retryOnConnectionFailure(true).build();
         salve.sketch.ImageReferenceSearch search = new salve.sketch.ImageReferenceSearch((url, maxBytes) -> {
             okhttp3.Request request = new okhttp3.Request.Builder().url(url)
                     .header("User-Agent", "Salve/1.1 (https://github.com/bryanstevenriverabejarano-svg/Convert)").get().build();
-            try (okhttp3.Response response = client.newCall(request).execute()) {
+            okhttp3.Response first;
+            try { first = client.newCall(request).execute(); }
+            catch (java.io.InterruptedIOException slow) {
+                if (Thread.currentThread().isInterrupted()) throw slow; // se acabó el tiempo de la búsqueda
+                first = client.newCall(request).execute(); // un reintento
+            }
+            try (okhttp3.Response response = first) {
                 okhttp3.ResponseBody body = response.body();
                 if (!response.isSuccessful() || body == null) throw new java.io.IOException("HTTP " + response.code());
                 long declared = body.contentLength();
@@ -1995,7 +2007,9 @@ public class MotorConversacional {
         } catch (java.io.IOException | RuntimeException error) {
             Log.w(TAG, "Búsqueda de referencias fallida para " + subject, error);
             referenceFailure = "la búsqueda falló (" + error.getMessage() + ") [" + search.diagnostic() + "]";
-            turnSketchStatus = "No pude buscar referencias de «" + subject + "»: " + error.getMessage() + ".";
+            String why = search.diagnostic();
+            turnSketchStatus = "No pude buscar referencias de «" + subject + "»: " + error.getMessage()
+                    + (why.isEmpty() ? "" : " (" + (why.length() > 220 ? why.substring(0, 220) + "…" : why) + ")") + ".";
             return null;
         }
     }

@@ -115,8 +115,7 @@ android {
 }
 
 dependencies {
-    // Native glTF skeletal animation and facial morph targets.
-    implementation 'com.google.android.filament:filament-utils-android:1.77.1'
+    // Avatar 3D (Filament) en pausa: el modelo está en docs/avatar3d/ hasta que se conecte a la vista.
     // Motor MLC para Java/Android (módulo local)
     implementation project(':mlc4j')
 
