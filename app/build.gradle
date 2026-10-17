@@ -56,6 +56,20 @@ android {
         }
     }
 
+    // Firma fija (si CI la recibe como secreto): cada APK nuevo se instala encima del anterior y
+    // Salve conserva su modelo, sus recuerdos y la autorización de pCloud. Sin el secreto, la de siempre.
+    signingConfigs {
+        debug {
+            def fixedKeystore = System.getenv("SALVE_DEBUG_KEYSTORE")
+            if (fixedKeystore != null && file(fixedKeystore).exists()) {
+                storeFile file(fixedKeystore)
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
+    }
+
     buildTypes {
         // A separate install preserves an existing Salve signed on another machine.
         preview {

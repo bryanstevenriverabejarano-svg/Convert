@@ -238,6 +238,10 @@ final class SalveStageController {
             SketchLibrary library = Sketches.loaded();
             if (library != null) next = StoryIllustrator.annotate(next, library, true);
         }
+        if (next != null) {
+            View row = activity.findViewById(R.id.thinkingRow);
+            if (row != null && row.getVisibility() == View.VISIBLE) showThinking("Escribiendo…");
+        }
         draft = next == null ? null : next.length() > 12000 ? next.substring(0, 12000) + "…" : next;
         renderMessages();
         if (draft != null) {
@@ -247,7 +251,37 @@ final class SalveStageController {
         }
     }
 
+    // ───────── Salve pensando: puntos de luz y lo que hace ahora ─────────
+    private final android.os.Handler thinkingHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable thinkingTimeout = this::hideThinking;
+
+    /** Muestra que Salve está trabajando y en qué («Buscando referencias de «gorila»…»). */
+    void showThinking(String status) {
+        View row = activity.findViewById(R.id.thinkingRow);
+        TextView label = activity.findViewById(R.id.thinkingLabel);
+        if (row == null || label == null) return;
+        String text = status == null || status.trim().isEmpty() ? "Pensando…" : status.trim();
+        label.setText(text);
+        label.setContentDescription("Salve: " + text);
+        if (row.getVisibility() != View.VISIBLE) { row.setVisibility(View.VISIBLE); scrollToEnd(); }
+        thinkingHandler.removeCallbacks(thinkingTimeout);
+        thinkingHandler.postDelayed(thinkingTimeout, 2 * 60 * 1000L); // sin novedades en 2 min, se quita
+    }
+
+    /** Actualiza lo que hace, sólo si ya está pensando en algo que pidió Bryan. */
+    void updateThinking(String status) {
+        View row = activity.findViewById(R.id.thinkingRow);
+        if (row != null && row.getVisibility() == View.VISIBLE) showThinking(status);
+    }
+
+    void hideThinking() {
+        thinkingHandler.removeCallbacks(thinkingTimeout);
+        View row = activity.findViewById(R.id.thinkingRow);
+        if (row != null) row.setVisibility(View.GONE);
+    }
+
     void appendMessage(boolean fromSalve, String text) {
+        if (fromSalve) hideThinking();
         if (text == null || text.trim().isEmpty()) { if (fromSalve) { draft = null; renderMessages(); } return; }
         // Bound recreation state so a long session cannot exceed the Android Binder limit.
         String visible = text.length() > 12000 ? text.substring(0, 12000) + "…" : text;

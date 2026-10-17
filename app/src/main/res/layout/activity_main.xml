@@ -99,6 +99,16 @@
                 android:layout_width="wrap_content" android:layout_height="48dp" android:text="Quitar"
                 android:contentDescription="Quitar foto del chat y conservar el recuerdo" />
         </LinearLayout>
+        <!-- Mientras Salve piensa: tres puntos de luz y lo que está haciendo ahora mismo. -->
+        <LinearLayout android:id="@+id/thinkingRow" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="10dp"
+            android:paddingVertical="6dp" android:visibility="gone" android:accessibilityLiveRegion="polite">
+            <salve.presentation.ui.ThinkingDotsView android:id="@+id/thinkingDots"
+                android:layout_width="44dp" android:layout_height="22dp" />
+            <TextView android:id="@+id/thinkingLabel" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:layout_marginStart="8dp" android:text="Pensando…"
+                android:textColor="#7FDFFF" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
+        </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
             <EditText android:id="@+id/inputChat" android:layout_width="0dp" android:layout_weight="1"
                 android:layout_height="wrap_content" android:minHeight="52dp" android:maxLines="3"

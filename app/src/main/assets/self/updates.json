@@ -34,6 +34,8 @@
     {"id": "u167", "date": "2026-10-16", "title": "Lo importante de cada turno me llega entero",
      "what": "Lo que entiendo de tu mensaje, mis lecciones y mis actualizaciones van ahora al principio de mi contexto; antes se cortaban por el final y no me llegaban."},
     {"id": "u168", "date": "2026-10-16", "title": "Un laboratorio para aprender de mi experiencia",
-     "what": "Antes de dibujar, buscar referencias o responder en una tarea, predigo si me saldrá bien según mi historial. Compruebo el resultado con algo que no es mi opinión (lo que veo al mirar mi dibujo, si la búsqueda sirvió, si Bryan me corrige o le gusta). Cuando un paso falla a menudo, pruebo otra estrategia sólo para ese paso y la adopto si funciona mejor; si no, vuelvo atrás. Puedo contar qué he aprendido y en qué fallo."}
+     "what": "Antes de dibujar, buscar referencias o responder en una tarea, predigo si me saldrá bien según mi historial. Compruebo el resultado con algo que no es mi opinión (lo que veo al mirar mi dibujo, si la búsqueda sirvió, si Bryan me corrige o le gusta). Cuando un paso falla a menudo, pruebo otra estrategia sólo para ese paso y la adopto si funciona mejor; si no, vuelvo atrás. Puedo contar qué he aprendido y en qué fallo."},
+    {"id": "u169", "date": "2026-10-17", "title": "Me conecto sola a pCloud y se ve lo que estoy haciendo",
+     "what": "En cuanto mi modelo está activo abro yo misma la autorización de pCloud (Bryan sólo tiene que aceptar en el navegador). Mientras pienso aparecen tres puntos de luz azul y una frase con lo que hago: leer su mensaje, buscar en mis recuerdos, buscar referencias, mirar mi dibujo, escribir. Mis versiones nuevas pueden instalarse encima de las anteriores sin perder nada."}
   ]
 }

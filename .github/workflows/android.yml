@@ -72,6 +72,18 @@ jobs:
         timeout-minutes: 10
         run: bash scripts/setup-android-sdk.sh
 
+      - name: Use Salve's fixed signing key (updates keep her data)
+        env:
+          SALVE_DEBUG_KEYSTORE_B64: ${{ secrets.SALVE_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$SALVE_DEBUG_KEYSTORE_B64" ]; then
+            printf '%s' "$SALVE_DEBUG_KEYSTORE_B64" | tr -d ' \n\r' | base64 -d > "$RUNNER_TEMP/salve-debug.keystore"
+            echo "SALVE_DEBUG_KEYSTORE=$RUNNER_TEMP/salve-debug.keystore" >> "$GITHUB_ENV"
+            echo "Firma fija de Salve activada"
+          else
+            echo "::warning::Sin el secreto SALVE_DEBUG_KEYSTORE_B64 el APK usa una firma aleatoria: para actualizar habrá que desinstalar."
+          fi
+
       - name: Run JVM tests and build the ARM64 APK
         timeout-minutes: 30
         # The checked-in daemon criteria still select/download JetBrains JDK 21.
