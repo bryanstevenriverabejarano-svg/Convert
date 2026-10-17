@@ -204,20 +204,31 @@ public class WikipediaResearchClient {
     protected Page readPage(String url, BooleanSupplier stopped, long deadline) throws IOException {
         return fetch(url, stopped, deadline, 0);
     }
+    /** JSON de una API con credencial propia. La credencial nunca sigue redirecciones. */
+    protected Page readApiJson(String url, String header, String value, BooleanSupplier stopped, long deadline) throws IOException {
+        return fetch(url, stopped, deadline, 1, header, value);
+    }
     private Page fetch(String requestedUrl, BooleanSupplier stopped, long deadline, int documentType) throws IOException {
+        return fetch(requestedUrl, stopped, deadline, documentType, null, null);
+    }
+    private Page fetch(String requestedUrl, BooleanSupplier stopped, long deadline, int documentType,
+                       String credentialHeader, String credential) throws IOException {
         String current = requestedUrl;
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             check(stopped, deadline);
             NetworkResourcePolicy.Validation validation = NetworkResourcePolicy.validateKnowledgeUrl(current);
             if (!validation.allowed) throw new IOException(validation.reason);
-            Request request = new Request.Builder().url(validation.normalizedUrl)
-                    .header("User-Agent", "Salve/1.1 (https://github.com/bryanstevenriverabejarano-svg/Convert)").get().build();
+            Request.Builder builder = new Request.Builder().url(validation.normalizedUrl)
+                    .header("User-Agent", "Salve/1.1 (https://github.com/bryanstevenriverabejarano-svg/Convert)");
+            if (credentialHeader != null) builder.header(credentialHeader, credential).header("Accept", "application/json");
+            Request request = builder.get().build();
             Call call = client.newCall(request);
             call.timeout().timeout(Math.max(1L, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             try (Response response = call.execute()) {
                 check(stopped, deadline);
                 int status = response.code();
                 if (status >= 300 && status < 400) {
+                    if (credentialHeader != null) throw new IOException("Redirección no permitida con credencial");
                     String location = response.header("Location");
                     if (location == null || redirects == MAX_REDIRECTS) throw new IOException("Redirección no permitida");
                     current = URI.create(validation.normalizedUrl).resolve(location).toString();
@@ -226,7 +237,7 @@ public class WikipediaResearchClient {
                 if (!response.isSuccessful()) throw new ReadFailure("La fuente pública devolvió HTTP " + status + ".");
                 ResponseBody body = response.body();
                 String type = response.header("Content-Type", "").toLowerCase(Locale.ROOT);
-                if (documentType == 1 && !type.startsWith("application/json")) throw new ReadFailure("Wikipedia no devolvió datos JSON.");
+                if (documentType == 1 && !type.startsWith("application/json")) throw new ReadFailure("La fuente no devolvió datos JSON.");
                 if (body == null || !(type.startsWith("text/") || type.startsWith("application/json") || type.startsWith("application/xml")))
                     throw new IOException("Tipo de contenido no permitido");
                 if (body.contentLength() > NetworkResourcePolicy.MAX_KNOWLEDGE_BYTES)

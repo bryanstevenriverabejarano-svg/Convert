@@ -1704,13 +1704,17 @@ public class MainActivity extends AppCompatActivity {
     private void mostrarBuscadoresWeb() {
         salve.core.web.SearchEngine current = salve.core.web.WebSearchSettings.load(this, "");
         new AlertDialog.Builder(this).setTitle("Buscadores web")
-                .setMessage("Buscador: " + current.id + "\n\n" + salve.core.web.WebSearchSettings.diagnostic(this)
-                        + "\n\nPuedes decir ‘Busca en Google…’, ‘Busca en Bing…’ o ‘Busca en DuckDuckGo…’. "
-                        + "Salve lee resultados públicos. Las páginas que exigen JavaScript, consentimiento o CAPTCHA pueden necesitar el navegador.")
+                .setMessage("Buscador: " + current.id
+                        + "\nBrave Search API: " + (salve.core.web.WebSearchKeyStore.hasBraveKey(this) ? "clave guardada" : "sin clave")
+                        + "\n\n" + salve.core.web.WebSearchSettings.diagnostic(this)
+                        + "\n\nPuedes decir ‘Busca en Google…’, ‘Busca en Brave…’, ‘Busca en Bing…’ o ‘Busca en DuckDuckGo…’. "
+                        + "Salve lee resultados públicos. Las páginas que exigen JavaScript, consentimiento o CAPTCHA pueden necesitar el navegador. "
+                        + "Con una clave de Brave Search API, el modo Automático usa primero la API oficial, sin CAPTCHA.")
                 .setPositiveButton("Elegir buscador", (d, w) -> new AlertDialog.Builder(this).setTitle("Elegir buscador")
                         .setItems(salve.core.web.SearchEngine.LABELS, (dialog, index) -> {
                             String id = salve.core.web.SearchEngine.IDS[index];
-                            if (!id.equals("custom")) {
+                            if (id.equals("brave")) editarClaveBrave();
+                            else if (!id.equals("custom")) {
                                 salve.core.web.WebSearchSettings.save(this, id, ""); mostrarBuscadoresWeb();
                             } else {
                                 android.widget.EditText input = new android.widget.EditText(this);
@@ -1739,6 +1743,49 @@ public class MainActivity extends AppCompatActivity {
                                 } catch (RuntimeException missing) { Toast.makeText(this, "No pude abrir la búsqueda", Toast.LENGTH_LONG).show(); }
                             }).setNegativeButton("Cancelar", null).show();
                 }).setNegativeButton("Cerrar", null).show();
+    }
+
+    /** La clave de Brave Search API es del dueño: se pega aquí, se cifra y nunca se muestra entera. */
+    private void editarClaveBrave() {
+        boolean saved = salve.core.web.WebSearchKeyStore.hasBraveKey(this);
+        android.widget.LinearLayout form = new android.widget.LinearLayout(this);
+        form.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density); form.setPadding(pad, pad / 2, pad, 0);
+        android.widget.TextView help = new android.widget.TextView(this);
+        help.setText("Búsqueda oficial, sin CAPTCHA. Crea una clave en brave.com/search/api (plan de pago por uso con "
+                + "crédito mensual gratuito; pon un límite de gasto en su panel). Salve solo envía la consulta, nunca tus recuerdos."
+                + (saved ? "\n\nYa hay una clave guardada. Pega otra para sustituirla." : ""));
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setSingleLine(true); input.setHint("Clave de la API");
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setImportantForAutofill(android.view.View.IMPORTANT_FOR_AUTOFILL_NO);
+        form.addView(help); form.addView(input);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this).setTitle("Brave Search API").setView(form)
+                .setPositiveButton("Guardar y usar", null).setNegativeButton("Cancelar", null);
+        if (saved) builder.setNeutralButton("Usar la guardada", (d, w) -> {
+            salve.core.web.WebSearchSettings.save(this, "brave", ""); mostrarBuscadoresWeb();
+        });
+        AlertDialog editor = builder.create();
+        editor.setOnShowListener(v -> editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
+            try {
+                salve.core.web.WebSearchKeyStore.saveBraveKey(this, input.getText().toString());
+                input.setText("");
+                salve.core.web.WebSearchSettings.save(this, "brave", "");
+                editor.dismiss(); mostrarBuscadoresWeb();
+            } catch (RuntimeException invalid) { input.setError(invalid.getMessage()); }
+        }));
+        editor.show();
+        if (saved) {
+            android.widget.Button remove = new android.widget.Button(this);
+            remove.setText("Quitar clave guardada"); remove.setAllCaps(false);
+            remove.setOnClickListener(v -> {
+                salve.core.web.WebSearchKeyStore.removeBraveKey(this);
+                if (salve.core.web.WebSearchSettings.load(this, "").id.equals("brave"))
+                    salve.core.web.WebSearchSettings.save(this, "auto", "");
+                editor.dismiss(); mostrarBuscadoresWeb();
+            });
+            form.addView(remove);
+        }
     }
 
     private void mostrarPCloud() {

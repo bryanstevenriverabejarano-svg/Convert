@@ -3,6 +3,7 @@
     <cloud-backup>
         <exclude domain="sharedpref" path="salve_tool_bridge.xml" />
         <exclude domain="sharedpref" path="salve_compute_nodes.xml" />
+        <exclude domain="sharedpref" path="salve_web_search_keys.xml" />
         <exclude domain="sharedpref" path="gemini_prefs.xml" />
         <exclude domain="sharedpref" path="salve_habilidades.xml" />
         <exclude domain="sharedpref" path="salve_device_control.xml" />
@@ -10,6 +11,7 @@
     <device-transfer>
         <exclude domain="sharedpref" path="salve_tool_bridge.xml" />
         <exclude domain="sharedpref" path="salve_compute_nodes.xml" />
+        <exclude domain="sharedpref" path="salve_web_search_keys.xml" />
         <exclude domain="sharedpref" path="gemini_prefs.xml" />
         <exclude domain="sharedpref" path="salve_habilidades.xml" />
         <exclude domain="sharedpref" path="salve_device_control.xml" />
