@@ -36,7 +36,9 @@ import java.util.Map;
 
 import salve.core.GestorConectividad;
 import salve.devices.BluetoothInspector;
+import salve.core.devicecontrol.AppActionCommand;
 import salve.devices.LocalServiceBrowser;
+import salve.devices.PhoneActions;
 import salve.devices.WhatsAppDraft;
 import salve.services.SalveAccessibilityService;
 import salve.services.MobileWorkspaceService;
@@ -44,6 +46,10 @@ import salve.services.MobileWorkspaceService;
 /** Visible, user-operated access to Android actions and compatible nearby device services. */
 public final class DeviceControlActivity extends Activity {
     private static final int REQUEST_BLUETOOTH = 81;
+    private static final int REQUEST_CONTACTS = 82;
+    private static final int REQUEST_CALL = 83;
+    private String pendingCallName;
+    private PhoneActions.Contact pendingCall;
     private LinearLayout content;
     private LinearLayout localServices;
     private TextView screenStatus;
@@ -60,6 +66,8 @@ public final class DeviceControlActivity extends Activity {
     public static final String EXTRA_PANEL = "open_mobile_panel";
     public static final String EXTRA_PHONE = "whatsapp_phone";
     public static final String EXTRA_MESSAGE = "whatsapp_message";
+    /** Nombre o número que el usuario pidió llamar; siempre se confirma en pantalla. */
+    public static final String EXTRA_CALL = "call_target";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -150,17 +158,20 @@ public final class DeviceControlActivity extends Activity {
         if (state != null) {
             waitingOverlay = state.getBoolean("waiting_overlay");
             pendingSearch = state.getString("pending_search", "");
+            pendingCallName = state.getString("pending_call_name");
         } else if (getIntent().getBooleanExtra(EXTRA_PANEL, false)) {
             openWorkspace(getIntent().getStringExtra(MobileWorkspaceService.QUERY));
         } else if (getIntent().hasExtra(EXTRA_PHONE)) {
             try { chooseWhatsApp(WhatsAppDraft.create(getIntent().getStringExtra(EXTRA_PHONE), getIntent().getStringExtra(EXTRA_MESSAGE))); }
             catch (IllegalArgumentException invalid) { appStatus.setText(invalid.getMessage()); }
+        } else if (getIntent().hasExtra(EXTRA_CALL)) {
+            startCall(getIntent().getStringExtra(EXTRA_CALL));
         }
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
-        state.putBoolean("waiting_overlay", waitingOverlay); state.putString("pending_search", pendingSearch);
+        state.putBoolean("waiting_overlay", waitingOverlay); state.putString("pending_search", pendingSearch); state.putString("pending_call_name", pendingCallName);
     }
 
     private void openWorkspace(String search) {
@@ -301,9 +312,73 @@ public final class DeviceControlActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+        if (requestCode == REQUEST_CONTACTS) {
+            String name = pendingCallName; pendingCallName = null;
+            if (name == null) return;
+            if (granted) resolveCall(name);
+            else appStatus.setText("Sin acceso a los contactos no puedo buscar a «" + name + "». Puedes decir el número: «llama al +34…».");
+            return;
+        }
+        if (requestCode == REQUEST_CALL) {
+            PhoneActions.Contact contact = pendingCall; pendingCall = null;
+            if (contact == null) return;
+            if (granted) placeCall(contact); else dial(contact);
+            return;
+        }
         if (requestCode != REQUEST_BLUETOOTH) return;
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) showPairedDevices();
         else bluetoothStatus.setText("Permiso Bluetooth denegado. Puedes conceder Dispositivos cercanos desde los ajustes de Salve.");
+    }
+
+    /** Llamada pedida por el usuario: contacto → (elegir) → confirmar → llamar. */
+    private void startCall(String target) {
+        if (target == null || target.trim().isEmpty()) return;
+        String clean = target.trim();
+        if (AppActionCommand.isPhoneNumber(clean)) { confirmCall(new PhoneActions.Contact(clean, clean, "")); return; }
+        if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            pendingCallName = clean;
+            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
+            return;
+        }
+        resolveCall(clean);
+    }
+
+    private void resolveCall(String name) {
+        List<PhoneActions.Contact> found = PhoneActions.findContacts(this, name);
+        if (found.isEmpty()) { appStatus.setText("No encuentro a «" + name + "» en tus contactos."); return; }
+        if (found.size() == 1) { confirmCall(found.get(0)); return; }
+        String[] choices = new String[found.size()];
+        for (int i = 0; i < choices.length; i++) choices[i] = found.get(i).describe();
+        new AlertDialog.Builder(this).setTitle("¿A quién llamo?")
+                .setItems(choices, (d, which) -> confirmCall(found.get(which)))
+                .setNegativeButton("Cancelar", null).show();
+    }
+
+    private void confirmCall(PhoneActions.Contact contact) {
+        new AlertDialog.Builder(this).setTitle("¿Llamar a " + contact.name + "?")
+                .setMessage(contact.number + (contact.label.isEmpty() ? "" : " · " + contact.label))
+                .setPositiveButton("Llamar", (d, w) -> {
+                    if (checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) placeCall(contact);
+                    else { pendingCall = contact; requestPermissions(new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL); }
+                })
+                .setNegativeButton("Cancelar", (d, w) -> appStatus.setText("Llamada cancelada."))
+                .show();
+    }
+
+    private void placeCall(PhoneActions.Contact contact) {
+        try {
+            startActivity(new Intent(Intent.ACTION_CALL, Uri.fromParts("tel", contact.number, null)));
+            appStatus.setText("Llamando a " + contact.name + ".");
+        } catch (ActivityNotFoundException | SecurityException blocked) { dial(contact); }
+    }
+
+    /** Sin permiso de llamada: abre el marcador con el número puesto; el usuario pulsa llamar. */
+    private void dial(PhoneActions.Contact contact) {
+        try {
+            startActivity(new Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", contact.number, null)));
+            appStatus.setText("He abierto el marcador con el número de " + contact.name + ". Pulsa llamar para hacerla.");
+        } catch (ActivityNotFoundException unavailable) { appStatus.setText("Este dispositivo no puede hacer llamadas."); }
     }
 
     private void showPairedDevices() {
