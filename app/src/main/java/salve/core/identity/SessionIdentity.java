@@ -126,6 +126,16 @@ public final class SessionIdentity {
         return state == State.PRESUMED_CREATOR && !biometricAvailable;
     }
 
+    /**
+     * Ante una petición privada: ¿hay que pedir antes la verificación del teléfono? Solo cuando
+     * podría ser el creador (presunción o duda), hay biometría y no hay verificación vigente. Un
+     * familiar o invitado declarado no la necesita: ya recibe solo lo que le corresponde.
+     */
+    public synchronized boolean needsPrivateCheckpoint(boolean biometricAvailable, long now) {
+        if (!biometricAvailable || privateAccess(true, now)) return false;
+        return state == State.PRESUMED_CREATOR || state == State.UNCERTAIN;
+    }
+
     public synchronized boolean isCreatorSide() {
         return state == State.VERIFIED_CREATOR || state == State.PRESUMED_CREATOR;
     }
