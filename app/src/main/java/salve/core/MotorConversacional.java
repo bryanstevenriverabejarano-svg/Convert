@@ -2397,6 +2397,32 @@ public class MotorConversacional {
     }
 
     private boolean procesarControlExplicito(String original) {
+        // Órdenes directas del usuario (nunca salida del modelo ni texto de páginas o mensajes).
+        salve.core.devicecontrol.AppActionCommand action = salve.core.devicecontrol.AppActionCommand.parse(original);
+        if (action != null) {
+            postConversationTask(() -> {
+                if (closed) return;
+                switch (action.type) {
+                    case NAVIGATE:
+                        hablar(salve.devices.PhoneActions.navigate(context, action.target)
+                                ? "Abro la ruta a " + action.target + "." : "No encontré ninguna app de mapas para abrir la ruta.");
+                        break;
+                    case MUSIC:
+                        hablar(salve.devices.PhoneActions.playMusic(context, action.target)
+                                ? "Pongo " + action.target + "." : "No encontré Spotify ni otra app de música que acepte búsquedas.");
+                        break;
+                    case CALL:
+                        try {
+                            context.startActivity(new Intent(context, salve.presentation.ui.DeviceControlActivity.class)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_CALL, action.target));
+                            hablar("Busco a " + action.target + ". Confirma en pantalla antes de que llame.");
+                        } catch (RuntimeException unavailable) { hablar("No pude abrir el panel de llamadas."); }
+                        break;
+                }
+            });
+            return true;
+        }
         salve.core.devicecontrol.MobileCommand mobile = salve.core.devicecontrol.MobileCommand.parse(original);
         if (mobile != null) {
             postConversationTask(() -> {
