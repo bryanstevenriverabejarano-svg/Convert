@@ -132,6 +132,7 @@ public final class SessionIdentity {
      * familiar o invitado declarado no la necesita: ya recibe solo lo que le corresponde.
      */
     public synchronized boolean needsPrivateCheckpoint(boolean biometricAvailable, long now) {
+        expire(now); // una verificación caducada vuelve a la presunción, aunque nadie la haya actualizado aún
         if (!biometricAvailable || privateAccess(true, now)) return false;
         return state == State.PRESUMED_CREATOR || state == State.UNCERTAIN;
     }
