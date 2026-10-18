@@ -581,6 +581,8 @@ public class MotorConversacional {
         turnSketchTag.set(null); // un dibujo de un turno anterior nunca se cuela en esta respuesta
         turnSketchStatus = null;
         estado("Leyendo lo que me dices…");
+        String privateCheckpoint = puntoCriticoPrivado(entrada, entradaPorVoz, privateBudgetTurn);
+        if (privateCheckpoint != null) { hablar(privateCheckpoint); return; }
         salve.core.mind.AttentionSchema.get().attend(salve.core.mind.AttentionSchema.topic(entrada),
                 salve.core.mind.AttentionSchema.Source.CONVERSATION, System.currentTimeMillis());
         salve.core.memory.CloudMemoryCommand.Action cloudCommand = salve.core.memory.CloudMemoryCommand.parse(entrada);
@@ -3447,6 +3449,27 @@ public class MotorConversacional {
                 ? "Ya está, " + first + ": eres tú. Puedo hablarte con toda confianza."
                 : "No he podido confirmarlo. Si eres " + first + ", inténtalo de nuevo cuando quieras; mientras, guardo tus recuerdos.")));
         return "Abro la verificación del teléfono: pon tu huella o mira a la pantalla.";
+    }
+
+    /**
+     * «Punto crítico»: una petición de algo privado (quién soy, mi familia, mis recuerdos, dinero…)
+     * cuando solo se presume que habla el creador. Antes de que el turno cargue memoria o perfil,
+     * se pide la verificación del sistema (huella, rostro con prueba de vida del propio Android o
+     * PIN). Si se confirma, el mismo turno se repite ya verificado; si no, lo privado no se toca.
+     * Sin biometría configurada en el teléfono se mantiene el comportamiento anterior.
+     */
+    private String puntoCriticoPrivado(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
+        if (!salve.core.identity.SensitiveRequest.needsVerification(entrada, privateBudgetTurn)) return null;
+        salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
+        if (!identity.session().needsPrivateCheckpoint(identity.biometricAvailable(), System.currentTimeMillis())) return null;
+        String first = mind().peopleGraph().creator().name.split(" ")[0];
+        identity.requestVerification("Para hablar de algo privado de " + first, ok -> toolHandler.post(() -> {
+            if (closed) return;
+            if (ok) encolarEntrada(entrada, entradaPorVoz, privateBudgetTurn);
+            else hablar("No he podido confirmar que eres " + first + ", así que eso lo guardo para él. "
+                    + "Si eres tú, di «verifícame» cuando quieras.");
+        }));
+        return "Eso es privado de " + first + ". Antes de responder, confirma que eres tú: pon tu huella o mira a la pantalla.";
     }
 
     /**

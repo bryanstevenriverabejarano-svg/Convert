@@ -80,4 +80,22 @@ public class SessionIdentityTest {
         assertFalse(SessionIdentity.matches("", "Bryan"));
         assertEquals(Arrays.asList("ana"), Arrays.asList(SessionIdentity.normalize(" Ána! ")));
     }
+
+    @Test public void privateCheckpointOnlyWhenItCouldBeTheCreatorAndIsNotVerified() {
+        SessionIdentity s = new SessionIdentity();
+        assertTrue("presunción + biometría: pedir verificación", s.needsPrivateCheckpoint(true, NOW));
+        assertFalse("sin biometría no hay nada que pedir", s.needsPrivateCheckpoint(false, NOW));
+        s.onBiometricSuccess(NOW);
+        assertFalse("ya verificado", s.needsPrivateCheckpoint(true, NOW + 1000));
+        assertTrue("al caducar vuelve a pedirse", s.needsPrivateCheckpoint(true, NOW + SessionIdentity.VERIFICATION_TTL + 1));
+        SessionIdentity voice = new SessionIdentity();
+        voice.onVoiceSession(NOW);
+        assertTrue("voz sin verificar: en duda", voice.needsPrivateCheckpoint(true, NOW));
+        SessionIdentity guest = new SessionIdentity();
+        guest.onNotCreator();
+        assertFalse("un invitado declarado ya recibe solo lo suyo", guest.needsPrivateCheckpoint(true, NOW));
+        SessionIdentity family = new SessionIdentity();
+        family.onDeclaredName("Ana", "Bryan", FAMILY, NOW);
+        assertFalse(family.needsPrivateCheckpoint(true, NOW));
+    }
 }
