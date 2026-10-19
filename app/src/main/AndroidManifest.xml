@@ -118,6 +118,7 @@
         <activity android:name="salve.presentation.ui.DeviceControlActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.NodeConstellationActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.PrivateFamilyActivity" android:exported="false" android:theme="@style/Theme.Salve" />
+        <activity android:name="salve.presentation.ui.SalventeGenesisActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.AgentPlansActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.ToolBridgeActivity" android:exported="false" android:theme="@style/Theme.Salve" />
 

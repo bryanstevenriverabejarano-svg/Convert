@@ -14,6 +14,10 @@ public class SelfFeaturesTest {
         assertEquals(PHONE_ACTIONS, SelfFeatures.detect("¿Puedes llamar a alguien?"));
         assertEquals(PRIVACY_CHECK, SelfFeatures.detect("¿Cómo sabes que soy yo?"));
         assertEquals(OVERVIEW, SelfFeatures.detect("¿Qué puedes hacer?"));
+        assertEquals(SALVENTES, SelfFeatures.detect("¿Qué es un Salvente?"));
+        assertEquals(SALVENTES, SelfFeatures.detect("Salve, ¿puedes crear una IA para mi madre?"));
+        assertEquals(SALVENTES, SelfFeatures.detect("Crea un compañero nuevo para mi sobrino"));
+        assertNotEquals(SALVENTES, SelfFeatures.detect("Crea un dibujo de una casa"));
         assertNull(SelfFeatures.detect("Hola, ¿qué tal?"));
         assertNull(SelfFeatures.detect(null));
     }
@@ -32,6 +36,8 @@ public class SelfFeaturesTest {
         String already = "Tengo dos nodos. " + offer;
         assertEquals(already, SelfFeatures.withOffer(already, offer));
         assertNull(SelfFeatures.offer(WEB_SEARCH, true));
+        assertTrue(SelfFeatures.offer(SALVENTES, false).contains("génesis"));
+        assertTrue(SelfFeatures.facts(SALVENTES).contains("aprueba"));
         assertNull("sin biometría no hay verificación que ofrecer", SelfFeatures.offer(PRIVACY_CHECK, false));
     }
 

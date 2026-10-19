@@ -6,4 +6,8 @@
     <exclude domain="sharedpref" path="gemini_prefs.xml" />
     <exclude domain="sharedpref" path="salve_habilidades.xml" />
     <exclude domain="sharedpref" path="salve_device_control.xml" />
+    <!-- Salventes: sus claves de Keystore no se restauran; sin ellas la copia sería ilegible -->
+    <exclude domain="database" path="salventes.db" />
+    <exclude domain="database" path="salventes.db-wal" />
+    <exclude domain="database" path="salventes.db-shm" />
 </full-backup-content>
