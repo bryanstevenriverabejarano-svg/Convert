@@ -91,6 +91,10 @@ def configure(previous=None):
         while lon is None:
             lon = ask_float('Longitud')
         config['location'] = {'lat': lat, 'lon': lon, 'city': ask('Ciudad'), 'country': ask('País'), 'zone': ask('Zona (opcional)')}
+    print('\nGuardián: este PC puede guardar copias de los Salventes cifradas en el móvil con una frase que solo')
+    print('conoces tú. El PC no puede leerlas; sirven para recuperarlos si pierdes o cambias de móvil.')
+    previous_guardian = 's' if previous.get('guardian') else 'n'
+    config['guardian'] = ask('¿Usar este PC también como Guardián? (s/n)', previous_guardian).strip().lower().startswith('s')
     print('\nModelo. Si indicas el archivo .gguf, Salve Nodo arrancará llama-server por ti.')
     model_file = ask('Ruta del modelo .gguf (Enter si ya tienes llama-server en marcha)', previous.get('model_file', ''))
     config['model_file'] = model_file.strip('"')
@@ -162,6 +166,8 @@ def node_args(config, paths):
                  '--pais', location.get('country', ''), '--zona', location.get('zone', '')]
     else:
         args += ['--location-directory', str(FOLDER / 'ubicacion'), '--location-token-file', str(paths['token-ubicacion'])]
+    if config.get('guardian'):
+        args += ['--vault-directory', str(FOLDER / 'guardian')]
     return args
 
 
@@ -180,8 +186,10 @@ def self_test():
         network._private_write(Path(folder) / 'local.key', network._pem_key(key))
         tls = node.server_tls(Path(folder) / 'local.pem', Path(folder) / 'local.key', paths['ca.pem'])
         token = paths['token'].read_text().strip()
+        from salve_guardian import MAGIC, BlindVault
         app = node.ComputeApplication(token, Mock(model='prueba', ready=Mock(return_value=True)),
-                                      location_store=node.StaticLocation(42.85, -2.67, 'Vitoria-Gasteiz', 'España'))
+                                      location_store=node.StaticLocation(42.85, -2.67, 'Vitoria-Gasteiz', 'España'),
+                                      vault=BlindVault(Path(folder) / 'guardian'))
         server = node.NodeServer(('127.0.0.1', 0), app, tls=tls)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:
@@ -191,6 +199,15 @@ def self_test():
             connection.request('GET', '/v1/family/status', headers={'Authorization': 'Bearer ' + token})
             body = json.loads(connection.getresponse().read())
             assert body['location']['city'] == 'Vitoria-Gasteiz', body
+            assert body['roles'] == ['inferencia', 'guardian'], body
+            blob = MAGIC + os.urandom(400)
+            upload = http.client.HTTPSConnection('127.0.0.1', server.server_address[1], context=client, timeout=5)
+            upload.request('POST', '/v1/vault/autoprueba', body=blob, headers={
+                'Authorization': 'Bearer ' + token, 'Content-Type': 'application/octet-stream', 'Content-Length': str(len(blob))})
+            assert upload.getresponse().status == 200
+            download = http.client.HTTPSConnection('127.0.0.1', server.server_address[1], context=client, timeout=5)
+            download.request('GET', '/v1/vault/autoprueba', headers={'Authorization': 'Bearer ' + token})
+            assert download.getresponse().read() == blob, 'el Guardián no devolvió la copia intacta'
             anonymous = ssl.create_default_context(cafile=str(paths['ca.pem']))
             try:
                 plain = http.client.HTTPSConnection('127.0.0.1', server.server_address[1], context=anonymous, timeout=5)
@@ -201,7 +218,7 @@ def self_test():
                 pass
         finally:
             server.shutdown(); server.server_close()
-    print('Autoprueba correcta: certificados, perfil, QR y TLS mutuo funcionan en este equipo.')
+    print('Autoprueba correcta: certificados, perfil, QR, TLS mutuo y Guardián funcionan en este equipo.')
     return 0
 
 
@@ -225,6 +242,8 @@ def run(argv=None):
             return 0
     llama = start_llama(config)
     print(f'\nSalve Nodo en marcha en el puerto {config["port"]}. Deja esta ventana abierta; ciérrala para pararlo.')
+    if config.get('guardian'):
+        print(f'Guardián activo: las copias selladas se guardan en {FOLDER / "guardian"} (este PC no puede leerlas).')
     print(f'Si Windows pregunta por el cortafuegos, permite el acceso en redes privadas. Fuera de casa: '
           f'reenvía TCP {config["port"]} del router a este PC.')
     try:

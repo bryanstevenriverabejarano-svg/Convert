@@ -77,6 +77,53 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         JsonObject payload = new JsonObject(); payload.add("location", location == null ? JsonNull.INSTANCE : location);
         request(owner, "/v1/location", payload, 5, stopped, null);
     }
+    /** Copias selladas del Guardián: el nodo guarda bytes que no puede leer (cabecera SLVB1). */
+    public static final int VAULT_MAX = 16 * 1024 * 1024;
+    private static final MediaType OCTET = MediaType.get("application/octet-stream");
+
+    /** Sube una copia sellada y comprueba que el Guardián guardó exactamente esos bytes. */
+    public void vaultPut(ComputeNode node, String name, byte[] sealed, BooleanSupplier stopped) throws IOException {
+        if (sealed == null || sealed.length > VAULT_MAX) throw new IOException("Copia demasiado grande");
+        byte[] raw = exchange(node, "POST", "/v1/vault/" + vaultName(name), RequestBody.create(sealed, OCTET), "json", 4096, 120, stopped);
+        try {
+            JsonObject json = JsonParser.parseString(new String(raw, StandardCharsets.UTF_8)).getAsJsonObject();
+            String expected = sha256(sealed);
+            if (!json.get("saved").getAsBoolean() || !expected.equals(json.get("sha256").getAsString()))
+                throw new IOException("El Guardián no confirmó la copia íntegra");
+        } catch (RuntimeException malformed) { throw new IOException("Respuesta del Guardián inválida"); }
+    }
+
+    /** Descarga una copia sellada; null si el Guardián no tiene ninguna con ese nombre. */
+    public byte[] vaultGet(ComputeNode node, String name, BooleanSupplier stopped) throws IOException {
+        try { return exchange(node, "GET", "/v1/vault/" + vaultName(name), null, "octet-stream", VAULT_MAX, 120, stopped); }
+        catch (IOException failure) {
+            if ("Nodo no disponible (404)".equals(failure.getMessage())) {
+                if (!isGuardian(node, stopped)) throw new IOException("Ese nodo no es Guardián: actívalo en Salve Nodo con --reconfigurar");
+                return null;
+            }
+            throw failure;
+        }
+    }
+
+    /** ¿Tiene este nodo activado el Guardián? */
+    public boolean isGuardian(ComputeNode node, BooleanSupplier stopped) throws IOException {
+        try { exchange(node, "GET", "/v1/vault", null, "json", 65536, 10, stopped); return true; }
+        catch (IOException failure) { if ("Nodo no disponible (404)".equals(failure.getMessage())) return false; throw failure; }
+    }
+
+    private static String vaultName(String name) {
+        if (name == null || !name.matches("[a-z0-9][a-z0-9-]{2,63}")) throw new IllegalArgumentException("Nombre de copia no válido");
+        return name;
+    }
+
+    static String sha256(byte[] data) {
+        try {
+            StringBuilder out = new StringBuilder();
+            for (byte b : java.security.MessageDigest.getInstance("SHA-256").digest(data)) out.append(String.format("%02x", b));
+            return out.toString();
+        } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+    }
+
     @Override public ComputeRouter.Health health(ComputeNode node, BooleanSupplier stopped) throws IOException {
         JsonObject json = request(node, "/v1/health", null, 2, stopped);
         try {
@@ -121,6 +168,27 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         }
     }
 
+    /** Como request, pero con método, cuerpo y tipo de respuesta libres (para el Guardián). */
+    private byte[] exchange(ComputeNode node, String method, String path, RequestBody body, String subtype, int maximum,
+                            int seconds, BooleanSupplier stopped) throws IOException {
+        if (stopped.getAsBoolean()) throw new CancellationException();
+        Route route = route(node);
+        java.util.List<String> bases = route.ordered();
+        for (int i = 0; ; i++) {
+            try {
+                Request.Builder request = new Request.Builder().url(bases.get(i) + path)
+                        .header("Authorization", "Bearer " + node.token)
+                        .header("Accept", "json".equals(subtype) ? "application/json" : "application/octet-stream")
+                        .method(method, body);
+                byte[] result = call(route.client, request.build(), subtype, maximum, seconds, stopped);
+                route.worked(bases.get(i));
+                return result;
+            } catch (IOException failure) {
+                if (i + 1 >= bases.size() || !retryable(failure, "GET".equals(method))) throw failure;
+            }
+        }
+    }
+
     static boolean retryable(IOException failure, boolean safe) {
         String message = failure.getMessage() == null ? "" : failure.getMessage();
         if (message.startsWith("No hay conexión con el nodo") || message.startsWith("No se encuentra el servidor")) return true;
@@ -133,24 +201,31 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
                 .header("Authorization", "Bearer " + node.token).header("Accept", "application/json");
         if (knownLocation != null && knownLocation.matches("[a-f0-9]{16}|none")) request.header("X-Salve-Location-Version", knownLocation);
         if (payload != null) request.post(RequestBody.create(payload.toString(), MediaType.get("application/json; charset=utf-8")));
-        Call call = client.newCall(request.build()); call.timeout().timeout(seconds, TimeUnit.SECONDS);
-        CompletableFuture<JsonObject> future = new CompletableFuture<>();
+        byte[] raw = call(client, request.build(), "json", payload == null ? 4096 : 262144, seconds, stopped);
+        try { return JsonParser.parseString(new String(raw, StandardCharsets.UTF_8)).getAsJsonObject(); }
+        catch (RuntimeException malformed) { throw new IOException("La petición al nodo falló"); }
+    }
+
+    /** Ejecuta una llamada cancelable con plazo, comprobando tipo y tamaño de la respuesta. */
+    private byte[] call(OkHttpClient client, Request built, String subtype, int maximum, int seconds,
+                        BooleanSupplier stopped) throws IOException {
+        Call call = client.newCall(built); call.timeout().timeout(seconds, TimeUnit.SECONDS);
+        CompletableFuture<byte[]> future = new CompletableFuture<>();
         call.enqueue(new Callback() {
             @Override public void onFailure(Call ignored, IOException error) { future.completeExceptionally(error); }
             @Override public void onResponse(Call ignored, Response response) {
                 try (Response close = response) {
                     if (!response.isSuccessful() || response.body() == null) throw new IOException("Nodo no disponible (" + response.code() + ")");
                     MediaType type = response.body().contentType();
-                    if (type == null || !"application".equals(type.type()) || !"json".equals(type.subtype())) throw new IOException("Tipo de respuesta inválido");
-                    int maximum = payload == null ? 4096 : 262144;
+                    if (type == null || !"application".equals(type.type()) || !subtype.equals(type.subtype())) throw new IOException("Tipo de respuesta inválido");
                     if (response.body().contentLength() > maximum) throw new IOException("Respuesta demasiado grande");
                     ByteArrayOutputStream bytes = new ByteArrayOutputStream(); InputStream stream = response.body().byteStream();
-                    byte[] buffer = new byte[4096]; int count;
+                    byte[] buffer = new byte[8192]; int count;
                     while ((count = stream.read(buffer)) != -1) {
                         if (bytes.size() + count > maximum) throw new IOException("Respuesta demasiado grande");
                         bytes.write(buffer, 0, count);
                     }
-                    future.complete(JsonParser.parseString(new String(bytes.toByteArray(), StandardCharsets.UTF_8)).getAsJsonObject());
+                    future.complete(bytes.toByteArray());
                 } catch (Exception error) { future.completeExceptionally(error); }
             }
         });
@@ -159,7 +234,7 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
             while (true) {
                 if (stopped.getAsBoolean()) throw new CancellationException();
                 if (System.nanoTime() >= deadline) throw new IOException("Tiempo de nodo agotado");
-                try { JsonObject result = future.get(100, TimeUnit.MILLISECONDS);
+                try { byte[] result = future.get(100, TimeUnit.MILLISECONDS);
                     if (stopped.getAsBoolean()) throw new CancellationException();
                     return result; }
                 catch (TimeoutException pending) { /* check cancellation, revocation and deadline */ }

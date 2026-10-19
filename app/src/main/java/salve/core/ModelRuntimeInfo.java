@@ -16,6 +16,11 @@ public final class ModelRuntimeInfo {
                 + "el modelo que está generando esta respuesta es " + name(path)
                 + ". Se ejecuta localmente en el teléfono. Estos datos sustituyen cualquier nombre de modelo en el historial.\n";
     }
+    /** Igual que {@link #context} pero sin atribuir identidad: para voces que no son Salve (Salventes). */
+    public static String neutralContext(String path) {
+        return "DATOS DEL MOTOR: el modelo que genera esta respuesta es " + name(path)
+                + " y se ejecuta localmente en el teléfono. Tu identidad es la que indica el texto siguiente.\n";
+    }
     public static boolean isStatusQuestion(String input) {
         if (input == null) return false;
         String q = Normalizer.normalize(input.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)

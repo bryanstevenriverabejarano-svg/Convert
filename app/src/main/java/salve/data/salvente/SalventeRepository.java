@@ -99,6 +99,57 @@ public final class SalventeRepository implements SalventeGenesisSession.Store {
 
     public int memoryCount(String id) { return db.dao().memoryCount(id); }
 
+    /** Olvida todo lo que recuerda un Salvente; conserva su identidad y su clave. */
+    public int forgetMemories(String id) { return db.dao().deleteMemories(id); }
+
+    /** Para la conversación: sus recuerdos más recientes, ya descifrados. */
+    public java.util.List<salve.core.salvente.SalventeMind.Memory> recentForMind(String id, int max) {
+        java.util.List<salve.core.salvente.SalventeMind.Memory> out = new ArrayList<>();
+        for (Memory m : memories(id, max)) out.add(new salve.core.salvente.SalventeMind.Memory(m.at, m.text));
+        return out;
+    }
+
+    /** Todo, descifrado en memoria, para sellarlo en una copia. Nunca se escribe así en disco. */
+    public List<salve.core.salvente.SalventeArchive.Entry> exportAll() {
+        List<salve.core.salvente.SalventeArchive.Entry> out = new ArrayList<>();
+        for (SalventeProfile p : all()) {
+            List<salve.core.salvente.SalventeMind.Memory> mem = recentForMind(p.id, MAX_MEMORIES);
+            java.util.Collections.reverse(mem);   // cronológico
+            out.add(new salve.core.salvente.SalventeArchive.Entry(p, mem));
+        }
+        return out;
+    }
+
+    /**
+     * Restaura un Salvente de una copia con una clave nueva de este teléfono. Si ya existe (mismo id)
+     * o su nombre está ocupado, no lo toca y devuelve false. Atómico: clave + ficha + recuerdos, o nada.
+     */
+    public boolean restore(salve.core.salvente.SalventeArchive.Entry entry) {
+        SalventeProfile p = entry.profile;
+        if (db.dao().countId(p.id) > 0) return false;
+        for (String other : names()) if (SalventeProfileValidator.nameKey(other).equals(SalventeProfileValidator.nameKey(p.name))) return false;
+        try { identity.admit(p); }
+        catch (IllegalArgumentException | IllegalStateException invalid) { return false; }
+        catch (Exception keystore) { throw new IllegalStateException("No se pudo crear su clave en este teléfono"); }
+        try {
+            List<SalventeMemoryEntity> rows = new ArrayList<>();
+            List<salve.core.salvente.SalventeMind.Memory> mem = entry.memories;
+            for (salve.core.salvente.SalventeMind.Memory m : mem.subList(Math.max(0, mem.size() - MAX_MEMORIES), mem.size())) {
+                if (m.text.trim().isEmpty()) continue;
+                String value = m.text.length() > MAX_MEMORY_CHARS ? m.text.substring(0, MAX_MEMORY_CHARS) : m.text;
+                SalventeKeyVault.Sealed sealed = identity.keys().seal(p.id, value.getBytes(StandardCharsets.UTF_8));
+                SalventeMemoryEntity row = new SalventeMemoryEntity();
+                row.salventeId = p.id; row.createdAt = m.at; row.iv = sealed.iv; row.ciphertext = sealed.ciphertext;
+                rows.add(row);
+            }
+            db.runInTransaction(() -> { db.dao().insert(toEntity(p, clock.getAsLong())); db.dao().insertMemories(rows); });
+            return true;
+        } catch (Exception failure) {
+            try { identity.retire(p.id); } catch (Exception ignored) { }
+            throw new IllegalStateException("No se pudo restaurar a " + p.name + "; no ha quedado nada a medias");
+        }
+    }
+
     static SalventeProfileEntity toEntity(SalventeProfile p, long now) {
         SalventeProfileEntity e = new SalventeProfileEntity();
         e.id = p.id; e.name = p.name; e.nameKey = SalventeProfileValidator.nameKey(p.name); e.species = p.species;

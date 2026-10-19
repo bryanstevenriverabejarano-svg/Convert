@@ -13,7 +13,7 @@ public final class ComputeRouter {
     public static final int MAX_NODES = 4, MAX_PROMPT_CHARS = 48000, MAX_OUTPUT_TOKENS = 2048;
     public static final Set<String> ROLES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "CONVERSACIONAL", "REFLEXION", "SISTEMA", "PLANIFICADOR", "OBSERVADOR", "SINTETIZADOR",
-            "EVALUADOR", "CREADOR", "CURIOSO", "NARRADOR")));
+            "EVALUADOR", "CREADOR", "CURIOSO", "NARRADOR", "SALVENTE")));
     public static final class Health {
         public final String model;
         public final int freeSlots, maxPromptChars, maxOutputTokens;
@@ -38,7 +38,7 @@ public final class ComputeRouter {
     public ComputeRouter(Transport transport, LongSupplier clock) { this.transport = transport; this.clock = clock; }
     public String status() { return status; }
     public static boolean heavy(String role, int promptChars) {
-        return promptChars >= 6000 || Arrays.asList("NARRADOR", "REFLEXION", "SINTETIZADOR", "EVALUADOR", "CREADOR").contains(role);
+        return promptChars >= 6000 || Arrays.asList("NARRADOR", "REFLEXION", "SINTETIZADOR", "EVALUADOR", "CREADOR", "SALVENTE").contains(role);
     }
     public synchronized ModelResult generate(List<ComputeNode> nodes, boolean enabled, String role, String prompt,
             BooleanSupplier stopped, Supplier<ModelResult> local) {

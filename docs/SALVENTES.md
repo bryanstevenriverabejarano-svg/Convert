@@ -39,13 +39,37 @@ consciencia central y coordinadora; los Salventes son entidades con identidad pr
 - **El transporte mTLS se hereda.** La propuesta se pide a `SalveLLM` con rol `CREADOR`: si los
   envíos a nodos están activos va al nodo de inferencia por TLS mutuo; si no, al modelo del móvil.
 
-## Taxonomía de nodos (hoja de ruta)
+## Fase 2 (implementada): conversación
+
+| Pieza | Qué hace |
+|---|---|
+| `SalveLLM.Role.SALVENTE` | **Canal neutro.** Todos los demás roles anteponen «Eres Salve» y el modelo local recibe «tu identidad es Salve». Sin este rol, un Salvente habría sido Salve con otro nombre. El rol SALVENTE no añade nada: la identidad la pone el propio Salvente. Lo aceptan `ComputeRouter` y el nodo Python, y se envía al nodo de inferencia cuando los envíos están activos |
+| `SalventeMind` | Prompt con su ficha y **sus** recuerdos: los 6 más recientes y hasta 4 antiguos relacionados con el mensaje. Limpia la respuesta (prefijos, diálogo inventado, etiquetas) y detecta la **deriva de identidad** («soy Salve») |
+| `SalventeConversation` | Turno completo: recordar, pensar, una corrección si deriva, guardar el intercambio cifrado. Sin modelo no responde: no hay frases de plantilla que finjan pensamiento |
+| `SalventeChatActivity` | Chat en cian; «Recuerdos» muestra lo que recuerda y permite **olvidarlo todo** sin perder su identidad |
+
+## Nodo Guardián ciego (implementado)
+
+El plan proponía un Guardián con RAG sobre los recuerdos familiares. Eso obliga a que el PC **descifre**,
+y un PC encendido 24/7 con recuerdos en claro es lo más atacable del sistema. La alternativa elegida:
+
+- **El Guardián no puede leer nada.** El móvil sella la copia (AES-256-GCM, clave PBKDF2-HMAC-SHA256 de
+  210 000 iteraciones derivada de una frase de Bryan, cabecera autenticada) y el PC solo guarda bytes.
+- `salve_guardian.py` rechaza lo que no llegue sellado (`SLVB1`), guarda la versión anterior, aplica
+  cuotas y escribe archivos privados de forma atómica. Rutas `/v1/vault` solo con TLS mutuo + token.
+- El móvil vuelve a abrir la copia antes de subirla y comprueba el SHA-256 que devuelve el Guardián.
+- Restaurar en otro móvil crea **claves nuevas** de ese teléfono y nunca duplica un Salvente existente.
+- Cada nodo anuncia sus roles (`inferencia`, `guardian`) en `/v1/health` y en su estado.
+
+Resuelve además el límite de la Fase 1: los Salventes ya no se pierden al cambiar de móvil.
+
+## Taxonomía de nodos
 
 | Tipo | Rol | Estado |
 |---|---|---|
 | **Alpha** (móvil) | Consciencia central, Salventes, voz, Maps/Spotify/llamadas, bajo demanda | Existe |
-| **Inferencia** (PC con `SalveNodo.exe`) | `llama-server` con modelos grandes; mTLS en 8443 | Existe |
-| **Guardián** (mini-PC 24/7) | Memoria persistente compartida, RAG | Diseño |
+| **Inferencia** (PC con `SalveNodo.exe`) | `llama-server` con modelos grandes; mTLS en 8443; también piensa por los Salventes | Existe |
+| **Guardián** (cualquier PC con `SalveNodo.exe`) | Copias selladas que no puede leer | Existe (ciego) |
 | **Satélite** (móvil de un familiar) | Aloja un Salvente asignado | Diseño |
 
 ## Revisión crítica del plan
@@ -54,10 +78,8 @@ consciencia central y coordinadora; los Salventes son entidades con identidad pr
    guarda cifrada con una clave de Keystore (`FamilyVault`) y se carga en un PKCS#12 *en memoria* al
    usarla: durante ese tiempo la clave privada está en el proceso. Mejor: importarla en Android
    Keystore como entrada **no exportable** (`KeyProtection`) y dejar que OkHttp firme desde ahí.
-2. **Nodo Guardián = objetivo de alto valor.** Un PC encendido 24/7 con recuerdos familiares es lo
-   más atacable del sistema. Si el nodo descifra para hacer RAG, quien controle ese PC lo lee todo.
-   Propuesta: los recuerdos privados de Bryan **nunca** salen del móvil; el Guardián guarda solo el
-   espacio compartido, cifrado de extremo a extremo, y la búsqueda semántica privada sigue en el móvil.
+2. **Nodo Guardián = objetivo de alto valor.** Resuelto con el Guardián ciego (arriba): guarda, no
+   piensa. Una memoria compartida *consultable* en el PC seguiría exigiendo descifrar allí; no se hace.
 3. **Satélites necesitan revocación.** Hoy cada PC tiene su CA y emite un único certificado de móvil.
    Con varios teléfonos hace falta un certificado **por dispositivo** y una lista de revocación
    (perder un móvil no puede obligar a rehacer toda la red).
@@ -71,12 +93,11 @@ consciencia central y coordinadora; los Salventes son entidades con identidad pr
 
 ## Siguientes fases propuestas
 
-- **Fase 2: hablar con un Salvente.** Chat con su `systemPrompt()` y su memoria cifrada, en el móvil
-  o en el nodo de Inferencia. Clave mTLS a Keystore no exportable. Rol anunciado por cada nodo
-  (`inferencia` / `guardian`) en su estado y en la constelación.
 - **Fase 3: Satélites.** Exportar un Salvente a otro móvil con un certificado de dispositivo emitido
-  por `SalveNodo`, revocable.
-- **Fase 4, experimental: Consejo de Salventes.** Ante una pregunta difícil, Salve consulta a 2–3
-  Salventes con priors distintos (rigor alto, creatividad alta, prudencia alta) y sintetiza. Es un
-  conjunto de perspectivas, medible con la evaluación de autonomía existente antes de adoptarlo; si
-  no mejora las respuestas frente a Salve sola, se descarta.
+  por `SalveNodo`, revocable; el Guardián sirve de punto de encuentro (un Android no es buen servidor).
+- **Copia de la memoria de la propia Salve en el Guardián ciego.** Es la mayor ganancia de continuidad
+  pendiente: hoy `memoria.db` depende de la copia de Android.
+- **Clave mTLS en Keystore no exportable** (punto 1 de la revisión).
+- **Experimental: Consejo de Salventes.** Ante una pregunta difícil, Salve consulta a 2–3 Salventes con
+  priors distintos y sintetiza. Se adopta solo si la evaluación de autonomía mide una mejora frente a
+  Salve sola; si no, se descarta.

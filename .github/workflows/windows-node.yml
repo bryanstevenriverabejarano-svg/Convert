@@ -36,7 +36,7 @@ jobs:
         working-directory: scripts
         run: |
           python salve_nodo_app.py --autoprueba
-          python -m unittest test_private_network.PrivateNetworkSetupTests test_private_network.LocationVersionTests -v
+          python -m unittest test_private_network.PrivateNetworkSetupTests test_private_network.LocationVersionTests test_guardian -v
 
       - name: Empaquetar SalveNodo.exe
         working-directory: scripts
@@ -44,7 +44,7 @@ jobs:
           pyinstaller --onefile --console --clean --name SalveNodo
           --collect-submodules qrcode
           --hidden-import salve_compute_node --hidden-import salve_private_network
-          --hidden-import salve_private_location --hidden-import salve_node_setup
+          --hidden-import salve_private_location --hidden-import salve_node_setup --hidden-import salve_guardian
           salve_nodo_app.py
 
       - name: Probar el .exe empaquetado (sin Python)

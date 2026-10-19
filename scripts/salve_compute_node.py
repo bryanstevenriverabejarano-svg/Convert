@@ -20,6 +20,7 @@ from pathlib import Path
 import re
 import socket
 import ssl
+from salve_guardian import MAX_BLOB, BlindVault, VaultError
 from salve_private_location import LocationStore, location_version, private_read, validate_location
 import sys
 import threading
@@ -32,7 +33,7 @@ MAX_PROMPT = 48_000
 MAX_TEXT = 60_000
 MAX_TOKENS = 2048
 ROLES = frozenset(('CONVERSACIONAL', 'REFLEXION', 'SISTEMA', 'PLANIFICADOR', 'OBSERVADOR',
-                   'SINTETIZADOR', 'EVALUADOR', 'CREADOR', 'CURIOSO', 'NARRADOR'))
+                   'SINTETIZADOR', 'EVALUADOR', 'CREADOR', 'CURIOSO', 'NARRADOR', 'SALVENTE'))
 TOKEN = re.compile(r'[A-Za-z0-9_-]{32,256}')
 
 
@@ -110,7 +111,7 @@ class LocalBackend:
     def generate(self, task):
         response = self.request('POST', '/v1/chat/completions', {
             'model': self.model, 'stream': False, 'max_tokens': task['max_tokens'],
-            'temperature': .65 if task['role'] == 'NARRADOR' else .35,
+            'temperature': .65 if task['role'] == 'NARRADOR' else .6 if task['role'] == 'SALVENTE' else .35,
             'messages': [{'role': 'user', 'content': task['prompt']}],
         })
         try:
@@ -127,7 +128,8 @@ class LocalBackend:
 
 
 class ComputeApplication:
-    def __init__(self, token, backend, *, slots=1, hourly_limit=60, max_prompt=MAX_PROMPT, clock=time.monotonic, location_store=None, location_token=None):
+    def __init__(self, token, backend, *, slots=1, hourly_limit=60, max_prompt=MAX_PROMPT, clock=time.monotonic, location_store=None, location_token=None,
+                 vault=None):
         if not isinstance(token, str) or not TOKEN.fullmatch(token):
             raise ValueError('Token must have 32-256 URL-safe characters')
         if not 1 <= slots <= 4 or not 1 <= hourly_limit <= 600 or not 1000 <= max_prompt <= MAX_PROMPT:
@@ -135,6 +137,7 @@ class ComputeApplication:
         if location_token is not None and (not TOKEN.fullmatch(location_token) or location_token == token):
             raise ValueError('Location writer token must be valid and different from the read token')
         self.location_store, self.location_token = location_store, location_token
+        self.vault = vault  # Guardián ciego: solo copias selladas que este PC no puede leer
         self.token, self.backend, self.slots, self.hourly_limit = token, backend, slots, hourly_limit
         self.max_prompt, self.clock = max_prompt, clock
         self.lock = threading.Lock()
@@ -146,9 +149,35 @@ class ComputeApplication:
         return token is not None and isinstance(authorization, str) and hmac.compare_digest(
             authorization.encode('utf-8'), ('Bearer ' + token).encode('utf-8'))
 
+    @property
+    def roles(self):
+        return ['inferencia'] + (['guardian'] if self.vault is not None else [])
+
+    def handle_vault(self, method, path, body):
+        if self.vault is None:
+            return 404, {'error': 'guardian_not_enabled'}
+        if method == 'GET' and path == '/v1/vault':
+            return 200, {'protocol': 1, 'guardian': True, 'blobs': self.vault.list(), 'usage': self.vault.usage()}
+        name = path[len('/v1/vault/'):]
+        try:
+            if method == 'GET':
+                data = self.vault.get(name)
+                return (200, data) if data is not None else (404, {'error': 'not_found'})
+            if method == 'POST':
+                return 200, {'protocol': 1, 'saved': True, **self.vault.put(name, body)}
+            if method == 'DELETE':
+                return 200, {'protocol': 1, 'deleted': self.vault.delete(name)}
+        except VaultError as refused:
+            return (413 if refused.code in ('too_large', 'quota_exceeded', 'too_many') else 400), {'error': refused.code}
+        except OSError:
+            return 503, {'error': 'guardian_unavailable'}
+        return 405, {'error': 'method_not_allowed'}
+
     def handle(self, method, path, authorization, body=b'', known_location=None):
         if not self.authorized(authorization, path):
             return 401, {'error': 'unauthorized'}
+        if path == '/v1/vault' or path.startswith('/v1/vault/'):
+            return self.handle_vault(method, path, body)
         if method == 'GET' and path == '/v1/family/status':
             try:
                 location = self.location_store.read() if self.location_store else None
@@ -158,7 +187,8 @@ class ComputeApplication:
             # El móvil manda la versión que ya tiene: si no ha cambiado, no viajan coordenadas.
             if known_location is not None and hmac.compare_digest(str(known_location), version):
                 return 200, {'protocol': 1, 'available': True, 'unchanged': True, 'location_version': version}
-            return 200, {'protocol': 1, 'available': True, 'location': location, 'location_version': version}
+            return 200, {'protocol': 1, 'available': True, 'location': location, 'location_version': version,
+                         'roles': self.roles}
         if method == 'POST' and path == '/v1/location':
             if self.location_store is None:
                 return 409, {'error': 'location_not_enabled_by_owner'}
@@ -181,7 +211,8 @@ class ComputeApplication:
             with self.lock:
                 free = max(0, self.slots - len(self.active)) if ready else 0
             return 200, {'protocol': 1, 'ready': ready, 'model': self.backend.model,
-                         'free_slots': free, 'max_prompt_chars': self.max_prompt, 'max_output_tokens': MAX_TOKENS}
+                         'free_slots': free, 'max_prompt_chars': self.max_prompt, 'max_output_tokens': MAX_TOKENS,
+                         'roles': self.roles}
         if method != 'POST' or path != '/v1/generate':
             return 404, {'error': 'unknown_endpoint'}
         try:
@@ -299,6 +330,9 @@ class NodeHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         self.dispatch()
 
+    def do_DELETE(self):
+        self.dispatch()
+
     def dispatch(self):
         app = self.server.app
         auth = self.headers.get('Authorization', '')
@@ -310,7 +344,10 @@ class NodeHandler(BaseHTTPRequestHandler):
                 if self.headers.get('Transfer-Encoding') or len(self.headers.get_all('Content-Length', [])) != 1:
                     raise ValueError()
                 size = int(self.headers.get('Content-Length', ''))
-                if not 0 <= size <= MAX_BODY or self.headers.get_content_type() != 'application/json':
+                # Solo las copias del Guardián son binarias y grandes; todo lo demás sigue siendo JSON acotado.
+                blob = self.path.startswith('/v1/vault/')
+                limit, kind = (MAX_BLOB, 'application/octet-stream') if blob else (MAX_BODY, 'application/json')
+                if not 0 <= size <= limit or self.headers.get_content_type() != kind:
                     raise ValueError()
                 body = self.rfile.read(size)
                 if len(body) != size:
@@ -319,7 +356,22 @@ class NodeHandler(BaseHTTPRequestHandler):
                 return self.send_json(400, {'error': 'invalid_body'})
         status, result = app.handle(self.command, self.path, auth, body,
                                     known_location=self.headers.get('X-Salve-Location-Version'))
+        if isinstance(result, (bytes, bytearray)):
+            return self.send_bytes(status, bytes(result))
         self.send_json(status, result)
+
+    def send_bytes(self, status, body):
+        try:
+            self.send_response(status)
+            self.send_header('Content-Type', 'application/octet-stream')
+            self.send_header('Content-Length', str(len(body)))
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Connection', 'close')
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        self.close_connection = True
 
     def send_json(self, status, result):
         body = json.dumps(result, ensure_ascii=False).encode('utf-8')
@@ -398,6 +450,8 @@ def main(argv=None, ready=None):
     parser.add_argument('--ciudad', default='', help='Ubicación fija: ciudad')
     parser.add_argument('--pais', default='', help='Ubicación fija: país')
     parser.add_argument('--zona', default='', help='Ubicación fija: zona o barrio')
+    parser.add_argument('--vault-directory', type=Path,
+                        help='Activa el Guardián ciego: guarda copias selladas del móvil que este PC no puede leer')
     parser.add_argument('--model', required=True)
     parser.add_argument('--slots', type=int, default=1)
     parser.add_argument('--hourly-limit', type=int, default=60)
@@ -417,10 +471,12 @@ def main(argv=None, ready=None):
     tls = server_tls(args.tls_cert, args.tls_key, args.client_ca)
     app = ComputeApplication(token, LocalBackend(args.backend, args.model, cafile=args.backend_ca),
                              slots=args.slots, hourly_limit=args.hourly_limit, max_prompt=args.max_prompt_chars,
-                             location_store=location, location_token=writer)
+                             location_store=location, location_token=writer,
+                             vault=BlindVault(args.vault_directory) if args.vault_directory else None)
     guard = IpAllowList(args.allow_ip) if args.allow_ip else None
     server = NodeServer((args.bind, args.port), app, tls=tls, connection_guard=guard)
-    print(f'Nodo de Salve escuchando en {args.bind}:{args.port} con TLS mutuo (solo el móvil con su certificado).')
+    print(f'Nodo de Salve escuchando en {args.bind}:{args.port} con TLS mutuo (solo el móvil con su certificado).'
+          + (' Guardián ciego activo.' if args.vault_directory else ''))
     if ready:
         ready(server)
     try:

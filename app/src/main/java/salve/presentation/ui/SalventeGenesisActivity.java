@@ -68,8 +68,15 @@ public final class SalventeGenesisActivity extends AppCompatActivity {
         about.setPadding(0, dp(6), 0, dp(12)); root.addView(about);
 
         root.addView(text("Mis Salventes", INK, 14, true));
-        list = new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); list.setPadding(0, dp(4), 0, dp(14));
+        list = new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); list.setPadding(0, dp(4), 0, dp(6));
         root.addView(list);
+        LinearLayout guardian = new LinearLayout(this);
+        guardian.addView(button("Copia al Guardián", () -> chooseGuardian(this::askBackup)), weight());
+        guardian.addView(button("Restaurar", () -> chooseGuardian(this::askRestore)), weight());
+        root.addView(guardian);
+        TextView guardianNote = text("La copia se cifra aquí con una frase que solo tú sabes; tu PC Guardián guarda bytes que no "
+                + "puede leer. Sirve para recuperarlos si cambias o pierdes el móvil.", MUTED, 12, false);
+        guardianNote.setPadding(0, 0, 0, dp(14)); root.addView(guardianNote);
 
         root.addView(text("Nuevo Salvente", INK, 14, true));
         purpose = field("¿Para qué o para quién? Ej.: compañero tranquilo para mi madre, le gusta cocinar", true);
@@ -258,11 +265,15 @@ public final class SalventeGenesisActivity extends AppCompatActivity {
         if (!p.greeting.isEmpty()) out.append("\n\n«").append(p.greeting).append("»");
         boolean paused = p.state == SalventeProfile.State.PAUSADO;
         new AlertDialog.Builder(this).setTitle(p.name).setMessage(out)
-                .setPositiveButton(paused ? "Reanudar" : "Pausar", (d, w) -> work.execute(() -> {
-                    repository.setState(p.id, paused ? SalventeProfile.State.ACTIVO : SalventeProfile.State.PAUSADO);
-                    runOnUiThread(this::renderList);
-                }))
-                .setNeutralButton("Retirar", (d, w) -> confirmRetire(p))
+                .setPositiveButton("Hablar", (d, w) -> startActivity(SalventeChatActivity.open(this, p.id)))
+                .setNeutralButton("Más…", (d, w) -> new AlertDialog.Builder(this).setTitle(p.name)
+                        .setItems(new String[]{paused ? "Reanudar" : "Pausar", "Retirar"}, (d2, which) -> {
+                            if (which == 1) { confirmRetire(p); return; }
+                            work.execute(() -> {
+                                repository.setState(p.id, paused ? SalventeProfile.State.ACTIVO : SalventeProfile.State.PAUSADO);
+                                runOnUiThread(this::renderList);
+                            });
+                        }).show())
                 .setNegativeButton("Cerrar", null).show();
     }
 
@@ -275,6 +286,87 @@ public final class SalventeGenesisActivity extends AppCompatActivity {
                     runOnUiThread(() -> { status.setText(p.name + " se ha retirado."); renderList(); });
                 }))
                 .setNegativeButton("Cancelar", null).show();
+    }
+
+    // ---------------------------------------------------------------- Guardián
+
+    private void chooseGuardian(java.util.function.Consumer<salve.core.compute.ComputeNode> then) {
+        List<salve.core.compute.ComputeNode> nodes = new salve.core.compute.ComputeNodeStore(this).load();
+        if (nodes.isEmpty()) { status.setText("Primero añade tu PC en Nodos de cómputo y activa el Guardián en Salve Nodo."); return; }
+        if (nodes.size() == 1) { then.accept(nodes.get(0)); return; }
+        String[] names = new String[nodes.size()];
+        for (int i = 0; i < names.length; i++) names[i] = nodes.get(i).name;
+        new AlertDialog.Builder(this).setTitle("¿Qué PC es tu Guardián?")
+                .setItems(names, (d, which) -> then.accept(nodes.get(which))).setNegativeButton("Cancelar", null).show();
+    }
+
+    private void askBackup(salve.core.compute.ComputeNode node) {
+        LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); form.setPadding(dp(16), dp(8), dp(16), 0);
+        TextView warn = new TextView(this);
+        warn.setText("Elige una frase de al menos " + salve.core.salvente.SealedBox.MIN_PASSPHRASE + " caracteres. No la guardo en "
+                + "ningún sitio: si la olvidas, la copia no se puede abrir. Nadie puede recuperarla, tampoco yo.");
+        form.addView(warn);
+        EditText first = secret("Frase"), second = secret("Repite la frase");
+        form.addView(first); form.addView(second);
+        new AlertDialog.Builder(this).setTitle("Copia en " + node.name).setView(form)
+                .setPositiveButton("Sellar y subir", (d, w) -> {
+                    char[] a = chars(first), b = chars(second);
+                    first.setText(""); second.setText("");
+                    if (!java.util.Arrays.equals(a, b)) { java.util.Arrays.fill(a, '\0'); java.util.Arrays.fill(b, '\0'); status.setText("Las frases no coinciden."); return; }
+                    java.util.Arrays.fill(b, '\0');
+                    guardianTask("Sellando y subiendo la copia…", () -> {
+                        salve.data.salvente.SalventeGuardianBackup.Summary s = backup(node).backup(a);
+                        return "Copia guardada en " + node.name + ": " + s.salventes + (s.salventes == 1 ? " Salvente" : " Salventes")
+                                + " y " + s.memories + " recuerdos, sellados (" + Math.max(1, s.bytes / 1024) + " KB).";
+                    });
+                }).setNegativeButton("Cancelar", null).show();
+    }
+
+    private void askRestore(salve.core.compute.ComputeNode node) {
+        EditText pass = secret("Frase de la copia");
+        LinearLayout form = new LinearLayout(this); form.setPadding(dp(16), dp(8), dp(16), 0); form.addView(pass, weight());
+        new AlertDialog.Builder(this).setTitle("Restaurar desde " + node.name).setView(form)
+                .setPositiveButton("Restaurar", (d, w) -> {
+                    char[] a = chars(pass); pass.setText("");
+                    guardianTask("Descargando y abriendo la copia…", () -> {
+                        salve.data.salvente.SalventeGuardianBackup.Summary s = backup(node).restore(a);
+                        return "Restaurados: " + s.salventes + (s.skipped > 0 ? "; ya estaban aquí: " + s.skipped : "") + ".";
+                    });
+                }).setNegativeButton("Cancelar", null).show();
+    }
+
+    private salve.data.salvente.SalventeGuardianBackup backup(salve.core.compute.ComputeNode node) {
+        salve.core.compute.ComputeHttpTransport transport = new salve.core.compute.ComputeHttpTransport(this);
+        java.util.function.BooleanSupplier stopped = this::isDestroyed;
+        return new salve.data.salvente.SalventeGuardianBackup(repository, new salve.data.salvente.SalventeGuardianBackup.Remote() {
+            public void put(String name, byte[] sealed) throws Exception { transport.vaultPut(node, name, sealed, stopped); }
+            public byte[] get(String name) throws Exception { return transport.vaultGet(node, name, stopped); }
+        }, System::currentTimeMillis);
+    }
+
+    private void guardianTask(String waiting, java.util.concurrent.Callable<String> task) {
+        status.setText(waiting);
+        work.execute(() -> {
+            String message;
+            try { message = task.call(); }
+            catch (Exception failure) { message = failure.getMessage() == null ? "No se pudo completar." : failure.getMessage(); }
+            final String result = message;
+            runOnUiThread(() -> { if (!isDestroyed()) { status.setText(result); renderList(); } });
+        });
+    }
+
+    private EditText secret(String hint) {
+        EditText e = field(hint, false);
+        e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        e.setSaveEnabled(false);
+        return e;
+    }
+
+    private static char[] chars(EditText field) {
+        android.text.Editable text = field.getText();
+        char[] out = new char[text.length()];
+        text.getChars(0, text.length(), out, 0);
+        return out;
     }
 
     // ------------------------------------------------------------------ vistas

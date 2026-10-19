@@ -79,7 +79,10 @@ public final class SelfFeatures {
                         + "(acompañar a alguien, ayudar con los estudios, contar cuentos…). Bryan me dice para qué es, yo propongo su "
                         + "nombre, 14 rasgos de personalidad y sus capacidades con mi modelo (o con un motor determinista si no hay "
                         + "modelo), y solo se crea cuando él lo aprueba. Cada Salvente tiene su propia memoria cifrada con su propia "
-                        + "clave: yo no leo sus recuerdos ni ellos los míos, y no controlan el teléfono. Recuerdo a quién he creado.";
+                        + "clave: yo no leo sus recuerdos ni ellos los míos, y no controlan el teléfono. Recuerdo a quién he creado. "
+                        + "Bryan puede hablar con cada uno: piensan con su propia identidad (no con la mía), en el nodo de "
+                        + "inferencia o en el móvil, y él puede ver y borrar lo que recuerdan. Puedo guardar una copia sellada "
+                        + "de todos en su PC Guardián, cifrada con una frase que solo él conoce: el PC no puede leerla.";
             default:
                 return "Converso con mi modelo local, recuerdo lo que me cuentan, pienso y sueño entre conversaciones, investigo "
                         + "por mi cuenta, busco en internet, dibujo con luz, veo fotos, hablo por voz, uso mis nodos de cómputo "
