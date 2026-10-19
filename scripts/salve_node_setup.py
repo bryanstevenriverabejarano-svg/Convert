@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Prepara un nodo propio: mide hardware y genera un QR de emparejamiento privado.
+"""Mide el hardware de este PC y recomienda el tamaño de modelo GGUF para un nodo de Salve.
 
-python salve_node_setup.py preparar --url https://10.77.0.2:8766
-No usa descubrimiento mDNS, proveedores VPN externos ni geolocalización de IPs.
-El QR opcional (pip install qrcode) contiene el token de consulta. Guárdalo privado.
-Consulta PRIVATE_FAMILY_NETWORK.md para WireGuard, certificados y arranque HTTPS.
+python salve_node_setup.py preparar
+La conexión segura (TLS mutuo), los certificados y el QR con el perfil para Salve los crea
+salve_private_network.py crear. No usa mDNS, VPN externas ni geolocalización por IP.
 """
 from __future__ import annotations
 
@@ -26,7 +25,7 @@ from urllib.parse import quote, urlsplit
 
 SERVICE_TYPE = '_salvenode._tcp'
 PAIRING_VERSION = '1'
-NODE_PORT = 8766
+NODE_PORT = 8443
 TOKEN_RE = re.compile(r'[A-Za-z0-9_-]{32,256}')
 NAME_RE = re.compile(r'[^\x00-\x1f\x7f]{1,60}')
 
@@ -139,22 +138,22 @@ def recommend(ram_available, gpu_free):
 # ---------------------------------------------------------------- red y URL
 
 def validate_url(raw):
-    """HTTPS y literal RFC1918: sin DNS, ruta ni parámetros."""
+    """Mismas reglas que la app: https, IP o dominio (DDNS), sin ruta, credenciales ni parámetros."""
     value = (raw or '').strip().rstrip('/')
     parts = urlsplit(value)
     try:
         port = parts.port
     except ValueError:
         port = -1
+    host = parts.hostname or ''
     try:
-        ip = ipaddress.IPv4Address(parts.hostname)
-        private = any(ip in ipaddress.ip_network(net) for net in ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'))
-    except (ValueError, TypeError):
-        private = False
-    if (not private or parts.scheme != 'https' or not parts.hostname or parts.username or parts.password
+        loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = host == 'localhost'
+    if (parts.scheme != 'https' or not host or loopback or parts.username or parts.password
             or parts.query or parts.fragment or parts.path or '\\' in value or len(value) > 500
             or (port is not None and not 1 <= port <= 65535)):
-        raise ValueError('La URL debe ser https://IPv4-privada[:puerto], sin ruta, credenciales ni parámetros.')
+        raise ValueError('La URL debe ser https://IP-o-dominio[:puerto], sin ruta, credenciales ni parámetros.')
     return value
 
 
@@ -223,11 +222,9 @@ def cmd_preparar(args):
 
     url = args.url
     if not url:
-        print('\nFalta la URL HTTPS del nodo. La app solo acepta https:// con certificado válido.')
-        print('Crea antes la red privada (WireGuard propio, CA y certificados):')
-        print('  python salve_private_network.py crear --endpoint <IP del PC o de tu router>')
-        print('Después: python salve_node_setup.py preparar --url https://10.77.0.2:8766')
-        return 2
+        print('\nSiguiente paso: crea la conexión segura y el QR con el perfil para Salve:')
+        print('  python salve_private_network.py crear [--host-remoto tu-dominio.duckdns.org] [--puerto 8443]')
+        return 0
     try:
         url = validate_url(url)
     except ValueError as error:
@@ -255,7 +252,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest='orden', required=True)
     prep = sub.add_parser('preparar', help='medir el equipo, crear token y mostrar el QR')
-    prep.add_argument('--url', help='URL HTTPS con la IPv4 privada del nodo en WireGuard')
+    prep.add_argument('--url', help='URL HTTPS del nodo (IP local, IP pública o dominio DDNS)')
     prep.add_argument('--nombre', help='nombre que verás en la app')
     prep.add_argument('--token-file', default='~/.salve/red/token', help='el mismo que usa salve_private_network.py')
     prep.add_argument('--rotar', action='store_true', help='crear un token nuevo aunque ya exista')

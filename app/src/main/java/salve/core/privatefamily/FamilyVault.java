@@ -12,14 +12,18 @@ import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.GCMParameterSpec;
 
-/** Encrypted atomic state in noBackupFilesDir. No keys, locations or tokens in diagnostics. */
+/** Credenciales mTLS y ubicaciones de nodos, cifradas con Android Keystore en noBackupFilesDir (fuera de copias). */
 public final class FamilyVault {
     private static final Object LOCK = new Object();
     private static final String ALIAS = "salve.private.family.v1";
     private final AtomicFile file;
+    /** Identidad mTLS del móvil para un nodo (DER en base64) y su dirección remota opcional. */
+    public static final class Credential {
+        public String remote = "", ca = "", cert = "", key = "";
+    }
     public static final class Data {
-        public String config = "", ca = "";
         public long revision;
+        public Map<String, Credential> credentials = new HashMap<>();
         /** Última ubicación recibida de cada nodo (JSON de PrivateLocation) y su versión. */
         public Map<String, String> locations = new HashMap<>();
         public Map<String, String> versions = new HashMap<>();
@@ -34,6 +38,7 @@ public final class FamilyVault {
                 Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
                 cipher.init(Cipher.DECRYPT_MODE, key(), new GCMParameterSpec(128, Arrays.copyOf(bytes, 12)));
                 Data data = new Gson().fromJson(new String(cipher.doFinal(bytes, 12, bytes.length - 12), StandardCharsets.UTF_8), Data.class);
+                if (data.credentials == null) data.credentials = new HashMap<>();
                 if (data.locations == null) data.locations = new HashMap<>();
                 if (data.versions == null) data.versions = new HashMap<>();
                 if (data.receivedAt == null) data.receivedAt = new HashMap<>();

@@ -54,8 +54,9 @@ public final class SelfFeatures {
         switch (feature) {
             case NODES:
                 return "Tengo nodos de cómputo: ordenadores de Bryan (su PC, una torre…) a los que puedo enviar tareas de texto "
-                        + "pesadas para pensar con un modelo más grande; si fallan, respondo con el móvil. Hablo con ellos solo por "
-                        + "mi propia red privada WireGuard, cifrada y sin servicios de terceros, y yo no les envío mi ubicación; "
+                        + "pesadas para pensar con un modelo más grande; si fallan, respondo con el móvil. Hablo con ellos directamente "
+                        + "por HTTPS con TLS mutuo (ellos solo aceptan mi certificado y yo solo el suyo), sin VPN ni servicios de "
+                        + "terceros, en casa o fuera con su dirección remota; yo no les envío mi ubicación; "
                         + "ellos sí pueden compartirme la suya. Se ven en mi constelación de nodos: el móvil en el centro y cada "
                         + "nodo con su color (verde activo, ámbar ocupado, rojo desconectado), con ficha para probarlo, activarlo "
                         + "o desactivarlo y ver dónde está.";

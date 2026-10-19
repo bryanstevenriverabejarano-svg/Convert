@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Salve private worker: authenticated HTTPS tasks over an existing WireGuard interface.
+"""Nodo de Salve: tareas por HTTPS con TLS mutuo (mTLS), sin VPN ni adaptadores virtuales.
 
-Python 3.10+ on Linux. TLS is required, including the fixed loopback model backend.
-No shell, tools, replication, provisioning, geolocation APIs or downloads.
+Python 3.10+ en Windows, Linux o macOS. Solo acepta conexiones que presenten un certificado
+de cliente firmado por la CA propia (el del móvil) y, además, el token de consulta.
+Sin shell, herramientas, replicación, descargas ni geolocalización por IP.
 """
 from __future__ import annotations
 
@@ -19,8 +20,7 @@ from pathlib import Path
 import re
 import socket
 import ssl
-import subprocess
-from salve_private_location import LocationStore, location_version, private_read
+from salve_private_location import LocationStore, location_version, private_read, validate_location
 import sys
 import threading
 import time
@@ -162,6 +162,8 @@ class ComputeApplication:
         if method == 'POST' and path == '/v1/location':
             if self.location_store is None:
                 return 409, {'error': 'location_not_enabled_by_owner'}
+            if not getattr(self.location_store, 'writable', True):
+                return 409, {'error': 'location_fixed_by_node'}
             try:
                 if len(body) > 4096:
                     raise ValueError()
@@ -245,19 +247,13 @@ class ComputeApplication:
 
 class NodeServer(ThreadingHTTPServer):
     daemon_threads = True
-    def __init__(self, address, app, *, tls, connection_guard, interface=None):
-        if not isinstance(tls, ssl.SSLContext) or not callable(connection_guard):
-            raise ValueError('TLS and explicit connection guard are required')
-        self.tls, self.connection_guard, self.interface = tls, connection_guard, interface
+    def __init__(self, address, app, *, tls, connection_guard=None):
+        if not isinstance(tls, ssl.SSLContext) or (connection_guard is not None and not callable(connection_guard)):
+            raise ValueError('TLS is required')
+        self.tls, self.connection_guard = tls, connection_guard or (lambda ip: True)
         self.app = app
         self.connections = threading.BoundedSemaphore(12)
         super().__init__(address, NodeHandler)
-
-    def server_bind(self):
-        if self.interface and sys.platform.startswith('linux'):
-            # Kernel-enforced ingress restriction; fail closed if CAP_NET_RAW is missing.
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, self.interface.encode() + b'\0')
-        super().server_bind()
 
     def handle_error(self, request, client_address):
         pass  # No client addresses, tokens or coordinates in server logs.
@@ -340,91 +336,93 @@ class NodeHandler(BaseHTTPRequestHandler):
         self.close_connection = True
 
 
-def private_ipv4(raw):
-    try:
-        address = ipaddress.IPv4Address(raw)
-        return any(address in ipaddress.ip_network(net) for net in ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'))
-    except (ValueError, TypeError):
-        return False
+def server_tls(cert, key, client_ca):
+    """TLS mutuo: el nodo presenta su certificado y exige uno de cliente firmado por client_ca."""
+    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    tls.minimum_version = ssl.TLSVersion.TLSv1_2
+    private_read(key)  # la clave debe ser un archivo privado normal
+    tls.load_cert_chain(cert, key)
+    tls.load_verify_locations(cafile=str(client_ca))
+    tls.verify_mode = ssl.CERT_REQUIRED
+    return tls
 
 
-class WireGuardIngress:
-    """Explicit client list plus interface check; no location inferred from addresses.
+class StaticLocation:
+    """Ubicación fijada por parámetros al arrancar el nodo. No se deduce de la IP ni se puede
+    cambiar desde la red: se muestra tal cual en la ficha del nodo en Salve."""
+    writable = False
 
-    Linux: the bind address must belong to a WireGuard interface (iproute2) and the socket is
-    bound to that device. Windows/macOS: the bind address must be assigned to this machine (the
-    WireGuard tunnel gives it); the server only listens there and only accepts listed clients.
-    """
-    LINUX = sys.platform.startswith('linux')
+    def __init__(self, latitude, longitude, city='', country='', zone='', now=None):
+        parts = [part.strip() for part in (zone, country) if part and part.strip()]
+        self.value = validate_location({
+            'latitude': float(latitude), 'longitude': float(longitude), 'city': (city or '').strip(),
+            'zone': ', '.join(parts), 'source': 'static', 'captured_at': int(now if now is not None else time.time()),
+            'accuracy_m': 0}, now)
 
-    def __init__(self, interface, bind, clients):
-        if not private_ipv4(bind) or (self.LINUX and not re.fullmatch(r'[A-Za-z0-9_-]{1,15}', interface or '')):
-            raise ValueError('A private IPv4 bind address (and on Linux its WireGuard interface) is required')
-        if not 1 <= len(clients) <= 16 or any(not private_ipv4(client) or client == bind for client in clients):
-            raise ValueError('Specify private VPN IPv4 addresses of authorized clients')
-        self.interface, self.bind, self.clients = interface, bind, set(clients)
-        if not self.interface_valid():
-            raise ValueError('The bind address must belong to an active WireGuard tunnel on this machine')
+    def read(self):
+        return dict(self.value)
 
-    def interface_valid(self):
-        if not self.LINUX:
-            return self.address_assigned()
-        try:
-            command = subprocess.run(['ip', '-j', '-d', 'address', 'show', 'dev', self.interface], capture_output=True, timeout=2, check=True)
-            links = json.loads(command.stdout)
-            return any(link.get('linkinfo', {}).get('info_kind') == 'wireguard'
-                       and any(item.get('local') == self.bind for item in link.get('addr_info', [])) for link in links)
-        except (OSError, ValueError, subprocess.SubprocessError):
-            return False
+    def write(self, value):
+        raise PermissionError('La ubicación de este nodo es fija')
 
-    def address_assigned(self):
-        """True only while this machine owns the tunnel address (the tunnel is up)."""
-        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            probe.bind((self.bind, 0))
-            return True
-        except OSError:
-            return False
-        finally:
-            probe.close()
+
+class IpAllowList:
+    """Filtro opcional por IP de origen, además del certificado de cliente y el token."""
+    def __init__(self, entries):
+        self.networks = [ipaddress.ip_network(entry, strict=False) for entry in entries]
 
     def __call__(self, client):
-        return client in self.clients and self.interface_valid()
+        try:
+            address = ipaddress.ip_address(client)
+        except ValueError:
+            return False
+        return any(address in network for network in self.networks)
 
 
-def main():
+def main(argv=None, ready=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--token-file', type=Path, required=True)
     parser.add_argument('--backend', default='http://127.0.0.1:8080',
                         help='Modelo local en loopback; https://127.0.0.1:8080 si llama-server tiene TLS')
     parser.add_argument('--backend-ca', type=Path, help='CA del backend, solo si --backend usa https')
-    parser.add_argument('--bind', required=True, help='Private IPv4 assigned to the WireGuard interface')
-    parser.add_argument('--interface', help='Interfaz WireGuard en Linux (p. ej. wg0); en Windows no hace falta')
-    parser.add_argument('--allow-client', action='append', required=True, help='Authorized phone VPN IPv4; repeat per phone')
-    parser.add_argument('--tls-cert', type=Path, required=True)
-    parser.add_argument('--tls-key', type=Path, required=True)
-    parser.add_argument('--location-directory', type=Path)
+    parser.add_argument('--bind', default='0.0.0.0', help='Dirección donde escuchar (por defecto, todas)')
+    parser.add_argument('--port', type=int, default=8443)
+    parser.add_argument('--tls-cert', type=Path, required=True, help='Certificado del nodo (nodo.pem)')
+    parser.add_argument('--tls-key', type=Path, required=True, help='Clave del nodo (nodo.key)')
+    parser.add_argument('--client-ca', type=Path, required=True, help='CA que firma el certificado del móvil (ca.pem)')
+    parser.add_argument('--allow-ip', action='append', default=[], help='Opcional: IP o red de origen permitida; repetible')
+    parser.add_argument('--location-directory', type=Path, help='Ubicación que el dueño publica desde Salve (cifrada)')
     parser.add_argument('--location-token-file', type=Path)
+    parser.add_argument('--lat', type=float, help='Ubicación fija: latitud')
+    parser.add_argument('--lon', type=float, help='Ubicación fija: longitud')
+    parser.add_argument('--ciudad', default='', help='Ubicación fija: ciudad')
+    parser.add_argument('--pais', default='', help='Ubicación fija: país')
+    parser.add_argument('--zona', default='', help='Ubicación fija: zona o barrio')
     parser.add_argument('--model', required=True)
-    parser.add_argument('--port', type=int, default=8766)
     parser.add_argument('--slots', type=int, default=1)
     parser.add_argument('--hourly-limit', type=int, default=60)
     parser.add_argument('--max-prompt-chars', type=int, default=12000)
-    args = parser.parse_args()
-    guard = WireGuardIngress(args.interface, args.bind, args.allow_client)
+    args = parser.parse_args(argv)
     token = private_read(args.token_file, 300).decode('ascii').strip()
-    writer = private_read(args.location_token_file, 300).decode('ascii').strip() if args.location_token_file else None
-    if writer and not args.location_directory:
-        parser.error('Location writer requires --location-directory')
-    location = LocationStore(args.location_directory) if args.location_directory else None
-    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER); tls.minimum_version = ssl.TLSVersion.TLSv1_2
-    private_read(args.tls_key)  # Require a private regular file before loading it.
-    tls.load_cert_chain(args.tls_cert, args.tls_key)
+    if (args.lat is None) != (args.lon is None):
+        parser.error('La ubicación fija necesita --lat y --lon')
+    writer = None
+    if args.lat is not None:
+        location = StaticLocation(args.lat, args.lon, args.ciudad, args.pais, args.zona)
+    else:
+        writer = private_read(args.location_token_file, 300).decode('ascii').strip() if args.location_token_file else None
+        if writer and not args.location_directory:
+            parser.error('Location writer requires --location-directory')
+        location = LocationStore(args.location_directory) if args.location_directory else None
+    tls = server_tls(args.tls_cert, args.tls_key, args.client_ca)
     app = ComputeApplication(token, LocalBackend(args.backend, args.model, cafile=args.backend_ca),
                              slots=args.slots, hourly_limit=args.hourly_limit, max_prompt=args.max_prompt_chars,
                              location_store=location, location_token=writer)
-    server = NodeServer((args.bind, args.port), app, tls=tls, connection_guard=guard, interface=args.interface)
-    print('Salve private node ready: HTTPS restricted to its WireGuard interface.')
+    guard = IpAllowList(args.allow_ip) if args.allow_ip else None
+    server = NodeServer((args.bind, args.port), app, tls=tls, connection_guard=guard)
+    print(f'Nodo de Salve escuchando en {args.bind}:{args.port} con TLS mutuo (solo el móvil con su certificado).')
+    if ready:
+        ready(server)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -131,7 +131,7 @@ def main():
     if input('¿Compartir estas coordenadas con los móviles autorizados? Escribe COMPARTIR: ') != 'COMPARTIR':
         print('Cancelado.'); return
     store.write(value)
-    print('Guardado cifrado. El nodo solo lo enviará por HTTPS en WireGuard.')
+    print('Guardado cifrado. El nodo solo lo enviará por HTTPS con TLS mutuo.')
 
 
 if __name__ == '__main__':

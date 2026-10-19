@@ -27,7 +27,7 @@ public final class ComputeNodesDialog {
         labels.add(engine.isDistributedEnabled() ? "Desactivar: usar solo el móvil" : "Activar nodos propios");
         labels.add("Añadir un nodo");
         labels.add("Ver constelación de nodos");
-        labels.add("Red privada (VPN)");
+        labels.add("Conexión segura (perfiles y ubicación)");
         for (ComputeNode n : nodes) labels.add(n.name + " · " + n.endpoint + (store.nodeEnabled(n.id) ? "" : " (desactivado)"));
         new AlertDialog.Builder(activity).setTitle("Nodos de cómputo")
                 .setItems(labels.toArray(new String[0]), (dialog, which) -> {
@@ -51,24 +51,31 @@ public final class ComputeNodesDialog {
         LinearLayout form = new LinearLayout(activity); form.setOrientation(LinearLayout.VERTICAL);
         int pad = (int)(20 * activity.getResources().getDisplayMetrics().density); form.setPadding(pad, pad, pad, pad);
         TextView explanation = new TextView(activity);
-        explanation.setText("Registra un nodo tuyo por su dirección en la red privada (https://10.77.0.2:8766) y su token, o escanea su QR. Necesita la VPN de Salve y tu CA (Red privada). Añadirlo no activa los envíos automáticos."); form.addView(explanation);
+        explanation.setText("Escanea el QR que muestra Salve Nodo en tu PC: trae la dirección local, la remota, el token y el certificado del móvil para la conexión con TLS mutuo. Añadirlo no activa los envíos automáticos."); form.addView(explanation);
         Button scan = button(activity, form, "Escanear QR del PC");
         Button guide = button(activity, form, "Enviar script a mi PC");
         EditText name = field(activity, form, "Nombre: mi PC");
-        EditText url = field(activity, form, "https://10.77.0.2:8766");
+        EditText url = field(activity, form, "https://192.168.1.20:8443");
         url.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         EditText token = field(activity, form, "Token del nodo");
         token.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         token.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
-        scan.setOnClickListener(v -> scanQr(activity, name, url, token));
+        salve.core.privatefamily.NodeProfile[] profile = {null};
+        scan.setOnClickListener(v -> scanQr(activity, name, url, token, profile));
         guide.setOnClickListener(v -> NodeSetupShare.share(activity));
         ScrollView scroll = new ScrollView(activity); scroll.addView(form);
         AlertDialog dialog = new AlertDialog.Builder(activity).setTitle("Añadir nodo autorizado").setView(scroll)
                 .setPositiveButton("Guardar", null).setNegativeButton("Cancelar", null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             try {
-                salve.core.privatefamily.PrivatePolicy.endpointHost(url.getText().toString().trim()); // solo IPv4 privada del túnel
-                new ComputeNodeStore(activity).add(name.getText().toString(), url.getText().toString(), token.getText().toString());
+                ComputeNode saved = new ComputeNodeStore(activity).add(name.getText().toString(), url.getText().toString(), token.getText().toString());
+                salve.core.privatefamily.NodeProfile scanned = profile[0];
+                // El certificado del móvil solo se guarda si los campos siguen siendo los del perfil escaneado.
+                if (scanned != null && scanned.local.equalsIgnoreCase(saved.endpoint) && scanned.token.equals(saved.token)) {
+                    try { new salve.core.privatefamily.FamilyVault(activity).edit(data -> data.credentials.put(saved.id, scanned.credential())); }
+                    catch (RuntimeException failure) { new ComputeNodeStore(activity).remove(saved.id); throw failure; }
+                }
+                profile[0] = null;
                 token.setText(""); dialog.dismiss(); show(activity);
             } catch (RuntimeException invalid) { token.setError(invalid.getMessage()); }
         })); dialog.show();
@@ -79,12 +86,21 @@ public final class ComputeNodesDialog {
         if (!node.token.isEmpty()) { token.setText(node.token); token.setError(null); }
         else { token.setText(""); token.requestFocus(); token.setError("Anunciado en tu red: comprueba que es tuyo y escribe su token o escanea su QR"); }
     }
-    private static void scanQr(Activity activity, EditText name, EditText url, EditText token) {
+    private static void scanQr(Activity activity, EditText name, EditText url, EditText token,
+                               salve.core.privatefamily.NodeProfile[] profile) {
         GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build();
         GmsBarcodeScanning.getClient(activity, options).startScan()
                 .addOnSuccessListener(code -> {
-                    try { fill(NodePairing.fromQr(code.getRawValue()), name, url, token); }
-                    catch (IllegalArgumentException invalid) { url.setError(invalid.getMessage()); }
+                    try {
+                        String raw = code.getRawValue();
+                        if (salve.core.privatefamily.NodeProfile.looksLikeProfile(raw)) {
+                            salve.core.privatefamily.NodeProfile scanned = salve.core.privatefamily.NodeProfile.parse(raw);
+                            profile[0] = scanned;
+                            name.setText(scanned.name); url.setText(scanned.local); token.setText(scanned.token);
+                            url.setError(null); token.setError(null);
+                        } else { profile[0] = null; fill(NodePairing.fromQr(raw), name, url, token); }
+                    }
+                    catch (IllegalArgumentException invalid) { profile[0] = null; url.setError(invalid.getMessage()); }
                 })
                 .addOnFailureListener(error -> message(activity, "No se pudo abrir el lector de QR. Necesita Google Play Services actualizado."));
     }
@@ -100,6 +116,11 @@ public final class ComputeNodesDialog {
                 .setNeutralButton("Retirar", (d, w) -> {
                     try { ComputeNodeStore store = new ComputeNodeStore(activity);
                         store.remove(node.id);
+                        try { new salve.core.privatefamily.FamilyVault(activity).edit(data -> {
+                            data.credentials.remove(node.id); data.locations.remove(node.id);
+                            data.versions.remove(node.id); data.receivedAt.remove(node.id); }); }
+                        catch (RuntimeException ignored) { }
+                        ComputeHttpTransport.forget(node.id);
                         if (store.load().isEmpty()) SalveLLM.getInstance(activity).setDistributedEnabled(false);
                         show(activity); }
                     catch (RuntimeException error) { message(activity, error.getMessage()); }

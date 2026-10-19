@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Prepara la red privada de Salve en este PC, sin servicios de terceros ni openssl.
+"""Prepara la conexión segura entre Salve y este PC: TLS mutuo (mTLS), sin VPN ni openssl.
 
-  python salve_private_network.py crear --endpoint 192.168.1.20
+  python salve_private_network.py crear --host-remoto midominio.duckdns.org --puerto 8443
 
 Genera en ~/.salve/red (o --carpeta):
-  ca.pem / ca.key          CA propia que firma el HTTPS del nodo (ca.key no sale de aquí)
-  nodo.pem / nodo.key      certificado del nodo para su IP del túnel (10.77.0.2)
-  wg-nodo-salve.conf       túnel WireGuard de este PC (impórtalo en WireGuard para Windows o wg-quick)
-  salve-movil.conf         perfil del móvil: impórtalo en Salve → Red privada junto con ca.pem
-  token / token-ubicacion  tokens de consulta y de escritura de ubicación
+  ca.pem / ca.key        CA propia (ca.key nunca sale de este PC)
+  nodo.pem / nodo.key    certificado del nodo para su IP local y su host remoto
+  movil.pem / movil.key  certificado de cliente del móvil (va dentro del perfil)
+  token / token-ubicacion
+  salve-perfil.json      perfil para Salve: direcciones, token, CA y certificado del móvil
+  salve-perfil.svg       el mismo perfil como QR (si está instalado el paquete qrcode)
 
-Todo se genera aquí con la biblioteca `cryptography` (requirements-family.txt). No contacta con
-nadie. Si ya existen, se reutilizan; --rehacer crea claves y certificados nuevos.
+El perfil y su QR contienen la clave del móvil: trátalos como una contraseña. No contacta con nadie.
 """
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ import argparse
 import base64
 import datetime
 import ipaddress
+import json
 import os
 from pathlib import Path
 import secrets
@@ -27,13 +28,11 @@ import sys
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, x25519
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
-NODE_IP = '10.77.0.2'
-PHONE_IP = '10.77.0.1'
-WG_PORT = 51820
-NODE_PORT = 8766
+DEFAULT_PORT = 8443
+PROFILE_VERSION = 2
 
 
 def _private_write(path: Path, data: bytes):
@@ -49,6 +48,12 @@ def _pem_key(key) -> bytes:
     return key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
 
 
+def _key_usage(signing: bool, ca: bool = False):
+    return x509.KeyUsage(digital_signature=signing, content_commitment=False, key_encipherment=False,
+                         data_encipherment=False, key_agreement=False, key_cert_sign=ca, crl_sign=ca,
+                         encipher_only=False, decipher_only=False)
+
+
 def make_ca(days=3650):
     """CA con Subject Key Identifier: Python 3.13+ y Android rechazan cadenas sin identificadores."""
     key = ec.generate_private_key(ec.SECP256R1())
@@ -58,62 +63,77 @@ def make_ca(days=3650):
             .serial_number(x509.random_serial_number())
             .not_valid_before(now - datetime.timedelta(minutes=5)).not_valid_after(now + datetime.timedelta(days=days))
             .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
-            .add_extension(x509.KeyUsage(digital_signature=False, content_commitment=False, key_encipherment=False,
-                                         data_encipherment=False, key_agreement=False, key_cert_sign=True, crl_sign=True,
-                                         encipher_only=False, decipher_only=False), critical=True)
+            .add_extension(_key_usage(False, ca=True), critical=True)
             .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
             .sign(key, hashes.SHA256()))
     return key, cert
 
 
-def issue(ca_key, ca_cert, ips, days=825, common_name='Salve node'):
-    """Certificado de servidor para IPs concretas (SAN), con AKI/SKI y uso serverAuth."""
+def _leaf(ca_key, ca_cert, common_name, usage, sans, days):
     key = ec.generate_private_key(ec.SECP256R1())
     now = datetime.datetime.now(datetime.timezone.utc)
-    cert = (x509.CertificateBuilder()
-            .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)]))
-            .issuer_name(ca_cert.subject).public_key(key.public_key()).serial_number(x509.random_serial_number())
-            .not_valid_before(now - datetime.timedelta(minutes=5)).not_valid_after(now + datetime.timedelta(days=days))
-            .add_extension(x509.SubjectAlternativeName([x509.IPAddress(ipaddress.ip_address(ip)) for ip in ips]), critical=False)
-            .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
-            .add_extension(x509.KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False,
-                                         data_encipherment=False, key_agreement=False, key_cert_sign=False, crl_sign=False,
-                                         encipher_only=False, decipher_only=False), critical=True)
-            .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]), critical=False)
-            .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
-            .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()), critical=False)
-            .sign(ca_key, hashes.SHA256()))
-    return key, cert
+    builder = (x509.CertificateBuilder()
+               .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)]))
+               .issuer_name(ca_cert.subject).public_key(key.public_key()).serial_number(x509.random_serial_number())
+               .not_valid_before(now - datetime.timedelta(minutes=5)).not_valid_after(now + datetime.timedelta(days=days))
+               .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+               .add_extension(_key_usage(True), critical=True)
+               .add_extension(x509.ExtendedKeyUsage([usage]), critical=False)
+               .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
+               .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()), critical=False))
+    if sans:
+        builder = builder.add_extension(x509.SubjectAlternativeName(sans), critical=False)
+    return key, builder.sign(ca_key, hashes.SHA256())
 
 
-def wg_keypair():
-    """Par de claves WireGuard (Curve25519, base64), igual que `wg genkey | wg pubkey`."""
-    private = x25519.X25519PrivateKey.generate()
-    raw = private.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())
-    pub = private.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
-    return base64.b64encode(raw).decode(), base64.b64encode(pub).decode()
-
-
-def node_conf(node_private, phone_public, node_ip=NODE_IP, phone_ip=PHONE_IP, port=WG_PORT):
-    return (f'[Interface]\nPrivateKey = {node_private}\nAddress = {node_ip}/32\nListenPort = {port}\n\n'
-            f'[Peer]\n# Móvil con Salve\nPublicKey = {phone_public}\nAllowedIPs = {phone_ip}/32\n')
-
-
-def phone_conf(phone_private, node_public, endpoint, node_ip=NODE_IP, phone_ip=PHONE_IP, port=WG_PORT):
-    """Perfil que acepta Salve: una dirección /32, rutas /32 privadas, endpoint IPv4 numérico y sin DNS."""
-    return (f'[Interface]\nPrivateKey = {phone_private}\nAddress = {phone_ip}/32\n\n'
-            f'[Peer]\nPublicKey = {node_public}\nAllowedIPs = {node_ip}/32\nEndpoint = {endpoint}:{port}\n'
-            'PersistentKeepalive = 25\n')
-
-
-def check_endpoint(raw):
+def san_for(host):
+    """IP literal → IPAddress; nombre (DDNS) → DNSName."""
     try:
-        address = ipaddress.IPv4Address(raw)
+        return x509.IPAddress(ipaddress.ip_address(host))
     except ValueError:
-        raise ValueError('El endpoint debe ser una IPv4 numérica (la de tu PC en casa o la pública de tu router)') from None
-    if address.is_loopback or address.is_unspecified or address.is_multicast:
-        raise ValueError('Usa la IPv4 por la que el móvil llegará a este PC')
-    return str(address)
+        return x509.DNSName(host)
+
+
+def issue(ca_key, ca_cert, hosts, days=825, common_name='Salve node'):
+    """Certificado de servidor para las IP o nombres por los que el móvil llegará al nodo."""
+    unique = list(dict.fromkeys(h for h in hosts if h))
+    return _leaf(ca_key, ca_cert, common_name, ExtendedKeyUsageOID.SERVER_AUTH, [san_for(h) for h in unique], days)
+
+
+def issue_client(ca_key, ca_cert, days=825, common_name='Salve phone'):
+    """Certificado de cliente del móvil: con él, y solo con él, el nodo acepta la conexión."""
+    return _leaf(ca_key, ca_cert, common_name, ExtendedKeyUsageOID.CLIENT_AUTH, [], days)
+
+
+def check_host(raw, field):
+    """IP o nombre DNS sin esquema, ruta ni puerto."""
+    value = (raw or '').strip().lower()
+    if not value:
+        raise ValueError(f'Falta {field}')
+    try:
+        address = ipaddress.ip_address(value)
+        if address.is_loopback or address.is_unspecified or address.is_multicast or address.is_link_local:
+            raise ValueError(f'{field}: usa la dirección por la que el móvil llega a este PC')
+        return str(address)
+    except ValueError as error:
+        if str(error).startswith(field):
+            raise
+    labels = value.rstrip('.').split('.')
+    if len(value) > 253 or len(labels) < 2 or not all(
+            label and len(label) <= 63 and label[0] != '-' and label[-1] != '-'
+            and all(c.isalnum() or c == '-' for c in label) for label in labels):
+        raise ValueError(f'{field}: escribe una IP o un dominio como midominio.duckdns.org')
+    return value.rstrip('.')
+
+
+def check_port(port):
+    if not isinstance(port, int) or not 1 <= port <= 65535:
+        raise ValueError('El puerto debe estar entre 1 y 65535')
+    return port
+
+
+def endpoint(host, port):
+    return f'https://[{host}]:{port}' if ':' in host else f'https://{host}:{port}'
 
 
 def lan_ip():
@@ -127,82 +147,116 @@ def lan_ip():
         probe.close()
 
 
-def create(folder: Path, endpoint: str, rebuild=False):
+def build_profile(name, local_url, remote_url, token, ca_cert, client_cert, client_key):
+    """Perfil compacto (DER en base64) para que quepa en un QR."""
+    der = lambda cert: base64.b64encode(cert.public_bytes(serialization.Encoding.DER)).decode()
+    profile = {'salve': 'nodo', 'v': PROFILE_VERSION, 'n': name, 'u': local_url, 't': token,
+               'ca': der(ca_cert), 'c': der(client_cert),
+               'k': base64.b64encode(client_key.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8,
+                                                               serialization.NoEncryption())).decode()}
+    if remote_url:
+        profile['r'] = remote_url
+    return json.dumps(profile, separators=(',', ':'), ensure_ascii=False)
+
+
+def write_qr_svg(text, path: Path):
+    try:
+        import qrcode
+        import qrcode.image.svg
+    except ImportError:
+        return False
+    image = qrcode.make(text, image_factory=qrcode.image.svg.SvgPathImage,
+                        error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+    with open(path, 'wb') as handle:
+        image.save(handle)
+    return True
+
+
+def create(folder: Path, local_host: str, remote_host: str = None, port: int = DEFAULT_PORT,
+           name: str = 'Mi PC', rebuild=False):
+    """Genera (o reutiliza) CA, certificados, tokens y perfil. Devuelve (rutas, lo_generado)."""
     folder = folder.expanduser()
     folder.mkdir(parents=True, exist_ok=True)
     if os.name == 'posix':
         folder.chmod(0o700)
-    paths = {name: folder / name for name in ('ca.key', 'ca.pem', 'nodo.key', 'nodo.pem', 'wg-nodo-salve.conf',
-                                              'salve-movil.conf', 'token', 'token-ubicacion')}
+    local_host = check_host(local_host, 'Host local')
+    remote_host = check_host(remote_host, 'Host remoto') if remote_host else None
+    port = check_port(port)
+    paths = {n: folder / n for n in ('ca.key', 'ca.pem', 'nodo.key', 'nodo.pem', 'movil.key', 'movil.pem',
+                                     'token', 'token-ubicacion', 'salve-perfil.json', 'salve-perfil.svg', 'hosts.json')}
     made = []
     if rebuild or not paths['ca.pem'].exists() or not paths['ca.key'].exists():
         ca_key, ca_cert = make_ca()
         _private_write(paths['ca.key'], _pem_key(ca_key))
         paths['ca.pem'].write_bytes(ca_cert.public_bytes(serialization.Encoding.PEM))
         made.append('CA')
-        rebuild = True  # una CA nueva obliga a reemitir el certificado del nodo
+        rebuild = True  # una CA nueva obliga a reemitir todo lo que firma
     else:
         ca_key = serialization.load_pem_private_key(paths['ca.key'].read_bytes(), None)
         ca_cert = x509.load_pem_x509_certificate(paths['ca.pem'].read_bytes())
-    if rebuild or not paths['nodo.pem'].exists():
-        key, cert = issue(ca_key, ca_cert, [NODE_IP])
+    hosts = [local_host] + ([remote_host] if remote_host else [])
+    previous = json.loads(paths['hosts.json'].read_text()) if paths['hosts.json'].exists() else None
+    if rebuild or not paths['nodo.pem'].exists() or previous != hosts:
+        key, cert = issue(ca_key, ca_cert, hosts)
         _private_write(paths['nodo.key'], _pem_key(key))
         paths['nodo.pem'].write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+        paths['hosts.json'].write_text(json.dumps(hosts))
         made.append('certificado del nodo')
-    if rebuild or not paths['wg-nodo-salve.conf'].exists() or not paths['salve-movil.conf'].exists():
-        node_private, node_public = wg_keypair()
-        phone_private, phone_public = wg_keypair()
-        _private_write(paths['wg-nodo-salve.conf'], node_conf(node_private, phone_public).encode())
-        _private_write(paths['salve-movil.conf'], phone_conf(phone_private, node_public, endpoint).encode())
-        made.append('claves WireGuard')
-    for name in ('token', 'token-ubicacion'):
-        if rebuild or not paths[name].exists():
-            _private_write(paths[name], (secrets.token_urlsafe(32) + '\n').encode())
-            made.append(name)
+    if rebuild or not paths['movil.pem'].exists():
+        key, cert = issue_client(ca_key, ca_cert)
+        _private_write(paths['movil.key'], _pem_key(key))
+        paths['movil.pem'].write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+        made.append('certificado del móvil')
+    for token_name in ('token', 'token-ubicacion'):
+        if rebuild or not paths[token_name].exists():
+            _private_write(paths[token_name], (secrets.token_urlsafe(32) + '\n').encode())
+            made.append(token_name)
+    client_key = serialization.load_pem_private_key(paths['movil.key'].read_bytes(), None)
+    client_cert = x509.load_pem_x509_certificate(paths['movil.pem'].read_bytes())
+    profile = build_profile(name, endpoint(local_host, port), endpoint(remote_host, port) if remote_host else None,
+                            paths['token'].read_text().strip(), ca_cert, client_cert, client_key)
+    _private_write(paths['salve-perfil.json'], profile.encode())
+    if paths['salve-perfil.svg'].exists():
+        paths['salve-perfil.svg'].unlink()
+    write_qr_svg(profile, paths['salve-perfil.svg'])
     return paths, made
 
 
 def cmd_crear(args):
     try:
-        endpoint = check_endpoint(args.endpoint or lan_ip() or '')
+        paths, made = create(Path(args.carpeta), args.host_local or lan_ip() or '', args.host_remoto,
+                             args.puerto, args.nombre or socket.gethostname() or 'Mi PC', args.rehacer)
     except ValueError as error:
         print(error)
         return 2
-    paths, made = create(Path(args.carpeta), endpoint, args.rehacer)
-    print('\n== Red privada de Salve ==\n')
+    print('\n== Conexión segura de Salve (TLS mutuo) ==\n')
     print('Generado: ' + (', '.join(made) if made else 'nada nuevo (se reutiliza lo existente)'))
     print(f'Carpeta: {paths["ca.pem"].parent}\n')
-    print('1. En este PC, importa el túnel en WireGuard (WireGuard para Windows → Importar túnel):')
-    print(f'   {paths["wg-nodo-salve.conf"]}')
-    print(f'   Abre en el cortafuegos UDP {WG_PORT}. Fuera de casa: reenvía UDP {WG_PORT} del router a este PC.')
-    print('2. Pasa al móvil, por cable o un medio privado, estos dos archivos y bórralos de donde los copies:')
-    print(f'   {paths["salve-movil.conf"]}   y   {paths["ca.pem"]}')
-    print('   En Salve: Nodos de cómputo → Red privada (VPN) → Configurar VPN → Importar .conf / Importar CA → Conectar.')
-    print('3. Arranca el modelo y el nodo:')
+    if paths['salve-perfil.svg'].exists():
+        print(f'1. Abre el QR en pantalla y escanéalo en Salve (Nodos de cómputo → Añadir un nodo → Escanear QR):\n   {paths["salve-perfil.svg"]}')
+    else:
+        print('1. Instala el paquete qrcode para ver el QR, o pasa al móvil por un medio privado:')
+    print(f'   o importa {paths["salve-perfil.json"]} en Salve → Conexión segura → Importar perfil.')
+    print('2. Arranca el modelo y el nodo:')
     print('   llama-server -m modelo.gguf --host 127.0.0.1 --port 8080')
-    print(f'   python salve_compute_node.py --bind {NODE_IP} --allow-client {PHONE_IP} '
-          f'--tls-cert "{paths["nodo.pem"]}" --tls-key "{paths["nodo.key"]}" --token-file "{paths["token"]}" '
-          f'--location-directory "{paths["ca.pem"].parent / "ubicacion"}" --location-token-file "{paths["token-ubicacion"]}" '
-          '--model <nombre-del-modelo>' + (' --interface wg-nodo-salve' if sys.platform.startswith('linux') else ''))
-    print('4. Registra el nodo en Salve con el QR (Nodos de cómputo → Añadir un nodo → Escanear QR):')
-    try:
-        from salve_node_setup import pairing_uri, print_qr
-        print_qr(pairing_uri(args.nombre or socket.gethostname() or 'Mi PC', f'https://{NODE_IP}:{NODE_PORT}',
-                             paths['token'].read_text().strip()))
-    except Exception:
-        print(f'   URL: https://{NODE_IP}:{NODE_PORT}   Token: {paths["token"]}')
-    print('\nca.key firma tus certificados: no la copies a ningún otro sitio.')
+    print(f'   python salve_compute_node.py --port {args.puerto} --tls-cert "{paths["nodo.pem"]}" --tls-key "{paths["nodo.key"]}" '
+          f'--client-ca "{paths["ca.pem"]}" --token-file "{paths["token"]}" --model <nombre-del-modelo>')
+    print(f'3. Permite el puerto TCP {args.puerto} en el cortafuegos. Fuera de casa: reenvía TCP {args.puerto} '
+          'del router a este PC y usa --host-remoto con tu IP pública o tu dominio DDNS.')
+    print('\nEl perfil y el QR contienen la clave del móvil: no los compartas. ca.key no debe salir de este PC.')
     return 0
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest='orden', required=True)
-    crear = sub.add_parser('crear', help='generar CA, certificado, túnel WireGuard, perfil del móvil y tokens')
-    crear.add_argument('--endpoint', help='IPv4 por la que el móvil llega a este PC (por defecto, su IP local)')
+    crear = sub.add_parser('crear', help='generar CA, certificados, tokens, perfil y QR')
+    crear.add_argument('--host-local', help='IP de este PC en tu red (por defecto, la detectada)')
+    crear.add_argument('--host-remoto', help='IP pública o dominio DDNS para conectar fuera de casa')
+    crear.add_argument('--puerto', type=int, default=DEFAULT_PORT)
     crear.add_argument('--carpeta', default='~/.salve/red')
     crear.add_argument('--nombre', help='nombre del nodo en la app')
-    crear.add_argument('--rehacer', action='store_true', help='generar claves y certificados nuevos')
+    crear.add_argument('--rehacer', action='store_true', help='generar CA, certificados y tokens nuevos')
     args = parser.parse_args(argv)
     return cmd_crear(args)
 

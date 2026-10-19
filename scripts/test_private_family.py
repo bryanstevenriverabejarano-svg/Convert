@@ -38,6 +38,36 @@ def certificates(folder):
     return server, ssl.create_default_context(cafile=folder / 'ca.pem')
 
 
+def mutual_certificates(folder):
+    """Como salve_private_network: CA, servidor (127.0.0.1) y cliente del móvil; el servidor exige cliente."""
+    import salve_private_network as network
+    folder = Path(folder)
+    ca_key, ca = network.make_ca(days=2)
+    server_key, server_cert = network.issue(ca_key, ca, ['127.0.0.1'], days=2)
+    client_key, client_cert = network.issue_client(ca_key, ca, days=2)
+    for name, obj in (('ca.pem', ca), ('server.pem', server_cert), ('client.pem', client_cert)):
+        (folder / name).write_bytes(obj.public_bytes(serialization.Encoding.PEM))
+    for name, key in (('server.key', server_key), ('client.key', client_key)):
+        (folder / name).write_bytes(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+        (folder / name).chmod(0o600)
+    server = node.server_tls(folder / 'server.pem', folder / 'server.key', folder / 'ca.pem')
+    client = ssl.create_default_context(cafile=folder / 'ca.pem')
+    client.load_cert_chain(folder / 'client.pem', folder / 'client.key')
+    return server, client
+
+
+def foreign_client(folder):
+    import salve_private_network as network
+    folder = Path(folder)
+    other_key, other = network.make_ca(days=2)
+    key, cert = network.issue_client(other_key, other, days=2)
+    (folder / 'foreign.pem').write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    (folder / 'foreign.key').write_bytes(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+    context = ssl.create_default_context(cafile=folder / 'ca.pem')
+    context.load_cert_chain(folder / 'foreign.pem', folder / 'foreign.key')
+    return context
+
+
 def location(**changes):
     result = dict(latitude=4.6, longitude=-74.0, city='Ciudad privada', zone='Casa privada', source='static', captured_at=int(time.time()), accuracy_m=0)
     result.update(changes)
@@ -94,20 +124,25 @@ class FamilyPrivacyTests(unittest.TestCase):
         with patch('salve_private_location.time.time', return_value=now + 901):
             self.assertIsNone(self.store.read())
 
-    def test_vpn_interface_and_client_list_fail_closed(self):
-        info = [{'linkinfo': {'info_kind': 'wireguard'}, 'addr_info': [{'local': '10.77.0.2'}]}]
-        with patch('salve_compute_node.subprocess.run', return_value=Mock(stdout=json.dumps(info))):
-            guard = node.WireGuardIngress('wg0', '10.77.0.2', ['10.77.0.1'])
-            self.assertTrue(guard('10.77.0.1')); self.assertFalse(guard('8.8.8.8')); self.assertFalse(guard('10.77.0.3'))
-        with patch('salve_compute_node.subprocess.run', side_effect=OSError):
-            self.assertFalse(guard('10.77.0.1'))
-        for ip in ('8.8.8.8', '127.0.0.1', '169.254.1.1', '100.64.0.1'):
-            with self.assertRaises(ValueError): node.WireGuardIngress('wg0', ip, ['10.77.0.1'])
+    def test_static_location_from_parameters_is_served_and_cannot_be_overwritten(self):
+        fixed = node.StaticLocation(42.8467, -2.6716, 'Vitoria-Gasteiz', 'España', 'Casa')
+        app = node.ComputeApplication(READ, self.backend, location_store=fixed, location_token=WRITE)
+        status = app.handle('GET', '/v1/family/status', 'Bearer ' + READ)[1]
+        self.assertEqual('Vitoria-Gasteiz', status['location']['city'])
+        self.assertEqual('Casa, España', status['location']['zone'])
+        self.assertEqual('static', status['location']['source'])
+        self.assertEqual(409, app.handle('POST', '/v1/location', 'Bearer ' + WRITE, json.dumps({'location': location()}).encode())[0])
+        with self.assertRaises(ValueError):
+            node.StaticLocation(95, 0, 'X')
 
-    def test_real_tls_auth_no_plaintext_and_ingress_revocation(self):
-        tls, client = certificates(self.folder)
-        allowed = [True]
-        server = node.NodeServer(('127.0.0.1', 0), self.app, tls=tls, connection_guard=lambda ip: allowed[0])
+    def test_ip_allow_list_is_optional_and_exact(self):
+        allow = node.IpAllowList(['192.168.1.0/24', '203.0.113.7'])
+        self.assertTrue(allow('192.168.1.40')); self.assertTrue(allow('203.0.113.7'))
+        self.assertFalse(allow('203.0.113.8')); self.assertFalse(allow('no-es-ip'))
+
+    def test_real_mutual_tls_requires_the_phone_certificate(self):
+        tls, client = mutual_certificates(self.folder)
+        server = node.NodeServer(('127.0.0.1', 0), self.app, tls=tls)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close); self.addCleanup(server.shutdown)
         port = server.server_address[1]
@@ -119,14 +154,17 @@ class FamilyPrivacyTests(unittest.TestCase):
             finally: connection.close()
         self.store.write(location())
         self.assertEqual(401, read(token='bad')[0]); self.assertIn(b'Ciudad privada', read()[1])
-        with self.assertRaises(ssl.SSLError): read(ssl.create_default_context())
+        # Sin certificado de cliente (aunque confíe en la CA del nodo) no hay respuesta.
+        anonymous = ssl.create_default_context(cafile=self.folder / 'ca.pem')
+        with self.assertRaises((ssl.SSLError, OSError, http.client.HTTPException)):
+            read(anonymous)
+        # Un certificado de cliente de otra CA tampoco vale.
+        with self.assertRaises((ssl.SSLError, OSError, http.client.HTTPException)):
+            read(foreign_client(self.folder))
         with socket.create_connection(('127.0.0.1', port), timeout=2) as plain:
             plain.sendall(b'GET /v1/family/status HTTP/1.0\r\n\r\n')
             try: self.assertNotIn(b'Ciudad', plain.recv(1024))
-            except ConnectionResetError: pass
-        allowed[0] = False
-        with self.assertRaises((OSError, http.client.HTTPException)): read()
-
+            except (ConnectionResetError, socket.timeout): pass
 
 if __name__ == '__main__':
     unittest.main()

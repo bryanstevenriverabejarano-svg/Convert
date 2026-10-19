@@ -171,7 +171,7 @@ class WireTests(unittest.TestCase):
         backend_server.socket = tls.wrap_socket(backend_server.socket, server_side=True)
         backend_port = self.start(backend_server)
         backend = node.LocalBackend(f'https://127.0.0.1:{backend_port}', 'fixed-model', cafile=Path(folder.name) / 'ca.pem')
-        port = self.start(node.NodeServer(('127.0.0.1', 0), node.ComputeApplication(TOKEN, backend), tls=tls, connection_guard=lambda ip: ip == '127.0.0.1'))
+        port = self.start(node.NodeServer(('127.0.0.1', 0), node.ComputeApplication(TOKEN, backend), tls=tls))
         def request(path, payload=None, token=TOKEN):
             connection = http.client.HTTPSConnection('127.0.0.1', port, timeout=3, context=client_tls)
             try:
