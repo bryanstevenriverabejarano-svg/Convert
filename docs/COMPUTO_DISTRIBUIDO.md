@@ -16,7 +16,7 @@ No copia la aplicación, no escanea webs, no crea cuentas y no contrata máquina
   anuncie más plazas libres. En empate se conserva el orden del registro.
 - Se envía a **un solo nodo** por tarea. Timeout, error o respuesta vacía/grande llevan
   al modelo del teléfono. Un nodo con errores descansa 60 segundos antes de volver a probarlo.
-- Desactivar, cambiar el registro o cancelar el turno cancela la petición HTTP y descarta
+- Desactivar, cambiar el registro o cancelar el turno cancela la petición HTTPS y descarta
   una respuesta tardía. Una cancelación no inicia inferencia local adicional.
 - El proveedor de cada respuesta queda identificado como `Nodo nombre / modelo`.
 - La consolidación de sueño se beneficia a través de sus llamadas de inferencia; la base
@@ -31,74 +31,18 @@ La calidad y velocidad dependen del modelo, hardware y red, y requieren medició
 
 ## Preparar un nodo propio
 
-Requisitos: equipo/servidor con permiso de administración, Python 3.10 o superior,
-`llama-server` y un modelo GGUF compatible ya instalado. Un hosting compartido PHP o
-una carpeta pCloud/Terabox no sustituyen un servidor capaz de ejecutar el modelo.
+Sigue la [guía de red privada familiar](../scripts/PRIVATE_FAMILY_NETWORK.md) para configurar
+WireGuard propio, HTTPS con CA privada, backend local HTTPS, registro por IPv4 privada y
+coordenadas voluntarias. El servidor de esta versión requiere Linux y una interfaz WireGuard
+real; las URL públicas antiguas deben migrarse. No se usan proxies HTTP sin cifrar.
 
-1. Inicia el modelo **solo en loopback**. Ajusta el contexto a tu RAM/VRAM:
+El nodo mantiene su modelo fijo, límites de plazas, 60 tareas por hora por defecto,
+cota de entrada configurable y hasta 2.048 tokens de salida. El backend tiene hasta 40
+segundos para terminar; el contexto debe caber en su modelo. El móvil elige entre nodos
+registrados con permiso y vuelve al modelo local si no hay ninguno utilizable.
 
-   ```bash
-   llama-server -m /ruta/modelo.gguf --alias salve-node --host 127.0.0.1 --port 8080 -c 8192 --parallel 1
-   ```
-
-2. Guarda un token privado distinto para cada nodo. No lo metas en Git ni en mensajes:
-
-   ```bash
-   python3 - <<'PY'
-   import os, secrets
-   from pathlib import Path
-   directory = Path.home() / '.config' / 'salve-compute'
-   directory.mkdir(parents=True, exist_ok=True)
-   path = directory / 'token'
-   descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-   with os.fdopen(descriptor, 'w') as stream:
-       stream.write(secrets.token_urlsafe(32))
-   print('Token creado en', path)
-   PY
-   ```
-
-3. Ejecuta el microcomponente desde este repositorio:
-
-   ```bash
-   python3 scripts/salve_compute_node.py \
-     --token-file "$HOME/.config/salve-compute/token" \
-     --backend http://127.0.0.1:8080 --model salve-node \
-     --slots 1 --hourly-limit 60 --max-prompt-chars 12000
-   ```
-
-   El proceso escucha en `127.0.0.1:8766`. El backend está fijado por el operador:
-   una tarea no puede cambiar su URL, modelo, herramientas o límites. El backend tiene
-   hasta 40 segundos para terminar y un máximo de 2.048 tokens de salida.
-   `--max-prompt-chars` es una cota de transporte, no una garantía del tokenizador:
-   la entrada más la salida deben caber también en el contexto real de llama.cpp.
-
-4. Publica **solo ese puerto** mediante tu proxy HTTPS administrado y certificado válido
-   para el nombre que usarás en Android. El proxy debe conservar `Authorization`, limitar
-   el cuerpo a 300.000 bytes, limitar conexiones y aplicar timeouts. Por ejemplo, si ya
-   administras Caddy con un dominio propio:
-
-   ```caddyfile
-   nodo.tu-dominio.example {
-       request_body {
-           max_size 300000
-       }
-       reverse_proxy 127.0.0.1:8766
-   }
-   ```
-
-   Sustituye el dominio de ejemplo por el tuyo. No expongas el puerto 8080 del backend.
-   También puedes usar una red privada/VPN con HTTPS válido. Android no acepta certificados
-   autofirmados sin confianza ni se desactiva la verificación TLS. El servidor Python
-   incluido es un servidor sencillo: para exponerlo a Internet usa un proxy mantenido
-   con límites de conexiones y peticiones, firewall y operación supervisada.
-
-5. En Salve, añade nombre, URL HTTPS del nodo y token. Pulsa **Probar**: consulta su estado
-   y solicita un saludo de prueba. Después activa **nodos propios** para permitir envíos
-   automáticos de tareas pesadas. No necesita una clave de Gemini.
-
-No se han desplegado servidores ni comprado recursos con este parche. El usuario decide
-qué equipos registra. Registrar una URL no instala nada en ella. Para añadir potencia,
-instala este mismo componente y un modelo adecuado en otro equipo y registra su endpoint.
+Registrar una dirección no instala nada en ella. El propietario prepara cada equipo;
+no se crean ni contratan recursos automáticamente.
 
 ## Datos, autorización y retirada
 
@@ -110,8 +54,9 @@ permisos de Android; una respuesta propuesta pasa por el controlador habitual de
 Tokens y endpoints se almacenan cifrados con AES-GCM y una clave de Android Keystore. El
 registro se excluye del backup y la migración de dispositivo. Tras reinstalar/restaurar
 puede ser necesario volver a registrar los nodos. No se registran prompts o tokens en logs.
-HTTPS verifica el destino, no sigue redirecciones ni proxies del sistema, y desactiva los
-reintentos automáticos. La política de navegación web pública no se modifica.
+HTTPS verifica la IP SAN con la CA importada, no sigue redirecciones ni proxies del sistema,
+y desactiva los reintentos automáticos. El socket queda vinculado al túnel de Salve. Android
+bloquea tráfico HTTP sin cifrar; la navegación HTTPS conserva su política anterior.
 
 - **Usar modelo local**: desactiva nodos y Gemini.
 - **Activar nodos propios**: texto pesado a nodos, resto/respaldo al móvil; fotos locales.
@@ -139,12 +84,13 @@ La respuesta debe coincidir con el UUID, ser `SUCCESS` y contener texto no vací
 El servicio rechaza salidas truncadas (`finish_reason` distinto de `stop`).
 
 ```bash
+python3 -m pip install -r scripts/requirements-family.txt
 python3 -m unittest discover -s scripts -p test_salve_compute_node.py -v
 bash scripts/test-compute-router.sh
 ./gradlew :app:testDebugUnitTest :app:assembleDebug
 ```
 
-Las pruebas del worker incluyen HTTP real contra un backend de prueba (no una inferencia
+Las pruebas del worker incluyen HTTPS real contra un backend de prueba (no una inferencia
 LLM real), autenticación, contrato, errores, duplicados concurrentes, cuota y límites. Las
 pruebas Java cubren selección, desconexión, ocupación, capacidad, cancelación y respaldo.
 La compilación Android/CI comprueba la integración; la prueba desde el S24 Ultra a un nodo
@@ -152,4 +98,4 @@ real, la calidad del modelo remoto y sus tiempos siguen siendo validaciones de d
 
 Referencias del adaptador:
 - [API de llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)
-- [Configuración del proxy Caddy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)
+- [Red privada familiar y TLS](../scripts/PRIVATE_FAMILY_NETWORK.md)

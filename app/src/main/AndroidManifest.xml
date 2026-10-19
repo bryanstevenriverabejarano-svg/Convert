@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.salve.app">
 
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
     <!-- ====== PERMISOS ====== -->
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS"
@@ -61,6 +65,7 @@
     <application
         android:name="salve.services.SalveApplication"
         android:largeHeap="true"
+        android:usesCleartextTraffic="false"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -71,6 +76,14 @@
         android:theme="@style/Theme.Salve.Splash"
         tools:targetApi="31">
 
+        <activity android:name="salve.presentation.ui.PrivateFamilyActivity" android:exported="false" android:theme="@style/Theme.Salve" />
+        <service android:name="com.wireguard.android.backend.GoBackend$VpnService" tools:node="remove" />
+        <service android:name="salve.core.privatefamily.FamilyVpnService" android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false" android:foregroundServiceType="specialUse">
+            <intent-filter><action android:name="android.net.VpnService" /></intent-filter>
+            <meta-data android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON" android:value="false" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started private WireGuard VPN for authorized family nodes, with persistent notification and disconnect action" />
+        </service>
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
 

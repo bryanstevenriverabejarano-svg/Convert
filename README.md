@@ -27,6 +27,8 @@ delegar cuentos, reflexiones y otras tareas de texto pesadas, con respaldo local
 Incluye el microcomponente Python, límites y prueba de conexión.
 Consulta [instalación y alcance del cómputo distribuido](docs/COMPUTO_DISTRIBUIDO.md).
 
+La red privada familiar integra WireGuard, HTTPS con CA propia, coordenadas estáticas/GPS voluntarias y mapa osmdroid sin consultas externas. Configuración y migración de nodos: [red privada familiar](scripts/PRIVATE_FAMILY_NETWORK.md).
+
 ## Modelo local principal
 
 Salve prioriza Dolphin 3.0 Llama 3.2 3B Q4_K_M (2,02 GB), con llama.cpp para

@@ -86,6 +86,7 @@ android {
     }
 
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
@@ -115,6 +116,9 @@ android {
 }
 
 dependencies {
+    implementation "com.wireguard.android:tunnel:1.0.20260102"
+    implementation "org.osmdroid:osmdroid-android:6.1.20"
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
     // Avatar 3D (Filament) en pausa: el modelo está en docs/avatar3d/ hasta que se conecte a la vista.
     // Motor MLC para Java/Android (módulo local)
     implementation project(':mlc4j')

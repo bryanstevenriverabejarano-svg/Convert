@@ -11,16 +11,16 @@ import salve.core.cognition.CognitivePrompt;
 
 /** TLS verification, no redirects/retries/proxies, bounded JSON and promptly cancellable calls. */
 public final class ComputeHttpTransport implements ComputeRouter.Transport {
-    private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
-            .proxy(Proxy.NO_PROXY).followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
-            .connectTimeout(2, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).callTimeout(50, TimeUnit.SECONDS)
-            .dns(host -> {
-                java.util.List<java.net.InetAddress> addresses = Dns.SYSTEM.lookup(host);
-                for (java.net.InetAddress ip : addresses)
-                    if (ip.isAnyLocalAddress() || ip.isLoopbackAddress() || ip.isLinkLocalAddress() || ip.isMulticastAddress())
-                        throw new java.net.UnknownHostException("Destino de nodo no admitido");
-                return addresses;
-            }).build();
+    private final salve.core.privatefamily.PrivateVpn vpn;
+    public ComputeHttpTransport(android.content.Context context) { vpn = salve.core.privatefamily.PrivateVpn.get(context); }
+    public JsonObject familyStatus(ComputeNode node, BooleanSupplier stopped) throws IOException {
+        return request(node, "/v1/family/status", null, 5, stopped);
+    }
+    public void shareLocation(ComputeNode node, String writerToken, JsonObject location, BooleanSupplier stopped) throws IOException {
+        ComputeNode owner = new ComputeNode(node.id, node.name, node.endpoint, writerToken);
+        JsonObject payload = new JsonObject(); payload.add("location", location == null ? JsonNull.INSTANCE : location);
+        request(owner, "/v1/location", payload, 5, stopped);
+    }
     @Override public ComputeRouter.Health health(ComputeNode node, BooleanSupplier stopped) throws IOException {
         JsonObject json = request(node, "/v1/health", null, 2, stopped);
         try {
@@ -47,7 +47,8 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         Request.Builder request = new Request.Builder().url(node.endpoint + path)
                 .header("Authorization", "Bearer " + node.token).header("Accept", "application/json");
         if (payload != null) request.post(RequestBody.create(payload.toString(), MediaType.get("application/json; charset=utf-8")));
-        Call call = CLIENT.newCall(request.build()); call.timeout().timeout(seconds, TimeUnit.SECONDS);
+        salve.core.privatefamily.PrivateVpn.Lease lease = vpn.lease(node.endpoint);
+        Call call = lease.client.newCall(request.build()); call.timeout().timeout(seconds, TimeUnit.SECONDS);
         CompletableFuture<JsonObject> future = new CompletableFuture<>();
         call.enqueue(new Callback() {
             @Override public void onFailure(Call ignored, IOException error) { future.completeExceptionally(error); }
@@ -72,12 +73,15 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         try {
             while (true) {
                 if (stopped.getAsBoolean()) throw new CancellationException();
+                if (!lease.valid()) throw new IOException("VPN desconectada");
                 if (System.nanoTime() >= deadline) throw new IOException("Tiempo de nodo agotado");
-                try { return future.get(100, TimeUnit.MILLISECONDS); }
+                try { JsonObject result = future.get(100, TimeUnit.MILLISECONDS);
+                    if (!lease.valid() || stopped.getAsBoolean()) throw new CancellationException();
+                    return result; }
                 catch (TimeoutException pending) { /* check cancellation, revocation and deadline */ }
                 catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new CancellationException(); }
                 catch (ExecutionException failed) { throw new IOException("La petición al nodo falló"); }
             }
-        } finally { call.cancel(); }
+        } finally { call.cancel(); lease.close(); }
     }
 }

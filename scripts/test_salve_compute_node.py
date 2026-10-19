@@ -5,6 +5,10 @@ import threading
 import unittest
 from unittest.mock import Mock
 import uuid
+import ssl
+import tempfile
+from pathlib import Path
+from test_private_family import certificates
 
 import salve_compute_node as node
 
@@ -126,11 +130,11 @@ class NodeTests(unittest.TestCase):
         self.assertNotIn('Había', repr(self.app.receipts))
 
     def test_backend_only_accepts_literal_loopback_and_fixed_model(self):
-        for url in ('http://example.org', 'http://169.254.169.254', 'http://localhost:8080',
+        for url in ('http://127.0.0.1:8080', 'https://example.org', 'http://169.254.169.254', 'http://localhost:8080',
                     'http://127.0.0.1@evil.example', 'http://127.0.0.1:8080/x', 'http://127.0.0.1?x=1'):
             with self.assertRaises(ValueError):
                 node.LocalBackend(url, 'model')
-        self.assertEqual('::1', node.LocalBackend('http://[::1]:8080', 'model').host)
+        self.assertEqual('::1', node.LocalBackend('https://[::1]:8080', 'model').host)
 
 
 class WireTests(unittest.TestCase):
@@ -141,7 +145,7 @@ class WireTests(unittest.TestCase):
         self.addCleanup(server.shutdown)
         return server.server_address[1]
 
-    def test_real_http_roundtrip_to_fixed_backend_and_errors(self):
+    def test_real_https_roundtrip_to_fixed_backend_and_errors(self):
         requests = []
         finish = ['stop']
         class Backend(BaseHTTPRequestHandler):
@@ -158,11 +162,15 @@ class WireTests(unittest.TestCase):
                 self.send_header('Content-Length', str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-        backend_port = self.start(ThreadingHTTPServer(('127.0.0.1', 0), Backend))
-        backend = node.LocalBackend(f'http://127.0.0.1:{backend_port}', 'fixed-model')
-        port = self.start(node.NodeServer(('127.0.0.1', 0), node.ComputeApplication(TOKEN, backend)))
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        tls, client_tls = certificates(folder.name)
+        backend_server = ThreadingHTTPServer(('127.0.0.1', 0), Backend)
+        backend_server.socket = tls.wrap_socket(backend_server.socket, server_side=True)
+        backend_port = self.start(backend_server)
+        backend = node.LocalBackend(f'https://127.0.0.1:{backend_port}', 'fixed-model', cafile=Path(folder.name) / 'ca.pem')
+        port = self.start(node.NodeServer(('127.0.0.1', 0), node.ComputeApplication(TOKEN, backend), tls=tls, connection_guard=lambda ip: ip == '127.0.0.1'))
         def request(path, payload=None, token=TOKEN):
-            connection = http.client.HTTPConnection('127.0.0.1', port, timeout=3)
+            connection = http.client.HTTPSConnection('127.0.0.1', port, timeout=3, context=client_tls)
             try:
                 connection.request('GET' if payload is None else 'POST', path,
                                    None if payload is None else json.dumps(payload),
