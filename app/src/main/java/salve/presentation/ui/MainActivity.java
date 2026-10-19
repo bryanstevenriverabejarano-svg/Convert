@@ -1686,6 +1686,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void mostrarMemoriaEspanol() {
+        if (salve.core.EmbeddingsIndex.artifacts(this).installed()) {
+            // Ya descargada: nada que preparar ni pausar; sólo su estado.
+            new AlertDialog.Builder(this).setTitle("Memoria en español")
+                    .setMessage("✓ Descargada y lista: funciona sin conexión.\n\n" + salve.work.EmbeddingDownloadWorker.describe(this)
+                            + "\n\nSalve ya puede recordar cosas aunque las digas con otras palabras.")
+                    .setPositiveButton("Cerrar", null).show();
+            return;
+        }
         new AlertDialog.Builder(this).setTitle("Memoria en español")
                 .setMessage(salve.work.EmbeddingDownloadWorker.describe(this)
                         + "\n\nPermite recuperar recuerdos aunque uses otras palabras. Descarga única de 123,42 MB por Wi-Fi. "
