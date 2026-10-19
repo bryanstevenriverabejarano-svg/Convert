@@ -76,8 +76,18 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
                 try { return future.get(100, TimeUnit.MILLISECONDS); }
                 catch (TimeoutException pending) { /* check cancellation, revocation and deadline */ }
                 catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new CancellationException(); }
-                catch (ExecutionException failed) { throw new IOException("La petición al nodo falló"); }
+                catch (ExecutionException failed) { throw diagnose(failed.getCause()); }
             }
         } finally { call.cancel(); }
+    }
+    /** Mensajes fijos y útiles para el dueño; nunca incluyen token, cuerpo ni contenido de la tarea. */
+    static IOException diagnose(Throwable cause) {
+        if (cause instanceof javax.net.ssl.SSLException) return new IOException("Certificado HTTPS no válido");
+        if (cause instanceof java.net.UnknownHostException) return new IOException("No se encuentra el servidor");
+        if (cause instanceof java.net.SocketTimeoutException || cause instanceof java.io.InterruptedIOException)
+            return new IOException("Tiempo de nodo agotado");
+        if (cause instanceof IOException && cause.getMessage() != null
+                && cause.getMessage().matches("Nodo no disponible \\([0-9]{3}\\)")) return (IOException) cause;
+        return new IOException("La petición al nodo falló");
     }
 }
