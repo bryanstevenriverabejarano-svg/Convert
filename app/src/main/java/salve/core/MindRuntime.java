@@ -153,7 +153,10 @@ public final class MindRuntime {
             + "Wikipedia o en URLs que me des; analizar fotos si el modelo tiene visión; dibujar con trazos de luz (mi repertorio, "
             + "lo aprendido de fotos y dibujos de Bryan, referencias de imágenes que busco en internet o formas que compongo); "
             + "mover mi cuerpo en pantalla; examinarme a partir de lo que he hecho; controlar apps del móvil y crear "
-            + "rutinas solo con tu aprobación; presupuesto personal; voz. Órdenes: «tu mente», «sueña ahora», «examínate», «qué has hecho».";
+            + "rutinas solo con tu aprobación; presupuesto personal; voz; enviar tareas pesadas a mis nodos de cómputo "
+            + "(ordenadores de Bryan, vistos en mi constelación de nodos); buscar con Brave Search si hay clave; abrir rutas "
+            + "en Maps, poner música y llamar con confirmación; pedir la verificación del teléfono antes de contar algo privado. "
+            + "Órdenes: «tu mente», «sueña ahora», «examínate», «qué has hecho».";
 
     /**
      * Texto para el prompt de cada turno: con quién habla, qué puede hacer de verdad y su yo

@@ -583,6 +583,9 @@ public class MotorConversacional {
         estado("Leyendo lo que me dices…");
         String privateCheckpoint = puntoCriticoPrivado(entrada, entradaPorVoz, privateBudgetTurn);
         if (privateCheckpoint != null) { hablar(privateCheckpoint); return; }
+        turnFeatureOffer.set(null); // una oferta de un turno anterior nunca se cuela en este
+        String featureAnswer = respuestaOfertaPropia(entrada);
+        if (featureAnswer != null) { hablar(featureAnswer); return; }
         salve.core.mind.AttentionSchema.get().attend(salve.core.mind.AttentionSchema.topic(entrada),
                 salve.core.mind.AttentionSchema.Source.CONVERSATION, System.currentTimeMillis());
         salve.core.memory.CloudMemoryCommand.Action cloudCommand = salve.core.memory.CloudMemoryCommand.parse(entrada);
@@ -841,6 +844,7 @@ public class MotorConversacional {
         }
         // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
         String sketchContext = observarExperiencia(entrada) + prepararDibujo(entrada) + nubeContexto() + entenderHilo(entrada)
+                + conocimientoPropio(entrada)
                 + estrategiaRespuesta() + misActualizaciones(entrada) + misHabilidades(entrada);
         if (procesarControlExplicito(entrada)) return;
 
@@ -3477,6 +3481,83 @@ public class MotorConversacional {
         return "Abro la verificación del teléfono: pon tu huella o mira a la pantalla.";
     }
 
+    /** Oferta pendiente de abrir una de sus pantallas («¿Quieres que te abra mi constelación…?»). */
+    private final java.util.concurrent.atomic.AtomicReference<String> turnFeatureOffer = new java.util.concurrent.atomic.AtomicReference<>();
+    private volatile salve.core.mind.SelfFeatures.Feature pendingFeature;
+    private volatile long pendingFeatureUntil;
+
+    /**
+     * Autoconocimiento: si se habla de una de sus funciones, el modelo recibe qué es y su estado real
+     * (sin red: solo lo guardado en el móvil). Con el creador, además, se prepara la oferta de abrirla.
+     */
+    private String conocimientoPropio(String entrada) {
+        try {
+            salve.core.mind.SelfFeatures.Feature feature = salve.core.mind.SelfFeatures.detect(entrada);
+            if (feature == null || salve.core.devicecontrol.AppActionCommand.parse(entrada) != null) return "";
+            boolean creator = creatorSide();
+            salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
+            String offer = creator ? salve.core.mind.SelfFeatures.offer(feature, identity.biometricAvailable()) : null;
+            if (feature == salve.core.mind.SelfFeatures.Feature.PRIVACY_CHECK
+                    && !identity.session().needsPrivateCheckpoint(identity.biometricAvailable(), System.currentTimeMillis())) offer = null;
+            turnFeatureOffer.set(offer == null ? null : feature.name() + "|" + offer);
+            return salve.core.mind.SelfFeatures.promptBlock(feature, creator ? estadoFuncion(feature) : "", offer);
+        } catch (RuntimeException unavailable) { return ""; }
+    }
+
+    private String estadoFuncion(salve.core.mind.SelfFeatures.Feature feature) {
+        switch (feature) {
+            case NODES:
+            case OVERVIEW: {
+                salve.core.compute.ComputeNodeStore store = new salve.core.compute.ComputeNodeStore(context);
+                java.util.List<salve.core.compute.ComputeNode> nodes = store.load();
+                if (nodes.isEmpty()) return "Bryan aún no ha registrado ningún nodo";
+                StringBuilder out = new StringBuilder(nodes.size() + (nodes.size() == 1 ? " nodo registrado: " : " nodos registrados: "));
+                for (int i = 0; i < nodes.size(); i++) {
+                    salve.core.compute.ComputeNode node = nodes.get(i);
+                    String place = store.locationLabel(node.id);
+                    out.append(i == 0 ? "" : ", ").append(node.name).append(place.isEmpty() ? "" : " en " + place)
+                            .append(store.nodeEnabled(node.id) ? " (activo para tareas)" : " (desactivado)");
+                }
+                out.append("; envíos a nodos ").append(llm != null && llm.isDistributedEnabled() ? "activados" : "desactivados")
+                        .append(". No sé si están encendidos ahora: eso se comprueba al abrir la constelación");
+                return out.toString();
+            }
+            case WEB_SEARCH:
+                return "buscador elegido: " + salve.core.web.WebSearchSettings.load(context, "").id + "; clave de Brave: "
+                        + (salve.core.web.WebSearchKeyStore.hasBraveKey(context) ? "guardada" : "sin configurar");
+            case PRIVACY_CHECK: {
+                salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
+                if (!identity.biometricAvailable()) return "este teléfono no tiene huella, rostro ni PIN configurados";
+                return identity.session().state() == salve.core.identity.SessionIdentity.State.VERIFIED_CREATOR
+                        ? "Bryan está verificado ahora mismo" : "no hay una verificación vigente";
+            }
+            default: return "";
+        }
+    }
+
+    /** Respuesta del usuario a la oferta del turno anterior. Solo un «sí» claro abre algo. */
+    private String respuestaOfertaPropia(String entrada) {
+        salve.core.mind.SelfFeatures.Feature feature = pendingFeature;
+        pendingFeature = null;
+        if (feature == null || System.currentTimeMillis() > pendingFeatureUntil) return null;
+        if (salve.core.mind.SelfFeatures.declines(entrada)) return "Vale. Cuando quieras, me lo pides.";
+        if (!salve.core.mind.SelfFeatures.accepts(entrada)) return null;
+        if (feature == salve.core.mind.SelfFeatures.Feature.NODES) {
+            try {
+                context.startActivity(new Intent(context, salve.presentation.ui.NodeConstellationActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return "Abro mi constelación. Toca cualquier nodo para ver su ficha.";
+            } catch (RuntimeException unavailable) { return "No pude abrir la constelación. Está en Nodos de cómputo → Ver constelación."; }
+        }
+        if (feature == salve.core.mind.SelfFeatures.Feature.PRIVACY_CHECK) {
+            String first = mind().peopleGraph().creator().name.split(" ")[0];
+            salve.core.identity.IdentityManager.get(context).requestVerification("Confirma que eres " + first,
+                    ok -> toolHandler.post(() -> hablar(ok ? "Listo, " + first + ": verificado." : "No he podido confirmarlo.")));
+            return "Abro la verificación del teléfono: pon tu huella o mira a la pantalla.";
+        }
+        return null;
+    }
+
     /**
      * «Punto crítico»: una petición de algo privado (quién soy, mi familia, mis recuerdos, dinero…)
      * cuando solo se presume que habla el creador. Antes de que el turno cargue memoria o perfil,
@@ -3606,6 +3687,13 @@ public class MotorConversacional {
     private synchronized void deliverResponse(String texto, AvatarMotionProtocol.Result motion,
                                               boolean record, boolean publishUi, boolean privateBudget) {
         if (closed || texto == null || texto.trim().isEmpty()) return;
+        String featureOffer = record ? turnFeatureOffer.getAndSet(null) : null;
+        if (featureOffer != null) {
+            int bar = featureOffer.indexOf('|');
+            texto = salve.core.mind.SelfFeatures.withOffer(texto, featureOffer.substring(bar + 1));
+            pendingFeature = salve.core.mind.SelfFeatures.Feature.valueOf(featureOffer.substring(0, bar));
+            pendingFeatureUntil = System.currentTimeMillis() + salve.core.mind.SelfFeatures.OFFER_TTL_MS;
+        }
         // Dibujos: la marca [[salve_draw:…]] dice dónde va cada lienzo en el chat; la voz y el
         // historial reciben el texto limpio y una nota de lo que dibujó (así lo recuerda).
         String pendingSketch = record ? turnSketchTag.getAndSet(null) : null;
