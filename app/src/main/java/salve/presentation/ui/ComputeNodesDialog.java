@@ -42,9 +42,7 @@ public final class ComputeNodesDialog {
                                 }).setNegativeButton("Cancelar", null).show();
                     } else if (which == 1) add(activity);
                     else inspect(activity, nodes.get(which - 2));
-                }).setNeutralButton("Estado", (d, w) -> message(activity, engine.getComputeStatus()
-                        + "\n" + nodes.size() + " nodos registrados (no implica que estén conectados)."
-                        + "\nCada nodo necesita el servicio salve_compute_node.py y su modelo en ejecución. Una web o una carpeta de almacenamiento no aportan cómputo por sí solas."))
+                }).setNeutralButton("Estado", (d, w) -> checkAll(activity, nodes, engine))
                 .setNegativeButton("Cerrar", null).show();
     }
     private static void add(Activity activity) {
@@ -131,6 +129,26 @@ public final class ComputeNodesDialog {
                         show(activity); }
                     catch (RuntimeException error) { message(activity, error.getMessage()); }
                 }).setNegativeButton("Cerrar", null).show();
+    }
+    /** Comprueba ahora todos los nodos (solo al pulsar Estado; no hay sondeo en segundo plano). */
+    private static void checkAll(Activity activity, List<ComputeNode> nodes, SalveLLM engine) {
+        String mode = engine.isDistributedEnabled() ? "Envíos a nodos: activados." : "Envíos a nodos: desactivados (solo el móvil).";
+        if (nodes.isEmpty()) {
+            message(activity, mode + "\nNo hay nodos registrados. Usa «Añadir un nodo» y escanea el QR de tu PC.");
+            return;
+        }
+        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle("Estado de mis nodos")
+                .setMessage("Comprobando " + nodes.size() + (nodes.size() == 1 ? " nodo…" : " nodos…"))
+                .setNegativeButton("Cerrar", null).show();
+        ComputeNodeStore store = new ComputeNodeStore(activity); long revision = store.revision();
+        Future<?> pending = CHECKS.submit(() -> {
+            java.util.function.BooleanSupplier stopped = () -> Thread.currentThread().isInterrupted() || store.revision() != revision;
+            List<NodeStatusCheck.Result> results = NodeStatusCheck.run(nodes, new ComputeHttpTransport(), stopped,
+                    () -> System.nanoTime() / 1_000_000L);
+            String text = mode + "\n" + NodeStatusCheck.summary(results) + "\n\nÚltima tarea: " + engine.getComputeStatus() + ".";
+            activity.runOnUiThread(() -> { if (!activity.isFinishing() && !activity.isDestroyed() && dialog.isShowing()) dialog.setMessage(text); });
+        });
+        dialog.setOnDismissListener(d -> pending.cancel(true));
     }
     private static void probe(Activity activity, ComputeNode node) {
         AlertDialog dialog = new AlertDialog.Builder(activity).setTitle("Probar " + node.name)
