@@ -44,7 +44,7 @@ class BlindVaultTests(unittest.TestCase):
         for data in (b'{"salventes": []}', b'SLVB1', 'texto'):
             with self.assertRaises(VaultError):
                 self.vault.put('salventes', data)
-        for name in ('../x', 'A', 'ab', 'con espacio', 'x' * 65, None):
+        for name in ('../x', 'A', 'ab', 'con espacio', 'x' * 65, None, 'con', 'nul', 'com1'):
             with self.assertRaises(VaultError):
                 self.vault.put(name, sealed())
         with self.assertRaises(VaultError) as big:

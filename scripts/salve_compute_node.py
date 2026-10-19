@@ -348,6 +348,15 @@ class NodeHandler(BaseHTTPRequestHandler):
                 blob = self.path.startswith('/v1/vault/')
                 limit, kind = (MAX_BLOB, 'application/octet-stream') if blob else (MAX_BODY, 'application/json')
                 if not 0 <= size <= limit or self.headers.get_content_type() != kind:
+                    # Se lee y descarta lo enviado antes de responder: cerrar con datos sin leer provoca un
+                    # reset (sobre todo en Windows) y el móvil no llegaría a ver el motivo del rechazo.
+                    if 0 <= size <= MAX_BLOB:
+                        remaining = size
+                        while remaining > 0:
+                            chunk = self.rfile.read(min(65536, remaining))
+                            if not chunk:
+                                break
+                            remaining -= len(chunk)
                     raise ValueError()
                 body = self.rfile.read(size)
                 if len(body) != size:

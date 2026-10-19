@@ -24,6 +24,8 @@ MAX_BLOB = 16 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024
 MAX_BLOBS = 32
 MIN_SEALED = 5 + 4 + 16 + 12 + 16
+# Nombres de dispositivo reservados en Windows (con cualquier extensión): no pueden ser archivos.
+WINDOWS_RESERVED = frozenset(['con', 'prn', 'aux', 'nul'] + [f'com{i}' for i in range(10)] + [f'lpt{i}' for i in range(10)])
 POSIX = os.name == 'posix'
 
 
@@ -43,7 +45,7 @@ class BlindVault:
         self.lock = threading.Lock()
 
     def _path(self, name, previous=False):
-        if not isinstance(name, str) or not NAME.fullmatch(name):
+        if not isinstance(name, str) or not NAME.fullmatch(name) or name in WINDOWS_RESERVED:
             raise VaultError('invalid_name')
         return self.directory / (name + ('.anterior' if previous else '.sellado'))
 
