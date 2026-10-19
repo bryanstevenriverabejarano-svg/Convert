@@ -24,10 +24,16 @@ import salve.core.compute.ComputeNode;
 import salve.core.compute.ComputeNodeStore;
 import salve.core.compute.ConstellationModel;
 import salve.core.compute.NodeStatusCheck;
+import salve.core.privatefamily.FamilyVault;
+import salve.core.privatefamily.LocationSync;
+import salve.core.privatefamily.PrivateLocation;
+import salve.core.privatefamily.PrivateVpn;
 
 /**
- * Vista de constelación de los nodos propios. Comprueba su estado solo al abrirse o al pulsar
- * «Comprobar ahora»; nada se consulta en segundo plano. La ubicación es una etiqueta local.
+ * Vista de constelación de los nodos propios, por la red privada (VPN) de Salve. El estado se
+ * comprueba al abrirse o al pulsar «Comprobar ahora»; la ubicación que comparte cada nodo se
+ * consulta cada 10 s solo mientras la pantalla está visible y solo viaja si cambió. Nada se
+ * consulta en segundo plano. Salve no envía su propia ubicación a los nodos.
  */
 public final class NodeConstellationActivity extends Activity {
     private static final int BG = 0xFF02060C, CYAN = 0xFF22D3EE, INK = 0xFFE6FBFF, MUTED = 0xFF7DA9B8;
@@ -45,12 +51,25 @@ public final class NodeConstellationActivity extends Activity {
     private Button sending;
     private Future<?> pending;
     private int generation;
+    /** Ubicaciones: cada 10 s solo mientras la pantalla está visible, y solo viajan si cambiaron. */
+    private static final long LOCATION_EVERY_MS = 10_000;
+    private final ExecutorService locationChecks = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "salve-node-locations"); thread.setDaemon(true); return thread;
+    });
+    private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable locationTick = new Runnable() {
+        @Override public void run() { syncLocations(); ui.postDelayed(this, LOCATION_EVERY_MS); }
+    };
+    private Future<?> locationPending;
+    private FamilyVault vault;
+    private FamilyVault.Data vaultData = new FamilyVault.Data();
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         setTitle("Constelación de nodos");
         store = new ComputeNodeStore(this);
         engine = SalveLLM.getInstance(this);
+        vault = new FamilyVault(this);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
 
@@ -79,27 +98,70 @@ public final class NodeConstellationActivity extends Activity {
         actions.setGravity(Gravity.CENTER);
         actions.setPadding(0, dp(10), 0, 0);
         actions.addView(button("Comprobar ahora", v -> refresh()), weight());
-        sending = button("", v -> toggleSending());
-        actions.addView(sending, weight());
-        actions.addView(button("Cerrar", v -> finish()), weight());
+        actions.addView(button("Red privada", v -> startActivity(new android.content.Intent(this, PrivateFamilyActivity.class))), weight());
         root.addView(actions);
+        LinearLayout more = new LinearLayout(this);
+        more.setOrientation(LinearLayout.HORIZONTAL);
+        more.setGravity(Gravity.CENTER);
+        sending = button("", v -> toggleSending());
+        more.addView(sending, weight());
+        more.addView(button("Cerrar", v -> finish()), weight());
+        root.addView(more);
         setContentView(root);
     }
 
     @Override protected void onResume() {
         super.onResume();
         nodes = new ArrayList<>(store.load());
+        loadVault();
         updateSendingButton();
         refresh();
+        ui.post(locationTick);
+    }
+
+    private void loadVault() {
+        try { vaultData = vault.read(); } catch (RuntimeException unreadable) { vaultData = new FamilyVault.Data(); }
+    }
+
+    /**
+     * Pide a cada nodo activo su ubicación enviando la versión que ya conoce: si no cambió, el nodo
+     * responde «sin cambios» y no viaja nada. Sin VPN no se intenta (no hay otra vía hacia los nodos).
+     */
+    private void syncLocations() {
+        if (locationPending != null && !locationPending.isDone()) return;
+        if (!PrivateVpn.get(this).available()) return;
+        List<ComputeNode> enabled = new ArrayList<>();
+        for (ComputeNode node : nodes) if (store.nodeEnabled(node.id)) enabled.add(node);
+        if (enabled.isEmpty()) return;
+        long revision = store.revision();
+        locationPending = locationChecks.submit(() -> {
+            ComputeHttpTransport transport = new ComputeHttpTransport(this);
+            boolean changed = false;
+            for (ComputeNode node : enabled) {
+                if (Thread.currentThread().isInterrupted() || store.revision() != revision) return;
+                try {
+                    String known = vault.read().versions.get(node.id);
+                    com.google.gson.JsonObject response = transport.familyStatus(node, known,
+                            () -> Thread.currentThread().isInterrupted() || store.revision() != revision);
+                    long now = System.currentTimeMillis() / 1000;
+                    final boolean[] updated = {false};
+                    vault.edit(data -> updated[0] = LocationSync.apply(data.locations, data.versions, data.receivedAt, node.id, response, now));
+                    changed |= updated[0];
+                } catch (Exception unavailable) { /* un nodo sin respuesta conserva su última ubicación conocida */ }
+            }
+            if (changed) runOnUiThread(() -> { if (!isFinishing() && !isDestroyed()) { loadVault(); render(); } });
+        });
     }
 
     @Override protected void onPause() {
         super.onPause();
         if (pending != null) pending.cancel(true);
+        ui.removeCallbacks(locationTick);
+        if (locationPending != null) locationPending.cancel(true);
         generation++;
     }
 
-    @Override protected void onDestroy() { checks.shutdownNow(); super.onDestroy(); }
+    @Override protected void onDestroy() { checks.shutdownNow(); locationChecks.shutdownNow(); super.onDestroy(); }
 
     /** Comprueba los nodos activos; los desactivados no se contactan. */
     private void refresh() {
@@ -111,12 +173,16 @@ public final class NodeConstellationActivity extends Activity {
             if (store.nodeEnabled(node.id)) enabled.add(node);
         }
         render();
+        if (!nodes.isEmpty() && !PrivateVpn.get(this).available()) {
+            summary.setText("Red privada desconectada: pulsa «Red privada» y Conectar para ver tus nodos.");
+            return;
+        }
         summary.setText(nodes.isEmpty() ? "Sin nodos registrados." : enabled.isEmpty()
                 ? "Todos los nodos están desactivados." : "Comprobando " + enabled.size() + (enabled.size() == 1 ? " nodo…" : " nodos…"));
         if (enabled.isEmpty()) return;
         long revision = store.revision();
         pending = checks.submit(() -> {
-            List<NodeStatusCheck.Result> found = NodeStatusCheck.run(enabled, new ComputeHttpTransport(),
+            List<NodeStatusCheck.Result> found = NodeStatusCheck.run(enabled, new ComputeHttpTransport(this),
                     () -> Thread.currentThread().isInterrupted() || store.revision() != revision,
                     () -> System.nanoTime() / 1_000_000L);
             runOnUiThread(() -> {
@@ -128,7 +194,7 @@ public final class NodeConstellationActivity extends Activity {
                 }
                 int online = 0;
                 for (NodeStatusCheck.Result r : found) if (r.online) online++;
-                summary.setText(online + " de " + enabled.size() + " nodos activos responden · núcleo: este móvil");
+                summary.setText(online + " de " + enabled.size() + " nodos activos responden · por la red privada");
                 render();
             });
         });
@@ -136,8 +202,11 @@ public final class NodeConstellationActivity extends Activity {
 
     private void render() {
         List<NodeConstellationView.Item> items = new ArrayList<>();
-        for (ComputeNode node : nodes)
-            items.add(new NodeConstellationView.Item(node.name, store.locationLabel(node.id), stateOf(node)));
+        long now = System.currentTimeMillis() / 1000;
+        for (ComputeNode node : nodes) {
+            String place = LocationSync.place(LocationSync.current(vaultData.locations, node.id, now));
+            items.add(new NodeConstellationView.Item(node.name, place.isEmpty() ? store.locationLabel(node.id) : place, stateOf(node)));
+        }
         constellation.setItems(items);
     }
 
@@ -156,9 +225,18 @@ public final class NodeConstellationActivity extends Activity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(20), dp(12), dp(20), dp(4));
-        String location = store.locationLabel(node.id);
+        String label = store.locationLabel(node.id);
+        long nowSeconds = System.currentTimeMillis() / 1000;
+        PrivateLocation shared = LocationSync.current(vaultData.locations, node.id, nowSeconds);
         row(card, "Estado", ConstellationModel.label(state));
-        row(card, "Ubicación", location.isEmpty() ? "Sin etiqueta" : location);
+        if (shared != null) {
+            row(card, "Ubicación del nodo", LocationSync.place(shared) + (shared.source.equals("gps") ? " · GPS puntual" : " · fijada por su dueño"));
+            row(card, "Coordenadas", String.format(java.util.Locale.ROOT, "%.5f, %.5f", shared.latitude, shared.longitude)
+                    + (shared.accuracy > 0 ? " (±" + Math.round(shared.accuracy) + " m)" : ""));
+            row(card, "Compartida", java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+                    .format(new java.util.Date(shared.capturedAt * 1000)));
+        } else row(card, "Ubicación del nodo", "No la comparte");
+        if (!label.isEmpty()) row(card, "Etiqueta propia", label);
         if (result != null && result.online) {
             row(card, "Modelo", result.model);
             row(card, "Plazas libres", String.valueOf(result.freeSlots));

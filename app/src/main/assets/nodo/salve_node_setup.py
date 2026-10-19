@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
-"""Prepara un PC propio como nodo de cómputo de Salve. Lo ejecuta el dueño, a mano.
+"""Prepara un nodo propio: mide hardware y genera un QR de emparejamiento privado.
 
-  python salve_node_setup.py preparar [--url https://mi-pc.tail1234.ts.net] [--nombre "Mi PC"]
-  python salve_node_setup.py anunciar --url https://mi-pc.tail1234.ts.net [--nombre "Mi PC"]
-
-`preparar` mide RAM/GPU con la biblioteca estándar, recomienda un tamaño de modelo GGUF,
-crea el token en un archivo privado y muestra un QR (URL + token) para la app.
-`anunciar` publica el nodo por mDNS (_salvenode._tcp) en tu red local. El anuncio
-lleva solo nombre, URL y versión: el token nunca viaja por la red de descubrimiento.
-
-No descarga nada, no abre puertos y no instala servicios. El QR del terminal usa el
-paquete opcional `qrcode` (pip install qrcode); el anuncio mDNS usa `zeroconf` o, si
-no está, avahi-publish-service (Linux) o dns-sd (macOS / Bonjour para Windows).
+python salve_node_setup.py preparar --url https://10.77.0.2:8766
+No usa descubrimiento mDNS, proveedores VPN externos ni geolocalización de IPs.
+El QR opcional (pip install qrcode) contiene el token de consulta. Guárdalo privado.
+Consulta PRIVATE_FAMILY_NETWORK.md para WireGuard, certificados y arranque HTTPS.
 """
 from __future__ import annotations
 
 import argparse
 import ctypes
 import json
+import ipaddress
 import os
 from pathlib import Path
 import platform
@@ -144,40 +138,24 @@ def recommend(ram_available, gpu_free):
 
 # ---------------------------------------------------------------- red y URL
 
-def tailscale_url():
-    raw = _run(['tailscale', 'status', '--json'])
-    try:
-        name = json.loads(raw or '{}').get('Self', {}).get('DNSName', '').rstrip('.')
-    except ValueError:
-        return None
-    return f'https://{name}' if name else None
-
-
 def validate_url(raw):
-    """Mismas reglas que ComputeNode.endpoint() en la app: https, host, sin ruta ni parámetros."""
+    """HTTPS y literal RFC1918: sin DNS, ruta ni parámetros."""
     value = (raw or '').strip().rstrip('/')
     parts = urlsplit(value)
     try:
         port = parts.port
     except ValueError:
         port = -1
-    if (parts.scheme != 'https' or not parts.hostname or parts.username or parts.password
+    try:
+        ip = ipaddress.IPv4Address(parts.hostname)
+        private = any(ip in ipaddress.ip_network(net) for net in ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'))
+    except (ValueError, TypeError):
+        private = False
+    if (not private or parts.scheme != 'https' or not parts.hostname or parts.username or parts.password
             or parts.query or parts.fragment or parts.path or '\\' in value or len(value) > 500
             or (port is not None and not 1 <= port <= 65535)):
-        raise ValueError('La URL debe ser https://servidor[:puerto], sin ruta, credenciales ni parámetros.')
+        raise ValueError('La URL debe ser https://IPv4-privada[:puerto], sin ruta, credenciales ni parámetros.')
     return value
-
-
-def lan_ip():
-    """IP local por la que saldría el tráfico. No envía paquetes."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        sock.connect(('192.0.2.1', 9))  # TEST-NET-1: nunca se contacta
-        return sock.getsockname()[0]
-    except OSError:
-        return '127.0.0.1'
-    finally:
-        sock.close()
 
 
 def pairing_uri(name, url, token):
@@ -243,22 +221,18 @@ def cmd_preparar(args):
     else:
         print('Recomendación: este equipo no tiene memoria suficiente ni para un modelo de 1-2B.')
 
-    url = args.url or tailscale_url()
+    url = args.url
     if not url:
         print('\nFalta la URL HTTPS del nodo. La app solo acepta https:// con certificado válido.')
-        print('Opción sencilla con Tailscale en este PC y en el móvil:')
-        print(f'  tailscale serve --bg --https=443 http://127.0.0.1:{NODE_PORT}')
-        print('Después repite:  python salve_node_setup.py preparar --url https://<tu-pc>.<tailnet>.ts.net')
+        print('Crea antes la red privada (WireGuard propio, CA y certificados):')
+        print('  python salve_private_network.py crear --endpoint <IP del PC o de tu router>')
+        print('Después: python salve_node_setup.py preparar --url https://10.77.0.2:8766')
         return 2
     try:
         url = validate_url(url)
     except ValueError as error:
         print(f'\n{error}')
         return 2
-    if not args.url:
-        print(f'\nURL detectada con Tailscale: {url}')
-        print(f'  Si aún no lo has hecho:  tailscale serve --bg --https=443 http://127.0.0.1:{NODE_PORT}')
-
     name = args.nombre or platform.node() or 'Mi PC'
     if not NAME_RE.fullmatch(name):
         print('\nEl nombre debe tener de 1 a 60 caracteres imprimibles.')
@@ -267,8 +241,8 @@ def cmd_preparar(args):
     token, created = create_token(token_path, rotate=args.rotar)
     print(f"\nToken {'nuevo' if created else 'existente'} guardado en: {token_path}")
 
-    print('\nArranca el servicio del nodo (con llama-server ya en marcha en el puerto 8080):')
-    print(f'  python salve_compute_node.py --token-file "{token_path}" --model <nombre-del-modelo> --port {NODE_PORT}')
+    print('\nPara arrancar el nodo usa el comando que muestra «python salve_private_network.py crear»')
+    print('(incluye certificados, túnel y tokens). El modelo puede escuchar en http://127.0.0.1:8080.')
 
     print('\nEn la app: Nodos de cómputo > Añadir un nodo > Escanear QR\n')
     print_qr(pairing_uri(name, url, token))
@@ -277,65 +251,16 @@ def cmd_preparar(args):
     return 0
 
 
-def cmd_anunciar(args):
-    try:
-        url = validate_url(args.url)
-    except ValueError as error:
-        print(error)
-        return 2
-    name = args.nombre or platform.node() or 'Mi PC'
-    port = urlsplit(url).port or 443
-    ip = lan_ip()
-    props = {'v': PAIRING_VERSION, 'u': url, 'n': name}  # nunca el token
-    print(f'Anunciando "{name}" ({url}) en la red local desde {ip}. Ctrl+C para parar.')
-    try:
-        from zeroconf import ServiceInfo, Zeroconf  # opcional
-    except ImportError:
-        return _announce_cli(name, port, props)
-    info = ServiceInfo(f'{SERVICE_TYPE}.local.', f'{name}.{SERVICE_TYPE}.local.',
-                       addresses=[socket.inet_aton(ip)], port=port, properties=props,
-                       server=f'{socket.gethostname().split(".")[0]}.local.')
-    zc = Zeroconf()
-    zc.register_service(info)
-    try:
-        while True:
-            time.sleep(3600)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        zc.unregister_service(info)
-        zc.close()
-    return 0
-
-
-def _announce_cli(name, port, props):
-    txt = [f'{k}={v}' for k, v in props.items()]
-    if shutil.which('avahi-publish-service'):
-        command = ['avahi-publish-service', name, SERVICE_TYPE, str(port), *txt]
-    elif shutil.which('dns-sd'):
-        command = ['dns-sd', '-R', name, SERVICE_TYPE, 'local', str(port), *txt]
-    else:
-        print('No hay herramienta mDNS. Instala una:  pip install zeroconf')
-        return 2
-    try:
-        return subprocess.call(command)
-    except KeyboardInterrupt:
-        return 0
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest='orden', required=True)
     prep = sub.add_parser('preparar', help='medir el equipo, crear token y mostrar el QR')
-    prep.add_argument('--url', help='URL HTTPS pública del nodo (si no, se intenta con Tailscale)')
+    prep.add_argument('--url', help='URL HTTPS con la IPv4 privada del nodo en WireGuard')
     prep.add_argument('--nombre', help='nombre que verás en la app')
-    prep.add_argument('--token-file', default='~/.salve/node_token')
+    prep.add_argument('--token-file', default='~/.salve/red/token', help='el mismo que usa salve_private_network.py')
     prep.add_argument('--rotar', action='store_true', help='crear un token nuevo aunque ya exista')
-    ann = sub.add_parser('anunciar', help='publicar el nodo por mDNS en la red local')
-    ann.add_argument('--url', required=True)
-    ann.add_argument('--nombre')
     args = parser.parse_args(argv)
-    return cmd_preparar(args) if args.orden == 'preparar' else cmd_anunciar(args)
+    return cmd_preparar(args)
 
 
 if __name__ == '__main__':

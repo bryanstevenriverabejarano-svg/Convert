@@ -9,8 +9,11 @@ import java.util.function.Supplier;
 /** App-owned orchestration; a node receives only the current prompt, never the memory database. */
 public final class DistributedCompute {
     private final ComputeNodeStore store;
-    private final ComputeRouter router = new ComputeRouter(new ComputeHttpTransport(), () -> System.nanoTime() / 1_000_000L);
-    public DistributedCompute(Context context) { store = new ComputeNodeStore(context); }
+    private final ComputeRouter router;
+    public DistributedCompute(Context context) {
+        store = new ComputeNodeStore(context);
+        router = new ComputeRouter(new ComputeHttpTransport(context), () -> System.nanoTime() / 1_000_000L);
+    }
     public boolean enabled() { return store.enabled(); }
     public void setEnabled(boolean enabled) { store.setEnabled(enabled); }
     public String status() { return enabled() ? router.status() : "Nodos desactivados"; }

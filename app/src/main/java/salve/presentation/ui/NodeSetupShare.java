@@ -13,20 +13,18 @@ import java.util.ArrayList;
 
 /** Envía al PC del dueño los scripts del nodo y una guía breve. Se ejecutan allí, a mano. */
 final class NodeSetupShare {
-    private static final String[] SCRIPTS = {"salve_node_setup.py", "salve_compute_node.py"};
-    static final String GUIDE = "Guía para preparar tu PC como nodo de Salve\n\n"
-            + "1. Instala Python 3.10+ y llama.cpp. Opcional: pip install qrcode zeroconf\n"
-            + "2. Mide tu equipo y obtén la recomendación de modelo:\n"
-            + "   python salve_node_setup.py preparar\n"
-            + "3. Descarga un GGUF del tamaño recomendado y arráncalo solo en local:\n"
-            + "   llama-server -m modelo.gguf --host 127.0.0.1 --port 8080\n"
-            + "4. Publica el nodo con HTTPS válido. Con Tailscale en el PC y en el móvil:\n"
-            + "   tailscale serve --bg --https=443 http://127.0.0.1:8766\n"
-            + "5. Repite el paso 2 (detecta la URL de Tailscale o pásala con --url) y arranca el nodo:\n"
-            + "   python salve_compute_node.py --token-file ~/.salve/node_token --model <modelo> --port 8766\n"
-            + "6. En la app: Nodos de cómputo > Añadir un nodo > Escanear QR.\n"
-            + "   Para que aparezca en \"Buscar en mi red\": python salve_node_setup.py anunciar --url <tu-url>\n\n"
-            + "El QR incluye el token: no lo compartas. El anuncio de red no lo incluye.";
+    private static final String[] SCRIPTS = {"salve_private_network.py", "salve_node_setup.py", "salve_compute_node.py",
+            "salve_private_location.py", "requirements-family.txt", "PRIVATE_FAMILY_NETWORK.md"};
+    static final String GUIDE = "Red privada de Salve (sin servicios de terceros)\n\n"
+            + "1. En el PC instala Python 3.10+, llama.cpp y WireGuard (wireguard.com, sin cuenta).\n"
+            + "2. python -m pip install -r requirements-family.txt\n"
+            + "3. Mide tu equipo y elige modelo: python salve_node_setup.py preparar --url https://10.77.0.2:8766\n"
+            + "4. Crea la red privada: python salve_private_network.py crear --endpoint <IP del PC o de tu router>\n"
+            + "   Genera certificados, claves WireGuard, el perfil del móvil y el comando exacto para arrancar el nodo.\n"
+            + "5. Importa wg-nodo-salve.conf en WireGuard del PC y actívalo.\n"
+            + "6. Pasa al móvil salve-movil.conf y ca.pem. En Salve: Nodos de cómputo → Red privada (VPN) → Configurar → Conectar.\n"
+            + "7. Arranca llama-server y el nodo con el comando que muestra el paso 4, y escanea su QR en Añadir un nodo.\n\n"
+            + "Detalles y modo manual en PRIVATE_FAMILY_NETWORK.md. El QR y salve-movil.conf son privados.";
 
     private NodeSetupShare() { }
 
