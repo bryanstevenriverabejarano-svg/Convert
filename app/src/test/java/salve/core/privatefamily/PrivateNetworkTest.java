@@ -44,6 +44,12 @@ public class PrivateNetworkTest {
         assertFalse(state.observe(false, true, 3100)); assertEquals("Inaccesible", state.status);
         assertFalse(state.observe(true, true, 3200)); assertFalse(state.alerted); assertEquals(0, state.failures);
     }
+    @Test public void oldSuccessIsNotShownAsLiveAvailability() {
+        FamilyState state = new FamilyState(); state.observe(true, true, 1000);
+        assertEquals("Disponible", state.displayStatus(true, 1100));
+        assertEquals("Sin comprobación reciente", state.displayStatus(true, 2801));
+        assertEquals("Sin VPN disponible; estado desconocido", state.displayStatus(false, 1100));
+    }
     @Test public void neverSeenNodesDoNotRaiseAnIncident() {
         FamilyState state = new FamilyState();
         for (int i = 0; i < 5; i++) assertFalse(state.observe(false, true, 1000 + i * 900));

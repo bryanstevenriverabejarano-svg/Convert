@@ -7,6 +7,11 @@ public final class FamilyState {
     public boolean alerted;
     public String status = "Sin comprobar";
     public PrivateLocation location;
+    public boolean recent(long now) { return lastCheck > 0 && now >= lastCheck - 60 && now - lastCheck <= 1800; }
+    public String displayStatus(boolean vpnAvailable, long now) {
+        if (!vpnAvailable) return "Sin VPN disponible; estado desconocido";
+        return recent(now) ? status : "Sin comprobación reciente";
+    }
     public boolean observe(boolean reachable, boolean vpnAvailable, long now) {
         if (!vpnAvailable) { status = "Pausado: VPN desconectada"; return false; }
         lastCheck = now;

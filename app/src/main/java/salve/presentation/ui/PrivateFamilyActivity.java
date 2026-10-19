@@ -43,7 +43,7 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
     private TextView status;
     private EditText importTarget;
     private LocationListener gps;
-    private Runnable gpsGranted;
+    private Runnable gpsGranted, gpsTimeout;
     private boolean busy;
     private String rendered = "";
     private final List<Marker> markers = new ArrayList<>();
@@ -176,7 +176,7 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
             for (ComputeNode node : new ComputeNodeStore(this).load()) {
                 if (!data.family.contains(node.id)) continue;
                 FamilyState state = data.states.getOrDefault(node.id, new FamilyState());
-                String label = node.name + " · " + (vpn.available() ? state.status : "VPN desconectada; estado desconocido")
+                String label = node.name + " · " + state.displayStatus(vpn.available(), now)
                         + "\nÚltima respuesta: " + date(state.lastSeen);
                 PrivateLocation fix = state.location;
                 if (fix != null && fix.fresh(now)) {
@@ -184,7 +184,7 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
                             + "\n" + fix.latitude + ", " + fix.longitude + " · compartida " + date(fix.capturedAt);
                     Marker marker = new Marker(map);
                     android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable(); dot.setShape(android.graphics.drawable.GradientDrawable.OVAL); dot.setSize(30, 30);
-                    dot.setColor(!vpn.available() ? Color.GRAY : state.status.equals("Disponible") ? Color.rgb(26, 128, 75) : Color.rgb(192, 114, 27)); dot.setStroke(2, Color.WHITE); marker.setIcon(dot);
+                    dot.setColor(!vpn.available() || !state.recent(now) ? Color.GRAY : state.status.equals("Disponible") ? Color.rgb(26, 128, 75) : Color.rgb(192, 114, 27)); dot.setStroke(2, Color.WHITE); marker.setIcon(dot);
                     marker.setPosition(new GeoPoint(fix.latitude, fix.longitude)); marker.setTitle(node.name);
                     marker.setSnippet(label); marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); map.getOverlays().add(marker); markers.add(marker);
                 } else label += "\nSin coordenadas compartidas vigentes";
@@ -272,10 +272,11 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
             @Override public void onStatusChanged(String provider, int status, Bundle extras) { }
         };
         try { manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, gps, Looper.getMainLooper());
-            handler.postDelayed(() -> { if (gps != null) { stopGps(); message("No llegó una lectura GPS. Prueba al aire libre o usa coordenadas estáticas."); } }, 30000);
+            gpsTimeout = () -> { if (gps != null) { stopGps(); message("No llegó una lectura GPS. Prueba al aire libre o usa coordenadas estáticas."); } };
+            handler.postDelayed(gpsTimeout, 30000);
         } catch (SecurityException denied) { stopGps(); message("No hay permiso para leer el GPS."); }
     }
-    private void stopGps() { if (gps != null) { getSystemService(LocationManager.class).removeUpdates(gps); gps = null; } }
+    private void stopGps() { if (gpsTimeout != null) { handler.removeCallbacks(gpsTimeout); gpsTimeout = null; } if (gps != null) { getSystemService(LocationManager.class).removeUpdates(gps); gps = null; } }
     private void message(String text) { if (!isFinishing() && !isDestroyed()) new AlertDialog.Builder(this).setMessage(text).setPositiveButton("Cerrar", null).show(); }
     @Override protected void onResume() { super.onResume(); if (map != null) map.onResume(); handler.post(update); }
     @Override protected void onPause() { handler.removeCallbacks(update); if (map != null) map.onPause(); super.onPause(); }
