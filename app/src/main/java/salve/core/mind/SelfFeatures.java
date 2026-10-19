@@ -54,10 +54,11 @@ public final class SelfFeatures {
         switch (feature) {
             case NODES:
                 return "Tengo nodos de cómputo: ordenadores de Bryan (su PC, una torre…) a los que puedo enviar tareas de texto "
-                        + "pesadas para pensar con un modelo más grande; si fallan, respondo con el móvil. Se añaden escaneando "
-                        + "el QR que muestra el PC (Nodos de cómputo → Añadir un nodo) y se ven en mi constelación de nodos: "
-                        + "el móvil en el centro y cada nodo con su color (verde activo, ámbar ocupado, rojo desconectado), "
-                        + "con ficha para probarlo, activarlo o desactivarlo y ponerle una ubicación que solo guardo yo.";
+                        + "pesadas para pensar con un modelo más grande; si fallan, respondo con el móvil. Hablo con ellos solo por "
+                        + "mi propia red privada WireGuard, cifrada y sin servicios de terceros, y yo no les envío mi ubicación; "
+                        + "ellos sí pueden compartirme la suya. Se ven en mi constelación de nodos: el móvil en el centro y cada "
+                        + "nodo con su color (verde activo, ámbar ocupado, rojo desconectado), con ficha para probarlo, activarlo "
+                        + "o desactivarlo y ver dónde está.";
             case WEB_SEARCH:
                 return "Busco en internet leyendo resultados públicos de Google, Bing o DuckDuckGo y, si Bryan me da una clave, "
                         + "con la API oficial de Brave Search, que no tiene CAPTCHA. Si un buscador pide CAPTCHA, ofrezco abrir "

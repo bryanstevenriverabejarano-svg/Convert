@@ -3511,13 +3511,20 @@ public class MotorConversacional {
                 salve.core.compute.ComputeNodeStore store = new salve.core.compute.ComputeNodeStore(context);
                 java.util.List<salve.core.compute.ComputeNode> nodes = store.load();
                 if (nodes.isEmpty()) return "Bryan aún no ha registrado ningún nodo";
+                java.util.Map<String, String> locations;
+                try { locations = new salve.core.privatefamily.FamilyVault(context).read().locations; }
+                catch (RuntimeException unreadable) { locations = java.util.Collections.emptyMap(); }
+                boolean vpn = salve.core.privatefamily.PrivateVpn.get(context).available();
                 StringBuilder out = new StringBuilder(nodes.size() + (nodes.size() == 1 ? " nodo registrado: " : " nodos registrados: "));
                 for (int i = 0; i < nodes.size(); i++) {
                     salve.core.compute.ComputeNode node = nodes.get(i);
-                    String place = store.locationLabel(node.id);
+                    String place = salve.core.privatefamily.LocationSync.place(salve.core.privatefamily.LocationSync.current(
+                            locations, node.id, System.currentTimeMillis() / 1000));
+                    if (place.isEmpty()) place = store.locationLabel(node.id);
                     out.append(i == 0 ? "" : ", ").append(node.name).append(place.isEmpty() ? "" : " en " + place)
                             .append(store.nodeEnabled(node.id) ? " (activo para tareas)" : " (desactivado)");
                 }
+                out.append("; red privada ").append(vpn ? "conectada" : "desconectada");
                 out.append("; envíos a nodos ").append(llm != null && llm.isDistributedEnabled() ? "activados" : "desactivados")
                         .append(". No sé si están encendidos ahora: eso se comprueba al abrir la constelación");
                 return out.toString();

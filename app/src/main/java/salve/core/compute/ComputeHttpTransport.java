@@ -9,18 +9,26 @@ import java.util.function.BooleanSupplier;
 import okhttp3.*;
 import salve.core.cognition.CognitivePrompt;
 
-/** TLS verification, no redirects/retries/proxies, bounded JSON and promptly cancellable calls. */
+/** Over Salve's own WireGuard tunnel only: own CA, no redirects/retries/proxies, bounded JSON, cancellable. */
 public final class ComputeHttpTransport implements ComputeRouter.Transport {
-    private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
-            .proxy(Proxy.NO_PROXY).followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
-            .connectTimeout(2, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).callTimeout(50, TimeUnit.SECONDS)
-            .dns(host -> {
-                java.util.List<java.net.InetAddress> addresses = Dns.SYSTEM.lookup(host);
-                for (java.net.InetAddress ip : addresses)
-                    if (ip.isAnyLocalAddress() || ip.isLoopbackAddress() || ip.isLinkLocalAddress() || ip.isMulticastAddress())
-                        throw new java.net.UnknownHostException("Destino de nodo no admitido");
-                return addresses;
-            }).build();
+    private final salve.core.privatefamily.PrivateVpn vpn;
+    /** Toda conexión a un nodo va por el túnel WireGuard propio de Salve; sin túnel, no sale nada. */
+    public ComputeHttpTransport(android.content.Context context) { vpn = salve.core.privatefamily.PrivateVpn.get(context); }
+    public JsonObject familyStatus(ComputeNode node, BooleanSupplier stopped) throws IOException {
+        return familyStatus(node, null, stopped);
+    }
+    /**
+     * Estado y ubicación del nodo. Con {@code knownVersion} el nodo responde «sin cambios» y no
+     * envía coordenadas si la ubicación no ha cambiado desde la última vez.
+     */
+    public JsonObject familyStatus(ComputeNode node, String knownVersion, BooleanSupplier stopped) throws IOException {
+        return request(node, "/v1/family/status", null, 5, stopped, knownVersion);
+    }
+    public void shareLocation(ComputeNode node, String writerToken, JsonObject location, BooleanSupplier stopped) throws IOException {
+        ComputeNode owner = new ComputeNode(node.id, node.name, node.endpoint, writerToken);
+        JsonObject payload = new JsonObject(); payload.add("location", location == null ? JsonNull.INSTANCE : location);
+        request(owner, "/v1/location", payload, 5, stopped, null);
+    }
     @Override public ComputeRouter.Health health(ComputeNode node, BooleanSupplier stopped) throws IOException {
         JsonObject json = request(node, "/v1/health", null, 2, stopped);
         try {
@@ -43,11 +51,17 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         } catch (RuntimeException malformed) { throw new IOException("Respuesta inválida"); }
     }
     private JsonObject request(ComputeNode node, String path, JsonObject payload, int seconds, BooleanSupplier stopped) throws IOException {
+        return request(node, path, payload, seconds, stopped, null);
+    }
+    private JsonObject request(ComputeNode node, String path, JsonObject payload, int seconds, BooleanSupplier stopped,
+                               String knownLocation) throws IOException {
         if (stopped.getAsBoolean()) throw new CancellationException();
         Request.Builder request = new Request.Builder().url(node.endpoint + path)
                 .header("Authorization", "Bearer " + node.token).header("Accept", "application/json");
+        if (knownLocation != null && knownLocation.matches("[a-f0-9]{16}|none")) request.header("X-Salve-Location-Version", knownLocation);
         if (payload != null) request.post(RequestBody.create(payload.toString(), MediaType.get("application/json; charset=utf-8")));
-        Call call = CLIENT.newCall(request.build()); call.timeout().timeout(seconds, TimeUnit.SECONDS);
+        salve.core.privatefamily.PrivateVpn.Lease lease = vpn.lease(node.endpoint);
+        Call call = lease.client.newCall(request.build()); call.timeout().timeout(seconds, TimeUnit.SECONDS);
         CompletableFuture<JsonObject> future = new CompletableFuture<>();
         call.enqueue(new Callback() {
             @Override public void onFailure(Call ignored, IOException error) { future.completeExceptionally(error); }
@@ -72,13 +86,16 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         try {
             while (true) {
                 if (stopped.getAsBoolean()) throw new CancellationException();
+                if (!lease.valid()) throw new IOException("VPN desconectada");
                 if (System.nanoTime() >= deadline) throw new IOException("Tiempo de nodo agotado");
-                try { return future.get(100, TimeUnit.MILLISECONDS); }
+                try { JsonObject result = future.get(100, TimeUnit.MILLISECONDS);
+                    if (!lease.valid() || stopped.getAsBoolean()) throw new CancellationException();
+                    return result; }
                 catch (TimeoutException pending) { /* check cancellation, revocation and deadline */ }
                 catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new CancellationException(); }
                 catch (ExecutionException failed) { throw diagnose(failed.getCause()); }
             }
-        } finally { call.cancel(); }
+        } finally { call.cancel(); lease.close(); }
     }
     /** Mensajes fijos y útiles para el dueño; nunca incluyen token, cuerpo ni contenido de la tarea. */
     static IOException diagnose(Throwable cause) {

@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.salve.app">
 
+    <!-- Solo para que el dueño de un nodo comparta su posición con una lectura GPS puntual y revisada -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
     <!-- ====== PERMISOS ====== -->
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS"
@@ -112,6 +117,15 @@
         <activity android:name="salve.presentation.ui.AvatarRoomActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.DeviceControlActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.NodeConstellationActivity" android:exported="false" android:theme="@style/Theme.Salve" />
+        <activity android:name="salve.presentation.ui.PrivateFamilyActivity" android:exported="false" android:theme="@style/Theme.Salve" />
+        <!-- VPN WireGuard propia de Salve: solo su tráfico, iniciada por el usuario, con notificación y Desconectar -->
+        <service android:name="com.wireguard.android.backend.GoBackend$VpnService" tools:node="remove" />
+        <service android:name="salve.core.privatefamily.FamilyVpnService" android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false" android:foregroundServiceType="specialUse">
+            <intent-filter><action android:name="android.net.VpnService" /></intent-filter>
+            <meta-data android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON" android:value="false" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started private WireGuard VPN for the owner's compute nodes, with persistent notification and disconnect action" />
+        </service>
         <activity android:name="salve.presentation.ui.AgentPlansActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.ToolBridgeActivity" android:exported="false" android:theme="@style/Theme.Salve" />
 

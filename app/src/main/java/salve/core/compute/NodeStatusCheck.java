@@ -87,9 +87,13 @@ public final class NodeStatusCheck {
     static String problem(Exception failure) {
         String message = failure.getMessage() == null ? "" : failure.getMessage();
         if (failure instanceof CancellationException) return "comprobación cancelada";
+        if (message.contains("VPN desconectada") || message.contains("túnel"))
+            return "la red privada (VPN) está desconectada: conéctala en Nodos de cómputo → Red privada";
+        if (message.contains("WireGuard") || message.contains("CA del nodo"))
+            return "este nodo no está en tu perfil WireGuard o su certificado no es de tu CA";
         if (message.contains("(401)") || message.contains("(403)")) return "token rechazado: vuelve a escanear el QR del nodo";
-        if (message.contains("Certificado")) return "certificado HTTPS no válido (¿Tailscale Serve activo?)";
-        if (message.contains("No se encuentra")) return "no se encuentra el servidor (¿PC encendido y Tailscale conectado?)";
+        if (message.contains("Certificado")) return "certificado HTTPS no válido: genera el del nodo con salve_private_network.py";
+        if (message.contains("No se encuentra")) return "no se encuentra el servidor (¿PC encendido y su túnel WireGuard activo?)";
         if (message.contains("no preparado")) return "servicio activo, pero el modelo no está listo (¿llama-server en marcha?)";
         if (message.matches(".*\\((?:5[0-9]{2})\\).*")) return "el servicio del nodo falló";
         if (message.contains("Tiempo")) return "no respondió a tiempo";

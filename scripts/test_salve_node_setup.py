@@ -10,22 +10,22 @@ import salve_node_setup as setup
 
 class NodeSetupTests(unittest.TestCase):
     def test_url_rules_match_the_app(self):
-        self.assertEqual('https://pc.tail1.ts.net', setup.validate_url(' https://pc.tail1.ts.net/ '))
-        self.assertEqual('https://pc:8443', setup.validate_url('https://pc:8443'))
-        for bad in ('http://pc', 'https://pc/v1', 'https://u:p@pc', 'https://pc?x=1',
+        self.assertEqual('https://10.77.0.2', setup.validate_url(' https://10.77.0.2/ '))
+        self.assertEqual('https://192.168.20.2:8443', setup.validate_url('https://192.168.20.2:8443'))
+        for bad in ('https://example.org', 'https://8.8.8.8', 'https://127.0.0.1', 'http://pc', 'https://pc/v1', 'https://u:p@pc', 'https://pc?x=1',
                     'https://pc#a', 'https://pc:0', 'https://pc:99999', 'ftp://pc', '', 'https://'):
             with self.assertRaises(ValueError, msg=bad):
                 setup.validate_url(bad)
 
     def test_pairing_uri_round_trips_and_carries_no_extra_fields(self):
         token = 'A' * 43
-        uri = setup.pairing_uri('Mi PC & co', 'https://pc.tail1.ts.net', token)
+        uri = setup.pairing_uri('Mi PC & co', 'https://10.77.0.2', token)
         parts = urlsplit(uri)
         self.assertEqual(('salve', 'nodo'), (parts.scheme, parts.netloc))
         query = parse_qs(parts.query)
         self.assertEqual({'v', 'n', 'u', 't'}, set(query))
         self.assertEqual('Mi PC & co', query['n'][0])
-        self.assertEqual('https://pc.tail1.ts.net', query['u'][0])
+        self.assertEqual('https://10.77.0.2', query['u'][0])
         self.assertEqual(token, query['t'][0])
 
     def test_token_is_private_reused_and_rotated(self):
@@ -61,7 +61,7 @@ class NodeSetupTests(unittest.TestCase):
         self.assertIsInstance(setup.gpus(), list)
 
     def test_preparar_without_url_explains_https(self):
-        with tempfile.TemporaryDirectory() as folder, unittest.mock.patch.object(setup, 'tailscale_url', return_value=None):
+        with tempfile.TemporaryDirectory() as folder:
             code = setup.main(['preparar', '--token-file', str(Path(folder) / 't')])
             self.assertEqual(2, code)
             self.assertFalse((Path(folder) / 't').exists())
@@ -69,14 +69,15 @@ class NodeSetupTests(unittest.TestCase):
     def test_preparar_with_url_creates_token(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 't'
-            code = setup.main(['preparar', '--url', 'https://pc.tail1.ts.net', '--nombre', 'PC',
+            code = setup.main(['preparar', '--url', 'https://10.77.0.2', '--nombre', 'PC',
                                '--token-file', str(path)])
             self.assertEqual(0, code)
             self.assertRegex(path.read_text().strip(), setup.TOKEN_RE)
 
     def test_android_assets_are_current_copies(self):
         root = Path(__file__).resolve().parent
-        for name in ('salve_node_setup.py', 'salve_compute_node.py'):
+        for name in ('salve_node_setup.py', 'salve_compute_node.py', 'salve_private_location.py', 'salve_private_network.py',
+                     'requirements-family.txt', 'PRIVATE_FAMILY_NETWORK.md'):
             asset = root.parent / 'app' / 'src' / 'main' / 'assets' / 'nodo' / name
             self.assertEqual((root / name).read_bytes(), asset.read_bytes(),
                              f'Copia desactualizada: cp scripts/{name} app/src/main/assets/nodo/')
