@@ -9,11 +9,59 @@ import java.util.function.BooleanSupplier;
 import okhttp3.*;
 import salve.core.cognition.CognitivePrompt;
 
-/** Over Salve's own WireGuard tunnel only: own CA, no redirects/retries/proxies, bounded JSON, cancellable. */
+/** HTTPS con TLS mutuo hacia los nodos propios (CA propia), sin proxy ni redirecciones; JSON acotado y cancelable. */
 public final class ComputeHttpTransport implements ComputeRouter.Transport {
-    private final salve.core.privatefamily.PrivateVpn vpn;
-    /** Toda conexión a un nodo va por el túnel WireGuard propio de Salve; sin túnel, no sale nada. */
-    public ComputeHttpTransport(android.content.Context context) { vpn = salve.core.privatefamily.PrivateVpn.get(context); }
+    /** Nodos sin perfil (registrados antes del TLS mutuo): HTTPS con las CA del sistema, como siempre. */
+    private static final OkHttpClient LEGACY = new OkHttpClient.Builder()
+            .proxy(Proxy.NO_PROXY).followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
+            .connectTimeout(3, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).callTimeout(50, TimeUnit.SECONDS)
+            .dns(host -> {
+                java.util.List<java.net.InetAddress> addresses = Dns.SYSTEM.lookup(host);
+                for (java.net.InetAddress ip : addresses)
+                    if (ip.isAnyLocalAddress() || ip.isLoopbackAddress() || ip.isLinkLocalAddress() || ip.isMulticastAddress())
+                        throw new java.net.UnknownHostException("Destino de nodo no admitido");
+                return addresses;
+            }).build();
+    /** Cliente mTLS y direcciones por nodo; recuerda qué dirección (local o remota) funcionó. */
+    private static final java.util.Map<String, Route> ROUTES = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long PREFERENCE_MS = 10 * 60 * 1000L;
+    private final salve.core.privatefamily.FamilyVault vault;
+    public ComputeHttpTransport(android.content.Context context) { vault = new salve.core.privatefamily.FamilyVault(context); }
+
+    private static final class Route {
+        final OkHttpClient client; final java.util.List<String> bases;
+        volatile int preferred; volatile long preferredAt;
+        Route(OkHttpClient client, java.util.List<String> bases) { this.client = client; this.bases = bases; }
+        java.util.List<String> ordered() {
+            if (preferred == 0 || System.currentTimeMillis() - preferredAt > PREFERENCE_MS) return bases;
+            java.util.List<String> out = new java.util.ArrayList<>(bases);
+            out.add(0, out.remove(preferred));
+            return out;
+        }
+        void worked(String base) { preferred = bases.indexOf(base); preferredAt = System.currentTimeMillis(); }
+    }
+
+    private Route route(ComputeNode node) throws IOException {
+        salve.core.privatefamily.FamilyVault.Credential credential;
+        try { credential = vault.read().credentials.get(node.id); }
+        catch (RuntimeException unreadable) { credential = null; }
+        if (credential == null) return new Route(LEGACY, java.util.Collections.singletonList(node.endpoint));
+        String key = node.id + "|" + node.endpoint + "|" + credential.remote + "|" + credential.cert.hashCode() + "|" + credential.ca.hashCode();
+        Route known = ROUTES.get(key);
+        if (known != null) return known;
+        java.util.List<String> bases = new java.util.ArrayList<>();
+        bases.add(node.endpoint);
+        if (credential.remote != null && !credential.remote.isEmpty()) bases.add(credential.remote);
+        try {
+            Route created = new Route(salve.core.privatefamily.MutualTls.client(credential), java.util.Collections.unmodifiableList(bases));
+            ROUTES.keySet().removeIf(other -> other.startsWith(node.id + "|"));
+            ROUTES.put(key, created);
+            return created;
+        } catch (Exception invalid) { throw new IOException("Certificado del perfil no válido"); }
+    }
+
+    /** Olvida el cliente de un nodo (al retirarlo o cambiar su perfil). */
+    public static void forget(String nodeId) { ROUTES.keySet().removeIf(other -> other.startsWith(nodeId + "|")); }
     public JsonObject familyStatus(ComputeNode node, BooleanSupplier stopped) throws IOException {
         return familyStatus(node, null, stopped);
     }
@@ -53,15 +101,39 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
     private JsonObject request(ComputeNode node, String path, JsonObject payload, int seconds, BooleanSupplier stopped) throws IOException {
         return request(node, path, payload, seconds, stopped, null);
     }
+    /**
+     * Primero la dirección local; si no hay conexión, la remota (IP pública o DDNS). Una tarea
+     * (POST) solo se reintenta en la otra dirección si no llegó a conectarse: nunca se duplica.
+     */
     private JsonObject request(ComputeNode node, String path, JsonObject payload, int seconds, BooleanSupplier stopped,
                                String knownLocation) throws IOException {
         if (stopped.getAsBoolean()) throw new CancellationException();
-        Request.Builder request = new Request.Builder().url(node.endpoint + path)
+        Route route = route(node);
+        java.util.List<String> bases = route.ordered();
+        for (int i = 0; ; i++) {
+            try {
+                JsonObject result = once(route.client, bases.get(i), node, path, payload, seconds, stopped, knownLocation);
+                route.worked(bases.get(i));
+                return result;
+            } catch (IOException failure) {
+                if (i + 1 >= bases.size() || !retryable(failure, payload == null)) throw failure;
+            }
+        }
+    }
+
+    static boolean retryable(IOException failure, boolean safe) {
+        String message = failure.getMessage() == null ? "" : failure.getMessage();
+        if (message.startsWith("No hay conexión con el nodo") || message.startsWith("No se encuentra el servidor")) return true;
+        return safe && message.startsWith("Tiempo de nodo agotado");
+    }
+
+    private JsonObject once(OkHttpClient client, String base, ComputeNode node, String path, JsonObject payload, int seconds,
+                            BooleanSupplier stopped, String knownLocation) throws IOException {
+        Request.Builder request = new Request.Builder().url(base + path)
                 .header("Authorization", "Bearer " + node.token).header("Accept", "application/json");
         if (knownLocation != null && knownLocation.matches("[a-f0-9]{16}|none")) request.header("X-Salve-Location-Version", knownLocation);
         if (payload != null) request.post(RequestBody.create(payload.toString(), MediaType.get("application/json; charset=utf-8")));
-        salve.core.privatefamily.PrivateVpn.Lease lease = vpn.lease(node.endpoint);
-        Call call = lease.client.newCall(request.build()); call.timeout().timeout(seconds, TimeUnit.SECONDS);
+        Call call = client.newCall(request.build()); call.timeout().timeout(seconds, TimeUnit.SECONDS);
         CompletableFuture<JsonObject> future = new CompletableFuture<>();
         call.enqueue(new Callback() {
             @Override public void onFailure(Call ignored, IOException error) { future.completeExceptionally(error); }
@@ -86,21 +158,25 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         try {
             while (true) {
                 if (stopped.getAsBoolean()) throw new CancellationException();
-                if (!lease.valid()) throw new IOException("VPN desconectada");
                 if (System.nanoTime() >= deadline) throw new IOException("Tiempo de nodo agotado");
                 try { JsonObject result = future.get(100, TimeUnit.MILLISECONDS);
-                    if (!lease.valid() || stopped.getAsBoolean()) throw new CancellationException();
+                    if (stopped.getAsBoolean()) throw new CancellationException();
                     return result; }
                 catch (TimeoutException pending) { /* check cancellation, revocation and deadline */ }
                 catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new CancellationException(); }
                 catch (ExecutionException failed) { throw diagnose(failed.getCause()); }
             }
-        } finally { call.cancel(); lease.close(); }
+        } finally { call.cancel(); }
     }
     /** Mensajes fijos y útiles para el dueño; nunca incluyen token, cuerpo ni contenido de la tarea. */
     static IOException diagnose(Throwable cause) {
         if (cause instanceof javax.net.ssl.SSLException) return new IOException("Certificado HTTPS no válido");
         if (cause instanceof java.net.UnknownHostException) return new IOException("No se encuentra el servidor");
+        if (cause instanceof java.net.ConnectException || cause instanceof java.net.NoRouteToHostException)
+            return new IOException("No hay conexión con el nodo");
+        if (cause instanceof java.net.SocketTimeoutException && cause.getMessage() != null
+                && cause.getMessage().toLowerCase(java.util.Locale.ROOT).contains("connect"))
+            return new IOException("No hay conexión con el nodo");
         if (cause instanceof java.net.SocketTimeoutException || cause instanceof java.io.InterruptedIOException)
             return new IOException("Tiempo de nodo agotado");
         if (cause instanceof IOException && cause.getMessage() != null

@@ -1,0 +1,61 @@
+name: Salve Nodo para Windows (.exe)
+
+on:
+  push:
+    paths:
+      - 'scripts/salve_*.py'
+      - 'scripts/requirements-family.txt'
+      - '.github/workflows/windows-node.yml'
+  pull_request:
+    paths:
+      - 'scripts/salve_*.py'
+      - 'scripts/requirements-family.txt'
+      - '.github/workflows/windows-node.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r scripts/requirements-family.txt pyinstaller==6.11.1
+
+      - name: Pruebas del nodo en Windows
+        working-directory: scripts
+        run: |
+          python salve_nodo_app.py --autoprueba
+          python -m unittest test_private_network.PrivateNetworkSetupTests test_private_network.LocationVersionTests -v
+
+      - name: Empaquetar SalveNodo.exe
+        working-directory: scripts
+        run: >
+          pyinstaller --onefile --console --clean --name SalveNodo
+          --collect-submodules qrcode
+          --hidden-import salve_compute_node --hidden-import salve_private_network
+          --hidden-import salve_private_location --hidden-import salve_node_setup
+          salve_nodo_app.py
+
+      - name: Probar el .exe empaquetado (sin Python)
+        working-directory: scripts
+        run: |
+          .\dist\SalveNodo.exe --version
+          .\dist\SalveNodo.exe --autoprueba
+
+      - name: Publicar el ejecutable
+        uses: actions/upload-artifact@v4
+        with:
+          name: SalveNodo-windows-${{ github.sha }}
+          path: scripts/dist/SalveNodo.exe
+          retention-days: 30

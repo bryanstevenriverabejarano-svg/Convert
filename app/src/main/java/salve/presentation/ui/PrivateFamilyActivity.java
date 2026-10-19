@@ -1,14 +1,12 @@
 package salve.presentation.ui;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.net.VpnService;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -25,7 +23,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 import com.google.gson.JsonObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -38,14 +35,13 @@ import salve.core.compute.ComputeHttpTransport;
 import salve.core.compute.ComputeNode;
 import salve.core.compute.ComputeNodeStore;
 import salve.core.privatefamily.FamilyVault;
-import salve.core.privatefamily.FamilyVpnService;
 import salve.core.privatefamily.PrivateLocation;
-import salve.core.privatefamily.PrivateVpn;
+import salve.core.privatefamily.NodeProfile;
 
 /**
- * Red privada de Salve: perfil WireGuard y CA propios (cifrados en el móvil), conectar y
- * desconectar, y compartir la ubicación de un nodo que administras. Sin servicios de terceros,
- * sin mapas externos y sin comprobaciones en segundo plano: los nodos se ven en la constelación.
+ * Conexión segura con los nodos: perfiles con TLS mutuo (importados por QR o archivo, guardados
+ * cifrados en el móvil) y la ubicación del nodo que administras. Sin VPN, sin servicios de terceros
+ * y sin comprobaciones en segundo plano: los nodos se ven en la constelación.
  */
 public final class PrivateFamilyActivity extends AppCompatActivity {
     private static final int BG = 0xFF02060C, CYAN = 0xFF22D3EE, INK = 0xFFE6FBFF, MUTED = 0xFF7DA9B8;
@@ -53,14 +49,9 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private FamilyVault vault;
     private TextView status;
-    private EditText importTarget;
     private LocationListener gps;
     private Runnable gpsGranted, gpsTimeout;
 
-    private final ActivityResultLauncher<Intent> vpnPermission = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == Activity.RESULT_OK) startVpn(); else message("Android no autorizó la VPN.");
-            });
     private final ActivityResultLauncher<String[]> gpsPermission = registerForActivityResult(
             new ActivityResultContracts.RequestMultiplePermissions(), result -> {
                 if (Boolean.TRUE.equals(result.get(Manifest.permission.ACCESS_FINE_LOCATION)) && gpsGranted != null) gpsGranted.run();
@@ -69,13 +60,12 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
             });
     private final ActivityResultLauncher<String[]> document = registerForActivityResult(
             new ActivityResultContracts.OpenDocument(), uri -> {
-                if (uri == null || importTarget == null) return;
+                if (uri == null) return;
                 try (InputStream in = getContentResolver().openInputStream(uri); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                     byte[] buffer = new byte[4096]; int count;
                     while ((count = in.read(buffer)) != -1) { if (out.size() + count > 65536) throw new java.io.IOException(); out.write(buffer, 0, count); }
-                    importTarget.setText(new String(out.toByteArray(), StandardCharsets.UTF_8));
+                    register(new String(out.toByteArray(), StandardCharsets.UTF_8));
                 } catch (Exception invalid) { message("No se pudo leer el archivo (máximo 64 KB)."); }
-                importTarget = null;
             });
     private final Runnable update = new Runnable() { @Override public void run() { render(); handler.postDelayed(this, 2000); } };
 
@@ -88,22 +78,23 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
         root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(BG);
         root.setPadding(dp(16), dp(18), dp(16), dp(16));
         TextView title = new TextView(this);
-        title.setText("RED PRIVADA"); title.setTextColor(CYAN); title.setTextSize(15); title.setLetterSpacing(0.18f);
+        title.setText("CONEXIÓN SEGURA"); title.setTextColor(CYAN); title.setTextSize(15); title.setLetterSpacing(0.18f);
         title.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
         root.addView(title);
         status = new TextView(this); status.setTextColor(INK); status.setTextSize(14); status.setPadding(0, dp(8), 0, dp(4));
         root.addView(status);
         TextView about = new TextView(this);
         about.setTextColor(MUTED); about.setTextSize(13); about.setPadding(0, 0, 0, dp(10));
-        about.setText("WireGuard propio dentro de Salve: solo su tráfico, solo hacia tus nodos, sin cuentas ni servidores de "
-                + "terceros. Cada petición va además por HTTPS con tu CA. Salve no envía su ubicación a los nodos.");
+        about.setText("Salve habla con tus nodos por HTTPS con TLS mutuo: el nodo solo acepta el certificado de este móvil "
+                + "y Salve solo acepta el del nodo. Sin VPN ni programas extra. En casa usa la dirección local y, si falla, "
+                + "la remota (IP pública o DDNS). Salve no envía su ubicación a los nodos.");
         root.addView(about);
         LinearLayout first = row(root);
-        button(first, "Configurar VPN", this::configure);
-        button(first, "Conectar", () -> { Intent consent = VpnService.prepare(this); if (consent == null) startVpn(); else vpnPermission.launch(consent); });
+        button(first, "Importar perfil", this::importProfile);
+        button(first, "Ubicación de mi nodo", this::chooseOwnerNode);
         LinearLayout second = row(root);
-        button(second, "Desconectar", () -> { disconnectVpn(); render(); });
-        button(second, "Ubicación de mi nodo", this::chooseOwnerNode);
+        button(second, "Añadir con QR", () -> ComputeNodesDialog.show(this));
+        button(second, "Borrar credenciales", this::confirmForget);
         LinearLayout third = row(root);
         button(third, "Ver constelación", () -> startActivity(new Intent(this, NodeConstellationActivity.class)));
         button(third, "Cerrar", this::finish);
@@ -115,56 +106,56 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
         if (isDestroyed()) return;
         try {
             FamilyVault.Data data = vault.read();
-            PrivateVpn vpn = PrivateVpn.get(this);
-            String profile = data.config.isEmpty() ? "Sin perfil: pulsa Configurar VPN e importa salve-movil.conf y ca.pem."
-                    : "Perfil importado.";
-            status.setText(vpn.status() + (vpn.available() ? " · nodos alcanzables por el túnel" : "") + "\n" + profile);
-        } catch (RuntimeException unavailable) { status.setText("No se pudo leer la configuración privada"); }
+            List<ComputeNode> nodes = new ComputeNodeStore(this).load();
+            if (nodes.isEmpty()) { status.setText("Aún no hay nodos. Abre Salve Nodo en tu PC y escanea su QR con «Añadir con QR»."); return; }
+            StringBuilder out = new StringBuilder();
+            for (ComputeNode node : nodes) {
+                FamilyVault.Credential credential = data.credentials.get(node.id);
+                out.append(out.length() == 0 ? "" : "\n").append(node.name).append(" · ")
+                        .append(credential == null ? "sin perfil (HTTPS normal)" : "TLS mutuo" + (credential.remote.isEmpty() ? "" : " · local y remota"));
+            }
+            status.setText(out);
+        } catch (RuntimeException unavailable) { status.setText("No se pudo leer la configuración segura"); }
     }
 
-    private void startVpn() {
-        try { ContextCompat.startForegroundService(this, new Intent(this, FamilyVpnService.class)); }
-        catch (RuntimeException blocked) { message("No se pudo iniciar la VPN. Vuelve a pulsar Conectar."); }
+    /** salve-perfil.json desde el almacenamiento: registra el nodo y guarda su certificado cifrado. */
+    private void importProfile() {
+        document.launch(new String[]{"application/json", "text/plain", "*/*"});
     }
 
-    private void disconnectVpn() {
-        PrivateVpn.get(this).invalidate();
-        if (FamilyVpnService.running) startService(new Intent(this, FamilyVpnService.class).setAction(FamilyVpnService.STOP));
-    }
-
-    private void configure() {
-        if (FamilyVpnService.running) { message("Desconecta la VPN antes de cambiar el perfil."); return; }
-        LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); form.setPadding(dp(16), dp(8), dp(16), 0);
-        TextView info = new TextView(this);
-        info.setText("Importa salve-movil.conf y ca.pem, creados en tu PC con «python salve_private_network.py crear». "
-                + "Se guardan cifrados en este móvil y no entran en copias de seguridad.");
-        form.addView(info);
-        EditText config = field(form, "Perfil WireGuard (.conf)", true), ca = field(form, "CA de tus nodos (ca.pem)", false);
-        try { FamilyVault.Data data = vault.read(); config.setText(data.config); ca.setText(data.ca); } catch (RuntimeException error) { message(error.getMessage()); }
-        LinearLayout imports = row(form);
-        button(imports, "Importar .conf", () -> { importTarget = config; document.launch(new String[]{"*/*"}); });
-        button(imports, "Importar CA", () -> { importTarget = ca; document.launch(new String[]{"*/*"}); });
-        ScrollView scroll = new ScrollView(this); scroll.addView(form);
-        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("VPN y certificados propios").setView(scroll)
-                .setPositiveButton("Guardar", null).setNegativeButton("Cerrar", null)
-                .setNeutralButton("Borrar red", (d, w) -> confirmForget()).create();
-        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            try {
-                if (FamilyVpnService.running) throw new IllegalStateException();
-                String profile = config.getText().toString(), pem = ca.getText().toString();
-                PrivateVpn.validate(profile, getPackageName()); PrivateVpn.trust(pem);
-                vault.edit(data -> { data.config = profile; data.ca = pem; data.revision++; });
-                config.setText(""); dialog.dismiss(); render();
-                message("Guardado. Pulsa Conectar y acepta el aviso de Android.");
-            } catch (Exception invalid) { message("Perfil o CA inválidos. Usa los archivos que genera salve_private_network.py."); }
-        }));
-        dialog.show();
+    /** Volver a importar el perfil de un nodo ya registrado (misma dirección) renueva sus certificados. */
+    private void register(String raw) {
+        try {
+            NodeProfile profile = NodeProfile.parse(raw);
+            ComputeNodeStore registry = new ComputeNodeStore(this);
+            ComputeNode existing = null;
+            for (ComputeNode candidate : registry.load()) if (candidate.endpoint.equalsIgnoreCase(profile.local)) existing = candidate;
+            if (existing != null && !existing.token.equals(profile.token)) {   // perfil rehecho en el PC: token nuevo
+                String stale = existing.id;
+                registry.remove(stale); ComputeHttpTransport.forget(stale);
+                vault.edit(data -> { data.credentials.remove(stale); data.locations.remove(stale); data.versions.remove(stale); });
+                existing = null;
+            }
+            boolean renewed = existing != null;
+            ComputeNode node = renewed ? existing : registry.add(profile.name, profile.local, profile.token);
+            try { vault.edit(data -> data.credentials.put(node.id, profile.credential())); }
+            catch (RuntimeException failure) { if (!renewed) registry.remove(node.id); throw failure; }
+            ComputeHttpTransport.forget(node.id);
+            render();
+            message(renewed ? "Certificados de «" + node.name + "» renovados."
+                    : "Nodo «" + profile.name + "» añadido con TLS mutuo. Ábrelo en la constelación para comprobarlo.");
+        } catch (RuntimeException invalid) { message(invalid.getMessage() == null ? "Perfil no válido." : invalid.getMessage()); }
     }
 
     private void confirmForget() {
-        new AlertDialog.Builder(this).setTitle("¿Borrar la red privada?")
-                .setMessage("Se borran de este móvil el perfil, la CA y las ubicaciones recibidas. Tus nodos no cambian.")
-                .setPositiveButton("Borrar", (d, w) -> { disconnectVpn(); vault.forget(); render(); })
+        new AlertDialog.Builder(this).setTitle("¿Borrar credenciales?")
+                .setMessage("Se borran de este móvil los certificados de los nodos y las ubicaciones recibidas. Los nodos quedan "
+                        + "registrados sin TLS mutuo hasta que vuelvas a escanear su QR. Tus PCs no cambian.")
+                .setPositiveButton("Borrar", (d, w) -> {
+                    vault.forget();
+                    for (ComputeNode node : new ComputeNodeStore(this).load()) ComputeHttpTransport.forget(node.id);
+                    render();
+                })
                 .setNegativeButton("Cancelar", null).show();
     }
 
@@ -233,10 +224,10 @@ public final class PrivateFamilyActivity extends AppCompatActivity {
             final boolean ok = sent;
             runOnUiThread(() -> {
                 if (isDestroyed() || !dialog.isShowing()) return;
-                if (ok) { dialog.dismiss(); message(fix == null ? "Ubicación retirada del nodo." : "Ubicación enviada al nodo por la red privada."); }
+                if (ok) { dialog.dismiss(); message(fix == null ? "Ubicación retirada del nodo." : "Ubicación enviada al nodo por la conexión segura."); }
                 else {
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true); dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(true);
-                    message("No se pudo enviar. Revisa que la VPN esté conectada y el token de ubicación.");
+                    message("No se pudo enviar. Revisa que Salve Nodo esté abierto y el token de ubicación.");
                 }
             });
         });

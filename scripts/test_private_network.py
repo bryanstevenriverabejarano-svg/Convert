@@ -1,3 +1,4 @@
+import base64
 import ipaddress
 import json
 from pathlib import Path
@@ -46,21 +47,7 @@ class LocationVersionTests(unittest.TestCase):
 
 
 class WindowsNodeTests(unittest.TestCase):
-    def test_ingress_without_iproute_checks_the_tunnel_address_is_ours(self):
-        with patch.object(node.WireGuardIngress, 'LINUX', False), \
-                patch.object(node.WireGuardIngress, 'address_assigned', return_value=True):
-            guard = node.WireGuardIngress(None, '10.77.0.2', ['10.77.0.1'])
-            self.assertTrue(guard('10.77.0.1')); self.assertFalse(guard('10.77.0.9'))
-        with patch.object(node.WireGuardIngress, 'LINUX', False), \
-                patch.object(node.WireGuardIngress, 'address_assigned', return_value=False):
-            with self.assertRaises(ValueError):  # túnel apagado: no arranca
-                node.WireGuardIngress(None, '10.77.0.2', ['10.77.0.1'])
-
-    def test_address_probe_is_real(self):
-        guard = object.__new__(node.WireGuardIngress)
-        guard.bind = '127.0.0.1'; self.assertTrue(guard.address_assigned())
-        guard.bind = '10.255.254.253'; self.assertFalse(guard.address_assigned())
-
+    @unittest.skipUnless(__import__('os').name == 'posix', 'los bits de modo solo existen en POSIX')
     def test_private_files_ignore_posix_mode_bits_on_windows(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'token'; path.write_text('x'); path.chmod(0o644)
@@ -71,43 +58,65 @@ class WindowsNodeTests(unittest.TestCase):
 
 
 class PrivateNetworkSetupTests(unittest.TestCase):
+    def create(self, folder, **kw):
+        return network.create(Path(folder), kw.pop('local', '192.168.1.20'), kw.pop('remote', 'casa.duckdns.org'), **kw)
+
     def test_creates_everything_once_and_reuses_it(self):
         with tempfile.TemporaryDirectory() as folder:
-            paths, made = network.create(Path(folder), '192.168.1.20')
-            self.assertIn('CA', made); self.assertIn('claves WireGuard', made)
-            for path in paths.values():
-                self.assertTrue(path.exists(), path)
-            again_paths, again = network.create(Path(folder), '192.168.1.20')
+            paths, made = self.create(folder)
+            for item in ('CA', 'certificado del nodo', 'certificado del móvil', 'token'):
+                self.assertIn(item, made)
+            for name in ('ca.pem', 'nodo.pem', 'movil.pem', 'token', 'salve-perfil.json'):
+                self.assertTrue(paths[name].exists(), name)
+            ca_before = paths['ca.pem'].read_bytes()
+            _, again = self.create(folder)
             self.assertEqual([], again)
-            self.assertEqual(paths['salve-movil.conf'].read_bytes(), again_paths['salve-movil.conf'].read_bytes())
-            _, rebuilt = network.create(Path(folder), '192.168.1.20', rebuild=True)
+            _, moved = self.create(folder, remote='otro.duckdns.org')
+            self.assertEqual(['certificado del nodo'], moved, 'cambiar el host remoto solo reemite el del nodo')
+            self.assertEqual(ca_before, paths['ca.pem'].read_bytes())
+            _, rebuilt = self.create(folder, rebuild=True)
             self.assertIn('CA', rebuilt)
 
-    def test_phone_profile_matches_what_salve_accepts(self):
+    def test_profile_carries_addresses_token_and_phone_identity(self):
         with tempfile.TemporaryDirectory() as folder:
-            paths, _ = network.create(Path(folder), '192.168.1.20')
-            phone = paths['salve-movil.conf'].read_text(); pc = paths['wg-nodo-salve.conf'].read_text()
-            self.assertIn('Address = 10.77.0.1/32', phone); self.assertIn('AllowedIPs = 10.77.0.2/32', phone)
-            self.assertIn('Endpoint = 192.168.1.20:51820', phone); self.assertNotIn('DNS', phone)
-            self.assertIn('Address = 10.77.0.2/32', pc); self.assertIn('AllowedIPs = 10.77.0.1/32', pc)
-            phone_public = [l.split(' = ')[1] for l in pc.splitlines() if l.startswith('PublicKey')][0]
-            node_public = [l.split(' = ')[1] for l in phone.splitlines() if l.startswith('PublicKey')][0]
-            self.assertNotEqual(phone_public, node_public)
-            self.assertEqual(32, len(__import__('base64').b64decode(node_public)))
+            paths, _ = self.create(folder, port=8443, name='Torre')
+            profile = json.loads(paths['salve-perfil.json'].read_text())
+            self.assertEqual(('nodo', 2, 'Torre'), (profile['salve'], profile['v'], profile['n']))
+            self.assertEqual('https://192.168.1.20:8443', profile['u'])
+            self.assertEqual('https://casa.duckdns.org:8443', profile['r'])
+            self.assertEqual(paths['token'].read_text().strip(), profile['t'])
+            client = x509.load_der_x509_certificate(base64.b64decode(profile['c']))
+            ca = x509.load_der_x509_certificate(base64.b64decode(profile['ca']))
+            self.assertEqual(ca.subject, client.issuer)
+            usage = client.extensions.get_extension_for_class(x509.ExtendedKeyUsage).value
+            self.assertIn(x509.oid.ExtendedKeyUsageOID.CLIENT_AUTH, list(usage))
+            self.assertNotIn('ca.key', paths['salve-perfil.json'].read_text())
+            self.assertLess(len(paths['salve-perfil.json'].read_bytes()), 2300, 'debe caber en un QR')
+            without_remote, _ = network.create(Path(folder) / 'b', '192.168.1.20', None)
+            self.assertNotIn('r', json.loads(without_remote['salve-perfil.json'].read_text()))
 
-    def test_certificate_names_the_tunnel_ip_and_carries_identifiers(self):
+    def test_server_certificate_names_local_ip_and_remote_host(self):
         with tempfile.TemporaryDirectory() as folder:
-            paths, _ = network.create(Path(folder), '192.168.1.20')
+            paths, _ = self.create(folder)
             cert = x509.load_pem_x509_certificate(paths['nodo.pem'].read_bytes())
-            sans = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.IPAddress)
-            self.assertEqual([ipaddress.ip_address('10.77.0.2')], sans)
+            sans = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+            self.assertEqual([ipaddress.ip_address('192.168.1.20')], sans.get_values_for_type(x509.IPAddress))
+            self.assertEqual(['casa.duckdns.org'], sans.get_values_for_type(x509.DNSName))
             cert.extensions.get_extension_for_class(x509.AuthorityKeyIdentifier)
-            ca = x509.load_pem_x509_certificate(paths['ca.pem'].read_bytes())
-            self.assertTrue(ca.extensions.get_extension_for_class(x509.BasicConstraints).value.ca)
 
-    def test_strict_tls_handshake_with_generated_certificates(self):
+    def test_qr_svg_when_qrcode_is_available(self):
+        try:
+            import qrcode  # noqa: F401
+        except ImportError:
+            self.skipTest('qrcode no instalado')
         with tempfile.TemporaryDirectory() as folder:
-            server_tls, client_tls = certificates(folder)
+            paths, _ = self.create(folder)
+            self.assertIn(b'<svg', paths['salve-perfil.svg'].read_bytes()[:300])
+
+    def test_strict_mutual_tls_handshake_with_generated_certificates(self):
+        from test_private_family import mutual_certificates
+        with tempfile.TemporaryDirectory() as folder:
+            server_tls, client_tls = mutual_certificates(folder)
             client_tls.verify_flags |= ssl.VERIFY_X509_STRICT  # como Python 3.13+: exige AKI/SKI
             listener = socket.socket(); listener.bind(('127.0.0.1', 0)); listener.listen(1)
             port = listener.getsockname()[1]
@@ -115,17 +124,39 @@ class PrivateNetworkSetupTests(unittest.TestCase):
                 connection, _ = listener.accept()
                 with server_tls.wrap_socket(connection, server_side=True) as tls:
                     tls.sendall(b'ok')
-            thread = threading.Thread(target=serve, daemon=True); thread.start()
+            threading.Thread(target=serve, daemon=True).start()
             with socket.create_connection(('127.0.0.1', port), timeout=5) as raw:
                 with client_tls.wrap_socket(raw, server_hostname='127.0.0.1') as tls:
                     self.assertEqual(b'ok', tls.recv(2))
             listener.close()
 
-    def test_endpoint_must_be_numeric_ipv4(self):
-        for bad in ('casa.example', '', '127.0.0.1', '0.0.0.0', '::1'):
+    def test_hosts_and_ports_are_validated(self):
+        for bad in ('', 'http://casa.example', '127.0.0.1', '0.0.0.0', 'casa', 'mal_host.example', 'a..b'):
+            with self.assertRaises(ValueError, msg=bad):
+                network.check_host(bad, 'Host')
+        self.assertEqual('203.0.113.7', network.check_host('203.0.113.7', 'Host'))
+        self.assertEqual('casa.duckdns.org', network.check_host('Casa.DuckDNS.org.', 'Host'))
+        for bad in (0, 70000):
             with self.assertRaises(ValueError):
-                network.check_endpoint(bad)
-        self.assertEqual('203.0.113.7', network.check_endpoint('203.0.113.7'))
+                network.check_port(bad)
+        self.assertEqual('https://[2001:db8::1]:8443', network.endpoint('2001:db8::1', 8443))
+
+
+class NodeAppTests(unittest.TestCase):
+    def test_self_test_runs_a_real_mutual_tls_request(self):
+        import salve_nodo_app as app
+        self.assertEqual(0, app.self_test())
+
+    def test_node_arguments_carry_fixed_location_or_owner_store(self):
+        import salve_nodo_app as app
+        paths = {name: Path('/x') / name for name in ('nodo.pem', 'nodo.key', 'ca.pem', 'token', 'token-ubicacion')}
+        config = {'port': 8443, 'model': 'm', 'location': {'lat': 42.8, 'lon': -2.6, 'city': 'Vitoria-Gasteiz', 'country': 'España', 'zone': ''}}
+        args = app.node_args(config, paths)
+        self.assertIn('--client-ca', args); self.assertEqual('8443', args[args.index('--port') + 1])
+        self.assertEqual('Vitoria-Gasteiz', args[args.index('--ciudad') + 1])
+        self.assertNotIn('--location-directory', args)
+        del config['location']
+        self.assertIn('--location-directory', app.node_args(config, paths))
 
 
 if __name__ == '__main__':

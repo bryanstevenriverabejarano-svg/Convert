@@ -3514,7 +3514,6 @@ public class MotorConversacional {
                 java.util.Map<String, String> locations;
                 try { locations = new salve.core.privatefamily.FamilyVault(context).read().locations; }
                 catch (RuntimeException unreadable) { locations = java.util.Collections.emptyMap(); }
-                boolean vpn = salve.core.privatefamily.PrivateVpn.get(context).available();
                 StringBuilder out = new StringBuilder(nodes.size() + (nodes.size() == 1 ? " nodo registrado: " : " nodos registrados: "));
                 for (int i = 0; i < nodes.size(); i++) {
                     salve.core.compute.ComputeNode node = nodes.get(i);
@@ -3524,7 +3523,7 @@ public class MotorConversacional {
                     out.append(i == 0 ? "" : ", ").append(node.name).append(place.isEmpty() ? "" : " en " + place)
                             .append(store.nodeEnabled(node.id) ? " (activo para tareas)" : " (desactivado)");
                 }
-                out.append("; red privada ").append(vpn ? "conectada" : "desconectada");
+                out.append("; conexión con TLS mutuo (el nodo solo acepta mi certificado)");
                 out.append("; envíos a nodos ").append(llm != null && llm.isDistributedEnabled() ? "activados" : "desactivados")
                         .append(". No sé si están encendidos ahora: eso se comprueba al abrir la constelación");
                 return out.toString();

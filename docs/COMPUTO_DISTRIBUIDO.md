@@ -31,10 +31,12 @@ La calidad y velocidad dependen del modelo, hardware y red, y requieren medició
 
 ## Preparar un nodo propio
 
-Sigue la [guía de red privada familiar](../scripts/PRIVATE_FAMILY_NETWORK.md) para configurar
-WireGuard propio, HTTPS con CA privada, backend local HTTPS, registro por IPv4 privada y
-coordenadas voluntarias. El servidor de esta versión requiere Linux y una interfaz WireGuard
-real; las URL públicas antiguas deben migrarse. No se usan proxies HTTP sin cifrar.
+Sigue la [guía de conexión segura](../scripts/PRIVATE_FAMILY_NETWORK.md). En Windows basta
+con `SalveNodo.exe` (doble clic, sin Python): crea una CA propia, el certificado del nodo y el
+del móvil, y un QR con el perfil. Salve habla con el nodo por HTTPS con TLS mutuo directo a la
+aplicación, sin VPN ni adaptadores de red virtuales; en casa usa la IP local y fuera la IP
+pública o el dominio DDNS con el puerto reenviado (8443 por defecto). La ubicación del nodo es
+la que fija su dueño; no hay geolocalización por IP. No se usan proxies HTTP sin cifrar.
 
 El nodo mantiene su modelo fijo, límites de plazas, 60 tareas por hora por defecto,
 cota de entrada configurable y hasta 2.048 tokens de salida. El backend tiene hasta 40

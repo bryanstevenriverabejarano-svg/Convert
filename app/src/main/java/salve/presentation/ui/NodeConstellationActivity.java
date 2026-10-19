@@ -27,10 +27,9 @@ import salve.core.compute.NodeStatusCheck;
 import salve.core.privatefamily.FamilyVault;
 import salve.core.privatefamily.LocationSync;
 import salve.core.privatefamily.PrivateLocation;
-import salve.core.privatefamily.PrivateVpn;
 
 /**
- * Vista de constelación de los nodos propios, por la red privada (VPN) de Salve. El estado se
+ * Vista de constelación de los nodos propios, por HTTPS con TLS mutuo. El estado se
  * comprueba al abrirse o al pulsar «Comprobar ahora»; la ubicación que comparte cada nodo se
  * consulta cada 10 s solo mientras la pantalla está visible y solo viaja si cambió. Nada se
  * consulta en segundo plano. Salve no envía su propia ubicación a los nodos.
@@ -98,7 +97,7 @@ public final class NodeConstellationActivity extends Activity {
         actions.setGravity(Gravity.CENTER);
         actions.setPadding(0, dp(10), 0, 0);
         actions.addView(button("Comprobar ahora", v -> refresh()), weight());
-        actions.addView(button("Red privada", v -> startActivity(new android.content.Intent(this, PrivateFamilyActivity.class))), weight());
+        actions.addView(button("Conexión segura", v -> startActivity(new android.content.Intent(this, PrivateFamilyActivity.class))), weight());
         root.addView(actions);
         LinearLayout more = new LinearLayout(this);
         more.setOrientation(LinearLayout.HORIZONTAL);
@@ -125,11 +124,10 @@ public final class NodeConstellationActivity extends Activity {
 
     /**
      * Pide a cada nodo activo su ubicación enviando la versión que ya conoce: si no cambió, el nodo
-     * responde «sin cambios» y no viaja nada. Sin VPN no se intenta (no hay otra vía hacia los nodos).
+     * responde «sin cambios» y no viaja nada.
      */
     private void syncLocations() {
         if (locationPending != null && !locationPending.isDone()) return;
-        if (!PrivateVpn.get(this).available()) return;
         List<ComputeNode> enabled = new ArrayList<>();
         for (ComputeNode node : nodes) if (store.nodeEnabled(node.id)) enabled.add(node);
         if (enabled.isEmpty()) return;
@@ -173,10 +171,6 @@ public final class NodeConstellationActivity extends Activity {
             if (store.nodeEnabled(node.id)) enabled.add(node);
         }
         render();
-        if (!nodes.isEmpty() && !PrivateVpn.get(this).available()) {
-            summary.setText("Red privada desconectada: pulsa «Red privada» y Conectar para ver tus nodos.");
-            return;
-        }
         summary.setText(nodes.isEmpty() ? "Sin nodos registrados." : enabled.isEmpty()
                 ? "Todos los nodos están desactivados." : "Comprobando " + enabled.size() + (enabled.size() == 1 ? " nodo…" : " nodos…"));
         if (enabled.isEmpty()) return;
@@ -194,7 +188,7 @@ public final class NodeConstellationActivity extends Activity {
                 }
                 int online = 0;
                 for (NodeStatusCheck.Result r : found) if (r.online) online++;
-                summary.setText(online + " de " + enabled.size() + " nodos activos responden · por la red privada");
+                summary.setText(online + " de " + enabled.size() + " nodos activos responden · con TLS mutuo");
                 render();
             });
         });

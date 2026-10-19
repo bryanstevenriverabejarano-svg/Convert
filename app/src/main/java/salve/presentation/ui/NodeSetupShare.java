@@ -13,18 +13,20 @@ import java.util.ArrayList;
 
 /** Envía al PC del dueño los scripts del nodo y una guía breve. Se ejecutan allí, a mano. */
 final class NodeSetupShare {
-    private static final String[] SCRIPTS = {"salve_private_network.py", "salve_node_setup.py", "salve_compute_node.py",
-            "salve_private_location.py", "requirements-family.txt", "PRIVATE_FAMILY_NETWORK.md"};
-    static final String GUIDE = "Red privada de Salve (sin servicios de terceros)\n\n"
-            + "1. En el PC instala Python 3.10+, llama.cpp y WireGuard (wireguard.com, sin cuenta).\n"
-            + "2. python -m pip install -r requirements-family.txt\n"
-            + "3. Mide tu equipo y elige modelo: python salve_node_setup.py preparar --url https://10.77.0.2:8766\n"
-            + "4. Crea la red privada: python salve_private_network.py crear --endpoint <IP del PC o de tu router>\n"
-            + "   Genera certificados, claves WireGuard, el perfil del móvil y el comando exacto para arrancar el nodo.\n"
-            + "5. Importa wg-nodo-salve.conf en WireGuard del PC y actívalo.\n"
-            + "6. Pasa al móvil salve-movil.conf y ca.pem. En Salve: Nodos de cómputo → Red privada (VPN) → Configurar → Conectar.\n"
-            + "7. Arranca llama-server y el nodo con el comando que muestra el paso 4, y escanea su QR en Añadir un nodo.\n\n"
-            + "Detalles y modo manual en PRIVATE_FAMILY_NETWORK.md. El QR y salve-movil.conf son privados.";
+    private static final String[] SCRIPTS = {"salve_nodo_app.py", "salve_private_network.py", "salve_node_setup.py",
+            "salve_compute_node.py", "salve_private_location.py", "requirements-family.txt", "PRIVATE_FAMILY_NETWORK.md"};
+    static final String GUIDE = "Nodo de Salve con TLS mutuo (sin VPN ni programas extra)\n\n"
+            + "Windows, lo más fácil: descarga SalveNodo.exe (artefacto «SalveNodo-windows» de GitHub Actions) y ábrelo con doble clic.\n"
+            + "No necesita Python. Si quieres modelo local, pon llama-server.exe junto a SalveNodo.exe.\n\n"
+            + "1. Responde las preguntas: nombre, IP del PC, IP pública o dominio DDNS (opcional), puerto (8443),\n"
+            + "   ubicación fija opcional (latitud, longitud, ciudad, país) y el archivo .gguf del modelo.\n"
+            + "2. Se abre un QR. En Salve: Nodos de cómputo → Añadir un nodo → Escanear QR → Guardar.\n"
+            + "   (O pasa salve-perfil.json al móvil e impórtalo en Conexión segura.)\n"
+            + "3. Deja la ventana abierta. Si Windows pregunta por el cortafuegos, permite redes privadas.\n"
+            + "4. Fuera de casa: reenvía TCP 8443 del router a este PC y usa tu IP pública o DDNS.\n\n"
+            + "Con Python (Windows, Linux o macOS): python -m pip install -r requirements-family.txt\n"
+            + "y después python salve_nodo_app.py. Detalles en PRIVATE_FAMILY_NETWORK.md.\n"
+            + "El QR y salve-perfil.json contienen la clave del móvil: no los compartas.";
 
     private NodeSetupShare() { }
 

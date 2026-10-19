@@ -38,12 +38,13 @@ public final class ComputeNodeStore {
             return Collections.unmodifiableList(nodes);
         } catch (Exception unreadable) { return Collections.emptyList(); }
     }
-    public synchronized void add(String name, String endpoint, String token) {
+    public synchronized ComputeNode add(String name, String endpoint, String token) {
         List<ComputeNode> nodes = new ArrayList<>(load());
         ComputeNode node = new ComputeNode(UUID.randomUUID().toString(), name.trim(), endpoint, token.trim());
         if (nodes.size() >= ComputeRouter.MAX_NODES) throw new IllegalArgumentException("Máximo cuatro nodos");
         for (ComputeNode existing : nodes) if (existing.endpoint.equalsIgnoreCase(node.endpoint)) throw new IllegalArgumentException("Este servidor ya está registrado");
         nodes.add(node); save(nodes);
+        return node;
     }
     public synchronized void remove(String id) {
         List<ComputeNode> nodes = new ArrayList<>(load()); nodes.removeIf(n -> n.id.equals(id)); save(nodes);
