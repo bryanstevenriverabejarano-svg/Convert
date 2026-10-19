@@ -11,11 +11,14 @@ import java.util.regex.Pattern;
  * siguiente; el texto del modelo nunca abre nada.
  */
 public final class SelfFeatures {
-    public enum Feature { NODES, WEB_SEARCH, PHONE_ACTIONS, PRIVACY_CHECK, OVERVIEW }
+    public enum Feature { NODES, WEB_SEARCH, PHONE_ACTIONS, PRIVACY_CHECK, SALVENTES, OVERVIEW }
 
     /** Una oferta caduca si no se responde pronto: un «sí» mucho después no la acepta. */
     public static final long OFFER_TTL_MS = 3 * 60 * 1000L;
 
+    private static final Pattern SALVENTES = Pattern.compile(
+            "\\b(?:salventes?|genesis de salventes|(?:crea|crear|creame|puedes crear|podrias crear) (?:un|una|otro|otra) "
+                    + "(?:ia|inteligencia|asistente|companer[oa]|personalidad)(?: nuev[oa])? para)\\b");
     private static final Pattern NODES = Pattern.compile(
             "\\b(?:nodos?|constelacion|computo distribuido|mis servidores|mis (?:pcs?|ordenadores|equipos)|potencia de calculo"
                     + "|delegar (?:tareas|trabajo)|cluster)\\b");
@@ -41,6 +44,7 @@ public final class SelfFeatures {
         if (input == null || input.length() > 600) return null;
         String text = normalize(input);
         if (text.isEmpty()) return null;
+        if (SALVENTES.matcher(text).find()) return Feature.SALVENTES;
         if (NODES.matcher(text).find()) return Feature.NODES;
         if (PRIVACY_CHECK.matcher(text).find()) return Feature.PRIVACY_CHECK;
         if (WEB_SEARCH.matcher(text).find()) return Feature.WEB_SEARCH;
@@ -70,10 +74,16 @@ public final class SelfFeatures {
             case PRIVACY_CHECK:
                 return "Antes de contar algo privado de Bryan (quién es, su familia, recuerdos, dinero) pido la verificación del "
                         + "propio teléfono: huella, rostro o PIN. Con un familiar o un invitado comparto solo lo que le corresponde.";
+            case SALVENTES:
+                return "Puedo crear Salventes: inteligencias nuevas, distintas de mí, para una persona o un propósito concreto "
+                        + "(acompañar a alguien, ayudar con los estudios, contar cuentos…). Bryan me dice para qué es, yo propongo su "
+                        + "nombre, 14 rasgos de personalidad y sus capacidades con mi modelo (o con un motor determinista si no hay "
+                        + "modelo), y solo se crea cuando él lo aprueba. Cada Salvente tiene su propia memoria cifrada con su propia "
+                        + "clave: yo no leo sus recuerdos ni ellos los míos, y no controlan el teléfono. Recuerdo a quién he creado.";
             default:
                 return "Converso con mi modelo local, recuerdo lo que me cuentan, pienso y sueño entre conversaciones, investigo "
                         + "por mi cuenta, busco en internet, dibujo con luz, veo fotos, hablo por voz, uso mis nodos de cómputo "
-                        + "(con mi constelación), abro rutas en Maps, pongo música, llamo con confirmación y protejo lo privado "
+                        + "(con mi constelación), creo Salventes con aprobación de Bryan, abro rutas en Maps, pongo música, llamo con confirmación y protejo lo privado "
                         + "con la verificación del teléfono.";
         }
     }
@@ -81,6 +91,7 @@ public final class SelfFeatures {
     /** Frase con la que ofrece abrir la pantalla; null si la función no tiene pantalla propia. */
     public static String offer(Feature feature, boolean biometricAvailable) {
         if (feature == Feature.NODES) return "¿Quieres que te abra mi constelación de nodos para verlos?";
+        if (feature == Feature.SALVENTES) return "¿Quieres que abra la génesis de Salventes?";
         if (feature == Feature.PRIVACY_CHECK && biometricAvailable) return "¿Quieres que te verifique ahora con el teléfono?";
         return null;
     }

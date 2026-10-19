@@ -3528,6 +3528,17 @@ public class MotorConversacional {
                         .append(". No sé si están encendidos ahora: eso se comprueba al abrir la constelación");
                 return out.toString();
             }
+            case SALVENTES: {
+                java.util.List<salve.core.salvente.SalventeProfile> all = salve.data.salvente.SalventeRepository.get(context).all();
+                if (all.isEmpty()) return "aún no he creado ningún Salvente";
+                StringBuilder out = new StringBuilder("he creado " + all.size() + (all.size() == 1 ? " Salvente: " : " Salventes: "));
+                for (int i = 0; i < all.size(); i++) {
+                    salve.core.salvente.SalventeProfile p = all.get(i);
+                    out.append(i == 0 ? "" : ", ").append(p.name).append(" (para ").append(p.purpose.length() > 60 ? p.purpose.substring(0, 57) + "…" : p.purpose)
+                            .append(p.state == salve.core.salvente.SalventeProfile.State.PAUSADO ? ", en pausa)" : ")");
+                }
+                return out.append(". No conozco el contenido de sus recuerdos").toString();
+            }
             case WEB_SEARCH:
                 return "buscador elegido: " + salve.core.web.WebSearchSettings.load(context, "").id + "; clave de Brave: "
                         + (salve.core.web.WebSearchKeyStore.hasBraveKey(context) ? "guardada" : "sin configurar");
@@ -3554,6 +3565,13 @@ public class MotorConversacional {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 return "Abro mi constelación. Toca cualquier nodo para ver su ficha.";
             } catch (RuntimeException unavailable) { return "No pude abrir la constelación. Está en Nodos de cómputo → Ver constelación."; }
+        }
+        if (feature == salve.core.mind.SelfFeatures.Feature.SALVENTES) {
+            try {
+                context.startActivity(new Intent(context, salve.presentation.ui.SalventeGenesisActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return "Abro la génesis. Cuéntame para qué o para quién es y te propongo uno; no se crea hasta que lo apruebes.";
+            } catch (RuntimeException unavailable) { return "No pude abrirla. Está en IA y cámara → Salventes (génesis)."; }
         }
         if (feature == salve.core.mind.SelfFeatures.Feature.PRIVACY_CHECK) {
             String first = mind().peopleGraph().creator().name.split(" ")[0];

@@ -1642,7 +1642,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español", "Nodos de cómputo"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español", "Nodos de cómputo", "Salventes (génesis)"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaModeloPrincipal(); break;
                         case 1:
@@ -1675,6 +1675,7 @@ public class MainActivity extends AppCompatActivity {
                         case 15: mostrarBuscadoresWeb(); break;
                         case 16: mostrarMemoriaEspanol(); break;
                         case 17: salve.presentation.ui.ComputeNodesDialog.show(this); break;
+                        case 18: startActivity(new Intent(this, SalventeGenesisActivity.class)); break;
                         default: break;
                     }
                 })
