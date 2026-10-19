@@ -17,7 +17,7 @@ public final class DistributedCompute {
     public ModelResult generate(String prompt, String role, Supplier<ModelResult> local) {
         if (!enabled() || Looper.myLooper() == Looper.getMainLooper()) return local.get();
         long revision = store.revision();
-        List<ComputeNode> nodes = store.load();
+        List<ComputeNode> nodes = store.loadActive(); // los nodos pausados por el dueño no reciben tareas
         return router.generate(nodes, true, role, prompt,
                 () -> Thread.currentThread().isInterrupted() || !store.enabled() || store.revision() != revision, local);
     }

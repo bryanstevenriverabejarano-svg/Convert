@@ -47,6 +47,39 @@ public final class ComputeNodeStore {
     }
     public synchronized void remove(String id) {
         List<ComputeNode> nodes = new ArrayList<>(load()); nodes.removeIf(n -> n.id.equals(id)); save(nodes);
+        Set<String> disabled = new HashSet<>(prefs.getStringSet("disabled_ids", Collections.emptySet()));
+        disabled.remove(id);
+        prefs.edit().putStringSet("disabled_ids", disabled).remove("label_" + id).commit();
+    }
+
+    /** Nodos que pueden recibir tareas: los registrados menos los que el dueño ha pausado. */
+    public synchronized List<ComputeNode> loadActive() {
+        Set<String> disabled = prefs.getStringSet("disabled_ids", Collections.emptySet());
+        List<ComputeNode> active = new ArrayList<>();
+        for (ComputeNode node : load()) if (!disabled.contains(node.id)) active.add(node);
+        return Collections.unmodifiableList(active);
+    }
+
+    public boolean nodeEnabled(String id) {
+        return !prefs.getStringSet("disabled_ids", Collections.emptySet()).contains(id);
+    }
+
+    /** Pausar un nodo cambia la revisión: una tarea en curso hacia él se detiene. */
+    public synchronized void setNodeEnabled(String id, boolean enabled) {
+        Set<String> disabled = new HashSet<>(prefs.getStringSet("disabled_ids", Collections.emptySet()));
+        if (enabled) disabled.remove(id); else disabled.add(id);
+        if (!prefs.edit().putStringSet("disabled_ids", disabled).putLong("revision", revision() + 1).commit())
+            throw new IllegalStateException("No se pudo guardar el cambio");
+    }
+
+    /** Etiqueta de ubicación escrita por el dueño. Solo vive en este móvil; el nodo no la conoce. */
+    public String locationLabel(String id) { return prefs.getString("label_" + id, ""); }
+
+    public void setLocationLabel(String id, String label) {
+        String value = label == null ? "" : label.trim();
+        if (!value.isEmpty() && !value.matches("[^\\p{Cntrl}]{1,40}")) throw new IllegalArgumentException("Hasta 40 caracteres, sin saltos de línea");
+        if (value.isEmpty()) prefs.edit().remove("label_" + id).apply();
+        else prefs.edit().putString("label_" + id, value).apply();
     }
     private void save(List<ComputeNode> nodes) {
         try {

@@ -28,7 +28,8 @@ public final class ComputeNodesDialog {
         List<String> labels = new ArrayList<>();
         labels.add(engine.isDistributedEnabled() ? "Desactivar: usar solo el móvil" : "Activar nodos propios");
         labels.add("Añadir un nodo");
-        for (ComputeNode n : nodes) labels.add(n.name + " · " + n.endpoint);
+        labels.add("Ver constelación de nodos");
+        for (ComputeNode n : nodes) labels.add(n.name + " · " + n.endpoint + (store.nodeEnabled(n.id) ? "" : " (desactivado)"));
         new AlertDialog.Builder(activity).setTitle("Nodos de cómputo")
                 .setItems(labels.toArray(new String[0]), (dialog, which) -> {
                     if (which == 0) {
@@ -41,7 +42,8 @@ public final class ComputeNodesDialog {
                                     catch (RuntimeException error) { message(activity, error.getMessage()); }
                                 }).setNegativeButton("Cancelar", null).show();
                     } else if (which == 1) add(activity);
-                    else inspect(activity, nodes.get(which - 2));
+                    else if (which == 2) activity.startActivity(new android.content.Intent(activity, NodeConstellationActivity.class));
+                    else inspect(activity, nodes.get(which - 3));
                 }).setNeutralButton("Estado", (d, w) -> checkAll(activity, nodes, engine))
                 .setNegativeButton("Cerrar", null).show();
     }
@@ -150,7 +152,7 @@ public final class ComputeNodesDialog {
         });
         dialog.setOnDismissListener(d -> pending.cancel(true));
     }
-    private static void probe(Activity activity, ComputeNode node) {
+    static void probe(Activity activity, ComputeNode node) {
         AlertDialog dialog = new AlertDialog.Builder(activity).setTitle("Probar " + node.name)
                 .setMessage("Comprobando conexión y una respuesta breve…").setNegativeButton("Cerrar", null).show();
         ComputeNodeStore store = new ComputeNodeStore(activity); long revision = store.revision();
