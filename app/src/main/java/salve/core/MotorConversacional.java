@@ -3542,7 +3542,7 @@ public class MotorConversacional {
             case LEARNING:
                 return autonomousTools.learnedSkillsSummary().replace("\\n", " ")
                         + "; estrategias de dibujo, referencias y respuesta: "
-                        + mind().skills().plan(salve.core.mind.SkillLab.RESPONDER, "").variants.keySet()
+                        + salve.core.mind.SkillLab.defaults().size() + " habilidades base"
                         + ". Cada resultado requiere evidencia; no he entrenado mis pesos";
             case BACKGROUND: {
                 salve.core.mind.BackgroundMindGate.Snapshot snapshot =
