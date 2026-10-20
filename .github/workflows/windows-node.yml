@@ -40,7 +40,7 @@ jobs:
         # Los fallos se publican también como anotación (legible sin descargar el log completo).
         run: |
           set -o pipefail
-          if ! { python salve_nodo_app.py --autoprueba && python -m unittest test_private_network.PrivateNetworkSetupTests test_private_network.LocationVersionTests test_guardian -v; } 2>&1 | tee pruebas.log; then
+          if ! { python salve_nodo_app.py --autoprueba && python -m unittest test_private_network.PrivateNetworkSetupTests test_private_network.LocationVersionTests test_guardian test_home test_node_telemetry -v; } 2>&1 | tee pruebas.log; then
             summary=$(grep -E "Error|error|FAIL|Traceback|assert|File \"" pruebas.log | tail -25)
             summary="${summary//'%'/'%25'}"; summary="${summary//$'\n'/'%0A'}"
             echo "::error title=Pruebas Windows::${summary}"
@@ -53,7 +53,7 @@ jobs:
           pyinstaller --onefile --console --clean --name SalveNodo
           --collect-submodules qrcode
           --hidden-import salve_compute_node --hidden-import salve_private_network
-          --hidden-import salve_private_location --hidden-import salve_node_setup --hidden-import salve_guardian
+          --hidden-import salve_private_location --hidden-import salve_node_setup --hidden-import salve_guardian --hidden-import salve_home
           salve_nodo_app.py
 
       - name: Probar el .exe empaquetado (sin Python)

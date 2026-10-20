@@ -26,6 +26,9 @@ public final class NodeStatusCheck {
         public final boolean online;
         public final int freeSlots;
         public final long millis;
+        /** GPU/VRAM y roles informados por el nodo; vacíos si no los da. */
+        public String telemetry = "";
+        public java.util.List<String> roles = java.util.Collections.emptyList();
 
         Result(String name, boolean online, String model, int freeSlots, long millis, String problem) {
             this.name = name; this.online = online; this.model = model;
@@ -77,7 +80,9 @@ public final class NodeStatusCheck {
         long start = clockMs.getAsLong();
         try {
             ComputeRouter.Health health = transport.health(node, stopped);
-            return new Result(node.name, true, health.model, health.freeSlots, Math.max(0, clockMs.getAsLong() - start), "");
+            Result ok = new Result(node.name, true, health.model, health.freeSlots, Math.max(0, clockMs.getAsLong() - start), "");
+            ok.telemetry = health.telemetry(); ok.roles = health.roles;
+            return ok;
         } catch (IOException | RuntimeException failure) {
             return new Result(node.name, false, "", 0, 0, problem(failure));
         }

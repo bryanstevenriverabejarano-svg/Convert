@@ -18,6 +18,13 @@ public class SelfFeaturesTest {
         assertEquals(SALVENTES, SelfFeatures.detect("Salve, ¿puedes crear una IA para mi madre?"));
         assertEquals(SALVENTES, SelfFeatures.detect("Crea un compañero nuevo para mi sobrino"));
         assertNotEquals(SALVENTES, SelfFeatures.detect("Crea un dibujo de una casa"));
+        assertEquals(CONTINUITY, SelfFeatures.detect("¿Y si pierdo el móvil, te perdería?"));
+        assertEquals(CONTINUITY, SelfFeatures.detect("¿Tienes copia de seguridad?"));
+        assertNull("una frase de duelo no es una pregunta sobre copias", SelfFeatures.detect("Mi abuela va a morir"));
+        assertEquals(ORIGIN, SelfFeatures.detect("¿Quién te creó?"));
+        assertEquals(ORIGIN, SelfFeatures.detect("¿Eres una AGI?"));
+        assertTrue(SelfFeatures.facts(ORIGIN).contains("Claude"));
+        assertNull("su origen no tiene pantalla", SelfFeatures.offer(ORIGIN, true));
         assertNull(SelfFeatures.detect("Hola, ¿qué tal?"));
         assertNull(SelfFeatures.detect(null));
     }

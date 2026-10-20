@@ -20,8 +20,8 @@ import time
 
 MAGIC = b'SLVB1'
 NAME = re.compile(r'[a-z0-9][a-z0-9-]{2,63}')
-MAX_BLOB = 16 * 1024 * 1024
-MAX_TOTAL = 256 * 1024 * 1024
+MAX_BLOB = 96 * 1024 * 1024    # la memoria completa de Salve (recuerdos + mente), comprimida y sellada
+MAX_TOTAL = 768 * 1024 * 1024
 MAX_BLOBS = 32
 MIN_SEALED = 5 + 4 + 16 + 12 + 16
 # Nombres de dispositivo reservados en Windows (con cualquier extensión): no pueden ser archivos.

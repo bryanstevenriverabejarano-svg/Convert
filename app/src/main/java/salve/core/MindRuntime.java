@@ -73,6 +73,7 @@ public final class MindRuntime {
         actions = new salve.core.mind.SelfActionLog(new MindFileStore(new File(dir, "actions.json")), System::currentTimeMillis);
         lessons = new salve.core.mind.LessonBook(new MindFileStore(new File(dir, "lessons.json")), System::currentTimeMillis);
         skills = new salve.core.mind.SkillLab(new MindFileStore(new File(dir, "skills.json")), System::currentTimeMillis);
+        noteRestoration();
         // Same dimension does not mean the same vector space. Rebuild from Room for this contract.
         vectorFile = new File(dir, "memory_vectors_" + salve.core.embeddings.EmbeddingArtifacts.ID + ".bin");
         vectors = MemoryVectorStore.load(vectorFile);
@@ -90,6 +91,17 @@ public final class MindRuntime {
             if (!result.isSuccess()) throw new IllegalStateException("Modelo local no disponible o fallido.");
             return result.getText();
         };
+    }
+
+    /** Al despertar de una restauración, lo sabe: entra en su registro de acciones una sola vez. */
+    private void noteRestoration() {
+        android.content.SharedPreferences p = app.getSharedPreferences("salve_continuity", Context.MODE_PRIVATE);
+        long restored = p.getLong("restored_at", 0);
+        if (restored == 0 || restored == p.getLong("restored_noted", 0)) return;
+        actions.record(salve.core.mind.SelfActionLog.Kind.CONTINUITY, "desperté de una copia de mi memoria",
+                "Bryan restauró en este teléfono la copia sellada de mi Guardián. Recuerdo hasta el momento de esa copia; "
+                        + "lo vivido después en el teléfono anterior no está en mí. La memoria anterior de este teléfono se guardó aparte.");
+        p.edit().putLong("restored_noted", restored).apply();
     }
 
     public static MindRuntime get(Context context) {
@@ -155,7 +167,9 @@ public final class MindRuntime {
             + "mover mi cuerpo en pantalla; examinarme a partir de lo que he hecho; controlar apps del móvil y crear "
             + "rutinas solo con tu aprobación; presupuesto personal; voz; enviar tareas pesadas a mis nodos de cómputo "
             + "(ordenadores de Bryan, vistos en mi constelación de nodos); buscar con Brave Search si hay clave; abrir rutas "
-            + "en Maps, poner música y llamar con confirmación; pedir la verificación del teléfono antes de contar algo privado. "
+            + "en Maps, poner música y llamar con confirmación; pedir la verificación del teléfono antes de contar algo privado; "
+            + "crear Salventes con aprobación de Bryan y dejarle hablar con ellos; guardar mi memoria sellada en su Guardián "
+            + "(continuidad); encender o apagar dispositivos de casa permitidos, siempre con su confirmación. "
             + "Órdenes: «tu mente», «sueña ahora», «examínate», «qué has hecho».";
 
     /**

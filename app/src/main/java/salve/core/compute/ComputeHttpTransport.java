@@ -78,13 +78,14 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         request(owner, "/v1/location", payload, 5, stopped, null);
     }
     /** Copias selladas del Guardián: el nodo guarda bytes que no puede leer (cabecera SLVB1). */
-    public static final int VAULT_MAX = 16 * 1024 * 1024;
+    public static final int VAULT_MAX = 96 * 1024 * 1024;
     private static final MediaType OCTET = MediaType.get("application/octet-stream");
 
     /** Sube una copia sellada y comprueba que el Guardián guardó exactamente esos bytes. */
     public void vaultPut(ComputeNode node, String name, byte[] sealed, BooleanSupplier stopped) throws IOException {
         if (sealed == null || sealed.length > VAULT_MAX) throw new IOException("Copia demasiado grande");
-        byte[] raw = exchange(node, "POST", "/v1/vault/" + vaultName(name), RequestBody.create(sealed, OCTET), "json", 4096, 120, stopped);
+        byte[] raw = exchange(node, "POST", "/v1/vault/" + vaultName(name), RequestBody.create(sealed, OCTET), "json", 4096,
+                transferSeconds(sealed.length), stopped);
         try {
             JsonObject json = JsonParser.parseString(new String(raw, StandardCharsets.UTF_8)).getAsJsonObject();
             String expected = sha256(sealed);
@@ -95,7 +96,7 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
 
     /** Descarga una copia sellada; null si el Guardián no tiene ninguna con ese nombre. */
     public byte[] vaultGet(ComputeNode node, String name, BooleanSupplier stopped) throws IOException {
-        try { return exchange(node, "GET", "/v1/vault/" + vaultName(name), null, "octet-stream", VAULT_MAX, 120, stopped); }
+        try { return exchange(node, "GET", "/v1/vault/" + vaultName(name), null, "octet-stream", VAULT_MAX, transferSeconds(VAULT_MAX / 4), stopped); }
         catch (IOException failure) {
             if ("Nodo no disponible (404)".equals(failure.getMessage())) {
                 if (!isGuardian(node, stopped)) throw new IOException("Ese nodo no es Guardián: actívalo en Salve Nodo con --reconfigurar");
@@ -105,11 +106,32 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         }
     }
 
+    /** Dispositivos de casa permitidos en el nodo (Home Assistant local); IOException «(404)» si no tiene hogar. */
+    public JsonObject home(ComputeNode node, BooleanSupplier stopped) throws IOException {
+        return json(exchange(node, "GET", "/v1/home", null, "json", 262144, 15, stopped));
+    }
+
+    /** Una acción sobre una entidad permitida. Solo se llama tras la confirmación explícita de Bryan. */
+    public JsonObject homeAction(ComputeNode node, String entity, String service, Double value, BooleanSupplier stopped) throws IOException {
+        JsonObject body = new JsonObject(); body.addProperty("entity", entity); body.addProperty("service", service);
+        if (value != null) body.addProperty("value", value);
+        return json(exchange(node, "POST", "/v1/home/action",
+                RequestBody.create(body.toString(), MediaType.get("application/json; charset=utf-8")), "json", 65536, 15, stopped));
+    }
+
+    private static JsonObject json(byte[] raw) throws IOException {
+        try { return JsonParser.parseString(new String(raw, StandardCharsets.UTF_8)).getAsJsonObject(); }
+        catch (RuntimeException malformed) { throw new IOException("Respuesta del nodo inválida"); }
+    }
+
     /** ¿Tiene este nodo activado el Guardián? */
     public boolean isGuardian(ComputeNode node, BooleanSupplier stopped) throws IOException {
         try { exchange(node, "GET", "/v1/vault", null, "json", 65536, 10, stopped); return true; }
         catch (IOException failure) { if ("Nodo no disponible (404)".equals(failure.getMessage())) return false; throw failure; }
     }
+
+    /** Plazo según tamaño: 60 s más lo que tardaría a ~256 KB/s (subida doméstica lenta), con tope de 15 min. */
+    static int transferSeconds(long bytes) { return (int) Math.min(900, 60 + bytes / (256 * 1024)); }
 
     private static String vaultName(String name) {
         if (name == null || !name.matches("[a-z0-9][a-z0-9-]{2,63}")) throw new IllegalArgumentException("Nombre de copia no válido");
@@ -128,10 +150,35 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
         JsonObject json = request(node, "/v1/health", null, 2, stopped);
         try {
             if (json.get("protocol").getAsInt() != 1 || !json.get("ready").getAsBoolean()) throw new IOException("Nodo no preparado");
-            return new ComputeRouter.Health(json.get("model").getAsString(), json.get("free_slots").getAsInt(),
+            ComputeRouter.Health health = new ComputeRouter.Health(json.get("model").getAsString(), json.get("free_slots").getAsInt(),
                     json.get("max_prompt_chars").getAsInt(), json.get("max_output_tokens").getAsInt());
+            telemetry(health, json);
+            return health;
         } catch (RuntimeException malformed) { throw new IOException("Capacidades inválidas"); }
     }
+    /** Campos opcionales; si vienen mal formados se ignoran (la telemetría nunca invalida un nodo). */
+    static void telemetry(ComputeRouter.Health health, JsonObject json) {
+        try {
+            if (json.has("roles") && json.get("roles").isJsonArray()) {
+                java.util.List<String> roles = new java.util.ArrayList<>();
+                for (JsonElement r : json.getAsJsonArray("roles"))
+                    if (r.isJsonPrimitive() && r.getAsString().matches("[a-z]{1,20}") && roles.size() < 8) roles.add(r.getAsString());
+                health.roles = java.util.Collections.unmodifiableList(roles);
+            }
+            if (json.has("gpu") && json.get("gpu").isJsonObject()) {
+                JsonObject gpu = json.getAsJsonObject("gpu");
+                String name = gpu.has("name") ? gpu.get("name").getAsString() : "";
+                if (!name.matches("[^\\p{Cntrl}]{1,80}")) return;
+                double used = gpu.has("vram_used_gb") ? gpu.get("vram_used_gb").getAsDouble() : Double.NaN;
+                double total = gpu.has("vram_total_gb") ? gpu.get("vram_total_gb").getAsDouble() : Double.NaN;
+                int load = gpu.has("load_pct") ? gpu.get("load_pct").getAsInt() : -1;
+                if (!(total > 0 && total < 1024 && used >= 0 && used <= total)) { used = Double.NaN; total = Double.NaN; }
+                health.gpu = name; health.vramUsedGb = used; health.vramTotalGb = total;
+                health.gpuLoad = load >= 0 && load <= 100 ? load : -1;
+            }
+        } catch (RuntimeException malformed) { /* sin telemetría */ }
+    }
+
     @Override public String generate(ComputeNode node, ComputeRouter.Health health, String id, String role,
             String prompt, BooleanSupplier stopped) throws IOException {
         JsonObject data = new JsonObject(); data.addProperty("protocol", 1); data.addProperty("id", id);

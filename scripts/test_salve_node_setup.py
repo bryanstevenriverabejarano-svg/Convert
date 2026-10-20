@@ -76,7 +76,7 @@ class NodeSetupTests(unittest.TestCase):
 
     def test_android_assets_are_current_copies(self):
         root = Path(__file__).resolve().parent
-        for name in ('salve_nodo_app.py', 'salve_node_setup.py', 'salve_compute_node.py', 'salve_private_location.py', 'salve_private_network.py', 'salve_guardian.py',
+        for name in ('salve_nodo_app.py', 'salve_node_setup.py', 'salve_compute_node.py', 'salve_private_location.py', 'salve_private_network.py', 'salve_guardian.py', 'salve_home.py',
                      'requirements-family.txt', 'PRIVATE_FAMILY_NETWORK.md'):
             asset = root.parent / 'app' / 'src' / 'main' / 'assets' / 'nodo' / name
             self.assertEqual((root / name).read_bytes(), asset.read_bytes(),

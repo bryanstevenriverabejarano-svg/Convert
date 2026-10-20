@@ -73,10 +73,26 @@ Un nodo puede ser también **Guardián**: guarda copias de los Salventes que **n
 - En Salve: **Salventes (génesis) → Copia al Guardián**. El móvil sella la copia con AES-256-GCM y una
   clave derivada (PBKDF2) de una frase que eliges tú; solo esos bytes viajan por TLS mutuo.
 - El Guardián **rechaza cualquier cosa que no llegue sellada** (cabecera `SLVB1`), conserva la versión
-  anterior de cada copia y aplica cuotas (16 MB por copia, 256 MB en total).
+  anterior de cada copia y aplica cuotas (96 MB por copia, 768 MB en total).
 - Para recuperar los Salventes en un móvil nuevo: escanea el QR del nodo y pulsa **Restaurar** con tu frase.
+- **La memoria de la propia Salve** también: **IA y cámara → Continuidad (Guardián)**. Copia a mano o cada
+  noche (cargando y con Wi-Fi). Restaurar se aplica al reabrir Salve y conserva la memoria anterior.
 - La frase no se guarda en ningún sitio. Si la olvidas, la copia es irrecuperable: es el precio de que
   quien entre en tu PC no pueda leer nada.
+
+## Hogar (Home Assistant local)
+
+Salve puede encender o apagar luces, enchufes y ventiladores, mover persianas, ajustar el clima y
+activar escenas a través de tu **Home Assistant local**, siempre con tu confirmación.
+
+- En el asistente, responde «s» a «¿Conectar con Home Assistant?». Indica la URL local (por ejemplo,
+  `http://homeassistant.local:8123`), un token de larga duración (Home Assistant → tu perfil →
+  Seguridad) y las entidades permitidas, como `light.salon,switch.cafetera,cover.dormitorio`.
+- El token se guarda en `~/.salve/red/ha-token` y **no sale del PC**. Solo se aceptan esas entidades y
+  esas acciones; las cerraduras no se admiten.
+- En Salve: «enciende la luz del salón» → «¿Enciendo «Luz salón»? Di sí para hacerlo». También desde
+  **IA y cámara → Mi casa**.
+- Modo manual: `--ha-url --ha-token-file --ha-entities`.
 
 ## Ubicación del nodo
 
