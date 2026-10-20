@@ -45,6 +45,12 @@ public class CuriosityWorker extends Worker {
 
     @NonNull @Override public Result doWork() {
         Context app = getApplicationContext();
+        salve.core.mind.BackgroundMindGate.Lease lease = salve.core.mind.BackgroundMindGate.get().acquire(
+                salve.core.mind.BackgroundMindGate.Task.CURIOSITY,
+                salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation(),
+                salve.core.MindRuntime.get(app).journal().isPaused(),
+                salve.core.SalveLLM.getInstance(app).isLoading());
+        if (lease == null) return Result.success();
         try {
             if (salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation()
                     || salve.core.SalveLLM.getInstance(app).isLoading()) {
@@ -69,7 +75,7 @@ public class CuriosityWorker extends Worker {
         } catch (Exception failure) {
             Log.w(TAG, "Curiosidad interrumpida: " + failure.getClass().getSimpleName());
             return Result.success();
-        }
+        } finally { lease.close(); }
     }
 
     private static boolean charging(Context context) {
