@@ -20,7 +20,10 @@ from pathlib import Path
 import re
 import socket
 import ssl
+import subprocess
+import shutil
 from salve_guardian import MAX_BLOB, BlindVault, VaultError
+from salve_home import HomeBridge, HomeError
 from salve_private_location import LocationStore, location_version, private_read, validate_location
 import sys
 import threading
@@ -127,9 +130,51 @@ class LocalBackend:
             raise NodeError('Invalid backend result') from error
 
 
+class GpuTelemetry:
+    """GPU, VRAM y carga desde nvidia-smi, con caché: no lanza un proceso por cada petición.
+    Sin NVIDIA (o sin nvidia-smi) informa None: no se inventan datos."""
+
+    def __init__(self, ttl=15, clock=time.monotonic, runner=None):
+        self.ttl, self.clock = ttl, clock
+        self.runner = runner or self._nvidia_smi
+        self.cached, self.at, self.lock = None, None, threading.Lock()
+
+    @staticmethod
+    def _nvidia_smi():
+        if not shutil.which('nvidia-smi'):
+            return None
+        try:
+            return subprocess.run(['nvidia-smi', '--query-gpu=name,memory.used,memory.total,utilization.gpu',
+                                   '--format=csv,noheader,nounits'], capture_output=True, text=True, timeout=3).stdout
+        except (OSError, subprocess.SubprocessError):
+            return None
+
+    def read(self):
+        with self.lock:
+            now = self.clock()
+            if self.at is not None and now - self.at < self.ttl:
+                return self.cached
+            self.at, self.cached = now, self._parse(self.runner())
+            return self.cached
+
+    @staticmethod
+    def _parse(output):
+        for line in (output or '').splitlines():
+            parts = [p.strip() for p in line.split(',')]
+            if len(parts) != 4 or not parts[0]:
+                continue
+            try:
+                used, total, load = float(parts[1]) / 1024, float(parts[2]) / 1024, int(float(parts[3]))
+            except ValueError:
+                continue
+            if 0 < total < 1024 and 0 <= used <= total and 0 <= load <= 100:
+                return {'name': parts[0][:80], 'vram_used_gb': round(used, 2), 'vram_total_gb': round(total, 2), 'load_pct': load}
+        return None
+
+
 class ComputeApplication:
     def __init__(self, token, backend, *, slots=1, hourly_limit=60, max_prompt=MAX_PROMPT, clock=time.monotonic, location_store=None, location_token=None,
-                 vault=None):
+                 vault=None, gpu=None, home=None):
         if not isinstance(token, str) or not TOKEN.fullmatch(token):
             raise ValueError('Token must have 32-256 URL-safe characters')
         if not 1 <= slots <= 4 or not 1 <= hourly_limit <= 600 or not 1000 <= max_prompt <= MAX_PROMPT:
@@ -138,6 +183,8 @@ class ComputeApplication:
             raise ValueError('Location writer token must be valid and different from the read token')
         self.location_store, self.location_token = location_store, location_token
         self.vault = vault  # Guardián ciego: solo copias selladas que este PC no puede leer
+        self.gpu = gpu if gpu is not None else GpuTelemetry()
+        self.home = home  # pasarela local con Home Assistant (lista de entidades permitidas)
         self.token, self.backend, self.slots, self.hourly_limit = token, backend, slots, hourly_limit
         self.max_prompt, self.clock = max_prompt, clock
         self.lock = threading.Lock()
@@ -151,7 +198,7 @@ class ComputeApplication:
 
     @property
     def roles(self):
-        return ['inferencia'] + (['guardian'] if self.vault is not None else [])
+        return ['inferencia'] + (['guardian'] if self.vault is not None else []) + (['hogar'] if self.home is not None else [])
 
     def handle_vault(self, method, path, body):
         if self.vault is None:
@@ -173,9 +220,33 @@ class ComputeApplication:
             return 503, {'error': 'guardian_unavailable'}
         return 405, {'error': 'method_not_allowed'}
 
+    HOME_STATUS = {'entity_not_allowed': 403, 'service_not_allowed': 403, 'invalid_value': 400, 'too_many_actions': 429,
+                   'home_entity_unknown': 404, 'home_token_rejected': 502, 'home_failed': 502, 'home_unreachable': 504}
+
+    def handle_home(self, method, path, body):
+        if self.home is None:
+            return 404, {'error': 'home_not_enabled'}
+        try:
+            if method == 'GET' and path == '/v1/home':
+                return 200, {'protocol': 1, 'entities': self.home.states()}
+            if method == 'POST' and path == '/v1/home/action':
+                try:
+                    payload = json.loads(body)
+                    if not isinstance(payload, dict) or not {'entity', 'service'} <= set(payload) <= {'entity', 'service', 'value'}:
+                        raise ValueError()
+                except (ValueError, TypeError, UnicodeError):
+                    return 400, {'error': 'invalid_action'}
+                return 200, {'protocol': 1, 'done': True,
+                             'entity': self.home.act(payload['entity'], payload['service'], payload.get('value'))}
+        except HomeError as refused:
+            return self.HOME_STATUS.get(refused.code, 502), {'error': refused.code}
+        return 404, {'error': 'unknown_endpoint'}
+
     def handle(self, method, path, authorization, body=b'', known_location=None):
         if not self.authorized(authorization, path):
             return 401, {'error': 'unauthorized'}
+        if path == '/v1/home' or path.startswith('/v1/home/'):
+            return self.handle_home(method, path, body)
         if path == '/v1/vault' or path.startswith('/v1/vault/'):
             return self.handle_vault(method, path, body)
         if method == 'GET' and path == '/v1/family/status':
@@ -212,7 +283,7 @@ class ComputeApplication:
                 free = max(0, self.slots - len(self.active)) if ready else 0
             return 200, {'protocol': 1, 'ready': ready, 'model': self.backend.model,
                          'free_slots': free, 'max_prompt_chars': self.max_prompt, 'max_output_tokens': MAX_TOKENS,
-                         'roles': self.roles}
+                         'roles': self.roles, 'gpu': self.gpu.read()}
         if method != 'POST' or path != '/v1/generate':
             return 404, {'error': 'unknown_endpoint'}
         try:
@@ -461,6 +532,9 @@ def main(argv=None, ready=None):
     parser.add_argument('--zona', default='', help='Ubicación fija: zona o barrio')
     parser.add_argument('--vault-directory', type=Path,
                         help='Activa el Guardián ciego: guarda copias selladas del móvil que este PC no puede leer')
+    parser.add_argument('--ha-url', help='Home Assistant en tu red local, p. ej. http://192.168.1.10:8123')
+    parser.add_argument('--ha-token-file', type=Path, help='Archivo privado con el token de larga duración de Home Assistant')
+    parser.add_argument('--ha-entities', default='', help='Entidades permitidas, separadas por comas (light.salon,switch.enchufe)')
     parser.add_argument('--model', required=True)
     parser.add_argument('--slots', type=int, default=1)
     parser.add_argument('--hourly-limit', type=int, default=60)
@@ -477,11 +551,16 @@ def main(argv=None, ready=None):
         if writer and not args.location_directory:
             parser.error('Location writer requires --location-directory')
         location = LocationStore(args.location_directory) if args.location_directory else None
+    home = None
+    if args.ha_url or args.ha_token_file:
+        if not (args.ha_url and args.ha_token_file and args.ha_entities):
+            parser.error('Home Assistant necesita --ha-url, --ha-token-file y --ha-entities')
+        home = HomeBridge(args.ha_url, private_read(args.ha_token_file, 2048).decode('utf-8').strip(), args.ha_entities.split(','))
     tls = server_tls(args.tls_cert, args.tls_key, args.client_ca)
     app = ComputeApplication(token, LocalBackend(args.backend, args.model, cafile=args.backend_ca),
                              slots=args.slots, hourly_limit=args.hourly_limit, max_prompt=args.max_prompt_chars,
                              location_store=location, location_token=writer,
-                             vault=BlindVault(args.vault_directory) if args.vault_directory else None)
+                             vault=BlindVault(args.vault_directory) if args.vault_directory else None, home=home)
     guard = IpAllowList(args.allow_ip) if args.allow_ip else None
     server = NodeServer((args.bind, args.port), app, tls=tls, connection_guard=guard)
     print(f'Nodo de Salve escuchando en {args.bind}:{args.port} con TLS mutuo (solo el móvil con su certificado).'

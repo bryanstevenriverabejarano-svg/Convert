@@ -235,6 +235,8 @@ public final class NodeConstellationActivity extends Activity {
             row(card, "Modelo", result.model);
             row(card, "Plazas libres", String.valueOf(result.freeSlots));
             row(card, "Latencia", result.millis + " ms");
+            if (!result.telemetry.isEmpty()) row(card, "GPU", result.telemetry);
+            if (!result.roles.isEmpty()) row(card, "Roles", String.join(" · ", result.roles).replace("guardian", "guardián"));
         } else if (result != null) {
             row(card, "Motivo", result.problem);
         }

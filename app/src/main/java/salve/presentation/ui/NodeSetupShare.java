@@ -14,7 +14,7 @@ import java.util.ArrayList;
 /** Envía al PC del dueño los scripts del nodo y una guía breve. Se ejecutan allí, a mano. */
 final class NodeSetupShare {
     private static final String[] SCRIPTS = {"salve_nodo_app.py", "salve_private_network.py", "salve_node_setup.py",
-            "salve_compute_node.py", "salve_private_location.py", "salve_guardian.py", "requirements-family.txt", "PRIVATE_FAMILY_NETWORK.md"};
+            "salve_compute_node.py", "salve_private_location.py", "salve_guardian.py", "salve_home.py", "requirements-family.txt", "PRIVATE_FAMILY_NETWORK.md"};
     static final String GUIDE = "Nodo de Salve con TLS mutuo (sin VPN ni programas extra)\n\n"
             + "Windows, lo más fácil: descarga SalveNodo.exe (artefacto «SalveNodo-windows» de GitHub Actions) y ábrelo con doble clic.\n"
             + "No necesita Python. Si quieres modelo local, pon llama-server.exe junto a SalveNodo.exe.\n\n"

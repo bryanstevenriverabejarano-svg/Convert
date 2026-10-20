@@ -586,6 +586,10 @@ public class MotorConversacional {
         turnFeatureOffer.set(null); // una oferta de un turno anterior nunca se cuela en este
         String featureAnswer = respuestaOfertaPropia(entrada);
         if (featureAnswer != null) { hablar(featureAnswer); return; }
+        String homeAnswer = respuestaHogar(entrada);
+        if (homeAnswer != null) { hablar(homeAnswer); return; }
+        String homeOrder = ordenHogar(entrada);
+        if (homeOrder != null) { hablar(homeOrder); return; }
         salve.core.mind.AttentionSchema.get().attend(salve.core.mind.AttentionSchema.topic(entrada),
                 salve.core.mind.AttentionSchema.Source.CONVERSATION, System.currentTimeMillis());
         salve.core.memory.CloudMemoryCommand.Action cloudCommand = salve.core.memory.CloudMemoryCommand.parse(entrada);
@@ -3539,6 +3543,8 @@ public class MotorConversacional {
                 }
                 return out.append(". No conozco el contenido de sus recuerdos").toString();
             }
+            case CONTINUITY:
+                return new salve.data.continuity.SalveContinuity(context).describe();
             case LEARNING:
                 return autonomousTools.learnedSkillsSummary().replace("\\n", " ")
                         + "; estrategias de dibujo, referencias y respuesta: "
@@ -3565,6 +3571,82 @@ public class MotorConversacional {
         }
     }
 
+    // ── Hogar: Home Assistant local a través de un nodo. Orden explícita → confirmación → acción ──
+
+    private static final class HomePending {
+        final salve.core.compute.ComputeNode node; final salve.core.home.HomeCommand command;
+        final salve.core.home.HomeCommand.Entity entity; final long until;
+        HomePending(salve.core.compute.ComputeNode node, salve.core.home.HomeCommand command, salve.core.home.HomeCommand.Entity entity, long until) {
+            this.node = node; this.command = command; this.entity = entity; this.until = until;
+        }
+    }
+    private volatile HomePending pendingHome;
+
+    /** Orden de casa dicha por Bryan: busca el dispositivo y pide confirmación. Nunca actúa aquí. */
+    private String ordenHogar(String entrada) {
+        salve.core.home.HomeCommand command = salve.core.home.HomeCommand.parse(entrada);
+        if (command == null) return null;
+        if (!creatorSide()) return "Solo Bryan puede controlar los dispositivos de casa.";
+        salve.core.compute.ComputeHttpTransport transport = new salve.core.compute.ComputeHttpTransport(context);
+        String lastProblem = null;
+        for (salve.core.compute.ComputeNode node : new salve.core.compute.ComputeNodeStore(context).load()) {
+            java.util.List<salve.core.home.HomeCommand.Entity> entities = new java.util.ArrayList<>();
+            try {
+                for (com.google.gson.JsonElement el : transport.home(node, () -> closed).getAsJsonArray("entities")) {
+                    com.google.gson.JsonObject o = el.getAsJsonObject();
+                    entities.add(new salve.core.home.HomeCommand.Entity(o.get("entity").getAsString(), o.get("name").getAsString(),
+                            o.get("domain").getAsString(), o.get("state").getAsString()));
+                }
+            } catch (java.io.IOException | RuntimeException failure) {
+                if (failure.getMessage() == null || !failure.getMessage().contains("(404)")) lastProblem = node.name;
+                continue;
+            }
+            salve.core.home.HomeCommand.Match match = command.resolve(entities);
+            if (match.entity == null) {
+                java.util.List<String> names = new java.util.ArrayList<>();
+                for (salve.core.home.HomeCommand.Entity e : match.candidates) names.add(e.name);
+                return names.isEmpty() ? "No encuentro ese dispositivo entre los que me has permitido en " + node.name + "."
+                        : "¿Cuál de estos? " + android.text.TextUtils.join(", ", names) + ".";
+            }
+            pendingHome = new HomePending(node, command, match.entity, System.currentTimeMillis() + 60_000);
+            return command.confirmation(match.entity) + " Di «sí» para hacerlo.";
+        }
+        return lastProblem != null ? "No pude hablar con " + lastProblem + " para controlar la casa. ¿Está encendido Salve Nodo?"
+                : "Ninguno de tus nodos tiene conectado Home Assistant. Actívalo en Salve Nodo con --reconfigurar.";
+    }
+
+    /** Respuesta a la confirmación del hogar: solo un «sí» claro, en el minuto siguiente, actúa. */
+    private String respuestaHogar(String entrada) {
+        HomePending pending = pendingHome;
+        pendingHome = null;
+        if (pending == null || System.currentTimeMillis() > pending.until) return null;
+        if (salve.core.mind.SelfFeatures.declines(entrada)) return "Vale, no lo toco.";
+        if (!salve.core.mind.SelfFeatures.accepts(entrada)) return null;
+        try {
+            com.google.gson.JsonObject result = new salve.core.compute.ComputeHttpTransport(context).homeAction(pending.node,
+                    pending.entity.id, pending.command.action.service, pending.command.value, () -> closed);
+            String state = result.getAsJsonObject("entity").get("state").getAsString();
+            return "Hecho: «" + pending.entity.name + "» " + homeState(state) + ".";
+        } catch (java.io.IOException | RuntimeException failure) {
+            String m = failure.getMessage() == null ? "" : failure.getMessage();
+            if (m.contains("(429)")) return "He hecho demasiados cambios seguidos en la casa; espera un minuto.";
+            if (m.contains("(403)")) return "Ese dispositivo o esa acción no están permitidos en Salve Nodo.";
+            if (m.contains("(502)") || m.contains("(504)")) return "Salve Nodo no pudo hablar con Home Assistant.";
+            return "No pude hacerlo: no hay conexión con " + pending.node.name + ".";
+        }
+    }
+
+    private static String homeState(String state) {
+        switch (state) {
+            case "on": return "está encendido";
+            case "off": return "está apagado";
+            case "open": case "opening": return "se está abriendo";
+            case "closed": case "closing": return "se está cerrando";
+            case "heat": case "cool": case "auto": case "heat_cool": return "está en marcha";
+            default: return "ha recibido la orden (estado: " + state + ")";
+        }
+    }
+
     /** Respuesta del usuario a la oferta del turno anterior. Solo un «sí» claro abre algo. */
     private String respuestaOfertaPropia(String entrada) {
         salve.core.mind.SelfFeatures.Feature feature = pendingFeature;
@@ -3585,6 +3667,12 @@ public class MotorConversacional {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 return "Abro la génesis. Cuéntame para qué o para quién es y te propongo uno; no se crea hasta que lo apruebes.";
             } catch (RuntimeException unavailable) { return "No pude abrirla. Está en IA y cámara → Salventes (génesis)."; }
+        }
+        if (feature == salve.core.mind.SelfFeatures.Feature.CONTINUITY) {
+            try {
+                context.startActivity(new Intent(context, salve.presentation.ui.ContinuityActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return "Abro mi continuidad. Desde ahí puedes guardar mi memoria sellada en tu Guardián.";
+            } catch (RuntimeException unavailable) { return "No pude abrirla. Está en IA y cámara → Continuidad (Guardián)."; }
         }
         if (feature == salve.core.mind.SelfFeatures.Feature.PRIVACY_CHECK) {
             String first = mind().peopleGraph().creator().name.split(" ")[0];

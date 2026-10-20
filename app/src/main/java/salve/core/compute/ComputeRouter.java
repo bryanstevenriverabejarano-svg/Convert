@@ -25,6 +25,18 @@ public final class ComputeRouter {
             this.model = model; this.freeSlots = freeSlots;
             this.maxPromptChars = maxPromptChars; this.maxOutputTokens = maxOutputTokens;
         }
+        /** Telemetría opcional del nodo (vacía si no la informa): GPU, VRAM y roles. */
+        public String gpu = ""; public double vramUsedGb = Double.NaN, vramTotalGb = Double.NaN; public int gpuLoad = -1;
+        public java.util.List<String> roles = java.util.Collections.emptyList();
+        /** «RTX 4070 · 6,2 / 12,0 GB de VRAM · 35 %»; vacío si no hay datos. */
+        public String telemetry() {
+            if (gpu.isEmpty()) return "";
+            StringBuilder out = new StringBuilder(gpu);
+            if (!Double.isNaN(vramUsedGb) && !Double.isNaN(vramTotalGb))
+                out.append(String.format(java.util.Locale.forLanguageTag("es"), " · %.1f / %.1f GB de VRAM", vramUsedGb, vramTotalGb));
+            if (gpuLoad >= 0) out.append(" · ").append(gpuLoad).append(" %");
+            return out.toString();
+        }
     }
     public interface Transport {
         Health health(ComputeNode node, BooleanSupplier stopped) throws IOException;

@@ -7,6 +7,17 @@ import salve.data.util.CloudLogger;
 public class SalveApplication extends Application {
     private static TTSManager ttsManager;
 
+    /**
+     * Antes que cualquier proveedor, tarea o pantalla: si hay una restauración de la memoria de Salve
+     * preparada, se coloca ahora, cuando nadie tiene abierta memoria.db.
+     */
+    @Override
+    protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(base);
+        try { salve.data.continuity.SalveContinuity.applyPending(this); }
+        catch (RuntimeException failure) { android.util.Log.e("Salve/Continuity", "Restauración no aplicada", failure); }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();

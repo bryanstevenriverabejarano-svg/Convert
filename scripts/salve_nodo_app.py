@@ -13,6 +13,7 @@ escanearlo desde la app. Las siguientes veces arranca el modelo (si lo configura
 from __future__ import annotations
 
 import argparse
+import getpass
 import http.client
 import json
 import os
@@ -30,6 +31,7 @@ import webbrowser
 import salve_compute_node as node
 import salve_node_setup as hardware
 import salve_private_network as network
+import salve_home as home
 
 VERSION = '1.0'
 FOLDER = Path('~/.salve/red').expanduser()
@@ -95,6 +97,20 @@ def configure(previous=None):
     print('conoces tú. El PC no puede leerlas; sirven para recuperarlos si pierdes o cambias de móvil.')
     previous_guardian = 's' if previous.get('guardian') else 'n'
     config['guardian'] = ask('¿Usar este PC también como Guardián? (s/n)', previous_guardian).strip().lower().startswith('s')
+    print('\nHogar: Salve puede encender o apagar luces, enchufes, ventiladores, persianas y el clima a través de tu')
+    print('Home Assistant local (siempre pidiéndote confirmación). El token se queda en este PC.')
+    previous_home = previous.get('home') or {}
+    if ask('¿Conectar con Home Assistant? (s/n)', 's' if previous_home else 'n').strip().lower().startswith('s'):
+        url = ask('URL de Home Assistant en tu red', previous_home.get('url', 'http://homeassistant.local:8123'))
+        home.check_url(url)
+        token = getpass.getpass('Token de larga duración (Perfil → Seguridad en Home Assistant; Enter para mantener el actual): ').strip()
+        if token:
+            FOLDER.mkdir(parents=True, exist_ok=True)
+            network._private_write(FOLDER / 'ha-token', token.encode('utf-8'))
+        elif not (FOLDER / 'ha-token').exists():
+            raise ValueError('Falta el token de Home Assistant')
+        entities = ask('Entidades que Salve puede controlar (light.salon,switch.enchufe…)', ','.join(previous_home.get('entities', [])))
+        config['home'] = {'url': url, 'entities': list(home.parse_entities(entities))}
     print('\nModelo. Si indicas el archivo .gguf, Salve Nodo arrancará llama-server por ti.')
     model_file = ask('Ruta del modelo .gguf (Enter si ya tienes llama-server en marcha)', previous.get('model_file', ''))
     config['model_file'] = model_file.strip('"')
@@ -168,6 +184,9 @@ def node_args(config, paths):
         args += ['--location-directory', str(FOLDER / 'ubicacion'), '--location-token-file', str(paths['token-ubicacion'])]
     if config.get('guardian'):
         args += ['--vault-directory', str(FOLDER / 'guardian')]
+    if config.get('home'):
+        args += ['--ha-url', config['home']['url'], '--ha-token-file', str(FOLDER / 'ha-token'),
+                 '--ha-entities', ','.join(config['home']['entities'])]
     return args
 
 
