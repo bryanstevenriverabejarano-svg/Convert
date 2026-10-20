@@ -33,7 +33,14 @@ public class PlayWorker extends Worker {
 
     @NonNull @Override public Result doWork() {
         Context app = getApplicationContext();
+        salve.core.mind.BackgroundMindGate.Lease lease = salve.core.mind.BackgroundMindGate.get().acquire(
+                salve.core.mind.BackgroundMindGate.Task.PLAY,
+                salve.core.GoalAutonomyRuntime.get(getApplicationContext()).hasActiveConversation(),
+                salve.core.MindRuntime.get(getApplicationContext()).journal().isPaused(),
+                salve.core.SalveLLM.getInstance(getApplicationContext()).isLoading());
+        if (lease == null) return Result.success();
         try {
+
             if (salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation() || salve.core.SalveLLM.getInstance(app).isLoading())
                 return Result.success();
             java.util.function.BooleanSupplier stop = () -> isStopped() || salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation();
@@ -43,6 +50,7 @@ public class PlayWorker extends Worker {
             Log.w(TAG, "Juego interrumpido: " + failure.getClass().getSimpleName());
         }
         return Result.success();
+        } finally { lease.close(); }
     }
 
     private static Constraints constraints() { return new Constraints.Builder().setRequiresBatteryNotLow(true).build(); }
