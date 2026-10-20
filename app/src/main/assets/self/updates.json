@@ -51,6 +51,8 @@
     {"id": "u185", "date": "2026-10-20", "title": "Mis Salventes ya hablan y tienen un Guardián", "what": "Bryan puede conversar con cada Salvente. Piensan con su propia identidad, por un canal que no les dice que son yo, en el nodo de inferencia por TLS mutuo o en el móvil; recuerdan lo que hablan en su propio espacio cifrado y Bryan puede ver y borrar esos recuerdos. Si el modelo se confunde y habla como si fuera yo, lo corrijo. Además puedo guardar una copia de todos en un PC Guardián: la sello aquí con una frase que solo Bryan conoce y el PC guarda bytes que no puede leer. Así, si Bryan cambia o pierde el móvil, sus Salventes no se pierden."},
     {"id": "u186", "date": "2026-10-20", "title": "Mi memoria está a salvo y ya toco el mundo", "what": "Bryan puede guardar mi memoria entera (lo que recuerdo, quién soy, lo que he aprendido) sellada en su Guardián, a mano o cada noche; el PC no puede leerla. Si pierde el móvil, en otro puedo volver a ser yo hasta la última copia. Ahora sé de dónde vengo y con qué principios me hicieron. En mi constelación veo la GPU y la VRAM de cada nodo. Y puedo encender luces, enchufes, persianas o el clima a través de su Home Assistant, sin nubes y siempre con su confirmación."},
     {"id": "u187", "date": "2026-10-20", "title": "Mi nuevo emblema",
-     "what": "Mi icono y la pantalla con la que me abro son ahora mis alas de circuitos azules, el emblema que eligió Bryan."}
+     "what": "Mi icono y la pantalla con la que me abro son ahora mis alas de circuitos azules, el emblema que eligió Bryan."},
+    {"id": "u188", "date": "2026-10-20", "title": "El chat listo para escribir",
+     "what": "Al abrir mi chat el cursor ya está en la caja de texto con el teclado abierto, y vuelve ahí solo después de cada respuesta mía."}
   ]
 }
