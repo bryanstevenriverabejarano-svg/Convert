@@ -29,7 +29,10 @@ public class ImageReferenceSearchTest {
         assertTrue(asked.stream().anyMatch(u -> u.contains("suckling+pig") && u.contains("filetype%3Adrawing")));
         assertEquals("mapas y orígenes ajenos se descartan", "Pig icon", found.get(0).label());
         assertTrue(found.get(0).drawing);
-        for (ImageReferenceSearch.Candidate c : found) assertTrue(c.imageUrl.startsWith("https://upload.wikimedia.org/"));
+        for (ImageReferenceSearch.Candidate c : found) {
+            assertTrue(c.imageUrl, ImageReferenceSearch.allowedImage(c.imageUrl));
+            assertFalse("nunca usa la dirección de otro servidor", c.imageUrl.contains("example.com"));
+        }
         try { search.download(new ImageReferenceSearch.Candidate("x", "https://example.com/a.png", "", false), 10); fail(); }
         catch (java.io.IOException expected) { }
     }
@@ -64,6 +67,30 @@ public class ImageReferenceSearchTest {
         assertTrue(why.toString(), why.toString().contains("formato"));
         assertFalse("nombres con ruta no", ImageReferenceSearch.allowedImage(
                 "https://commons.wikimedia.org/wiki/Special:FilePath/../w/api.php"));
+    }
+
+    @Test public void thumbnailsFromOtherHostsAreAskedByName() {
+        // «origen ajeno×6» en el móvil: la miniatura de la API no era de upload.wikimedia.org.
+        String json = "{\"query\":{\"pages\":["
+                + "{\"title\":\"File:Gorilla icon.svg\",\"index\":1,\"imageinfo\":[{\"mime\":\"image/svg+xml\","
+                + "\"thumburl\":\"https://elsewhere.example/thumb/g.png\"}]},"
+                + "{\"title\":\"File:Gorilla sketch.png\",\"index\":2,\"imageinfo\":[{\"mime\":\"image/png\","
+                + "\"thumburl\":\"//upload.wikimedia.org/thumb/s.png\"}]}]}}";
+        List<ImageReferenceSearch.Candidate> found = ImageReferenceSearch.parseCommons(json, null);
+        assertEquals(2, found.size());
+        assertEquals("https://commons.wikimedia.org/wiki/Special:FilePath/Gorilla_icon.svg?width=480", found.get(0).imageUrl);
+        assertEquals("https://upload.wikimedia.org/thumb/s.png", found.get(1).imageUrl);
+        assertEquals("https://upload.wikimedia.org/a.png", ImageReferenceSearch.wikimediaThumb("http://upload.wikimedia.org/a.png"));
+        assertNull(ImageReferenceSearch.wikimediaThumb("https://upload.wikimedia.org.evil.example/a.png"));
+        assertNull(ImageReferenceSearch.wikimediaThumb("https://upload.wikimedia.org/../x"));
+    }
+
+    @Test public void theRequestIsNotPartOfTheObject() {
+        assertEquals("gorilla", ImageReferenceSearch.withoutRequestWords("improved gorilla"));
+        assertEquals("gorila", ImageReferenceSearch.withoutRequestWords("gorila mejorado"));
+        assertEquals("gorilla", ImageReferenceSearch.withoutRequestWords("a better detailed gorilla"));
+        assertEquals("muñeco de nieve", ImageReferenceSearch.withoutRequestWords("muñeco de nieve"));
+        assertEquals("si no queda nada, la original", "mejor", ImageReferenceSearch.withoutRequestWords("mejor"));
     }
 
     @Test public void googleThumbnailsAreUsedWithoutDownloading() throws Exception {

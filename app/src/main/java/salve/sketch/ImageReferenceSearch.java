@@ -113,10 +113,11 @@ public final class ImageReferenceSearch {
      */
     public List<Candidate> search(String subject, String englishHint, int max, java.util.Collection<String> exclude)
             throws IOException {
-        String es = clean(subject);
+        String es = withoutRequestWords(clean(subject));
         if (es.isEmpty()) return new ArrayList<>();
         log.clear();
-        String hint = englishHint == null ? "" : clean(englishHint);
+        // «improved gorilla»: la petición («mejóralo») no es parte del objeto y estropea la búsqueda.
+        String hint = englishHint == null ? "" : withoutRequestWords(clean(englishHint));
         String main = hint.isEmpty() ? es : hint;
         Set<String> seen = new java.util.HashSet<>();
         if (exclude != null) seen.addAll(exclude);
@@ -210,6 +211,18 @@ public final class ImageReferenceSearch {
     static boolean allowedImage(String url) {
         return url != null && (url.startsWith("https://upload.wikimedia.org/") || url.startsWith("https://api.openverse.org/v1/images/")
                 || (url.startsWith(FILE_PATH) && !url.substring(FILE_PATH.length()).contains("/")));
+    }
+
+    /**
+     * La miniatura que da la API, si es de upload.wikimedia.org (también «//upload…» o «http://upload…»,
+     * que se pasan a https). Cualquier otro servidor → null.
+     */
+    static String wikimediaThumb(String thumb) {
+        if (thumb == null) return null;
+        String t = thumb.trim();
+        if (t.startsWith("//")) t = "https:" + t;
+        else if (t.startsWith("http://")) t = "https://" + t.substring(7);
+        return t.startsWith("https://upload.wikimedia.org/") && !t.contains("..") ? t : null;
     }
 
     /** «File:Gorilla silhouette.svg» → su miniatura de 480 px, sin depender de que la API traiga {@code thumburl}. */
@@ -375,8 +388,10 @@ public final class ImageReferenceSearch {
                     boolean raster = mime.equals("image/png") || mime.equals("image/jpeg")
                             || (mime.isEmpty() && lower.matches(".*\\.(png|jpe?g)$"));
                     if (!svg && !raster) { count(dropped, "formato " + (mime.isEmpty() ? "desconocido" : mime)); continue; }
-                    if (!thumb.isEmpty() && !thumb.startsWith("https://upload.wikimedia.org/")) { count(dropped, "origen ajeno"); continue; }
-                    if (thumb.isEmpty()) {
+                    thumb = wikimediaThumb(thumb);
+                    if (thumb == null) {
+                        // Sin miniatura utilizable (o en otro servidor): nunca se usa esa dirección,
+                        // se pide la del archivo a Commons por su nombre.
                         thumb = filePathThumb(title);
                         if (thumb == null) { count(dropped, "sin miniatura"); continue; }
                         recovered++;
@@ -387,7 +402,7 @@ public final class ImageReferenceSearch {
             }
         } catch (RuntimeException malformed) { count(dropped, "respuesta no JSON"); }
         if (why != null) {
-            if (recovered > 0) why.append(" (").append(recovered).append(" sin miniatura en la API, pedidas por nombre)");
+            if (recovered > 0) why.append(" (").append(recovered).append(" sin miniatura válida en la API, pedidas por nombre)");
             if (!dropped.isEmpty()) why.append(" [descartados: ").append(dropped.toString().replaceAll("[{}]", "").replace("=", "×")).append("]");
         }
         return out;
@@ -447,6 +462,19 @@ public final class ImageReferenceSearch {
         float d = 0;
         for (int i = 2; i + 1 < s.length; i += 2) d += (float) Math.hypot(s[i] - s[i - 2], s[i + 1] - s[i - 1]);
         return d;
+    }
+
+    /** Palabras de la petición, no del objeto: «gorila mejorado», «improved gorilla drawing». */
+    private static final java.util.regex.Pattern REQUEST_WORDS = java.util.regex.Pattern.compile(
+            "\\b(improved|improve|better|enhanced|refined|detailed|nicer|prettier|realistic|version"
+            + "|mejorad[oa]s?|mejor|mejora|detallad[oa]s?|bonit[oa]s?|realista|versi[oó]n)\\b",
+            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
+
+    static String withoutRequestWords(String term) {
+        if (term == null) return "";
+        String t = REQUEST_WORDS.matcher(term).replaceAll(" ")
+                .replaceAll("(?i)^\\s*(a|an|the|of|de|del)\\s+", " ").replaceAll("\\s+", " ").trim();
+        return t.isEmpty() ? term.trim() : t; // si no queda nada, mejor la palabra original que nada
     }
 
     static String clean(String subject) {
