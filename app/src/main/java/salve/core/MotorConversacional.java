@@ -3539,6 +3539,19 @@ public class MotorConversacional {
                 }
                 return out.append(". No conozco el contenido de sus recuerdos").toString();
             }
+            case LEARNING:
+                return autonomousTools.learnedSkillsSummary().replace("\\n", " ")
+                        + "; estrategias de dibujo, referencias y respuesta: "
+                        + salve.core.mind.SkillLab.defaults().size() + " habilidades base"
+                        + ". Cada resultado requiere evidencia; no he entrenado mis pesos";
+            case BACKGROUND: {
+                salve.core.mind.BackgroundMindGate.Snapshot snapshot =
+                        salve.core.mind.BackgroundMindGate.get().snapshot();
+                return "mente " + (mind().journal().isPaused() ? "pausada" : "habilitada")
+                        + "; tarea cognitiva en curso: " + (snapshot.active == null ? "ninguna" : snapshot.active.name())
+                        + "; ciclos observados en este proceso: " + snapshot.completions
+                        + ". Los trabajos programados no prueban que hayan corrido ni que hayan aprendido";
+            }
             case WEB_SEARCH:
                 return "buscador elegido: " + salve.core.web.WebSearchSettings.load(context, "").id + "; clave de Brave: "
                         + (salve.core.web.WebSearchKeyStore.hasBraveKey(context) ? "guardada" : "sin configurar");
