@@ -165,8 +165,9 @@ public class PublicResearchCoordinatorTest {
         PublicResearchCoordinator.Result result = new PublicResearchCoordinator((text, stop) -> {
             query.set(text); return batch(page("salve"));
         }, (phase, prompt) -> success(phase == PublicResearchCoordinator.Phase.QUERY
-                ? "{\"action\":\"search\",\"query\":\"Salve\"}"
-                : phase == PublicResearchCoordinator.Phase.PLAN ? FINISH : "Salve es un saludo [1]."), 3200)
+                ? "{\"objective\":\"Significado de Salve\",\"subject\":\"Salve\",\"person\":false,\"goals\":[\"significado\"],\"queries\":[\"Salve\"]}"
+                : phase == PublicResearchCoordinator.Phase.ANALYZE
+                ? "{\"relevant\":true,\"identity\":\"not_applicable\",\"identity_quote\":\"\",\"quotes\":[\"Texto de la fuente salve\"]}" : "Salve es un saludo [1]."), 3200)
                 .runConversation("significado de Salve", () -> false);
         assertEquals("Salve", query.get());
         assertEquals(PublicResearchCoordinator.Status.ANSWERED, result.status);
@@ -179,7 +180,8 @@ public class PublicResearchCoordinatorTest {
         AtomicReference<String> query = new AtomicReference<>();
         PublicResearchCoordinator.Result result = new PublicResearchCoordinator((text, stop) -> {
             query.set(text); return batch(page("salve"));
-        }, (phase, prompt) -> success(phase == PublicResearchCoordinator.Phase.PLAN ? FINISH
+        }, (phase, prompt) -> success(phase == PublicResearchCoordinator.Phase.ANALYZE
+                ? "{\"relevant\":true,\"identity\":\"not_applicable\",\"identity_quote\":\"\",\"quotes\":[\"Texto de la fuente salve\"]}"
                 : "Voy a buscarlo, ¿te parece bien? [1]"), 3200)
                 .runConversation("significado de tu nombre", () -> false);
         assertEquals("Salve", query.get());
@@ -201,15 +203,14 @@ public class PublicResearchCoordinatorTest {
         assertEquals(1, result.searches);
     }
 
-    @Test public void conversationReservesSynthesisWithinFourCalls() {
-        AtomicInteger plans = new AtomicInteger();
+    @Test public void malformedIntentFallsBackAndStillFinishesWithEvidence() {
         PublicResearchCoordinator.Result result = new PublicResearchCoordinator((query, stop) -> batch(page("a")),
-                (phase, prompt) -> success(phase == PublicResearchCoordinator.Phase.SYNTHESIZE
-                        ? "Resultado [1]." : "{\"action\":\"search\",\"query\":\"tema "
-                        + plans.incrementAndGet() + "\"}"), 3200).runConversation("tema", () -> false);
+                (phase, prompt) -> success(phase == PublicResearchCoordinator.Phase.QUERY ? "invalid plan"
+                        : phase == PublicResearchCoordinator.Phase.ANALYZE
+                        ? "{\"relevant\":true,\"identity\":\"not_applicable\",\"identity_quote\":\"\",\"quotes\":[\"Texto de la fuente a\"]}"
+                        : "Resultado [1]."), 3200).runConversation("tema", () -> false);
         assertEquals(PublicResearchCoordinator.Status.PARTIAL, result.status);
-        assertEquals(4, result.modelCalls);
+        assertEquals(3, result.modelCalls);
         assertTrue(result.toConversationText().contains("Resultado [1]."));
     }
 }
-

@@ -3225,15 +3225,36 @@ public class MotorConversacional {
 
     private String ejecutarInvestigacionPublica(String question) {
         String turnId = java.util.UUID.randomUUID().toString();
-        String liveHint = mostrarBusqueda(question);
+        estado("Interpretando tu petición antes de buscar…");
+        String liveHint;
+        try { liveHint = salve.core.web.SearchLive.prepare(context, conversationForeground); }
+        catch (RuntimeException unavailable) { liveHint = null; }
+        if (liveHintGiven) liveHint = null;
+        else if (liveHint != null) liveHintGiven = true;
         WikipediaResearchClient reader = researchReader(question);
         int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
         salve.core.research.PublicResearchCoordinator.Result result =
-                new salve.core.research.PublicResearchCoordinator(reader::researchResult,
+                new salve.core.research.PublicResearchCoordinator(new salve.core.research.PublicResearchCoordinator.SourceProvider() {
+                    @Override public WikipediaResearchClient.ResearchBatch read(String query, java.util.function.BooleanSupplier stopped) {
+                        return reader.researchResult(query, stopped);
+                    }
+                    @Override public WikipediaResearchClient.ResearchBatch read(String query, java.util.function.BooleanSupplier stopped,
+                            java.util.function.Consumer<WikipediaResearchClient.Page> consumer) {
+                        return reader.researchResult(query, stopped, consumer);
+                    }
+                },
                         (phase, prompt) -> ConversationModelRouter.generate(false,
                                 llm != null && llm.usesOwnedInference(), false,
                                 gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
-                                () -> generarRespuestaConversacionalLocal(prompt)), budget)
+                                () -> generarRespuestaConversacionalLocal(prompt)), budget,
+                        new salve.core.research.PublicResearchCoordinator.Observer() {
+                            @Override public void onProgress(String message) { estado(message); }
+                            @Override public void onSearch(String query) {
+                                String engine = salve.core.web.SearchEngine.explicitEngine(question);
+                                mostrarBusqueda(engine == null || query.contains("://") ? query : "en " + engine + " " + query);
+                            }
+                            @Override public void onReading(String url, String title) { salve.core.web.SearchLive.reading(url, title); }
+                        })
                         .runConversation(question, () -> closed || !isVoiceContextCurrent());
         String answer = result.toConversationText();
         if (!closed && isVoiceContextCurrent()) {
@@ -3458,6 +3479,7 @@ public class MotorConversacional {
             context.startActivity(new android.content.Intent(context, salve.presentation.ui.DeviceControlActivity.class)
                     .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PANEL, true)
                     .putExtra(salve.services.MobileWorkspaceService.QUERY, "")
+                    .putExtra(salve.services.MobileWorkspaceService.LIVE, true)
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (RuntimeException unavailable) { Log.w(TAG, "No pude abrir el permiso de mini ventana"); }
     }

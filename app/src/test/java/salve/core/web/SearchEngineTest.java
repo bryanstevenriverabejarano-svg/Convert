@@ -22,6 +22,13 @@ public class SearchEngineTest {
     @Test(timeout=2000) public void malformedHtmlHasBoundedParsing() {
         assertTrue(SearchEngine.links(String.join("",java.util.Collections.nCopies(100000,"<a ")),"https://www.google.com/search?q=x").isEmpty());
     }
+    @Test public void rejectedPortalsDoNotConsumeTheDiscoveryLimit() {
+        StringBuilder html = new StringBuilder();
+        for (int i = 0; i < 8; i++) html.append("<a href='https://www.instagram.com/?hl=" + i + "'>Home</a>");
+        html.append("<a href='https://example.org/profile'>Profile</a>");
+        assertEquals(java.util.Collections.singletonList("https://example.org/profile"), SearchEngine.links(html.toString(),
+                "https://www.google.com/search?q=x", salve.core.research.ResearchSourceQuality::candidate));
+    }
     @Test public void braveApiResultsAreFilteredLikeAnyOtherPublicLink() {
         String json = "{\"web\":{\"results\":[{\"url\":\"https://example.org/a\"},{\"url\":\"https://example.org/a\"},"
                 + "{\"url\":\"https://127.0.0.1/x\"},{\"url\":\"http://example.org/plain\"},{\"url\":42},{\"nourl\":true}]}}";

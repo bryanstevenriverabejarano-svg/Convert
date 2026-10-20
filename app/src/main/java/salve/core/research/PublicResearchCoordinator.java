@@ -24,18 +24,31 @@ import salve.core.WikipediaResearchClient;
 /** Bounded research with real source/provider adapters; citations are provenance, not factual proof. */
 public final class PublicResearchCoordinator {
     public static final int MAX_SEARCHES = 3;
-    public static final int MAX_MODEL_CALLS = 4;
-    public enum Phase { QUERY, PLAN, SYNTHESIZE }
+    public static final int MAX_MODEL_CALLS = 11;
+    public enum Phase { QUERY, ANALYZE, PLAN, SYNTHESIZE }
     public enum Status { ANSWERED, PARTIAL, SOURCES_ONLY, NO_SOURCES, FETCH_FAILED,
         MODEL_FAILED, INVALID_MODEL_REPLY, CANCELLED, BUDGET_EXHAUSTED }
     public interface SourceProvider {
         WikipediaResearchClient.ResearchBatch read(String query, BooleanSupplier stopped);
+        /** Streaming adapters analyze a page before fetching the next. Batch adapters remain compatible. */
+        default WikipediaResearchClient.ResearchBatch read(String query, BooleanSupplier stopped,
+                java.util.function.Consumer<WikipediaResearchClient.Page> pageConsumer) {
+            WikipediaResearchClient.ResearchBatch batch = read(query, stopped);
+            if (batch != null && batch.status != WikipediaResearchClient.Status.CANCELLED)
+                for (WikipediaResearchClient.Page page : batch.pages) { check(stopped); pageConsumer.accept(page); }
+            return batch;
+        }
+    }
+    public interface Observer {
+        default void onProgress(String message) { }
+        default void onSearch(String query) { }
+        default void onReading(String url, String title) { }
     }
     public interface ModelProvider { ModelResult generate(Phase phase, String prompt); }
     public static final class Source {
         public final int id;
         public final String url, excerpt;
-        private Source(int id, String url, String excerpt) { this.id = id; this.url = url; this.excerpt = excerpt; }
+        Source(int id, String url, String excerpt) { this.id = id; this.url = url; this.excerpt = excerpt; }
     }
     public static final class Result {
         public final Status status;
@@ -44,7 +57,7 @@ public final class PublicResearchCoordinator {
         public final List<String> decisions;
         public final int searches, modelCalls;
         public final String diagnostic;
-        private Result(Status status, String answer, Run run) {
+        Result(Status status, String answer, Run run) {
             this.status = status; this.answer = answer;
             sources = Collections.unmodifiableList(new ArrayList<>(run.sources.values()));
             decisions = Collections.unmodifiableList(new ArrayList<>(run.decisions));
@@ -109,9 +122,14 @@ public final class PublicResearchCoordinator {
     private final SourceProvider sources;
     private final ModelProvider model;
     private final int promptBudget;
+    private final Observer observer;
     public PublicResearchCoordinator(SourceProvider sources, ModelProvider model, int promptBudget) {
+        this(sources, model, promptBudget, new Observer() { });
+    }
+    public PublicResearchCoordinator(SourceProvider sources, ModelProvider model, int promptBudget, Observer observer) {
         if (sources == null || promptBudget < 2000 || promptBudget > 10500) throw new IllegalArgumentException();
         this.sources = sources; this.model = model; this.promptBudget = promptBudget;
+        this.observer = observer == null ? new Observer() { } : observer;
     }
 
     public Result run(String question, BooleanSupplier stopped) {
@@ -120,7 +138,7 @@ public final class PublicResearchCoordinator {
 
     /** The user request authorizes this public read; no conversational permission loop. */
     public Result runConversation(String question, BooleanSupplier stopped) {
-        return run(question, stopped, true);
+        return new GuidedPublicResearch(sources, model, promptBudget, observer).run(question, stopped);
     }
 
     private Result run(String question, BooleanSupplier stopped, boolean conversational) {
@@ -270,7 +288,7 @@ public final class PublicResearchCoordinator {
         if ("search".equals(action) && !query.trim().isEmpty()) return query.trim();
         throw new IllegalArgumentException();
     }
-    private static boolean citationsKnown(String answer, Run run) {
+    static boolean citationsKnown(String answer, Run run) {
         Matcher citations = Pattern.compile("\\[(\\d{1,4})\\]").matcher(answer);
         boolean any = false;
         while (citations.find()) {
@@ -288,7 +306,7 @@ public final class PublicResearchCoordinator {
     private static void check(BooleanSupplier stopped) {
         if (Thread.currentThread().isInterrupted() || stopped != null && stopped.getAsBoolean()) throw new CancellationException();
     }
-    private static final class Run {
+    static final class Run {
         final LinkedHashMap<String,Source> sources = new LinkedHashMap<>();
         final List<String> decisions = new ArrayList<>();
         final Set<Integer> visibleSourceIds = new HashSet<>();

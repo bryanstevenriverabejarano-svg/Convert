@@ -61,6 +61,46 @@ public class WebResearchClientTest {
         assertEquals(WikipediaResearchClient.Status.ERROR,result.status); assertTrue(result.diagnostic.contains("503"));
     }
 
+    @Test public void streamingReadsAndAnalysisInterleaveAndSkipPortalLinks() {
+        List<String> order = new ArrayList<>();
+        OkHttpClient transport = new OkHttpClient.Builder().addInterceptor(chain -> {
+            String host = chain.request().url().host(); String path = chain.request().url().encodedPath();
+            order.add("fetch:" + host + path);
+            if (host.equals("www.google.com")) return response(chain.request(),200,"text/html",
+                    "<a href='https://www.instagram.com/?hl=es'>Home</a>"
+                    + "<a href='https://example.org/a'>A</a><a href='https://example.net/b'>B</a>");
+            return response(chain.request(),200,"text/html","<article>Fuente pública sobre el tema.</article>");
+        }).build();
+        WikipediaResearchClient.ResearchBatch result = new WebResearchClient(transport,new SearchEngine("google",""))
+                .researchResult("tema",()->false,page -> order.add("analyze:" + page.url));
+        assertEquals(Arrays.asList("fetch:www.google.com/search", "fetch:example.org/a", "analyze:https://example.org/a",
+                "fetch:example.net/b", "analyze:https://example.net/b"),order);
+        assertEquals(2,result.pages.size());
+    }
+    @Test public void cancellingDuringPageAnalysisDoesNotFetchNextLink() {
+        java.util.concurrent.atomic.AtomicBoolean cancel = new java.util.concurrent.atomic.AtomicBoolean();
+        List<String> calls = new ArrayList<>();
+        OkHttpClient transport = new OkHttpClient.Builder().addInterceptor(chain -> {
+            calls.add(chain.request().url().host());
+            return response(chain.request(),200,"text/html",chain.request().url().host().equals("www.google.com")
+                    ? "<a href='https://example.org/a'>A</a><a href='https://example.net/b'>B</a>"
+                    : "<article>Fuente pública sobre el tema.</article>");
+        }).build();
+        WikipediaResearchClient.ResearchBatch result = new WebResearchClient(transport,new SearchEngine("google",""))
+                .researchResult("tema",cancel::get,page -> cancel.set(true));
+        assertEquals(WikipediaResearchClient.Status.CANCELLED,result.status);
+        assertEquals(Arrays.asList("www.google.com","example.org"),calls);
+    }
+    @Test public void redirectedLoginPageCannotBecomeResearchEvidence() {
+        OkHttpClient transport = new OkHttpClient.Builder().addInterceptor(chain -> {
+            String host = chain.request().url().host();
+            if (host.equals("www.google.com")) return response(chain.request(),200,"text/html","<a href='https://example.org/profile'>Profile</a>");
+            return response(chain.request(),200,"text/html","<title>Acceso</title><main>Inicia sesión para continuar</main>");
+        }).build();
+        assertTrue(new WebResearchClient(transport,new SearchEngine("google",""))
+                .researchResult("perfil",()->false).pages.isEmpty());
+    }
+
     private static final String KEY = "BSAtestkey_0123456789abcdef";
     private static final String BRAVE_JSON = "{\"type\":\"search\",\"web\":{\"results\":["
             + "{\"title\":\"Colada\",\"url\":\"https://example.org/colada\",\"description\":\"x\"},"

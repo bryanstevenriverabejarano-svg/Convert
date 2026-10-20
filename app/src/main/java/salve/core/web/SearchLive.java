@@ -32,10 +32,16 @@ public final class SearchLive {
     private static final long MIN_FREE_BYTES = 600L * 1024 * 1024;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static volatile Listener listener;
+    private static volatile String pendingQuery = "", lastActivity = "";
+    private static final String PERMISSION_OFFERED = "live_permission_offered";
 
     private SearchLive() { }
 
-    public static void register(Listener value) { listener = value; }
+    public static void register(Listener value) {
+        listener = value;
+        String activity = lastActivity;
+        if (!activity.isEmpty()) MAIN.post(() -> { if (listener == value) value.onActivity(activity); });
+    }
     public static void unregister(Listener value) { if (listener == value) listener = null; }
     public static boolean panelOpen() { return listener != null; }
 
@@ -45,9 +51,36 @@ public final class SearchLive {
 
     public static void setEnabled(Context context, boolean value) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, value).apply();
+        if (!value) { pendingQuery = ""; lastActivity = ""; }
     }
 
     public static boolean canShow(Context context) { return Settings.canDrawOverlays(context); }
+
+    /** Open a status window before planning, without submitting the user's raw request to a browser. */
+    public static String prepare(Context context, boolean foreground) {
+        pendingQuery = ""; lastActivity = "Interpretando el objetivo antes de buscar…";
+        if (!enabled(context)) return null;
+        if (canShow(context)) return show(context);
+        android.content.SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        if (foreground && !prefs.getBoolean(PERMISSION_OFFERED, false)) {
+            prefs.edit().putBoolean(PERMISSION_OFFERED, true).apply();
+            try {
+                context.startActivity(new android.content.Intent(context, salve.presentation.ui.DeviceControlActivity.class)
+                        .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PANEL, true)
+                        .putExtra(salve.services.MobileWorkspaceService.LIVE, true)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+                return "Te he abierto el ajuste de la ventana flotante. Confirma el permiso y vuelve: la ventana continuará automáticamente.";
+            } catch (RuntimeException unavailable) { /* Android may reject background activity launches. */ }
+        }
+        return "La búsqueda continúa. Para ver la ventana, di «muestra tus búsquedas» y confirma el permiso de Android.";
+    }
+
+    /** Called after the user grants the real system permission. No simulated clicks or permission grants. */
+    public static boolean resume(Context context) {
+        if (!enabled(context) || !canShow(context) || lowMemory(context)) return false;
+        return pendingQuery.isEmpty() ? salve.services.MobileWorkspaceService.openLive(context)
+                : salve.services.MobileWorkspaceService.open(context, pendingQuery);
+    }
 
     /**
      * Enseña la búsqueda en la mini ventana. Devuelve null si se muestra (o está desactivado) y
@@ -55,6 +88,7 @@ public final class SearchLive {
      */
     public static String begin(Context context, String query) {
         if (query == null || query.trim().isEmpty() || !enabled(context)) return null;
+        pendingQuery = query;
         Listener current = listener;
         if (current != null) { MAIN.post(() -> current.onSearch(query)); return null; }
         if (!canShow(context)) return "Si quieres ver mis búsquedas en directo, di «muestra tus búsquedas» y permite que aparezca sobre otras apps.";
@@ -74,6 +108,7 @@ public final class SearchLive {
 
     /** Lo que está haciendo (solo si la ventana está abierta; si no, no cuesta nada). */
     public static void activity(String text) {
+        if (text != null && !text.trim().isEmpty()) lastActivity = text.trim();
         Listener current = listener;
         if (current != null && text != null && !text.trim().isEmpty()) MAIN.post(() -> current.onActivity(text.trim()));
     }
