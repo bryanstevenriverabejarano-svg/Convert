@@ -30,9 +30,12 @@ public final class MemorySnapshot {
     public static final int FORMAT = 1;
     public static final long MAX_ENTRY = 96L * 1024 * 1024, MAX_TOTAL = 160L * 1024 * 1024;
     public static final int MAX_ENTRIES = 200;
-    /** db/memoria.db, nobackup/mind/x.json, nobackup/autonomy/x.json, files/sketch/x.json */
+    /**
+     * db/memoria.db, nobackup/mind/x.json, nobackup/autonomy/x.json, files/sketch/x.json. Los nombres
+     * admiten guion: las habilidades verificadas viven en autonomy/inductive-skills.json.
+     */
     private static final Pattern NAME = Pattern.compile(
-            "db/memoria\\.db|nobackup/(?:mind|autonomy)/[a-z0-9_]{1,48}\\.json|files/sketch/[a-z0-9_]{1,48}\\.json");
+            "db/memoria\\.db|nobackup/(?:mind|autonomy)/[a-z0-9][a-z0-9_-]{0,47}\\.json|files/sketch/[a-z0-9][a-z0-9_-]{0,47}\\.json");
     private static final byte[] SQLITE = "SQLite format 3\0".getBytes(StandardCharsets.US_ASCII);
 
     private MemorySnapshot() { }

@@ -57,6 +57,20 @@ La mente de Salve (`noBackupFilesDir/mind`: modelo de sí misma, acciones, lecci
 - **MQTT directo no se implementa:** Home Assistant ya integra Zigbee, Matter y MQTT, y duplicarlo
   añadiría superficie de ataque sin aportar nada.
 
+## Integración con #186 (habilidades inductivas) y #187 (puerta cognitiva)
+
+- **Fallo corregido entre parches:** las habilidades verificadas de #186 se guardan en
+  `autonomy/inductive-skills.json` y la lista blanca de la copia no admitía guiones. Lo que Salve
+  aprende en su laboratorio se habría perdido al cambiar de móvil. Ahora viaja en la copia y hay un
+  test que lo comprueba.
+- **La copia nocturna pasa por `BackgroundMindGate` (`Task.CONTINUITY`):** nunca se toma a mitad de
+  un sueño, una reflexión o un juego (si no, la base de datos y la mente quedarían descuadradas),
+  cede ante la conversación y aparece en el estado de su mente en segundo plano. Si la puerta está
+  ocupada, se reintenta cada 15 minutos. La copia pedida a mano espera hasta 90 s a que termine el
+  ciclo en curso.
+- **Coherente con su principio de no convertir reflexiones en órdenes externas:** el hogar solo
+  responde a órdenes explícitas de Bryan dentro de una conversación, nunca a trabajos en segundo plano.
+
 ## Revisión crítica
 
 1. **«Salve no duerme cuando el teléfono se apaga» choca con el Guardián ciego.** Para que su proceso

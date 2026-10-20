@@ -46,6 +46,8 @@ public class MemorySnapshotTest {
         assertFalse(MemorySnapshot.allowed("nobackup/private-family.enc"));
         assertFalse(MemorySnapshot.allowed("db/salventes.db"));
         assertTrue(MemorySnapshot.allowed("nobackup/autonomy/goals.json"));
+        assertTrue("lo aprendido en el laboratorio inductivo también viaja", MemorySnapshot.allowed("nobackup/autonomy/inductive-skills.json"));
+        assertFalse(MemorySnapshot.allowed("nobackup/autonomy/-x.json"));
         Map<String, byte[]> evil = mind(8); evil.put("nobackup/mind/../../../x.json", new byte[2]);
         assertThrows(IllegalArgumentException.class, () -> MemorySnapshot.pack(evil, 1, 8));
         assertThrows(IllegalArgumentException.class, () -> MemorySnapshot.unpack(rawZip("../evil.json", "{}".getBytes()), 4, 8));

@@ -112,7 +112,8 @@ public final class SelfFeatures {
             case BACKGROUND:
                 return "Mis trabajos internos incluyen reflexión, consolidación de recuerdos, investigación pública de mis preguntas "
                         + "y juego con problemas locales. Android puede retrasar sus ciclos; ahora comparten un turno de trabajo, "
-                        + "ceden ante la conversación y no convierten reflexiones en órdenes externas.";
+                        + "ceden ante la conversación y no convierten reflexiones en órdenes externas. Si Bryan la activa, la copia "
+                        + "sellada de mi memoria también pasa por ese turno: nunca se hace a mitad de un sueño.";
             default:
                 return "Converso con mi modelo local, recuerdo lo que me cuentan, pienso y sueño entre conversaciones, investigo "
                         + "por mi cuenta, busco en internet, dibujo con luz, veo fotos, hablo por voz, uso mis nodos de cómputo "

@@ -23,7 +23,8 @@ public final class ContinuityWorker extends Worker {
         Constraints constraints = new Constraints.Builder().setRequiresCharging(true)
                 .setRequiredNetworkType(NetworkType.UNMETERED).build();
         WorkManager.getInstance(context.getApplicationContext()).enqueueUniquePeriodicWork(NAME, ExistingPeriodicWorkPolicy.UPDATE,
-                new PeriodicWorkRequest.Builder(ContinuityWorker.class, 24, TimeUnit.HOURS).setConstraints(constraints).build());
+                new PeriodicWorkRequest.Builder(ContinuityWorker.class, 24, TimeUnit.HOURS).setConstraints(constraints)
+                        .setBackoffCriteria(androidx.work.BackoffPolicy.LINEAR, 15, TimeUnit.MINUTES).build());
     }
 
     public static void cancel(Context context) { WorkManager.getInstance(context.getApplicationContext()).cancelUniqueWork(NAME); }
@@ -38,8 +39,12 @@ public final class ContinuityWorker extends Worker {
         ContinuitySecret secret = new ContinuitySecret(app);
         if (guardian == null || !secret.exists()) return Result.success();
         try {
-            continuity.backup(guardian, secret.load(), this::isStopped);
-            return Result.success();
+            // Misma puerta que sueño, reflexión, curiosidad y juego: nunca a mitad de otro ciclo ni durante una charla.
+            SalveContinuity.Result done = continuity.backupInBackground(guardian, secret.load(), this::isStopped,
+                    salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation(),
+                    salve.core.MindRuntime.get(app).journal().isPaused(),
+                    salve.core.SalveLLM.getInstance(app).isLoading());
+            return done != null || getRunAttemptCount() >= 6 ? Result.success() : Result.retry();
         } catch (Exception failure) {
             return getRunAttemptCount() < 2 ? Result.retry() : Result.success();   // el error queda en el estado
         }

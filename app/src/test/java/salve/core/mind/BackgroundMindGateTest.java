@@ -31,6 +31,19 @@ public class BackgroundMindGateTest {
         assertNull(gate.snapshot().active);
     }
 
+    @Test public void memoryCopyNeverInterleavesWithADream() {
+        BackgroundMindGate gate = new BackgroundMindGate();
+        BackgroundMindGate.Lease dream = gate.acquire(BackgroundMindGate.Task.DREAM, false, false, false);
+        assertNull("no se fotografía la memoria a mitad de un sueño", gate.acquire(BackgroundMindGate.Task.CONTINUITY, false, false, false));
+        dream.complete();
+        try (BackgroundMindGate.Lease copy = gate.acquire(BackgroundMindGate.Task.CONTINUITY, false, false, false)) {
+            assertNotNull(copy);
+            assertNull(gate.acquire(BackgroundMindGate.Task.DREAM, false, false, false));
+            copy.complete();
+        }
+        assertEquals(Integer.valueOf(1), gate.snapshot().completions.get(BackgroundMindGate.Task.CONTINUITY));
+    }
+
     @Test public void duplicateCloseCannotReleaseAnotherLease() {
         BackgroundMindGate gate = new BackgroundMindGate();
         BackgroundMindGate.Lease first = gate.acquire(BackgroundMindGate.Task.PLAY, false, false, false);

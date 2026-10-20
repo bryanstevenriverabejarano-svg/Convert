@@ -93,8 +93,42 @@ public final class SalveContinuity {
         Result(long bytes, int files, long at) { this.bytes = bytes; this.files = files; this.at = at; }
     }
 
-    /** Sella y sube. La frase se borra de memoria al terminar. */
+    /**
+     * Copia pedida por Bryan: espera (hasta 90 s) a que termine el ciclo interno que esté en curso,
+     * para no fotografiar la memoria a mitad de un sueño.
+     */
     public Result backup(ComputeNode guardian, char[] passphrase, java.util.function.BooleanSupplier stopped) throws Exception {
+        salve.core.mind.BackgroundMindGate.Lease lease = null;
+        long deadline = System.currentTimeMillis() + 90_000;
+        try {
+            while ((lease = salve.core.mind.BackgroundMindGate.get().acquire(salve.core.mind.BackgroundMindGate.Task.CONTINUITY,
+                    false, false, false)) == null) {
+                if (stopped.getAsBoolean() || System.currentTimeMillis() > deadline)
+                    throw new IllegalStateException("Estoy en mitad de un ciclo interno (soñando o reflexionando); inténtalo en un minuto.");
+                Thread.sleep(1000);
+            }
+            Result result = backupHolding(guardian, passphrase, stopped);
+            lease.complete();
+            return result;
+        } finally {
+            Arrays.fill(passphrase, '\0');
+            if (lease != null) lease.close();
+        }
+    }
+
+    /** Copia nocturna: solo si la puerta está libre y no hay conversación; si no, null (se reintenta). */
+    Result backupInBackground(ComputeNode guardian, char[] passphrase, java.util.function.BooleanSupplier stopped,
+                              boolean conversing, boolean mindPaused, boolean modelLoading) throws Exception {
+        try (salve.core.mind.BackgroundMindGate.Lease lease = salve.core.mind.BackgroundMindGate.get().acquire(
+                salve.core.mind.BackgroundMindGate.Task.CONTINUITY, conversing, mindPaused, modelLoading)) {
+            if (lease == null) { Arrays.fill(passphrase, '\0'); return null; }
+            Result result = backupHolding(guardian, passphrase, stopped);
+            lease.complete();
+            return result;
+        }
+    }
+
+    private Result backupHolding(ComputeNode guardian, char[] passphrase, java.util.function.BooleanSupplier stopped) throws Exception {
         try {
             SealedBox.checkPassphrase(passphrase);
             Map<String, byte[]> entries = collect();
