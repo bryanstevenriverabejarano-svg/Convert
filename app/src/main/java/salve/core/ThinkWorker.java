@@ -38,7 +38,14 @@ public class ThinkWorker extends Worker {
     @Override
     public Result doWork() {
         if (isStopped()) return Result.success();
+        salve.core.mind.BackgroundMindGate.Lease lease = salve.core.mind.BackgroundMindGate.get().acquire(
+                salve.core.mind.BackgroundMindGate.Task.REFLECTION_AND_GOALS,
+                salve.core.GoalAutonomyRuntime.get(getApplicationContext()).hasActiveConversation(),
+                salve.core.MindRuntime.get(getApplicationContext()).journal().isPaused(),
+                salve.core.SalveLLM.getInstance(getApplicationContext()).isLoading());
+        if (lease == null) return Result.success();
         try {
+
             GoalAutonomyRuntime runtime = GoalAutonomyRuntime.get(getApplicationContext());
             if (isStopped()) return Result.success();
 
@@ -65,6 +72,7 @@ public class ThinkWorker extends Worker {
             Log.e(TAG, "Fallo del ciclo de objetivos: " + error.getClass().getSimpleName());
             return Result.failure();
         }
+        } finally { lease.close(); }
     }
 
     /**
