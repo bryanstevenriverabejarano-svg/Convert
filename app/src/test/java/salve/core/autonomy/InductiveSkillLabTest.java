@@ -19,7 +19,7 @@ public class InductiveSkillLabTest {
 
     private static JsonObject obj(String text) { return JsonParser.parseString(text).getAsJsonObject(); }
     private static JsonObject request(String holdout) {
-        return obj("{\"name\":\"positive_dedup\",\"train\":["
+        return obj("{\"name\":\"odd_dedup\",\"train\":["
                 + "{\"in\":[3,-2,3,4],\"out\":[3,4]},"
                 + "{\"in\":[-1,2,2,-3],\"out\":[2]},"
                 + "{\"in\":[8,-4,8,1],\"out\":[8,1]}],\"holdout\":" + holdout + "}");
@@ -36,11 +36,11 @@ public class InductiveSkillLabTest {
         assertEquals("CERTIFIED_ON_PROVIDED_HOLDOUT", report.get("status").getAsString());
         assertTrue(report.get("certified").getAsBoolean());
         assertEquals("[\"filter_odd\",\"unique\"]", report.get("program").toString());
-        assertEquals("[11,9]", lab.apply("positive_dedup", JsonParser.parseString("[11,4,11,-2,9]")).toString());
+        assertEquals("[11,9]", lab.apply("odd_dedup", JsonParser.parseString("[11,4,11,-2,9]")).toString());
         assertFalse(memory.value.contains("[-9,6,6,3]")); // no examples in memory
         InductiveSkillLab reload = new InductiveSkillLab(memory);
-        assertEquals("[11,9]", reload.apply("positive_dedup", JsonParser.parseString("[11,4,11,-2,9]")).toString());
-        assertTrue(reload.catalog().contains("positive_dedup"));
+        assertEquals("[11,9]", reload.apply("odd_dedup", JsonParser.parseString("[11,4,11,-2,9]")).toString());
+        assertTrue(reload.catalog().contains("odd_dedup"));
     }
 
     @Test public void holdoutFailureNeverPromotesAndNeverAdaptsSearchToHoldout() throws Exception {
@@ -53,7 +53,7 @@ public class InductiveSkillLabTest {
         assertEquals("HOLDOUT_FAILED", report.get("status").getAsString());
         assertFalse(report.get("certified").getAsBoolean());
         assertNull(memory.value);
-        assertFalse(lab.catalog().contains("positive_dedup"));
+        assertFalse(lab.catalog().contains("odd_dedup"));
     }
 
     @Test public void rejectsOverlapAndUntrustedProgram() throws Exception {
@@ -80,7 +80,7 @@ public class InductiveSkillLabTest {
         try { lab.learn(request(HELDOUT), () -> false); fail(); }
         catch (java.io.IOException expected) { assertEquals("no space", expected.getMessage()); }
         assertNull(memory.value);
-        assertFalse(lab.catalog().contains("positive_dedup"));
+        assertFalse(lab.catalog().contains("odd_dedup"));
     }
 
     @Test public void impossibleExamplesAreNotCalledLearning() throws Exception {
