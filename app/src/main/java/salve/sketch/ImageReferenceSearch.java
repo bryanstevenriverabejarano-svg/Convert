@@ -195,7 +195,7 @@ public final class ImageReferenceSearch {
         }
     }
 
-    /** Descarga la imagen de una referencia (sólo de Wikimedia o de las miniaturas de Openverse). */
+    /** Descarga la imagen de una referencia, de cualquier servidor público por HTTPS. */
     public byte[] download(Candidate c, int maxBytes) throws IOException {
         if (c != null && c.bytes != null) {
             if (c.bytes.length > maxBytes) throw new IOException("Demasiado grande");
@@ -208,21 +208,49 @@ public final class ImageReferenceSearch {
     /** Miniatura de Commons por nombre de archivo: redirige a upload.wikimedia.org. */
     private static final String FILE_PATH = "https://commons.wikimedia.org/wiki/Special:FilePath/";
 
+    /**
+     * ¿Se puede pedir esta imagen? Cualquier servidor público por HTTPS: no importa de dónde venga,
+     * sino si cumple con lo pedido (eso lo deciden el calco y su mirada). Solo se cierra la puerta a
+     * direcciones de la red de casa o del propio móvil, que una respuesta ajena no debe poder tocar.
+     */
     static boolean allowedImage(String url) {
-        return url != null && (url.startsWith("https://upload.wikimedia.org/") || url.startsWith("https://api.openverse.org/v1/images/")
-                || (url.startsWith(FILE_PATH) && !url.substring(FILE_PATH.length()).contains("/")));
+        if (url == null) return false;
+        if (url.startsWith(FILE_PATH)) return !url.substring(FILE_PATH.length()).contains("/");
+        return publicHttps(url);
+    }
+
+    /** HTTPS a un nombre de dominio público: ni IPs escritas a mano, ni localhost, ni nombres de red local. */
+    public static boolean publicHttps(String url) {
+        if (url == null || url.length() > 2048) return false;
+        try {
+            java.net.URI uri = new java.net.URI(url);
+            String host = uri.getHost();
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || host == null || uri.getUserInfo() != null) return false;
+            host = host.toLowerCase(Locale.ROOT);
+            if (host.startsWith("[") || host.matches("[0-9.]+") || !host.contains(".")) return false; // IPs y nombres sueltos
+            return !host.matches(".*\\.(local|localhost|lan|home|internal|intranet|corp|arpa|test|invalid)$");
+        } catch (java.net.URISyntaxException bad) { return false; }
+    }
+
+    /** ¿Esta dirección IP es de la red de casa o del propio móvil? (para filtrar lo que resuelve el DNS) */
+    public static boolean privateAddress(java.net.InetAddress address) {
+        return address.isLoopbackAddress() || address.isSiteLocalAddress() || address.isLinkLocalAddress()
+                || address.isAnyLocalAddress() || address.isMulticastAddress()
+                || (address instanceof java.net.Inet6Address && (address.getAddress()[0] & 0xfe) == 0xfc) // fc00::/7
+                || (address instanceof java.net.Inet4Address && (address.getAddress()[0] & 0xff) == 100
+                        && (address.getAddress()[1] & 0xc0) == 64); // 100.64.0.0/10
     }
 
     /**
-     * La miniatura que da la API, si es de upload.wikimedia.org (también «//upload…» o «http://upload…»,
-     * que se pasan a https). Cualquier otro servidor → null.
+     * La miniatura que da la API, venga del servidor que venga, si se puede pedir por HTTPS
+     * («//…» y «http://…» se pasan a https). Si no (vacía, red local, rara) → null.
      */
     static String wikimediaThumb(String thumb) {
         if (thumb == null) return null;
         String t = thumb.trim();
         if (t.startsWith("//")) t = "https:" + t;
         else if (t.startsWith("http://")) t = "https://" + t.substring(7);
-        return t.startsWith("https://upload.wikimedia.org/") && !t.contains("..") ? t : null;
+        return publicHttps(t) && !t.contains("..") ? t : null;
     }
 
     /** «File:Gorilla silhouette.svg» → su miniatura de 480 px, sin depender de que la API traiga {@code thumburl}. */
@@ -290,7 +318,7 @@ public final class ImageReferenceSearch {
                 JsonObject page = p.getAsJsonObject();
                 if (!page.has("thumbnail")) continue;
                 String url = page.getAsJsonObject("thumbnail").get("source").getAsString();
-                if (!url.startsWith("https://upload.wikimedia.org/")) continue;
+                if (!publicHttps(url)) continue;
                 out.add(new Candidate("Wikipedia " + lang + ": " + page.get("title").getAsString(), url,
                         "https://" + lang + ".wikipedia.org/wiki/" + page.get("title").getAsString().replace(' ', '_'),
                         url.toLowerCase(Locale.ROOT).contains(".svg")));
@@ -362,7 +390,7 @@ public final class ImageReferenceSearch {
     static List<Candidate> parseCommons(String json, StringBuilder why) {
         List<Candidate> out = new ArrayList<>();
         java.util.Map<String, Integer> dropped = new java.util.LinkedHashMap<>();
-        int recovered = 0;
+        int recovered = 0, foreign = 0;
         try {
             JsonObject query = JsonParser.parseString(json).getAsJsonObject().getAsJsonObject("query");
             if (query == null) return out;
@@ -388,10 +416,11 @@ public final class ImageReferenceSearch {
                     boolean raster = mime.equals("image/png") || mime.equals("image/jpeg")
                             || (mime.isEmpty() && lower.matches(".*\\.(png|jpe?g)$"));
                     if (!svg && !raster) { count(dropped, "formato " + (mime.isEmpty() ? "desconocido" : mime)); continue; }
+                    String given = thumb;
                     thumb = wikimediaThumb(thumb);
+                    if (thumb != null && !thumb.startsWith("https://upload.wikimedia.org/")) foreign++;
                     if (thumb == null) {
-                        // Sin miniatura utilizable (o en otro servidor): nunca se usa esa dirección,
-                        // se pide la del archivo a Commons por su nombre.
+                        // Sin miniatura utilizable: se pide la del archivo a Commons por su nombre.
                         thumb = filePathThumb(title);
                         if (thumb == null) { count(dropped, "sin miniatura"); continue; }
                         recovered++;
@@ -403,6 +432,7 @@ public final class ImageReferenceSearch {
         } catch (RuntimeException malformed) { count(dropped, "respuesta no JSON"); }
         if (why != null) {
             if (recovered > 0) why.append(" (").append(recovered).append(" sin miniatura válida en la API, pedidas por nombre)");
+            if (foreign > 0) why.append(" (").append(foreign).append(" de otro servidor)");
             if (!dropped.isEmpty()) why.append(" [descartados: ").append(dropped.toString().replaceAll("[{}]", "").replace("=", "×")).append("]");
         }
         return out;
