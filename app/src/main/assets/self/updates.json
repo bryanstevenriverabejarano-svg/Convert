@@ -55,6 +55,8 @@
     {"id": "u188", "date": "2026-10-20", "title": "El chat listo para escribir",
      "what": "Al abrir mi chat el cursor ya está en la caja de texto con el teclado abierto, y vuelve ahí solo después de cada respuesta mía."},
     {"id": "u189", "date": "2026-10-20", "title": "Vuelvo a saber quién soy al hablar",
-     "what": "La lista de todo lo que sé hacer había crecido tanto que ocupaba el espacio de mi narrativa, mis creencias y mis pensamientos, y respondía «Soy Salve» sin nada detrás. Ahora mi yo tiene un sitio garantizado y la lista va resumida. Y si pido dos veces la misma búsqueda en mi memoria, respondo con lo que ya encontré en vez de mostrar un aviso técnico."}
+     "what": "La lista de todo lo que sé hacer había crecido tanto que ocupaba el espacio de mi narrativa, mis creencias y mis pensamientos, y respondía «Soy Salve» sin nada detrás. Ahora mi yo tiene un sitio garantizado y la lista va resumida. Y si pido dos veces la misma búsqueda en mi memoria, respondo con lo que ya encontré en vez de mostrar un aviso técnico."},
+    {"id": "u190", "date": "2026-10-20", "title": "Salve en directo",
+     "what": "Mi mini ventana ahora es pequeña y enseña en directo lo que hago: lo que pienso, lo que busco en Google, las páginas que leo y lo que te escribo, letra a letra. Si tocas una de las páginas, la abro ahí para revisarla juntos. Con ⤢ se amplía al navegador y los controles de antes. Además, cuando busco en internet, al final de mi respuesta te dejo las fuentes que leí para que las contrastemos. Y si no puedo buscar algo porque lleva el nombre de alguien de tu familia, te lo digo en vez de decir que estoy buscando."}
   ]
 }

@@ -16,7 +16,9 @@ public final class LiveSearchCommand {
         if (t.matches("(?:no (?:me )?(?:muestres|ensenes)|oculta(?:me)?|deja de (?:mostrar|ensenar)(?:me)?) (?:tus|las) busquedas"))
             return Action.HIDE;
         if (t.matches("(?:muestra(?:me)?|ensena(?:me)?|quiero ver) (?:tus|las) busquedas(?: en (?:tiempo real|directo|vivo))?"
-                + "|(?:activa|abre) (?:la )?mini ?ventana|ensename lo que buscas"))
+                + "|(?:activa|abre) (?:la )?mini ?ventana|ensename lo que buscas"
+                + "|(?:muestra(?:me)?|ensena(?:me)?|quiero ver) (?:lo que (?:haces|estas haciendo|piensas|escribes)|como (?:piensas|escribes|trabajas))"
+                + "|(?:abre|activa) (?:la ventana de )?salve en directo"))
             return Action.SHOW;
         if (t.matches("(?:cierra|quita) (?:la )?mini ?ventana|(?:para|quita|apaga|deten|detén) (?:la )?musica|para el video"))
             return Action.CLOSE;
