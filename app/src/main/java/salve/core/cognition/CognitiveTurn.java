@@ -37,14 +37,14 @@ public final class CognitiveTurn {
         Map<String, Tool> tools = new LinkedHashMap<>(available);
         JsonArray receipts = new JsonArray();
         Set<String> used = new HashSet<>(); // one invocation per tool per turn; no repeated failed side effects
-        boolean repaired = false, repair = false;
+        boolean repaired = false, repair = false, toolsClosed = false;
         int actions = 0;
         long deadline = System.nanoTime() + 180_000_000_000L;
         ModelResult last = null;
         for (int call = 0; call < MAX_INFERENCES; call++) {
             if (cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()) return stopped(ModelResult.Status.CANCELLED, "Turno cancelado", receipts);
             if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Se agotó el presupuesto del turno; no se iniciaron más acciones", receipts);
-            try { last = model.generate(receipts.deepCopy(), repair, MAX_TOOLS - actions); }
+            try { last = model.generate(receipts.deepCopy(), repair, toolsClosed ? 0 : MAX_TOOLS - actions); }
             catch (RuntimeException unavailable) { return stopped(ModelResult.Status.ERROR, "No pude preparar o completar la inferencia", receipts); }
             if (cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()) return stopped(ModelResult.Status.CANCELLED, "Turno cancelado", receipts);
             if (!last.isSuccess()) return new Outcome(last, false);
@@ -67,8 +67,13 @@ public final class CognitiveTurn {
             if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Se agotó el presupuesto antes de ejecutar la acción", receipts);
             Tool tool = tools.get(reply.name);
             if (tool == null) return stopped(ModelResult.Status.ERROR, "La herramienta solicitada no está disponible en este turno; no la ejecuté", receipts);
-            if (actions >= MAX_TOOLS || !used.add(reply.name) || call == MAX_INFERENCES - 1)
+            if (toolsClosed || actions >= MAX_TOOLS || used.contains(reply.name) || call == MAX_INFERENCES - 1) {
+                // Pedir otra vez lo que ya tiene (memory.lookup dos veces) no es un fallo para Bryan:
+                // se le cierran las herramientas y responde con los resultados que ya tiene.
+                if (!toolsClosed && !receipts.isEmpty() && call < MAX_INFERENCES - 1) { toolsClosed = true; continue; }
                 return stopped(ModelResult.Status.ERROR, "Detuve las solicitudes repetidas o sin presupuesto", receipts);
+            }
+            used.add(reply.name);
             actions++;
             JsonObject receipt = new JsonObject();
             receipt.addProperty("name", reply.name);

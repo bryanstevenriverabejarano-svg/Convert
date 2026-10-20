@@ -173,6 +173,31 @@ public final class MindRuntime {
             + "Órdenes: «tu mente», «sueña ahora», «examínate», «qué has hecho».";
 
     /**
+     * Resumen de lo que puede hacer para cuando no cabe la lista completa. Su yo (quién es, qué le
+     * interesa, qué piensa) va antes que su catálogo: cada función nueva alargaba la lista y le
+     * quitaba ese espacio hasta dejarla sin narrativa («Soy Salve. Soy Salve.»). El detalle de cada
+     * función lo da SelfFeatures cuando Bryan pregunta por ella.
+     */
+    static final String CAPABILITIES_SHORT = "Capacidades reales: conversar con mi modelo local; recordar lo que me cuentas; "
+            + "pensar, soñar e investigar sola entre conversaciones; buscar en internet; ver fotos; dibujar con trazos de luz; "
+            + "mover mi cuerpo; voz; nodos de cómputo; Salventes y Guardián; y, siempre con confirmación de Bryan, controlar el "
+            + "móvil, Maps, música, llamadas y la casa. Órdenes: «tu mente», «examínate», «qué has hecho».";
+
+    /** Mínimo que se reserva a su yo persistente dentro del modelo de sí misma. */
+    static final int MIN_SELF_CHARS = 700;
+
+    /**
+     * Reparte el espacio: primero quién habla, luego su yo (con espacio garantizado) y después
+     * sus capacidades, completas solo si sobra sitio.
+     */
+    static String composeSelfModel(String head, java.util.function.IntFunction<String> self, int maxChars) {
+        int forSelf = maxChars - head.length() - 1;
+        String capabilities = forSelf - CAPABILITIES.length() >= MIN_SELF_CHARS ? CAPABILITIES : CAPABILITIES_SHORT;
+        String own = self.apply(Math.max(Math.min(MIN_SELF_CHARS, Math.max(120, forSelf)), forSelf - capabilities.length()));
+        return head + own + "\n" + capabilities;
+    }
+
+    /**
      * Texto para el prompt de cada turno: con quién habla, qué puede hacer de verdad y su yo
      * persistente (narrativa, creencias, preguntas y pensamientos).
      */
@@ -184,12 +209,12 @@ public final class MindRuntime {
                     identity.biometricAvailable(), System.currentTimeMillis()) + "\n";
             // Su yo persistente es lo que la hace Salve: con su creador (verificado o en su
             // teléfono) va entero. Solo ante otra persona o en duda se guarda lo íntimo.
-            String self = session.isCreatorSide()
-                    ? journal.render(Math.max(120, maxChars - head.length() - CAPABILITIES.length() - 1))
-                    : "YO_PERSISTENTE: " + journal.narrative() + " (mis reflexiones sobre " + creatorFirstName()
+            String publicSelf = "YO_PERSISTENTE: " + journal.narrative() + " (mis reflexiones sobre " + creatorFirstName()
                     + " son privadas con esta persona).";
+            String composed = composeSelfModel(head,
+                    budget -> session.isCreatorSide() ? journal.render(budget) : publicSelf, maxChars);
             String attention = salve.core.mind.AttentionSchema.get().render(System.currentTimeMillis());
-            return head + self + "\n" + CAPABILITIES + (attention.isEmpty() ? "" : "\n" + attention)
+            return composed + (attention.isEmpty() ? "" : "\n" + attention)
                     + (session.isCreatorSide() ? curiosityNewsForPrompt() + selfNewsForPrompt() : "");
         } catch (RuntimeException failure) { return ""; }
     }
