@@ -194,6 +194,12 @@ public final class MobileWorkspaceService extends Service {
         Button close = button(header, "×", this::stopSelf); close.setContentDescription("Cerrar panel y detener búsqueda");
         installDrag(title);
         body = column(); panel.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
+        Button journal = button(row(body), "Registro de ejecución", () -> {
+            collapse(true);
+            startActivity(new Intent(this, salve.presentation.ui.ExecutionJournalActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        });
+        journal.setContentDescription("Abrir las notas completas de cada tarea");
         feedView = message(body, ""); feedView.setTextSize(13); feedView.setMaxLines(7);
         feedView.setLineSpacing(0, 1.1f); feedView.setPadding(dp(2), dp(2), dp(2), dp(4));
         status = message(body, "Elige Web o Móvil. Puedes minimizar esta ventana mientras usas otras apps.");

@@ -42,6 +42,16 @@ public final class SketchProtocol {
 
     public static boolean contains(String text) { return text != null && ANY.matcher(text).find(); }
 
+    /** Display tool/source text without letting quoted protocol markers create another drawing. */
+    public static String literalText(String text) {
+        Matcher found = ANY.matcher(text);
+        StringBuffer out = new StringBuffer();
+        while (found.find()) found.appendReplacement(out, Matcher.quoteReplacement(
+                found.group().replace('[', '［').replace(']', '］')));
+        found.appendTail(out);
+        return out.toString();
+    }
+
     /** Notas de historial que el modelo a veces copia en su respuesta; no son para Bryan. */
     private static final Pattern ECHO = Pattern.compile(
             "\\s*(\\(\\s*Dibuj[eé] con mis trazos de luz:[^)]*\\)|\\[\\s*dibujo mostrado:[^\\]]*\\])",

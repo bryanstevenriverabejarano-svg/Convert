@@ -13,10 +13,15 @@ public final class SketchStyle {
 
     public static final class Result {
         public final List<float[]> strokes;
-        public final int fromStrokes, kept;
-        Result(List<float[]> strokes, int fromStrokes) { this.strokes = strokes; this.fromStrokes = fromStrokes; this.kept = strokes.size(); }
+        public final int fromStrokes, kept, fromPoints, keptPoints;
+        Result(List<float[]> strokes, List<float[]> source) {
+            this.strokes = strokes; this.fromStrokes = source.size(); this.kept = strokes.size();
+            this.fromPoints = points(source); this.keptPoints = points(strokes);
+        }
         public String describe() {
-            return "de " + fromStrokes + " líneas del calco me quedé con " + kept + " y las redondeé a mano alzada";
+            return "de " + fromStrokes + " líneas del calco conservé " + kept
+                    + "; apliqué suavizado Chaikin y simplificación Douglas-Peucker ("
+                    + fromPoints + " puntos de entrada, " + keptPoints + " de salida)";
         }
     }
 
@@ -36,7 +41,12 @@ public final class SketchStyle {
             float[] smooth = simplify(chaikin(chaikin(s)), 3.5f);
             if (smooth.length >= 4) out.add(smooth);
         }
-        return new Result(out, traced.size());
+        return new Result(out, traced);
+    }
+
+    private static int points(List<float[]> strokes) {
+        int total = 0; for (float[] stroke : strokes) if (stroke != null) total += stroke.length / 2;
+        return total;
     }
 
     static float[] chaikin(float[] s) {

@@ -314,6 +314,7 @@ public class MotorConversacional {
     private final java.util.List<String[]> turnSources = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     private void estado(String what) {
+        salve.core.trace.ExecutionTrace.note("ESTADO", what);
         salve.core.web.SearchLive.activity(what);
         ActivityListener l = activityListener;
         if (l != null && what != null) try { l.onActividad(what); } catch (RuntimeException ignored) { }
@@ -538,10 +539,14 @@ public class MotorConversacional {
                 try {
                     procesarEntradaInterna(entrada, entradaPorVoz, privateBudgetTurn);
                 } catch (RuntimeException error) {
+                    salve.core.trace.ExecutionTrace.note("ERROR", "El turno se interrumpió: " + error.getClass().getSimpleName());
+                    salve.core.trace.ExecutionTrace.finish("ERROR");
                     if (ticket == null) throw error;
                     String message = "No pude completar este turno. Puedes volver a preguntarme.";
                     deliverResponse(message, AvatarMotionProtocol.parse(message), false, true, false);
                 } finally {
+                    salve.core.trace.ExecutionTrace.finish(closed || !isVoiceContextCurrent() ? "CANCELADA" : "TURNO_TERMINADO");
+                    literalDrawingReply.remove(); literalDrawingTurn.remove();
                     goalAutonomy.endUserTurn();
                     liveVoiceTurn.remove();
                     liveVoiceBatch.remove();
@@ -834,6 +839,13 @@ public class MotorConversacional {
         }
 
         String inputLower = entrada.toLowerCase(Locale.ROOT);
+        String traceCommand = salve.sketch.SketchLibrary.normalize(entrada);
+        if (traceCommand.matches("(abre|abrir|ver|muestra|muestrame|ensename) (el |tu |las )?(registro de ejecucion|notas de esta tarea|notas de la tarea)")) {
+            toolHandler.post(() -> context.startActivity(new android.content.Intent(context,
+                    salve.presentation.ui.ExecutionJournalActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)));
+            hablar("Abro el registro de ejecución con las notas completas de cada tarea.");
+            return;
+        }
         AvatarMotionProtocol.Result gestureCommand = avatarSession == null ? null : AvatarMotionProtocol.parseCommand(entrada);
         if (gestureCommand != null) {
             if (gestureCommand.body.requiresCoreArtwork() && !"core".equals(
@@ -853,7 +865,17 @@ public class MotorConversacional {
             return;
         }
         // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
-        String sketchContext = observarExperiencia(entrada) + prepararDibujo(entrada) + nubeContexto() + entenderHilo(entrada)
+        String experienceContext = observarExperiencia(entrada);
+        String drawingContext = prepararDibujo(entrada);
+        String factualDrawing = literalDrawingReply.get();
+        if (factualDrawing != null && !storyTurn) {
+            literalDrawingReply.remove();
+            turnSketchStatus = null; turnSketchSubject = null;
+            salve.core.trace.ExecutionTrace.note("RESPUESTA BASADA EN EL REGISTRO", factualDrawing);
+            deliverResponse(salve.sketch.SketchProtocol.literalText(factualDrawing), AvatarMotionProtocol.parse(""), true);
+            return;
+        }
+        String sketchContext = experienceContext + drawingContext + nubeContexto() + entenderHilo(entrada)
                 + conocimientoPropio(entrada)
                 + estrategiaRespuesta() + misActualizaciones(entrada) + misHabilidades(entrada);
         if (procesarControlExplicito(entrada)) return;
@@ -1607,6 +1629,15 @@ public class MotorConversacional {
             + "pregunte cómo dibujas, y no digas que dibujar es un acto de conciencia.";
 
     /** Detecta una petición de dibujo; si procede, empieza a trazar y devuelve contexto para la respuesta. */
+    private final ThreadLocal<String> literalDrawingReply = new ThreadLocal<>();
+    private final ThreadLocal<Boolean> literalDrawingTurn = new ThreadLocal<>();
+
+    private void registrarPeticionDibujo(String entrada, String interpretation) {
+        salve.core.trace.ExecutionTrace.begin(context, "Dibujo", entrada);
+        salve.core.trace.ExecutionTrace.note("CONTEXTO DE LA TAREA", interpretation);
+        literalDrawingTurn.set(true);
+    }
+
     private String prepararDibujo(String entrada) {
         salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(context);
         if (library == null) return "";
@@ -1614,6 +1645,7 @@ public class MotorConversacional {
         VisualMemoryRecord photo = activePhoto;
         salve.sketch.PhotoSketchRequest onPhoto = photo == null ? null : salve.sketch.PhotoSketchRequest.parse(entrada, false);
         if (onPhoto != null && onPhoto.kind != salve.sketch.PhotoSketchRequest.Kind.NONE) {
+            registrarPeticionDibujo(entrada, "Se usa la foto seleccionada en este chat. Operación: " + onPhoto.kind);
             Bitmap image = null;
             try {
                 image = visualMemories.loadImage(photo);
@@ -1635,6 +1667,7 @@ public class MotorConversacional {
                     String wanted = lastSketchSubject;
                     if (shown != null && (wanted == null || salve.sketch.SketchRequest.cleanName(shown.title)
                             .equals(salve.sketch.SketchRequest.cleanName(wanted)))) {
+                        registrarPeticionDibujo(entrada, "Mostrar el dibujo existente: " + shown.title + ". No se prepara una nueva versión.");
                         empezarDibujo(shown);
                         return " | ACCION_REALIZADA: vuelves a mostrar tu dibujo de " + shown.title + " (" + origen(shown)
                                 + "); ya aparece en la pantalla y en el chat." + ESTILO_DIBUJO;
@@ -1650,6 +1683,13 @@ public class MotorConversacional {
             if (!talk.isEmpty() || !recent) return talk;
             return " | DIBUJO: en este turno NO has dibujado nada. No digas que estás dibujando, refinando, añadiendo detalle "
                     + "ni que lo has terminado o lo muestras. Si Bryan quiere el dibujo, dile que lo pida con «dibuja …».";
+        }
+        if (request.kind != salve.sketch.SketchRequest.Kind.LIST) {
+            registrarPeticionDibujo(entrada, "Operación: " + request.kind + "; objeto solicitado: "
+                    + (request.scene != null ? request.scene.title : request.unknown)
+                    + (request.kind == salve.sketch.SketchRequest.Kind.AGAIN ? "; contexto reutilizado: " + lastSketchSubject : "")
+                    + "; mejora: " + request.improve + "; referencias solicitadas: " + request.references + "; cambios: " + request.wish);
+            referenceFailure = "no se ha realizado una búsqueda en esta tarea";
         }
         boolean again = request.kind == salve.sketch.SketchRequest.Kind.AGAIN;
         String subject = again ? lastSketchSubject : request.unknown;
@@ -1753,6 +1793,12 @@ public class MotorConversacional {
                 || System.currentTimeMillis() - lastDrawnAt < 15 * 60_000L;
         if (!aboutIt) return "";
         salve.sketch.SketchJournal journal = salve.sketch.Sketches.journal(context);
+        if (talk == salve.sketch.SketchTalk.Kind.WHY) {
+            salve.core.trace.ExecutionTrace.begin(context, "Revisión de dibujo", entrada);
+            salve.core.trace.ExecutionTrace.note("CONTEXTO DE LA TAREA", "Se revisa la versión visible de «" + last.title + "».");
+            literalDrawingReply.set(salve.sketch.SketchExecutionNote.describe(last, journal));
+            return "";
+        }
         if (talk == salve.sketch.SketchTalk.Kind.CRITIQUE) journal.feedback(subject, entrada);
         String facts = journal.explain(subject);
         if (facts.isEmpty()) facts = "Lo dibujé así porque " + origen(last) + "; no tengo más notas de cómo lo pensé.";
@@ -1816,6 +1862,7 @@ public class MotorConversacional {
                 + (learned ? " y la guardé en mi repertorio con ese nombre" : "");
         registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_PHOTO, scene.title, photoHow);
         salve.sketch.SketchJournal.Attempt photoAttempt = new salve.sketch.SketchJournal.Attempt();
+        photoAttempt.drawingFingerprint = salve.sketch.SketchExecutionNote.fingerprint(scene);
         photoAttempt.source = "photo"; photoAttempt.how = "tracé las líneas de la foto que me enviaste: " + photoHow + ".";
         salve.sketch.Sketches.journal(context).record(scene.title, photoAttempt);
         empezarDibujo(scene);
@@ -1861,15 +1908,20 @@ public class MotorConversacional {
         if (subject == null || subject.trim().isEmpty()) return null;
         turnSketchSubject = subject;
         if (!hayInternet()) {
+            salve.core.trace.ExecutionTrace.note("BÚSQUEDA NO EJECUTADA", "Sin conexión a internet.");
             referenceFailure = "no hay conexión a internet";
             turnSketchStatus = "No busqué referencias: no hay conexión a internet.";
             return null;
         }
         List<String> known = new java.util.ArrayList<>();
         for (salve.core.identity.PeopleGraph.PersonEntity p : mind().peopleGraph().people()) known.add(p.name);
-        if (!salve.core.identity.NetworkPrivacy.safeForNetwork(subject, known)) { referenceFailure = "era algo privado"; return null; }
+        if (!salve.core.identity.NetworkPrivacy.safeForNetwork(subject, known)) {
+            salve.core.trace.ExecutionTrace.note("BÚSQUEDA NO EJECUTADA", "El filtro de privacidad bloqueó la consulta.");
+            referenceFailure = "era algo privado"; return null;
+        }
         // Como una persona: mira Google Imágenes en la ventana en directo mientras consulta las fuentes libres.
         estado("Buscando referencias de «" + subject + "»: Google Imágenes en la ventana y Wikimedia Commons…");
+        salve.core.trace.ExecutionTrace.note("INTENTO DE CONSULTA", "Google Imágenes y proveedores de referencias públicas. Tema: " + subject);
         StringBuffer googleWhy = new StringBuffer(); // lo escriben dos hilos
         java.util.concurrent.FutureTask<List<salve.core.web.SearchLive.Thumb>> google = new java.util.concurrent.FutureTask<>(() -> {
             StringBuilder why = new StringBuilder();
@@ -1943,6 +1995,11 @@ public class MotorConversacional {
             List<salve.sketch.ImageReferenceSearch.Candidate> fromGoogle = miraMiniaturas(google, subject, used, googleWhy);
             List<salve.sketch.ImageReferenceSearch.Candidate> candidates = new java.util.ArrayList<>(fromGoogle);
             candidates.addAll(commons);
+            String searchReceipt = "Google Imágenes: " + fromGoogle.size() + " candidatas tras el filtro"
+                    + (googleWhy.length() > 0 ? "; " + googleWhy : "")
+                    + ". Proveedores de referencias: " + commons.size() + " candidatas; " + search.diagnostic()
+                    + (commonsError == null ? "" : "; consulta fallida") + ".";
+            salve.core.trace.ExecutionTrace.note("RESULTADO DE LAS CONSULTAS", searchReceipt);
             String googleNote = fromGoogle.isEmpty() && googleWhy.length() > 0 ? " Google Imágenes: " + googleWhy + "." : "";
             if (candidates.isEmpty()) {
                 if (commonsError != null) throw new java.io.IOException(commonsError.getMessage() + googleNote, commonsError);
@@ -1969,10 +2026,15 @@ public class MotorConversacional {
                     salve.sketch.ImageTracer.Result traced = salve.sketch.ImageReferenceSearch.focus(trazarBytes(bytes, box), 45);
                     analyzed++;
                     float score = salve.sketch.ImageReferenceSearch.score(c, traced);
+                    salve.core.trace.ExecutionTrace.note("ANÁLISIS DE REFERENCIA", c.label() + "\nFuente: " + c.source
+                            + "\nURL: " + c.imageUrl + "\nRecorte: " + (box == null ? "no" : java.util.Arrays.toString(box))
+                            + "\nGeometría: " + traced.geometry.describe() + "\nPuntuación del selector: " + score
+                            + "\nCandidata retenida: " + (score > 0));
                     if (score > 0) scored.add(new Object[]{c, traced, score});
                     if (c.drawing && score > 2.2f && scored.size() >= 2) break; // dos buenas siluetas bastan
                 } catch (java.io.IOException | RuntimeException | OutOfMemoryError skip) {
                     failed++;
+                    salve.core.trace.ExecutionTrace.note("REFERENCIA NO PROCESADA", c.label() + "\n" + skip.getClass().getSimpleName());
                     Log.w(TAG, "Referencia descartada: " + c.title, skip);
                 }
             }
@@ -2027,26 +2089,27 @@ public class MotorConversacional {
             parts.add(new salve.sketch.SketchLibrary.Part("silueta", "el contorno que da la forma de " + subject, 0, 1));
             if (ordered.size() > 1) parts.add(new salve.sketch.SketchLibrary.Part("detalles", "las líneas de dentro", 1, ordered.size()));
             salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, ordered, bestTrace.aspect, "web", parts);
-            String how = "busqué referencias" + (fromGoogle.isEmpty() ? "" : " mirando Google Imágenes en la ventana ("
-                    + fromGoogle.size() + (fromGoogle.size() == 1 ? " miniatura útil)" : " miniaturas útiles)") + " y")
-                    + " en Wikimedia Commons" + (concept != null && !concept.english.isEmpty()
-                    ? " (como «" + concept.english + "», priorizando siluetas y dibujos de línea)" : "")
-                    + ", analicé " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegí «" + best.label() + "» de "
-                    + best.source + " (" + (best.drawing ? "un dibujo" : "una foto") + "); me quedé con sus contornos principales: "
-                    + bestTrace.geometry.describe()
-                    + (cropped > 0 ? " En las fotos, primero miré dónde estaba y recorté sólo eso." : "")
-                    + " No lo copié tal cual: " + mine.describe() + "; " + vectors.describe() + "."
-                    + (pose ? " Para la pose distinta deformé suavemente esas curvas (experimental)." : "")
-                    + (discarded.length() > 0 ? " Antes " + discarded + "." : "")
-                    + (improving ? " Lo rehíce porque Bryan pidió mejorarlo, sin repetir referencias anteriores." : "");
+            String transform = vectors.segments() >= 2
+                    ? (mine.strokes.size() >= 2 ? mine.describe() : "El suavizado no produjo suficientes líneas; usé los contornos originales")
+                        + "; " + vectors.describe()
+                    : mine.strokes.size() >= 2 ? mine.describe() + "; no usé el ajuste Bézier"
+                        : "Usé los contornos originales; el suavizado y el ajuste Bézier no dieron suficientes líneas";
+            String how = searchReceipt + "\nAnalicé " + analyzed + " imágenes; " + failed + " no pudieron procesarse. "
+                    + "Elegí «" + best.label() + "» de " + best.source + " y tracé sus contornos: " + bestTrace.geometry.describe()
+                    + "\n" + transform + "."
+                    + (pose && vectors.segments() >= 2 ? " Apliqué una variación algorítmica de la pose sobre las curvas." : "")
+                    + (improving ? " Se solicitaron referencias distintas de las usadas anteriormente." : "");
+            salve.core.trace.ExecutionTrace.note("PROCESAMIENTO DEL DIBUJO", how);
+            if (discarded.length() > 0) salve.core.trace.ExecutionTrace.note("VALORACIÓN DEL MODELO — SELECCIÓN", discarded.toString());
             salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
+            attempt.drawingFingerprint = salve.sketch.SketchExecutionNote.fingerprint(scene);
             attempt.source = "web"; attempt.how = how; attempt.reference = best.label(); attempt.referenceUrl = best.imageUrl;
             attempt.selfCheck = chosenLook == null ? null : chosenLook.describe(subject); attempt.wish = wish;
             journal.record(subject, attempt);
             registrarAccion(salve.core.mind.SelfActionLog.Kind.WEB_REFERENCE, subject, how);
             turnSketchStatus = "Referencia: «" + best.label() + "» de " + best.source + " (" + analyzed + " analizadas"
                     + (cropped > 0 ? ", " + cropped + " recortadas" : "") + "); " + mine.describe() + "; "
-                    + vectors.segments() + " curvas de Bézier propias.";
+                    + (vectors.segments() >= 2 ? vectors.segments() + " curvas de Bézier ajustadas." : "sin ajuste Bézier utilizable.");
             referenceNote = "ACCION_REALIZADA: " + (improving ? "has rehecho «" + subject + "» tú misma sin copiar la versión anterior: " : "")
                     + "pensaste cómo es («" + (concept == null ? subject : concept.summary()) + "»), buscaste referencias en internet, "
                     + "analizaste " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegiste «" + best.label() + "» de "
@@ -2059,6 +2122,7 @@ public class MotorConversacional {
         } catch (java.io.IOException | RuntimeException error) {
             Log.w(TAG, "Búsqueda de referencias fallida para " + subject, error);
             // El detalle técnico va al registro; a Bryan (y al modelo, que lo repetiría) solo el motivo.
+            salve.core.trace.ExecutionTrace.note("FALLO DE REFERENCIAS", search.diagnostic() + "\n" + error.getClass().getSimpleName());
             Log.i(TAG, "Referencias de «" + subject + "»: " + search.diagnostic());
             referenceFailure = "la búsqueda de imágenes no respondió";
             turnSketchStatus = "No pude buscar referencias de «" + subject + "»: las fuentes de imágenes no respondieron.";
@@ -2083,8 +2147,10 @@ public class MotorConversacional {
         catch (java.util.concurrent.TimeoutException slow) { google.cancel(true); why.append("no cargó a tiempo"); return out; }
         catch (InterruptedException stop) { Thread.currentThread().interrupt(); return out; }
         catch (java.util.concurrent.ExecutionException | RuntimeException failed) { why.append("falló al mirar la página"); return out; }
+        salve.core.trace.ExecutionTrace.note("GOOGLE IMÁGENES — RECEPCIÓN", "Miniaturas recibidas: " + (thumbs == null ? 0 : thumbs.size()) + (why.length() > 0 ? "\n" + why : ""));
         if (thumbs == null || thumbs.isEmpty()) return out;
         boolean eyes = llm != null && llm.supportsVision();
+        salve.core.trace.ExecutionTrace.note("GOOGLE IMÁGENES — VISIÓN", eyes ? "Modelo con visión disponible." : "Sin visión: se seleccionan candidatas sin comprobación visual del modelo.");
         int looked = 0, rejected = 0;
         for (salve.core.web.SearchLive.Thumb thumb : thumbs) {
             if (closed || out.size() >= 3 || looked >= 4) break;
@@ -2109,6 +2175,7 @@ public class MotorConversacional {
                 Log.w(TAG, "No pude mirar una miniatura", skip);
             } finally { if (image != null) image.recycle(); }
         }
+        salve.core.trace.ExecutionTrace.note("GOOGLE IMÁGENES — FILTRO", "Miniaturas examinadas con visión: " + looked + "; rechazadas: " + rejected + "; candidatas: " + out.size());
         if (out.isEmpty()) why.append(rejected > 0 ? "miré " + looked + " miniaturas y ninguna mostraba «" + subject + "»"
                 : "no pude usar sus miniaturas");
         return out;
@@ -2215,15 +2282,13 @@ public class MotorConversacional {
                 partNames.append(partNames.length() == 0 ? "" : ", ").append(p.name);
             else if (concept != null) for (salve.sketch.VisualConcept.Part p : concept.parts)
                 partNames.append(partNames.length() == 0 ? "" : ", ").append(p.name);
-            String how = "no tenía una referencia útil (" + salve.sketch.VisualConcept.clip(referenceFailure, 220)
-                    + "), así que lo imaginé yo"
-                    + (partNames.length() > 0 ? " parte por parte (" + partNames + ")" : " sin una idea clara de sus partes")
-                    + " con " + drawingThinker + " y lo escribí como " + shapes.shapes
-                    + " formas (curvas de Bézier, contornos curvos, líneas…)"
-                    + (shapes.parts.size() > 1 ? ", trazadas parte a parte" : "")
-                    + (shapes.summary.isEmpty() ? "" : ". Lo que pensé antes: «" + shapes.summary + "»") + "." + correction
-                    + " Por eso es una versión esquemática.";
+            String how = "Compuse un dibujo con " + drawingThinker
+                    + (partNames.length() > 0 ? "; partes: " + partNames : "")
+                    + ". El programa de formas produjo " + shapes.shapes + " formas y " + shapes.strokes.size() + " líneas.";
+            if (!shapes.summary.isEmpty()) salve.core.trace.ExecutionTrace.note("NOTA DE COMPOSICIÓN DEL MODELO", shapes.summary);
+            if (!correction.isEmpty()) salve.core.trace.ExecutionTrace.note("VALORACIÓN DEL MODELO — CORRECCIÓN", correction);
             salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
+            attempt.drawingFingerprint = salve.sketch.SketchExecutionNote.fingerprint(scene);
             attempt.source = "model"; attempt.how = how; attempt.wish = wish;
             attempt.selfCheck = look == null ? null : look.describe(subject);
             salve.sketch.Sketches.journal(context).record(subject, attempt);
@@ -2246,12 +2311,17 @@ public class MotorConversacional {
         if (subject == null || subject.trim().isEmpty()) return null;
         salve.sketch.SketchJournal journal = salve.sketch.Sketches.journal(context);
         salve.sketch.VisualConcept known = journal.concept(subject);
-        if (known != null || llm == null) return known;
+        if (known != null) {
+            salve.core.trace.ExecutionTrace.note("CONTEXTO REUTILIZADO — CONCEPTO GUARDADO", new com.google.gson.Gson().toJson(known));
+            return known;
+        }
+        if (llm == null) return null;
         try {
             ModelResult result = pensarDibujo(salve.sketch.VisualConcept.prompt(subject, wish));
             if (result == null || !result.isSuccess()) return null;
             salve.sketch.VisualConcept concept = salve.sketch.VisualConcept.parse(result.getText(), subject);
             if (!concept.isUsable()) return null;
+            salve.core.trace.ExecutionTrace.note("PLAN DE DIBUJO — CONCEPTO DEL MODELO", new com.google.gson.Gson().toJson(concept));
             journal.saveConcept(concept);
             if (!concept.name.isEmpty() && !concept.name.equals(subject)) {
                 salve.sketch.VisualConcept named = new salve.sketch.VisualConcept(concept.name, concept.english, concept.kind,
@@ -2303,7 +2373,10 @@ public class MotorConversacional {
      * qué parece, sin saber qué quería dibujar. null si no puede ver.
      */
     private salve.sketch.SketchTalk.Look mirarDibujo(List<float[]> strokes, String subject) {
-        if (llm == null || strokes == null || strokes.isEmpty() || !llm.supportsVision()) return null;
+        if (llm == null || strokes == null || strokes.isEmpty() || !llm.supportsVision()) {
+            salve.core.trace.ExecutionTrace.note("REVISIÓN VISUAL NO EJECUTADA", "Sin modelo con visión o sin trazos disponibles.");
+            return null;
+        }
         estado("Mirando mi dibujo para ver si se parece…");
         Bitmap image = null;
         try {
@@ -2333,7 +2406,9 @@ public class MotorConversacional {
             }
             ModelResult result = llm.generateImageResult(salve.sketch.SketchTalk.lookPrompt(subject), image);
             if (result == null || !result.isSuccess()) return null;
-            return salve.sketch.SketchTalk.parseLook(result.getText());
+            salve.sketch.SketchTalk.Look look = salve.sketch.SketchTalk.parseLook(result.getText());
+            salve.core.trace.ExecutionTrace.note("VALORACIÓN VISUAL DEL MODELO", look.describe(subject));
+            return look;
         } catch (Exception | OutOfMemoryError error) {
             Log.w(TAG, "No pudo mirar su dibujo", error);
             return null;
@@ -2414,6 +2489,8 @@ public class MotorConversacional {
         turnSketchTag.set(salve.sketch.SketchProtocol.tag(scene));
         lastDrawnScene = scene;
         lastDrawnAt = System.currentTimeMillis();
+        if (Boolean.TRUE.equals(literalDrawingTurn.get()))
+            literalDrawingReply.set(salve.sketch.SketchExecutionNote.describe(scene, salve.sketch.Sketches.journal(context)));
         salve.core.mind.AttentionSchema.get().attend(scene.title, salve.core.mind.AttentionSchema.Source.DRAWING,
                 System.currentTimeMillis());
         registrarAccion(salve.core.mind.SelfActionLog.Kind.DRAW, scene.title, comoDibujo(scene));
@@ -2444,6 +2521,7 @@ public class MotorConversacional {
     }
 
     private void registrarAccion(salve.core.mind.SelfActionLog.Kind kind, String what, String how) {
+        salve.core.trace.ExecutionTrace.note("ACCIÓN " + kind, what + "\n" + how);
         try { mind().actions().record(kind, what, how); }
         catch (RuntimeException ignored) { /* el registro nunca bloquea la acción */ }
     }
@@ -3306,6 +3384,7 @@ public class MotorConversacional {
     WikipediaResearchClient researchReader(String question) { return new WebResearchClient(context, question); }
 
     private String ejecutarInvestigacionPublica(String question) {
+        salve.core.trace.ExecutionTrace.begin(context, "Investigación web", question);
         String turnId = java.util.UUID.randomUUID().toString();
         estado("Interpretando tu petición antes de buscar…");
         String liveHint;
@@ -3331,14 +3410,21 @@ public class MotorConversacional {
                                 () -> generarRespuestaConversacionalLocal(prompt)), budget,
                         new salve.core.research.PublicResearchCoordinator.Observer() {
                             @Override public void onProgress(String message) { estado(message); }
+                            @Override public void onNote(String kind, String text) { salve.core.trace.ExecutionTrace.note(kind, text); }
                             @Override public void onSearch(String query) {
+                                salve.core.trace.ExecutionTrace.note("CONSULTA", query);
                                 String engine = salve.core.web.SearchEngine.explicitEngine(question);
                                 mostrarBusqueda(engine == null || query.contains("://") ? query : "en " + engine + " " + query);
                             }
-                            @Override public void onReading(String url, String title) { salve.core.web.SearchLive.reading(url, title); }
+                            @Override public void onReading(String url, String title) {
+                                salve.core.trace.ExecutionTrace.note("FUENTE LEÍDA", title + "\n" + url);
+                                salve.core.web.SearchLive.reading(url, title);
+                            }
                         })
                         .runConversation(question, () -> closed || !isVoiceContextCurrent());
         String answer = result.toConversationText();
+        for (String decision : result.decisions) salve.core.trace.ExecutionTrace.note("DECISIÓN REGISTRADA", decision);
+        salve.core.trace.ExecutionTrace.note("RESULTADO DE LA INVESTIGACIÓN", result.status + "\n" + answer);
         if (!closed && isVoiceContextCurrent()) {
             try {
                 salve.core.tasks.ResearchReceipt receipt = salve.core.tasks.ResearchReceipt.fromResult(result, null);

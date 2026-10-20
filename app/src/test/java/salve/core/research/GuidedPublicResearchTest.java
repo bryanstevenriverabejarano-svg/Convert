@@ -23,6 +23,29 @@ public class GuidedPublicResearchTest {
         JsonObject value = new JsonObject(); value.addProperty("relevant", true); value.addProperty("identity", "not_applicable");
         value.addProperty("identity_quote", ""); JsonArray quotes = new JsonArray(); quotes.add(quote); value.add("quotes", quotes); return value.toString();
     }
+    @Test public void journalSeesAppliedPlanBeforeNetworkAndValidatedNotesBeforeNextPage() {
+        List<String> events = new ArrayList<>();
+        PublicResearchCoordinator.Observer observer = new PublicResearchCoordinator.Observer() {
+            @Override public void onNote(String kind, String text) { events.add(kind + "\n" + text); }
+        };
+        SourceProvider provider = new SourceProvider() {
+            @Override public WikipediaResearchClient.ResearchBatch read(String q, java.util.function.BooleanSupplier s) { throw new AssertionError(); }
+            @Override public WikipediaResearchClient.ResearchBatch read(String q, java.util.function.BooleanSupplier s,
+                    java.util.function.Consumer<WikipediaResearchClient.Page> consumer) {
+                assertTrue(events.get(0).startsWith("PLAN DE BÚSQUEDA APLICADO"));
+                WikipediaResearchClient.Page a = page("https://example.org/a", TEXT);
+                consumer.accept(a);
+                assertTrue(events.stream().anyMatch(event -> event.equals("NOTA VALIDADA — VALORACIÓN DEL MODELO\n"
+                        + a.url + "\n" + evidence(TEXT))));
+                return batch(a);
+            }
+        };
+        Result result = new PublicResearchCoordinator(provider, (phase, prompt) -> phase == Phase.QUERY ? ok(PLAN)
+                : phase == Phase.ANALYZE ? ok(evidence(TEXT)) : ok("Es el lavado de ropa [1]."), 5000, observer)
+                .runConversation("Busca colada", () -> false);
+        assertEquals(Status.ANSWERED, result.status);
+        assertFalse(events.stream().anyMatch(event -> event.contains("Devuelve SOLO JSON")));
+    }
     @Test public void understandsBeforeAnySearchAndAnalyzesEachLinkBeforeTheNext() {
         List<String> order = new ArrayList<>(); AtomicInteger reads = new AtomicInteger();
         SourceProvider provider = new SourceProvider() {
