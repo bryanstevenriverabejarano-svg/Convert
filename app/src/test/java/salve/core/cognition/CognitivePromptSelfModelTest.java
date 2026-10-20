@@ -30,7 +30,7 @@ public class CognitivePromptSelfModelTest {
         String prompt = CognitivePrompt.build("", "hola", new JsonObject(), huge, "", "", Collections.emptyList(),
                 Collections.emptyMap(), new JsonArray(), false, 2, 8000);
         JsonObject data = salve.core.autonomy.AutonomousToolCommand.parseObject(prompt.substring(prompt.lastIndexOf('\n') + 1));
-        assertTrue(data.get("SELF_MODEL").getAsString().length() <= 1400);
+        assertTrue(data.get("SELF_MODEL").getAsString().length() <= 1700);
         assertEquals("hola", data.get("USER_INPUT").getAsString());
     }
 

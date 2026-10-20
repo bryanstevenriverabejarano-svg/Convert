@@ -126,7 +126,7 @@ public final class CognitivePrompt {
         if (remaining < 120) throw new IllegalArgumentException("Catálogo o estado demasiado grande para el contexto");
         remaining -= put(data, "USER_INPUT", input, Math.max(80, remaining * 2 / 5));
         if (results.size() > 0) remaining -= put(data, "TOOL_RESULTS", results.toString(), remaining * 3 / 5);
-        if (hasSelf) remaining -= put(data, "SELF_MODEL", selfModel, Math.min(1400, remaining / 4));
+        if (hasSelf) remaining -= put(data, "SELF_MODEL", selfModel, Math.min(1700, remaining / 4));
         // Keep antecedents for follow-ups such as "¿Por qué estás bien?" even with dense memory.
         int historyReserve = history.isEmpty() ? 0 : remaining / 3;
         remaining -= put(data, "MEMORY_CONTEXT", memory, (remaining - historyReserve) * 3 / 5);

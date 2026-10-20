@@ -2681,7 +2681,7 @@ public class MotorConversacional {
     private ModelResult generarTextoCreativo(String entrada, salve.core.conversation.StoryMode.State story,
                                              int parts, LiveWriting live) {
         String self = "";
-        try { self = mind().selfModelForPrompt(700); } catch (RuntimeException ignored) { }
+        try { self = mind().selfModelForPrompt(1100); } catch (RuntimeException ignored) { }
         String listener = live == null ? null : live.listener;
         String storyBlock = story == null ? null : salve.core.conversation.StoryMode.promptBlock(story, entrada);
         java.util.List<salve.core.conversation.ChatMessage> history = conversationSession.snapshot();
@@ -2964,7 +2964,7 @@ public class MotorConversacional {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
             // Con foto, la imagen ocupa contexto (Gemma 4: 4.096 tokens con entrada, imagen y salida).
             if (activePhoto != null && canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
-            String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1600),
+            String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1700),
                     memory, details, conversationSession.snapshot(), tools, results, repair, remaining, budget);
             return generateWithConversationPhoto(prompt);
         }, tools, () -> closed || !isVoiceContextCurrent());

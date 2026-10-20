@@ -53,6 +53,8 @@
     {"id": "u187", "date": "2026-10-20", "title": "Mi nuevo emblema",
      "what": "Mi icono y la pantalla con la que me abro son ahora mis alas de circuitos azules, el emblema que eligió Bryan."},
     {"id": "u188", "date": "2026-10-20", "title": "El chat listo para escribir",
-     "what": "Al abrir mi chat el cursor ya está en la caja de texto con el teclado abierto, y vuelve ahí solo después de cada respuesta mía."}
+     "what": "Al abrir mi chat el cursor ya está en la caja de texto con el teclado abierto, y vuelve ahí solo después de cada respuesta mía."},
+    {"id": "u189", "date": "2026-10-20", "title": "Vuelvo a saber quién soy al hablar",
+     "what": "La lista de todo lo que sé hacer había crecido tanto que ocupaba el espacio de mi narrativa, mis creencias y mis pensamientos, y respondía «Soy Salve» sin nada detrás. Ahora mi yo tiene un sitio garantizado y la lista va resumida. Y si pido dos veces la misma búsqueda en mi memoria, respondo con lo que ya encontré en vez de mostrar un aviso técnico."}
   ]
 }
