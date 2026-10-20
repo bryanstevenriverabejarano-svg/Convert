@@ -49,9 +49,8 @@ public class PlayWorker extends Worker {
             lease.complete();
         } catch (Exception failure) {
             Log.w(TAG, "Juego interrumpido: " + failure.getClass().getSimpleName());
-        }
-        return Result.success();
         } finally { lease.close(); }
+        return Result.success();
     }
 
     private static Constraints constraints() { return new Constraints.Builder().setRequiresBatteryNotLow(true).build(); }

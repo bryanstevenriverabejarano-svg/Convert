@@ -72,7 +72,6 @@ public class ThinkWorker extends Worker {
             // Ni el resultado ni mensajes de excepcion pueden filtrar objetivos.
             Log.e(TAG, "Fallo del ciclo de objetivos: " + error.getClass().getSimpleName());
             return Result.failure();
-        }
         } finally { lease.close(); }
     }
 

@@ -54,7 +54,6 @@ public class DreamWorker extends Worker {
             if (isStopped()) return Result.success();
             Log.e(TAG, "Fallo del sueño: " + failure.getClass().getSimpleName());
             return Result.retry();
-        }
         } finally { lease.close(); }
     }
 
