@@ -71,6 +71,7 @@ public class CuriosityWorker extends Worker {
                     Log.i(TAG, "Reflexión tras explorar: " + (reflection.length() > 120 ? reflection.substring(0, 120) : reflection));
                 }
             }
+            lease.complete();
             return Result.success();
         } catch (Exception failure) {
             Log.w(TAG, "Curiosidad interrumpida: " + failure.getClass().getSimpleName());
