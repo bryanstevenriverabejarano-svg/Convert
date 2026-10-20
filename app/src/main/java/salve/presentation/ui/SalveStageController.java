@@ -63,7 +63,7 @@ final class SalveStageController {
         avatar.setImmersiveMode(true);
         avatar.setOnClickListener(v -> showChat(true));
         avatar.setOnLongClickListener(v -> { showOptions(); return true; });
-        caption.setOnClickListener(v -> showChat(false));
+        caption.setOnClickListener(v -> showChat(true));
         caption.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         activity.findViewById(R.id.btnStageOptions).setOnClickListener(v -> showOptions());
         activity.findViewById(R.id.btnCloseChat).setOnClickListener(v -> closePanels());
@@ -158,6 +158,8 @@ final class SalveStageController {
                 if (state == BottomSheetBehavior.STATE_HIDDEN && active.equals(name)) {
                     active = ""; hideKeyboard(); updateChrome();
                 }
+                // El teclado sólo se puede abrir cuando el panel ya terminó de subir.
+                if (state == BottomSheetBehavior.STATE_EXPANDED && "chat".equals(name) && keyboardWanted) focusComposer();
             }
             @Override public void onSlide(View view, float offset) { }
         });
@@ -167,7 +169,7 @@ final class SalveStageController {
     boolean hasOpenPanel() { return !active.isEmpty(); }
 
     void showVoiceDetails() {
-        showChat(false);
+        showChat(false); // en modo voz no se abre el teclado
         scroll.post(() -> scroll.smoothScrollTo(0, 0));
     }
 
@@ -182,12 +184,26 @@ final class SalveStageController {
         chatBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
         updateChrome();
         scrollToEnd();
-        if (keyboard) composer.post(() -> {
-            if (!"chat".equals(active)) return;
-            composer.requestFocus();
-            InputMethodManager ime = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (ime != null) ime.showSoftInput(composer, InputMethodManager.SHOW_IMPLICIT);
-        });
+        keyboardWanted = keyboard;
+        if (keyboard) {
+            // Si el panel ya estaba abierto no habrá cambio de estado: se enfoca ya (y otra vez por si acaso).
+            composer.post(this::focusComposer);
+            composer.postDelayed(this::focusComposer, 350);
+        }
+    }
+
+    /** Bryan abrió el chat para escribir: tras cada respuesta de Salve, el cursor vuelve a la caja. */
+    private boolean keyboardWanted;
+
+    /** Cursor en la caja de texto y teclado abierto (sólo con el chat a la vista). */
+    void focusComposer() {
+        if (!"chat".equals(active) || activity.isFinishing()) return;
+        composer.requestFocus();
+        composer.setSelection(composer.getText() == null ? 0 : composer.getText().length());
+        androidx.core.view.WindowCompat.getInsetsController(activity.getWindow(), composer)
+                .show(androidx.core.view.WindowInsetsCompat.Type.ime());
+        InputMethodManager ime = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (ime != null) ime.showSoftInput(composer, InputMethodManager.SHOW_IMPLICIT);
     }
 
     private void showOptions() {
@@ -304,6 +320,7 @@ final class SalveStageController {
         messages.add((fromSalve ? "Salve" : "Tú") + "\n" + visible);
         serials.add(serial);
         trimMessages(); renderMessages();
+        if (fromSalve && keyboardWanted && "chat".equals(active)) composer.postDelayed(this::focusComposer, 120);
         if (fromSalve) {
             String plain = plain(text);
             caption.setText(plain.length() > 180 ? plain.substring(0, 180) + "…" : plain);
