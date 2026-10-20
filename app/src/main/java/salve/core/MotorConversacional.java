@@ -585,6 +585,7 @@ public class MotorConversacional {
         turnSketchTag.set(null); // un dibujo de un turno anterior nunca se cuela en esta respuesta
         turnSources.clear(); // las fuentes son de la búsqueda de este turno
         turnSketchStatus = null;
+        turnSketchSubject = null;
         estado("Leyendo lo que me dices…");
         String privateCheckpoint = puntoCriticoPrivado(entrada, entradaPorVoz, privateBudgetTurn);
         if (privateCheckpoint != null) { hablar(privateCheckpoint); return; }
@@ -1834,6 +1835,8 @@ public class MotorConversacional {
     private volatile long lastDrawnAt, lastSketchAskedAt;
     /** Línea fija para el chat con lo que hizo de verdad al buscar (no la redacta el modelo). */
     private volatile String turnSketchStatus;
+    /** De qué dibujo habla {@link #turnSketchStatus}: si la respuesta enseña otro, no se mezclan. */
+    private volatile String turnSketchSubject;
 
     /** ¿Se estaba hablando de un dibujo hace poco? */
     private boolean dibujoReciente() {
@@ -1856,6 +1859,7 @@ public class MotorConversacional {
                                                               boolean improving) {
         referenceFailure = "no encontraste imágenes";
         if (subject == null || subject.trim().isEmpty()) return null;
+        turnSketchSubject = subject;
         if (!hayInternet()) {
             referenceFailure = "no hay conexión a internet";
             turnSketchStatus = "No busqué referencias: no hay conexión a internet.";
@@ -1934,10 +1938,11 @@ public class MotorConversacional {
             if (candidates.isEmpty()) {
                 if (commonsError != null) throw new java.io.IOException(commonsError.getMessage() + googleNote, commonsError);
                 if (used.isEmpty() && fuente != null) aprenderFuente(fuente, false, "0 imágenes (" + search.diagnostic() + ")");
+                Log.i(TAG, "Referencias de «" + subject + "»: " + search.diagnostic() + googleNote);
                 referenceFailure = (used.isEmpty() ? "no había imágenes de «" + subject + "»"
-                        : "no quedaban imágenes distintas de las que ya usaste") + " [" + search.diagnostic() + "]" + googleNote;
+                        : "no quedaban imágenes distintas de las que ya usaste") + googleNote;
                 turnSketchStatus = "Busqué referencias de «" + subject + "» en Google Imágenes y Wikimedia Commons y no encontré "
-                        + "imágenes (" + search.diagnostic() + ")." + googleNote;
+                        + "imágenes que sirvieran." + googleNote;
                 return null;
             }
             List<Object[]> scored = new java.util.ArrayList<>(); // {candidato, trazado, puntuación}
@@ -2044,10 +2049,10 @@ public class MotorConversacional {
             return scene;
         } catch (java.io.IOException | RuntimeException error) {
             Log.w(TAG, "Búsqueda de referencias fallida para " + subject, error);
-            referenceFailure = "la búsqueda falló (" + error.getMessage() + ") [" + search.diagnostic() + "]";
-            String why = search.diagnostic();
-            turnSketchStatus = "No pude buscar referencias de «" + subject + "»: " + error.getMessage()
-                    + (why.isEmpty() ? "" : " (" + (why.length() > 220 ? why.substring(0, 220) + "…" : why) + ")") + ".";
+            // El detalle técnico va al registro; a Bryan (y al modelo, que lo repetiría) solo el motivo.
+            Log.i(TAG, "Referencias de «" + subject + "»: " + search.diagnostic());
+            referenceFailure = "la búsqueda de imágenes no respondió";
+            turnSketchStatus = "No pude buscar referencias de «" + subject + "»: las fuentes de imágenes no respondieron.";
             return null;
         }
     }
@@ -3935,7 +3940,14 @@ public class MotorConversacional {
         // historial reciben el texto limpio y una nota de lo que dibujó (así lo recuerda).
         String pendingSketch = record ? turnSketchTag.getAndSet(null) : null;
         String status = record ? turnSketchStatus : null;
-        if (record) turnSketchStatus = null;
+        String statusSubject = turnSketchSubject;
+        if (record) { turnSketchStatus = null; turnSketchSubject = null; }
+        String shown = pendingSketch != null ? pendingSketch : salve.sketch.SketchProtocol.contains(texto) ? texto : null;
+        if (status != null && shown != null && !salve.core.ReplyVoice.sketchAbout(shown, statusSubject)) {
+            Log.i(TAG, "Estado de otro dibujo («" + statusSubject + "») no se añade: " + status);
+            status = null; // la respuesta enseña otro dibujo: no se mezcla con lo que pasó con ese
+        }
+        if (record) texto = salve.core.ReplyVoice.withoutSelfVocative(texto);
         if (status != null && !status.isEmpty()) texto = texto.trim() + "\n\n(" + status + ")";
         if (record && pendingSketch == null && !salve.sketch.SketchProtocol.contains(texto) && dibujoReciente()
                 && salve.sketch.SketchTalk.claimsDrawing(texto))
