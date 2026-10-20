@@ -48,6 +48,7 @@ public class DreamWorker extends Worker {
 
             String outcome = MindRuntime.get(getApplicationContext()).dream(this::isStopped);
             Log.i(TAG, "Sueño finalizado: " + (outcome == null ? "" : outcome.length() > 160 ? outcome.substring(0, 160) : outcome));
+            lease.complete();
             return Result.success();
         } catch (Exception failure) {
             if (isStopped()) return Result.success();
