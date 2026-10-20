@@ -43,7 +43,12 @@ public class SalveLLM {
         EVALUADOR,      // juzgar decisiones propias — autocrítica profunda
         CREADOR,         // ideas originales no solicitadas — exploración creativa
         CURIOSO,        // investigar internet por iniciativa propia
-        NARRADOR        // cuentos, poemas, escenas: texto libre (sin JSON), largo y con más temperatura
+        NARRADOR,       // cuentos, poemas, escenas: texto libre (sin JSON), largo y con más temperatura
+        /**
+         * Voz de un Salvente: el prompt trae ya su propia identidad. Sin prefijo «Eres Salve» y sin
+         * el contexto que dice al modelo que su identidad es Salve; así no se mezclan identidades.
+         */
+        SALVENTE
     }
 
     private static final String TAG = "Salve/LLM";
@@ -380,7 +385,7 @@ public class SalveLLM {
         try {
             initEngineIfNeeded();
             String decorated = decoratePrompt(prompt, role);
-            String identity = ModelRuntimeInfo.context(modelPath);
+            String identity = role == Role.SALVENTE ? ModelRuntimeInfo.neutralContext(modelPath) : ModelRuntimeInfo.context(modelPath);
             String text;
             if (isGguf) {
                 ggufContextTokens = Math.min(ggufContextTokens, DeviceModelMemory.contextFor(appContext, modelPath, true));
@@ -819,6 +824,7 @@ public class SalveLLM {
                         "Distingue propuesta, hipótesis y resultado comprobado.\n\n" +
                         basePrompt;
 
+            case SALVENTE:          // la identidad la pone el propio Salvente
             case CONVERSACIONAL:
             default:
                 return basePrompt;

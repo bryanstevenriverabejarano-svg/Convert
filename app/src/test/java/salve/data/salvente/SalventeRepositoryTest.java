@@ -120,6 +120,66 @@ public class SalventeRepositoryTest {
         assertEquals("recuerdo " + (SalventeRepository.MAX_MEMORIES + 4), repo.memories(nyra.id, 1).get(0).text);
     }
 
+    @Test public void forgettingMemoriesKeepsIdentityAndKey() {
+        SalventeProfile nyra = approve("acompañar a la abuela", "Nyra");
+        repo.remember(nyra.id, "algo");
+        assertEquals(1, repo.forgetMemories(nyra.id));
+        assertEquals(0, repo.memoryCount(nyra.id));
+        assertTrue(vault.exists(nyra.id));
+        assertNotNull(repo.get(nyra.id));
+    }
+
+    @Test public void sealedCopyRestoresOnAnotherPhoneWithNewKeys() throws Exception {
+        SalventeProfile nyra = approve("acompañar a la abuela", "Nyra");
+        now = 6_000; repo.remember(nyra.id, "Le encanta el cocido");
+        now = 7_000; repo.remember(nyra.id, "Mañana tiene médico");
+        char[] pass = "frase larga de prueba".toCharArray();
+        byte[] sealed = salve.core.salvente.SealedBox.seal(
+                salve.core.salvente.SalventeArchive.toJson(repo.exportAll(), now).getBytes(StandardCharsets.UTF_8), pass.clone(),
+                new java.security.SecureRandom());
+
+        // «Otro teléfono»: base de datos y almacén de claves vacíos.
+        context.deleteDatabase("salventes-otro");
+        SalventeDatabase other = SalventeDatabase.builder(context, "salventes-otro").allowMainThreadQueries().build();
+        try {
+            SoftVault newKeys = new SoftVault();
+            SalventeRepository phone = new SalventeRepository(other, newKeys, () -> now);
+            List<salve.core.salvente.SalventeArchive.Entry> entries = salve.core.salvente.SalventeArchive.fromJson(
+                    new String(salve.core.salvente.SealedBox.open(sealed, pass.clone()), StandardCharsets.UTF_8));
+            assertTrue(phone.restore(entries.get(0)));
+            assertFalse("restaurar dos veces no duplica", phone.restore(entries.get(0)));
+            assertEquals(nyra.id, phone.get(nyra.id).id);
+            List<SalventeRepository.Memory> mem = phone.memories(nyra.id, 10);
+            assertEquals("Mañana tiene médico", mem.get(0).text);
+            assertEquals(7_000, mem.get(0).at);
+            assertTrue(newKeys.exists(nyra.id));
+            assertNotSame(vault.keys.get(nyra.id), newKeys.keys.get(nyra.id));
+        } finally { other.close(); context.deleteDatabase("salventes-otro"); }
+    }
+
+    @Test public void guardianOnlyEverSeesSealedBytesAndRestoreDoesNotDuplicate() throws Exception {
+        SalventeProfile nyra = approve("acompañar a la abuela", "Nyra");
+        repo.remember(nyra.id, "Le encanta el cocido");
+        Map<String, byte[]> guardian = new HashMap<>();
+        SalventeGuardianBackup.Remote remote = new SalventeGuardianBackup.Remote() {
+            public void put(String name, byte[] sealed) { guardian.put(name, sealed); }
+            public byte[] get(String name) { return guardian.get(name); }
+        };
+        SalventeGuardianBackup backup = new SalventeGuardianBackup(repo, remote, () -> now);
+        char[] pass = "frase larga de prueba".toCharArray();
+        SalventeGuardianBackup.Summary up = backup.backup(pass);
+        assertEquals(1, up.salventes); assertEquals(1, up.memories);
+        assertTrue("la frase se borra de memoria", new String(pass).replace("\0", "").isEmpty());
+        String stored = new String(guardian.get(SalventeGuardianBackup.BLOB), StandardCharsets.ISO_8859_1);
+        assertTrue(stored.startsWith("SLVB1"));
+        assertFalse(stored.contains("cocido")); assertFalse(stored.contains("Nyra"));
+
+        assertThrows(IllegalArgumentException.class, () -> backup.restore("frase equivocada!!".toCharArray()));
+        SalventeGuardianBackup.Summary again = backup.restore("frase larga de prueba".toCharArray());
+        assertEquals(0, again.salventes); assertEquals(1, again.skipped);   // ya existe aquí: no se duplica
+        assertThrows(IllegalArgumentException.class, () -> backup.backup("corta".toCharArray()));
+    }
+
     @Test public void pauseKeepsIdentity() {
         SalventeProfile nyra = approve("acompañar a la abuela", "Nyra");
         assertTrue(repo.setState(nyra.id, SalventeProfile.State.PAUSADO));

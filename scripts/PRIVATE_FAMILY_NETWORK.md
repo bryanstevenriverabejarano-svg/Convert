@@ -64,6 +64,20 @@ clave privada del móvil. Si se filtran, vuelve a crear la red (`--rehacer`) y e
 Si cambias la IP pública o el DDNS, ejecuta `SalveNodo.exe --reconfigurar`: solo se reemite el
 certificado del nodo y hay que volver a escanear el QR.
 
+## Guardián ciego (copias de los Salventes)
+
+Un nodo puede ser también **Guardián**: guarda copias de los Salventes que **no puede leer**.
+
+- Actívalo respondiendo «s» a «¿Usar este PC también como Guardián?» en el asistente (o
+  `--vault-directory <carpeta>` en modo manual). Las copias quedan en `~/.salve/red/guardian`.
+- En Salve: **Salventes (génesis) → Copia al Guardián**. El móvil sella la copia con AES-256-GCM y una
+  clave derivada (PBKDF2) de una frase que eliges tú; solo esos bytes viajan por TLS mutuo.
+- El Guardián **rechaza cualquier cosa que no llegue sellada** (cabecera `SLVB1`), conserva la versión
+  anterior de cada copia y aplica cuotas (16 MB por copia, 256 MB en total).
+- Para recuperar los Salventes en un móvil nuevo: escanea el QR del nodo y pulsa **Restaurar** con tu frase.
+- La frase no se guarda en ningún sitio. Si la olvidas, la copia es irrecuperable: es el precio de que
+  quien entre en tu PC no pueda leer nada.
+
 ## Ubicación del nodo
 
 - **Fija**: la que escribes en el asistente (o `--lat --lon --ciudad --pais --zona`). Salve la

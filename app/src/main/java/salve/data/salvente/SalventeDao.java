@@ -17,6 +17,8 @@ public interface SalventeDao {
     @Query("DELETE FROM salvente_profiles WHERE id = :id") int delete(String id);
 
     @Insert void insertMemory(SalventeMemoryEntity memory);
+    @Insert void insertMemories(List<SalventeMemoryEntity> memories);
+    @Query("DELETE FROM salvente_memories WHERE salvente_id = :id") int deleteMemories(String id);
     @Query("SELECT * FROM salvente_memories WHERE salvente_id = :id ORDER BY created_at DESC, id DESC LIMIT :limit")
     List<SalventeMemoryEntity> memories(String id, int limit);
     @Query("SELECT COUNT(*) FROM salvente_memories WHERE salvente_id = :id") int memoryCount(String id);

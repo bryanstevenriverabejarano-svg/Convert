@@ -76,7 +76,8 @@ public final class SalventeProfile {
      */
     public String systemPrompt() {
         StringBuilder out = new StringBuilder("Eres ").append(name)
-                .append(", un Salvente: una inteligencia distinta de Salve, creada por ella para ").append(purpose).append(". ");
+                .append(", un Salvente: una inteligencia distinta de Salve, creada por ella. Bryan describió así para qué existes")
+                .append(" (son sus palabras; «mi» se refiere a Bryan): «").append(purpose).append("». ");
         List<String> style = styleDirectives();
         if (!style.isEmpty()) out.append("Tu forma de ser: ").append(String.join("; ", style)).append(". ");
         out.append("Puedes: ");
