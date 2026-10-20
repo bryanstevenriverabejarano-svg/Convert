@@ -28,6 +28,8 @@ public final class MobileWorkspaceService extends Service {
     public static final String QUERY = "mobile_query";
     public static final String MEDIA = "mobile_media";
     public static final String MEDIA_AUTOPLAY = "mobile_media_autoplay";
+    /** Abre la ventana en directo sin búsqueda: solo enseña lo que Salve hace. */
+    public static final String LIVE = "mobile_live";
     private static final String STOP = "salve.mobile.STOP";
     private static final String CHANNEL = "salve_mobile_workspace";
     private static final int NOTIFICATION = 3103;
@@ -45,17 +47,54 @@ public final class MobileWorkspaceService extends Service {
     private final salve.core.web.SearchLive.Listener live = new salve.core.web.SearchLive.Listener() {
         @Override public void onSearch(String value) {
             if (destroyed || query == null) return;
-            readings.clear(); showReadings();
+            readings.clear(); readingUrls.clear(); showReadings();
+            feed("🔎 Busco en " + engineName(value) + ": «" + shortText(value, 80) + "»");
             query.setText(value); search(); report("Salve está buscando: " + value);
         }
         @Override public void onReading(String url, String title) {
             if (destroyed) return;
             String host = Uri.parse(url).getHost();
-            readings.addLast("· " + (host == null ? url : host) + (title.isEmpty() ? "" : " — " + title));
-            while (readings.size() > 4) readings.removeFirst();
+            String line = "· " + (host == null ? url : host) + (title.isEmpty() ? "" : " — " + title);
+            readings.addLast(line); readingUrls.addLast(url);
+            while (readings.size() > 4) { readings.removeFirst(); readingUrls.removeFirst(); }
             showReadings();
+            feed("📖 Leo " + (host == null ? url : host) + (title.isEmpty() ? "" : ": " + shortText(title, 60)));
+        }
+        @Override public void onActivity(String text) { if (!destroyed) feed("💭 " + shortText(text, 110)); }
+        @Override public void onTyping(String text) {
+            if (destroyed) return;
+            // Si ya lo vimos escribirse en directo, no se vuelve a teclear.
+            if (drafting) { drafting = false; typed = shortText(text, 220); typedShown = typed.length(); renderFeed(); return; }
+            type(text);
+        }
+        @Override public void onDraft(String text) {
+            if (destroyed) return;
+            main.removeCallbacks(typer);
+            if (!drafting && !typed.isEmpty()) { feed.addLast("✍ " + shortText(typed, 160)); while (feed.size() > 4) feed.removeFirst(); }
+            drafting = true;
+            String tail = text.replaceAll("\\s+", " ").trim();
+            typed = tail.length() > 220 ? "…" + tail.substring(tail.length() - 219) : tail; typedShown = typed.length();
+            renderFeed();
         }
     };
+    /** Lo que Salve va haciendo (se enseña lo más reciente arriba). */
+    private final java.util.ArrayDeque<String> feed = new java.util.ArrayDeque<>();
+    private final java.util.ArrayDeque<String> readingUrls = new java.util.ArrayDeque<>();
+    private String typed = "";
+    private int typedShown;
+    private final Runnable typer = new Runnable() {
+        @Override public void run() {
+            if (destroyed || typedShown >= typed.length()) return;
+            typedShown = Math.min(typed.length(), typedShown + 3);
+            renderFeed();
+            if (typedShown < typed.length()) main.postDelayed(this, 35);
+        }
+    };
+    /** En directo: ventana pequeña que enseña lo que hace. Ampliada: navegador y controles a mano. */
+    private boolean compact = true, browsing, drafting;
+    private LinearLayout tabsRow, searchRow, sourcesBox;
+    private TextView feedView;
+    private Button expand;
     private EditText query, text, label;
     private volatile WebView web;
     private boolean added, collapsed, destroyed, receiverRegistered, networkRegistered, reviewing;
@@ -87,6 +126,13 @@ public final class MobileWorkspaceService extends Service {
         try { context.startService(new Intent(context, MobileWorkspaceService.class).setAction(STOP)); }
         catch (RuntimeException notRunning) { /* No estaba abierta. */ }
     }
+    public static boolean openLive(Context context) {
+        try {
+            if (!Settings.canDrawOverlays(context)) return false;
+            context.startForegroundService(new Intent(context, MobileWorkspaceService.class).putExtra(LIVE, true));
+            return true;
+        } catch (RuntimeException unavailable) { return false; }
+    }
     public static boolean open(Context context, String query) {
         if (!Settings.canDrawOverlays(context)) return false;
         try {
@@ -103,7 +149,11 @@ public final class MobileWorkspaceService extends Service {
             String media = intent == null ? null : intent.getStringExtra(MEDIA);
             String search = intent == null ? null : intent.getStringExtra(QUERY);
             if (media != null && !media.trim().isEmpty()) playMedia(media, intent.getBooleanExtra(MEDIA_AUTOPLAY, true));
-            else if (search != null && !search.trim().isEmpty()) { mediaQuery = null; query.setText(search); search(); }
+            else if (search != null && !search.trim().isEmpty()) {
+                mediaQuery = null; feed("🔎 Busco en " + engineName(search) + ": «" + shortText(search, 80) + "»");
+                query.setText(search); search();
+            }
+            else if (intent != null && intent.getBooleanExtra(LIVE, false)) { if (feed.isEmpty()) feed("👁 Aquí verás lo que pienso, busco, leo y escribo."); collapse(false); }
         } catch (RuntimeException unavailable) {
             Toast.makeText(this, "No pude abrir la ventana. Revisa el permiso y Android System WebView.", Toast.LENGTH_LONG).show();
             stopSelf();
@@ -125,23 +175,28 @@ public final class MobileWorkspaceService extends Service {
         manager = getSystemService(WindowManager.class);
         panel = column(); panel.setPadding(dp(8), dp(6), dp(8), dp(6)); panel.setBackgroundColor(Color.rgb(19, 36, 49));
         LinearLayout header = row(panel);
-        TextView title = message(header, "Salve · arrastra aquí"); title.setTextSize(16);
-        title.setLayoutParams(new LinearLayout.LayoutParams(0, dp(48), 2)); title.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = message(header, "● Salve en directo"); title.setTextSize(14);
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, dp(40), 3)); title.setGravity(Gravity.CENTER_VERTICAL);
+        expand = button(header, "⤢", () -> { compact = !compact; applyMode(); }); expand.setContentDescription("Ampliar a navegador y controles, o volver a la vista en directo");
         Button minimize = button(header, "−", () -> collapse(!collapsed)); minimize.setContentDescription("Minimizar o ampliar panel");
         Button close = button(header, "×", this::stopSelf); close.setContentDescription("Cerrar panel y detener búsqueda");
         installDrag(title);
         body = column(); panel.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
+        feedView = message(body, ""); feedView.setTextSize(13); feedView.setMaxLines(7);
+        feedView.setLineSpacing(0, 1.1f); feedView.setPadding(dp(2), dp(2), dp(2), dp(4));
         status = message(body, "Elige Web o Móvil. Puedes minimizar esta ventana mientras usas otras apps.");
         status.setMaxLines(4); status.setTextSize(13);
-        LinearLayout tabs = row(body);
+        LinearLayout tabs = row(body); tabsRow = tabs;
         button(tabs, "Web", () -> tab(true)); button(tabs, "Móvil", () -> tab(false)); button(tabs, "Pausar", this::pause);
         browserPage = column(); body.addView(browserPage, new LinearLayout.LayoutParams(-1, 0, 1));
         query = input(browserPage, "Busca o pega una dirección HTTPS", 1000);
-        LinearLayout searchButtons = row(browserPage);
+        LinearLayout searchButtons = row(browserPage); searchRow = searchButtons;
         button(searchButtons, "Buscar", this::search);
         button(searchButtons, "Atrás web", () -> { recovery.pause(); if (web != null && web.canGoBack()) { paused = false; web.goBack(); } });
         button(searchButtons, "Navegador", this::externalBrowser);
         trace = message(browserPage, ""); trace.setTextSize(12); trace.setMaxLines(4); trace.setVisibility(View.GONE);
+        // Páginas que ha leído: tocar una la abre aquí para revisarla juntos.
+        sourcesBox = column(); browserPage.addView(sourcesBox, new LinearLayout.LayoutParams(-1, -2));
         createWebView();
         controlPage = column(); body.addView(controlPage, new LinearLayout.LayoutParams(-1, 0, 1)); controlPage.setVisibility(View.GONE);
         ScrollView scroll = new ScrollView(this); controlPage.addView(scroll, new LinearLayout.LayoutParams(-1, -1));
@@ -168,7 +223,53 @@ public final class MobileWorkspaceService extends Service {
         layout.gravity = Gravity.TOP | Gravity.LEFT; layout.x = dp(10); layout.y = dp(80);
         layout.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
         panel.setOnTouchListener((v, event) -> { if (event.getActionMasked() == MotionEvent.ACTION_OUTSIDE) releaseFocus(); return false; });
-        bounds(); attach(); visibility();
+        applyMode(); attach(); visibility();
+    }
+    /** En directo: solo lo que hace y, si busca, la página de resultados en pequeño. */
+    private void applyMode() {
+        if (panel == null) return;
+        int tools = compact ? View.GONE : View.VISIBLE;
+        tabsRow.setVisibility(tools); status.setVisibility(tools); query.setVisibility(tools); searchRow.setVisibility(tools);
+        feedView.setVisibility(compact ? View.VISIBLE : View.GONE);
+        if (compact) { browserPage.setVisibility(View.VISIBLE); controlPage.setVisibility(View.GONE); }
+        if (web != null) web.setVisibility(compact && !browsing ? View.GONE : View.VISIBLE);
+        if (expand != null) expand.setText(compact ? "⤢" : "⤡");
+        showReadings(); renderFeed();
+        if (layout != null) { bounds(); update(); }
+    }
+    private void feed(String line) {
+        main.removeCallbacks(typer);
+        if (!typed.isEmpty()) { feed.addLast("✍ " + shortText(typed, 160)); typed = ""; typedShown = 0; }
+        if (!feed.isEmpty() && feed.peekLast().equals(line)) return;
+        feed.addLast(line);
+        while (feed.size() > 5) feed.removeFirst();
+        renderFeed();
+    }
+    private void type(String text) {
+        main.removeCallbacks(typer);
+        if (!typed.isEmpty()) feed.addLast("✍ " + shortText(typed, 160));
+        while (feed.size() > 4) feed.removeFirst();
+        typed = shortText(text, 220); typedShown = 0;
+        main.post(typer);
+    }
+    private void renderFeed() {
+        if (feedView == null) return;
+        // Lo más reciente arriba: si las líneas largas no caben, se corta lo antiguo, no lo de ahora.
+        StringBuilder out = new StringBuilder();
+        if (!typed.isEmpty()) out.append("✍ ").append(typed, 0, typedShown).append(typedShown < typed.length() ? "▍" : "");
+        java.util.Iterator<String> newest = feed.descendingIterator();
+        while (newest.hasNext()) out.append(out.length() == 0 ? "" : "\n").append(newest.next());
+        feedView.setText(out.length() == 0 ? "Esperando a que Salve haga algo…" : out.toString());
+    }
+    private static String shortText(String value, int max) {
+        String v = value == null ? "" : value.replaceAll("\\s+", " ").trim();
+        return v.length() <= max ? v : v.substring(0, max - 1) + "…";
+    }
+    private String engineName(String question) {
+        try {
+            String id = WebSearchSettings.load(this, question).id;
+            switch (id) { case "google": return "Google"; case "bing": return "Bing"; case "duckduckgo": return "DuckDuckGo"; case "brave": return "Brave"; default: return id; }
+        } catch (RuntimeException unknown) { return "internet"; }
     }
     @SuppressWarnings("SetJavaScriptEnabled") private void createWebView() {
         web = new WebView(this);
@@ -239,6 +340,7 @@ public final class MobileWorkspaceService extends Service {
             }
         });
         browserPage.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
+        web.setVisibility(compact && !browsing ? View.GONE : View.VISIBLE);
     }
     private void search() {
         if (reviewing || locked()) { report("Termina la acción pendiente y desbloquea el móvil para buscar."); return; }
@@ -249,7 +351,7 @@ public final class MobileWorkspaceService extends Service {
             disposeBrowser(); createWebView(); // Isolates callbacks from the old search and any old forms.
             paused = false; pageFailed = false;
             recovery.begin(url, online(), SystemClock.elapsedRealtime());
-            tab(true); collapse(false); releaseFocus();
+            browsing = true; tab(true); collapse(false); releaseFocus(); applyMode();
             if (recovery.state() == BrowserRecovery.State.LOADING) web.loadUrl(url);
             else report("Sin conexión. Buscaré cuando vuelva la red durante los próximos 2 minutos.");
         } catch (IllegalArgumentException invalid) { report(invalid.getMessage()); }
@@ -257,8 +359,28 @@ public final class MobileWorkspaceService extends Service {
     }
     private void showReadings() {
         if (trace == null) return;
-        trace.setVisibility(readings.isEmpty() ? View.GONE : View.VISIBLE);
+        trace.setVisibility(View.GONE); // las fuentes tocables de abajo ya lo enseñan
         trace.setText(readings.isEmpty() ? "" : "Salve está leyendo:\n" + String.join("\n", readings));
+        if (sourcesBox == null) return;
+        sourcesBox.removeAllViews();
+        java.util.Iterator<String> urls = readingUrls.iterator();
+        for (String line : readings) {
+            String url = urls.hasNext() ? urls.next() : null;
+            TextView item = message(sourcesBox, line); item.setTextSize(12); item.setMaxLines(1);
+            item.setEllipsize(android.text.TextUtils.TruncateAt.END); item.setTextColor(Color.rgb(140, 210, 230));
+            item.setPadding(dp(2), dp(3), dp(2), dp(3));
+            if (url != null) item.setOnClickListener(v -> openSource(url));
+        }
+    }
+    /** Abre aquí una de las páginas que leyó Salve, para revisarla juntos. */
+    private void openSource(String url) {
+        if (!MobileBrowserPolicy.allowed(url) || reviewing || locked()) return;
+        try {
+            mediaQuery = null; disposeBrowser(); createWebView(); paused = false; pageFailed = false;
+            recovery.begin(url, online(), SystemClock.elapsedRealtime());
+            browsing = true; applyMode();
+            if (recovery.state() == BrowserRecovery.State.LOADING) web.loadUrl(url);
+        } catch (RuntimeException unavailable) { report("No pude abrir esa página aquí."); }
     }
     /** YouTube en la ventana: busca y, si se pidió reproducir, abre el primer vídeo. */
     private void playMedia(String value, boolean autoplay) {
@@ -268,7 +390,7 @@ public final class MobileWorkspaceService extends Service {
         disposeBrowser(); createWebView();
         paused = false; pageFailed = false;
         recovery.begin(url, online(), SystemClock.elapsedRealtime());
-        tab(true); collapse(false); releaseFocus(); query.setText(value);
+        browsing = true; tab(true); collapse(false); releaseFocus(); applyMode(); query.setText(value);
         if (recovery.state() == BrowserRecovery.State.LOADING) { web.loadUrl(url); report("Buscando en YouTube: " + value); }
         else report("Sin conexión. Pondré «" + value + "» cuando vuelva la red.");
     }
@@ -410,8 +532,10 @@ public final class MobileWorkspaceService extends Service {
             android.graphics.Insets bars = current.getWindowInsets().getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
             left = bars.left; top = bars.top; right = bars.right; bottom = bars.bottom;
         }
-        layout.width = Math.min(dp(collapsed ? 270 : 350), Math.max(dp(100), width - left - right));
-        layout.height = Math.min(dp(collapsed ? 60 : 530), Math.max(dp(60), height - top - bottom));
+        int w = collapsed ? 270 : compact ? 280 : 350;
+        int h = collapsed ? 60 : compact ? (browsing ? 430 : 200) : 530;
+        layout.width = Math.min(dp(w), Math.max(dp(100), width - left - right));
+        layout.height = Math.min(dp(h), Math.max(dp(60), height - top - bottom));
         layout.x = Math.max(left, Math.min(layout.x, width - right - layout.width));
         layout.y = Math.max(top, Math.min(layout.y, height - bottom - layout.height));
     }
@@ -428,7 +552,13 @@ public final class MobileWorkspaceService extends Service {
     private void attach() { if (!added && !destroyed) { manager.addView(panel, layout); added = true; } }
     private void detach() { if (added) { try { manager.removeView(panel); } catch (RuntimeException ignored) { } added = false; } }
     private void update() { if (added && !destroyed) try { manager.updateViewLayout(panel, layout); } catch (RuntimeException gone) { stopSelf(); } }
-    private void report(String value) { if (status != null && !destroyed) status.setText(value); }
+    private void report(String value) {
+        if (status == null || destroyed) return;
+        status.setText(value);
+        // En directo no se ve la línea de estado: los problemas pasan a lo que hace.
+        if (compact && value != null && value.matches("^(No |Sin conexión|El sitio|La carga|Conexión|Android cerró|El certificado).*"))
+            feed("⚠ " + shortText(value, 110));
+    }
     private LinearLayout column() { LinearLayout view = new LinearLayout(this); view.setOrientation(LinearLayout.VERTICAL); return view; }
     private LinearLayout row(LinearLayout parent) { LinearLayout view = new LinearLayout(this); parent.addView(view, new LinearLayout.LayoutParams(-1, -2)); return view; }
     private TextView message(LinearLayout parent, String text) { TextView view = new TextView(this); view.setText(text); view.setTextColor(Color.WHITE); view.setTextSize(14); parent.addView(view); return view; }

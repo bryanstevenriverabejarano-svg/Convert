@@ -7,8 +7,9 @@ import android.os.Looper;
 import android.provider.Settings;
 
 /**
- * Puente entre lo que Salve busca y la mini ventana flotante: abre la búsqueda en la ventana y
- * va mostrando qué páginas lee. Es solo visualización; la ventana no tiene acceso a la memoria.
+ * Puente entre lo que Salve hace y la mini ventana flotante «Salve en directo»: lo que piensa,
+ * lo que busca, las páginas que lee y lo que escribe. Es solo visualización; la ventana no tiene
+ * acceso a la memoria.
  *
  * <p>Para no competir con el modelo por la RAM, no abre un navegador nuevo si queda poca
  * memoria libre: en ese caso la búsqueda sigue, pero sin ventana.</p>
@@ -17,6 +18,12 @@ public final class SearchLive {
     public interface Listener {
         void onSearch(String query);
         void onReading(String url, String title);
+        /** Lo que está haciendo ahora («Pensando qué responderte…»). */
+        default void onActivity(String text) { }
+        /** Lo que acaba de escribir: la ventana lo teclea letra a letra. */
+        default void onTyping(String text) { }
+        /** Lo que está escribiendo ahora mismo (cuentos y textos largos, palabra a palabra). */
+        default void onDraft(String text) { }
     }
 
     private static final String PREFS = "salve_web_search";
@@ -54,6 +61,35 @@ public final class SearchLive {
         if (lowMemory(context)) return "No abro la mini ventana ahora: queda poca memoria y la necesito para pensar.";
         return salve.services.MobileWorkspaceService.open(context, query) ? null
                 : "Android no me dejó abrir la mini ventana.";
+    }
+
+    /** Abre la ventana en directo sin búsqueda. Mismas condiciones que {@link #begin}. */
+    public static String show(Context context) {
+        if (!enabled(context)) return null;
+        if (listener != null) return null;
+        if (!canShow(context)) return "Para enseñarte lo que hago necesito permiso para aparecer sobre otras apps.";
+        if (lowMemory(context)) return "Ahora queda poca memoria libre; abro la ventana cuando tenga más.";
+        return salve.services.MobileWorkspaceService.openLive(context) ? null : "Android no me dejó abrir la mini ventana.";
+    }
+
+    /** Lo que está haciendo (solo si la ventana está abierta; si no, no cuesta nada). */
+    public static void activity(String text) {
+        Listener current = listener;
+        if (current != null && text != null && !text.trim().isEmpty()) MAIN.post(() -> current.onActivity(text.trim()));
+    }
+
+    /** Su respuesta, para teclearla en la ventana (sin marcas internas de dibujo). */
+    public static void typing(String text) {
+        Listener current = listener;
+        if (current == null || text == null) return;
+        String clean = text.replaceAll("\\[\\[[^\\]]*\\]\\]", " ").replaceAll("\\s+", " ").trim();
+        if (!clean.isEmpty()) MAIN.post(() -> current.onTyping(clean));
+    }
+
+    /** Borrador en curso: la ventana lo enseña tal cual va saliendo. */
+    public static void draft(String text) {
+        Listener current = listener;
+        if (current != null && text != null && !text.trim().isEmpty()) MAIN.post(() -> current.onDraft(text));
     }
 
     /** Página que Salve está leyendo ahora mismo (solo si la ventana está abierta). */
