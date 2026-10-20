@@ -24,6 +24,79 @@ public final class SearchLive {
         default void onTyping(String text) { }
         /** Lo que está escribiendo ahora mismo (cuentos y textos largos, palabra a palabra). */
         default void onDraft(String text) { }
+        /** Abre Google Imágenes en la ventana y devuelve las miniaturas que se ven. */
+        default void onImages(String subject, ImagesCallback callback) {
+            callback.done(java.util.Collections.emptyList(), "esta ventana no sabe mirar imágenes");
+        }
+        /** Señala en la ventana la miniatura que está mirando (o la elegida). */
+        default void onMarkImage(int index, String label, boolean chosen) { }
+    }
+
+    /** Miniatura vista en la ventana: imagen (incrustada o recortada de la pantalla) y su texto alternativo. */
+    public static final class Thumb {
+        public final int index;
+        public final String alt, href;
+        public final byte[] bytes;
+        public Thumb(int index, String alt, String href, byte[] bytes) {
+            this.index = index; this.alt = alt == null ? "" : alt; this.href = href == null ? "" : href; this.bytes = bytes;
+        }
+    }
+
+    public interface ImagesCallback {
+        /** @param problem por qué no hay miniaturas (null si todo fue bien) */
+        void done(java.util.List<Thumb> thumbs, String problem);
+    }
+
+    /**
+     * Mira Google Imágenes en la ventana en directo, como lo haría una persona, y espera a ver las
+     * miniaturas. Bloquea: llámalo fuera del hilo principal.
+     * @param why recibe por qué no hubo miniaturas (ventana cerrada, verificación de Google…)
+     * @return miniaturas en el orden de la página; vacía si no se pudo
+     */
+    public static java.util.List<Thumb> lookAtImages(Context context, String subject, long timeoutMs, StringBuilder why) {
+        java.util.List<Thumb> none = java.util.Collections.emptyList();
+        if (Looper.myLooper() == Looper.getMainLooper()) { note(why, "no se puede esperar en el hilo principal"); return none; }
+        if (subject == null || subject.trim().isEmpty()) return none;
+        if (!enabled(context)) { note(why, "la ventana en directo está desactivada"); return none; }
+        Listener current = listener;
+        if (current == null) {
+            String problem = show(context);
+            if (problem != null) { note(why, problem); return none; }
+            long until = System.currentTimeMillis() + 4000; // el servicio tarda un momento en registrarse
+            while ((current = listener) == null && System.currentTimeMillis() < until) {
+                try { Thread.sleep(150); } catch (InterruptedException stop) { Thread.currentThread().interrupt(); return none; }
+            }
+            if (current == null) { note(why, "la ventana no llegó a abrirse"); return none; }
+        }
+        java.util.concurrent.CountDownLatch ready = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<java.util.List<Thumb>> result = new java.util.concurrent.atomic.AtomicReference<>(none);
+        java.util.concurrent.atomic.AtomicReference<String> problem = new java.util.concurrent.atomic.AtomicReference<>();
+        Listener target = current;
+        MAIN.post(() -> {
+            try {
+                target.onImages(subject, (thumbs, reason) -> {
+                    if (ready.getCount() == 0) return; // llegó tarde: ya se siguió sin ella
+                    result.set(thumbs == null ? none : thumbs); problem.set(reason); ready.countDown();
+                });
+            } catch (RuntimeException failed) { problem.set("la ventana falló al abrir Google Imágenes"); ready.countDown(); }
+        });
+        try {
+            if (!ready.await(Math.max(1000, timeoutMs), java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                note(why, "Google Imágenes no cargó a tiempo"); return none;
+            }
+        } catch (InterruptedException stop) { Thread.currentThread().interrupt(); return none; }
+        if (problem.get() != null) note(why, problem.get());
+        return result.get();
+    }
+
+    /** Señala en la ventana la miniatura que mira (azul) o la que eligió (verde). */
+    public static void markImage(int index, String label, boolean chosen) {
+        Listener current = listener;
+        if (current != null && index >= 0) MAIN.post(() -> current.onMarkImage(index, label == null ? "" : label, chosen));
+    }
+
+    private static void note(StringBuilder why, String text) {
+        if (why != null && text != null && !text.isEmpty()) why.append(why.length() == 0 ? "" : "; ").append(text);
     }
 
     private static final String PREFS = "salve_web_search";

@@ -27,13 +27,61 @@ public final class ImageReferenceSearch {
     public static final class Candidate {
         public final String title, imageUrl, pageUrl;
         public final boolean drawing;
+        /** De dónde viene («Wikimedia Commons», «Google Imágenes»…), para contarlo con honestidad. */
+        public final String source;
+        /** Imagen ya vista en la ventana (miniatura de Google): no se vuelve a descargar. */
+        final byte[] bytes;
+        /** Posición de la miniatura en la ventana en directo para señalarla; -1 si no está en pantalla. */
+        public final int screenIndex;
         Candidate(String title, String imageUrl, String pageUrl, boolean drawing) {
-            this.title = title; this.imageUrl = imageUrl; this.pageUrl = pageUrl; this.drawing = drawing;
+            this(title, imageUrl, pageUrl, drawing, sourceOf(title, imageUrl), null, -1);
         }
+        private Candidate(String title, String imageUrl, String pageUrl, boolean drawing, String source, byte[] bytes, int screenIndex) {
+            this.title = title; this.imageUrl = imageUrl; this.pageUrl = pageUrl; this.drawing = drawing;
+            this.source = source; this.bytes = bytes; this.screenIndex = screenIndex;
+        }
+        /**
+         * Miniatura que Salve está viendo en Google Imágenes dentro de la ventana en directo. Su
+         * identificador es una huella de la imagen, no la imagen, para no repetirla al mejorar.
+         * @param alt texto alternativo que Google da a la miniatura
+         */
+        public static Candidate fromScreen(String alt, byte[] bytes, String pageUrl, int screenIndex) {
+            if (bytes == null || bytes.length == 0) throw new IllegalArgumentException("Miniatura vacía");
+            String title = alt == null || alt.trim().isEmpty() ? "miniatura " + (screenIndex + 1) : alt.trim();
+            boolean drawing = title.toLowerCase(Locale.ROOT).matches(".*" + DRAWING_WORDS + ".*");
+            return new Candidate(title, "google-imagenes:" + fingerprint(bytes), pageUrl == null ? "" : pageUrl, drawing,
+                    "Google Imágenes", bytes.clone(), screenIndex);
+        }
+        /** La misma referencia, pero ya sabiendo (por lo que vio) si es un dibujo. */
+        public Candidate seenAs(boolean isDrawing) {
+            return new Candidate(title, imageUrl, pageUrl, isDrawing, source, bytes, screenIndex);
+        }
+        public boolean fromScreen() { return bytes != null; }
         /** Nombre legible del archivo («Pig icon»). */
         public String label() {
-            return title.replaceFirst("^(File|Archivo):", "").replaceFirst("\\.[A-Za-z0-9]{2,4}$", "").replace('_', ' ');
+            return title.replaceFirst("^(File|Archivo|Openverse|Wikipedia \\w+):\\s*", "")
+                    .replaceFirst("\\.[A-Za-z0-9]{2,4}$", "").replace('_', ' ');
         }
+    }
+
+    /** Palabras que dicen que una imagen es un dibujo y no una foto. */
+    static final String DRAWING_WORDS = "\\b(dibujos?|drawings?|silhouette|silueta|outline|line ?art|lineart|clip ?art|icon[oa]?s?"
+            + "|sketch|boceto|contorno|vector|vectorial|ilustraci[oó]n|illustration|para colorear|coloring|colouring|cartoon"
+            + "|caricatura)\\b";
+
+    static String sourceOf(String title, String imageUrl) {
+        if (title != null && title.startsWith("Openverse")) return "Openverse";
+        if (title != null && title.startsWith("Wikipedia")) return "Wikipedia";
+        return imageUrl != null && imageUrl.startsWith("google-imagenes:") ? "Google Imágenes" : "Wikimedia Commons";
+    }
+
+    static String fingerprint(byte[] bytes) {
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder hex = new StringBuilder();
+            for (int i = 0; i < 12; i++) hex.append(String.format(Locale.ROOT, "%02x", d[i]));
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 
     private static final String COMMONS = "https://commons.wikimedia.org/w/api.php";
@@ -148,12 +196,27 @@ public final class ImageReferenceSearch {
 
     /** Descarga la imagen de una referencia (sólo de Wikimedia o de las miniaturas de Openverse). */
     public byte[] download(Candidate c, int maxBytes) throws IOException {
+        if (c != null && c.bytes != null) {
+            if (c.bytes.length > maxBytes) throw new IOException("Demasiado grande");
+            return c.bytes.clone(); // ya la vio en la ventana: no pide nada a nadie
+        }
         if (c == null || !allowedImage(c.imageUrl)) throw new IOException("Origen no permitido");
         return http.get(c.imageUrl, maxBytes);
     }
 
+    /** Miniatura de Commons por nombre de archivo: redirige a upload.wikimedia.org. */
+    private static final String FILE_PATH = "https://commons.wikimedia.org/wiki/Special:FilePath/";
+
     static boolean allowedImage(String url) {
-        return url != null && (url.startsWith("https://upload.wikimedia.org/") || url.startsWith("https://api.openverse.org/v1/images/"));
+        return url != null && (url.startsWith("https://upload.wikimedia.org/") || url.startsWith("https://api.openverse.org/v1/images/")
+                || (url.startsWith(FILE_PATH) && !url.substring(FILE_PATH.length()).contains("/")));
+    }
+
+    /** «File:Gorilla silhouette.svg» → su miniatura de 480 px, sin depender de que la API traiga {@code thumburl}. */
+    static String filePathThumb(String title) {
+        String name = title == null ? "" : title.replaceFirst("^(File|Archivo):", "").trim().replace(' ', '_');
+        if (name.isEmpty() || name.contains("/")) return null;
+        return FILE_PATH + encode(name).replace("+", "%20") + "?width=480";
     }
 
     /** Nombre del artículo de Wikipedia en inglés para el término español (Commons está sobre todo en inglés). */
@@ -165,8 +228,10 @@ public final class ImageReferenceSearch {
     List<Candidate> commons(String query, int limit) throws IOException {
         try {
             String body = text(http.get(commonsUrl(query, limit), 400_000));
-            List<Candidate> found = parseCommons(body);
-            log.add("«" + query.replace(" filetype:", " ·") + "»: " + found.size() + (found.isEmpty() ? snippet(body) : ""));
+            StringBuilder why = new StringBuilder();
+            List<Candidate> found = parseCommons(body, why);
+            log.add("«" + query.replace(" filetype:", " ·") + "»: " + found.size() + why
+                    + (found.isEmpty() && why.length() == 0 ? snippet(body) : ""));
             return found;
         } catch (IOException error) {
             log.add("«" + query.replace(" filetype:", " ·") + "»: error " + error.getMessage());
@@ -194,9 +259,10 @@ public final class ImageReferenceSearch {
             if (q != null) for (JsonElement e : q.getAsJsonArray("search")) titles.add(e.getAsJsonObject().get("title").getAsString());
         } catch (RuntimeException malformed) { /* sin resultados */ }
         if (titles.isEmpty()) { log.add("Commons lista «" + term + "»: 0" + snippet(body)); return new ArrayList<>(); }
+        StringBuilder why = new StringBuilder();
         List<Candidate> found = parseCommons(text(http.get(COMMONS + "?action=query&format=json&formatversion=2"
-                + "&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=480&titles=" + encode(String.join("|", titles)), 300_000)));
-        log.add("Commons lista «" + term + "»: " + found.size());
+                + "&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=480&titles=" + encode(String.join("|", titles)), 300_000)), why);
+        log.add("Commons lista «" + term + "»: " + found.size() + why);
         return found;
     }
 
@@ -272,30 +338,72 @@ public final class ImageReferenceSearch {
         return null;
     }
 
-    static List<Candidate> parseCommons(String json) {
+    static List<Candidate> parseCommons(String json) { return parseCommons(json, null); }
+
+    /**
+     * Archivos de una búsqueda de Commons. Si un archivo llega sin {@code imageinfo} o sin miniatura
+     * (pasa cuando Commons corta el lote o no generó el tamaño pedido), no se pierde: se pide su
+     * miniatura por nombre. Cada página se lee por separado: una rara ya no tira el lote entero.
+     * @param why si no es null, cuenta por qué se descartó cada archivo (para el diagnóstico)
+     */
+    static List<Candidate> parseCommons(String json, StringBuilder why) {
         List<Candidate> out = new ArrayList<>();
+        java.util.Map<String, Integer> dropped = new java.util.LinkedHashMap<>();
+        int recovered = 0;
         try {
             JsonObject query = JsonParser.parseString(json).getAsJsonObject().getAsJsonObject("query");
             if (query == null) return out;
             List<JsonObject> pages = new ArrayList<>();
-            for (JsonElement p : query.getAsJsonArray("pages")) pages.add(p.getAsJsonObject());
-            pages.sort((a, b) -> Integer.compare(a.has("index") ? a.get("index").getAsInt() : 99,
-                    b.has("index") ? b.get("index").getAsInt() : 99));
+            JsonElement all = query.get("pages");
+            if (all != null && all.isJsonArray()) for (JsonElement p : all.getAsJsonArray()) { if (p.isJsonObject()) pages.add(p.getAsJsonObject()); }
+            else if (all != null && all.isJsonObject()) for (java.util.Map.Entry<String, JsonElement> p : all.getAsJsonObject().entrySet())
+                if (p.getValue().isJsonObject()) pages.add(p.getValue().getAsJsonObject()); // formatversion=1
+            pages.sort((a, b) -> Integer.compare(index(a), index(b)));
             for (JsonObject page : pages) {
-                String title = page.has("title") ? page.get("title").getAsString() : "";
-                JsonArray info = page.getAsJsonArray("imageinfo");
-                if (info == null || info.size() == 0 || title.matches(UNSUITABLE)) continue;
-                JsonObject i = info.get(0).getAsJsonObject();
-                String mime = i.has("mime") ? i.get("mime").getAsString() : "";
-                String thumb = i.has("thumburl") ? i.get("thumburl").getAsString() : null;
-                if (thumb == null || !thumb.startsWith("https://upload.wikimedia.org/")) continue;
-                if (!(mime.startsWith("image/svg") || mime.equals("image/png") || mime.equals("image/jpeg"))) continue;
-                String pageUrl = i.has("descriptionurl") ? i.get("descriptionurl").getAsString() : "";
-                out.add(new Candidate(title, thumb, pageUrl, mime.startsWith("image/svg")));
+                try {
+                    String title = text(page, "title");
+                    if (title.isEmpty() || page.has("missing")) { count(dropped, "sin archivo"); continue; }
+                    if (title.matches(UNSUITABLE)) { count(dropped, "mapa/logo/texto"); continue; }
+                    JsonObject i = null;
+                    JsonElement info = page.get("imageinfo");
+                    if (info != null && info.isJsonArray() && info.getAsJsonArray().size() > 0
+                            && info.getAsJsonArray().get(0).isJsonObject()) i = info.getAsJsonArray().get(0).getAsJsonObject();
+                    String mime = i == null ? "" : text(i, "mime");
+                    String thumb = i == null ? "" : text(i, "thumburl");
+                    String lower = title.toLowerCase(Locale.ROOT);
+                    boolean svg = mime.startsWith("image/svg") || (mime.isEmpty() && lower.endsWith(".svg"));
+                    boolean raster = mime.equals("image/png") || mime.equals("image/jpeg")
+                            || (mime.isEmpty() && lower.matches(".*\\.(png|jpe?g)$"));
+                    if (!svg && !raster) { count(dropped, "formato " + (mime.isEmpty() ? "desconocido" : mime)); continue; }
+                    if (!thumb.isEmpty() && !thumb.startsWith("https://upload.wikimedia.org/")) { count(dropped, "origen ajeno"); continue; }
+                    if (thumb.isEmpty()) {
+                        thumb = filePathThumb(title);
+                        if (thumb == null) { count(dropped, "sin miniatura"); continue; }
+                        recovered++;
+                    }
+                    String pageUrl = i == null ? "" : text(i, "descriptionurl");
+                    out.add(new Candidate(title, thumb, pageUrl, svg));
+                } catch (RuntimeException odd) { count(dropped, "página rara"); }
             }
-        } catch (RuntimeException malformed) { /* respuesta inesperada: sin candidatos */ }
+        } catch (RuntimeException malformed) { count(dropped, "respuesta no JSON"); }
+        if (why != null) {
+            if (recovered > 0) why.append(" (").append(recovered).append(" sin miniatura en la API, pedidas por nombre)");
+            if (!dropped.isEmpty()) why.append(" [descartados: ").append(dropped.toString().replaceAll("[{}]", "").replace("=", "×")).append("]");
+        }
         return out;
     }
+
+    private static int index(JsonObject page) {
+        JsonElement i = page.get("index");
+        try { return i != null && i.isJsonPrimitive() ? i.getAsInt() : 99; } catch (RuntimeException odd) { return 99; }
+    }
+
+    private static String text(JsonObject o, String key) {
+        JsonElement e = o.get(key);
+        return e != null && e.isJsonPrimitive() ? e.getAsString() : "";
+    }
+
+    private static void count(java.util.Map<String, Integer> map, String reason) { map.merge(reason, 1, Integer::sum); }
 
     /**
      * Puntuación de un trazado como referencia: líneas claras y en cantidad razonable; los dibujos
@@ -310,7 +418,7 @@ public final class ImageReferenceSearch {
         if (strokes < 2) s *= .5f;
         if (candidate.drawing) s *= 1.6f;
         String title = candidate.title.toLowerCase(Locale.ROOT);
-        if (title.matches(".*\\b(silhouette|silueta|outline|line ?art|lineart|clipart|clip art|icon|sketch|contorno)\\b.*")) s *= 1.35f;
+        if (title.matches(".*" + DRAWING_WORDS + ".*")) s *= 1.35f;
         if (title.matches(".*\\b(skull|skeleton|anatomy|range|distribution|track|footprint|cr[aá]neo|esqueleto|huella)\\b.*")) s *= .3f;
         return s;
     }
