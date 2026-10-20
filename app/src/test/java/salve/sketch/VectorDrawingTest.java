@@ -61,17 +61,20 @@ public class VectorDrawingTest {
                 body = "{\"query\":{\"pages\":[{\"title\":\"Gorilla\",\"thumbnail\":{\"source\":\"https://upload.wikimedia.org/g.jpg\"}}]}}";
             else if (url.contains("api.openverse.org"))
                 body = "{\"results\":[{\"title\":\"Gorilla in the zoo\",\"thumbnail\":\"https://api.openverse.org/v1/images/abc/thumb/\"},"
-                        + "{\"title\":\"x\",\"thumbnail\":\"https://evil.example/x.jpg\"}]}";
+                        + "{\"title\":\"Gorilla sketch\",\"thumbnail\":\"https://other.example/x.jpg\"},"
+                        + "{\"title\":\"router\",\"thumbnail\":\"https://192.168.1.1/x.jpg\"}]}";
             else body = "{\"batchcomplete\":true}"; // Commons sin resultados
             return body.getBytes(StandardCharsets.UTF_8);
         });
         List<ImageReferenceSearch.Candidate> found = search.search("gorila", "gorilla", 6, null);
-        assertEquals(2, found.size());
+        assertEquals("otro servidor público vale; la red de casa no", 3, found.size());
         assertEquals("https://upload.wikimedia.org/g.jpg", found.get(0).imageUrl);
         assertTrue(found.get(1).imageUrl.startsWith("https://api.openverse.org/"));
+        assertEquals("https://other.example/x.jpg", found.get(2).imageUrl);
         assertTrue(search.diagnostic().contains("Wikipedia en «gorilla»: 1"));
         assertTrue(ImageReferenceSearch.allowedImage("https://api.openverse.org/v1/images/abc/thumb/"));
-        assertFalse(ImageReferenceSearch.allowedImage("https://evil.example/x.jpg"));
+        assertTrue(ImageReferenceSearch.allowedImage("https://other.example/x.jpg"));
+        assertFalse(ImageReferenceSearch.allowedImage("https://192.168.1.1/x.jpg"));
         assertEquals(" (<html>Too many requests</html>)", ImageReferenceSearch.snippet("<html>Too many requests</html>"));
     }
 }
