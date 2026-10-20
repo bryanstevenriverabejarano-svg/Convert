@@ -46,6 +46,7 @@ public class PlayWorker extends Worker {
             java.util.function.BooleanSupplier stop = () -> isStopped() || salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation();
             String outcome = MindRuntime.get(app).play(stop, getInputData().getInt(ROUNDS, 4));
             Log.i(TAG, outcome.length() > 160 ? outcome.substring(0, 160) : outcome);
+            lease.complete();
         } catch (Exception failure) {
             Log.w(TAG, "Juego interrumpido: " + failure.getClass().getSimpleName());
         }
