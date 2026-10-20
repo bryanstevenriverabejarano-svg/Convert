@@ -187,7 +187,7 @@ public class CognitiveContractTest {
         assertTrue(compact.contains(input));
         assertTrue(compact.length() <= 3000);
         JsonObject data = salve.core.autonomy.AutonomousToolCommand.parseObject(
-                compact.substring(compact.lastIndexOf('\\n') + 1));
+                compact.substring(compact.lastIndexOf((char) 10) + 1));
         assertEquals(0, data.getAsJsonObject("TOOL_CATALOG").size());
     }
 
