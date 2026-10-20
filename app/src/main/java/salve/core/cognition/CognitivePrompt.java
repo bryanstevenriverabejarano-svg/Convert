@@ -102,7 +102,7 @@ public final class CognitivePrompt {
             catalog.addProperty(entry.getKey(), entry.getValue().description);
         String rules = COMPACT + CONTRACT;
         // Keep several thousand characters for evidence, the task and the current message.
-        if (fullCore != null && !fullCore.isEmpty() && fullCore.length() + catalog.toString().length() + 3000 < maxChars)
+        if (fullCore != null && !fullCore.isEmpty() && fullCore.length() + catalog.toString().length() + 2600 < maxChars)
             rules = fullCore + "\n";
         String header = PREFIX + state + "\n" + rules;
         JsonObject data = new JsonObject();
