@@ -38,10 +38,10 @@ public final class DeviceModelMemory {
         String id = LocalModelPolicy.idForPath(path);
         if (id == null) return ModelMemoryPolicy.LITERT_STANDARD;
         ModelMemoryPolicy.Snapshot ram = read(context);
-        int tokens = ModelMemoryPolicy.selectLiteRtContext(id, ram, weightsResident, vision);
+        int tokens = ModelMemoryPolicy.admitLiteRt(id, ram, weightsResident, vision);
         if (tokens == 0) throw new ModelMemoryPolicy.PressureException((ram.known() ? "RAM insuficiente para " : "No se pudo comprobar la RAM para ")
                 + id + (vision ? " con visión" : "") + ". " + describe(ram) + String.format(Locale.getDefault(),
-                ". Estimación mínima %s: %.2f GiB (con reserva para Android).",
+                ". Estimación mínima %s: %.2f GiB (con reserva para Android). Cierra alguna app abierta y pulsa «Intentar de nuevo».",
                 weightsResident ? "adicional con el modelo ya cargado" : "para iniciar",
                 ModelMemoryPolicy.requiredLiteRt(id, weightsResident, ram.threshold, vision, ModelMemoryPolicy.LITERT_STANDARD)
                         / (double) (1024 * ModelMemoryPolicy.MIB)));

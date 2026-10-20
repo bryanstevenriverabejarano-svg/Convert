@@ -62,7 +62,8 @@ class DownloadOverlayFragment : Fragment() {
                     binding.overlayProgress.progress = 0
                     binding.overlayMessage.text = state.message
                     binding.overlayActionButton.visibility = View.VISIBLE
-                    binding.overlayActionButton.text = "Reanudar por Wi-Fi"
+                    // Si falló por RAM no hay nada que reanudar: el modelo ya está descargado, solo hay que volver a cargarlo.
+                    binding.overlayActionButton.text = if (state.message.contains("RAM")) "Intentar de nuevo" else "Reanudar por Wi-Fi"
                     binding.overlayActionButton.setOnClickListener { hiddenState = null; viewModel.startDownload() }
                 }
             }
