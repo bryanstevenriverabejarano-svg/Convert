@@ -207,6 +207,12 @@ public final class AutonomousToolRuntime {
         return laboratory;
     }
     /** Relevant verified program metadata only; never challenge data or autobiographical memory. */
+    /** Read-only capability awareness; no user examples, model text or private memories. */
+    public String learnedSkillsSummary() {
+        try { return skills().catalog(); }
+        catch (Exception unavailable) { return "El catálogo inductivo no está disponible para leerlo."; }
+    }
+
     public String proceduralContextFor(String input) {
         String family = AutonomousToolCommand.offeredFamilyFor(input);
         if (family.isEmpty()) return "";
