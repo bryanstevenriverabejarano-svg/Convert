@@ -38,15 +38,24 @@ public class DreamWorker extends Worker {
     @Override
     public Result doWork() {
         if (isStopped()) return Result.success();
+        salve.core.mind.BackgroundMindGate.Lease lease = salve.core.mind.BackgroundMindGate.get().acquire(
+                salve.core.mind.BackgroundMindGate.Task.DREAM,
+                salve.core.GoalAutonomyRuntime.get(getApplicationContext()).hasActiveConversation(),
+                salve.core.MindRuntime.get(getApplicationContext()).journal().isPaused(),
+                salve.core.SalveLLM.getInstance(getApplicationContext()).isLoading());
+        if (lease == null) return Result.success();
         try {
+
             String outcome = MindRuntime.get(getApplicationContext()).dream(this::isStopped);
             Log.i(TAG, "Sueño finalizado: " + (outcome == null ? "" : outcome.length() > 160 ? outcome.substring(0, 160) : outcome));
+            lease.complete();
             return Result.success();
         } catch (Exception failure) {
             if (isStopped()) return Result.success();
             Log.e(TAG, "Fallo del sueño: " + failure.getClass().getSimpleName());
             return Result.retry();
         }
+        } finally { lease.close(); }
     }
 
     public static void schedule(Context context) {

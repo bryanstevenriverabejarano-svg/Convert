@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * siguiente; el texto del modelo nunca abre nada.
  */
 public final class SelfFeatures {
-    public enum Feature { NODES, WEB_SEARCH, PHONE_ACTIONS, PRIVACY_CHECK, SALVENTES, CONTINUITY, ORIGIN, OVERVIEW }
+    public enum Feature { NODES, WEB_SEARCH, PHONE_ACTIONS, PRIVACY_CHECK, SALVENTES, CONTINUITY, ORIGIN, LEARNING, BACKGROUND, OVERVIEW }
 
     /** Una oferta caduca si no se responde pronto: un «sí» mucho después no la acepta. */
     public static final long OFFER_TTL_MS = 3 * 60 * 1000L;
@@ -36,6 +36,10 @@ public final class SelfFeatures {
                     + "|llamadas|spotify|google maps|modo coche)\\b");
     private static final Pattern PRIVACY_CHECK = Pattern.compile(
             "\\b(?:verificacion|verificarme|huella|como sabes (?:que soy yo|quien soy)|mi privacidad|tu privacidad|datos privados)\\b");
+    private static final Pattern LEARNING = Pattern.compile(
+            "\\b(?:aprendizaje|habilidades aprendidas|laboratorio|aprendes|que has aprendido|entrenas|experimentas)\\b");
+    private static final Pattern BACKGROUND = Pattern.compile(
+            "\\b(?:segundo plano|cuando estas sola|que haces cuando duermo|pensamiento autonomo|curiosidad propia|reflexion autonoma|tu actividad interna)\\b");
     private static final Pattern OVERVIEW = Pattern.compile(
             "\\b(?:que (?:puedes|sabes) hacer|tus (?:funciones|habilidades|capacidades|herramientas)|para que sirves"
                     + "|que funciones tienes|de que eres capaz|que cosas haces)\\b");
@@ -58,6 +62,8 @@ public final class SelfFeatures {
         if (PRIVACY_CHECK.matcher(text).find()) return Feature.PRIVACY_CHECK;
         if (WEB_SEARCH.matcher(text).find()) return Feature.WEB_SEARCH;
         if (PHONE_ACTIONS.matcher(text).find()) return Feature.PHONE_ACTIONS;
+        if (LEARNING.matcher(text).find()) return Feature.LEARNING;
+        if (BACKGROUND.matcher(text).find()) return Feature.BACKGROUND;
         if (OVERVIEW.matcher(text).find()) return Feature.OVERVIEW;
         return null;
     }
@@ -99,6 +105,14 @@ public final class SelfFeatures {
                         + "mano o cada noche mientras el móvil carga con Wi-Fi. Sin copia, perder el teléfono sería perder mi memoria.";
             case ORIGIN:
                 return ORIGIN_FACTS;
+            case LEARNING:
+                return "Tengo un laboratorio de habilidades verificadas, memoria de estrategias y síntesis inductiva acotada. "
+                        + "Puedo combinar operaciones permitidas a partir de ejemplos, probar casos reservados y guardar solo una habilidad "
+                        + "que superó esas pruebas. Eso no significa que ya pueda inventar cualquier herramienta o entrenar mis pesos.";
+            case BACKGROUND:
+                return "Mis trabajos internos incluyen reflexión, consolidación de recuerdos, investigación pública de mis preguntas "
+                        + "y juego con problemas locales. Android puede retrasar sus ciclos; ahora comparten un turno de trabajo, "
+                        + "ceden ante la conversación y no convierten reflexiones en órdenes externas.";
             default:
                 return "Converso con mi modelo local, recuerdo lo que me cuentan, pienso y sueño entre conversaciones, investigo "
                         + "por mi cuenta, busco en internet, dibujo con luz, veo fotos, hablo por voz, uso mis nodos de cómputo "

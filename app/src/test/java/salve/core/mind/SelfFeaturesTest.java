@@ -14,6 +14,10 @@ public class SelfFeaturesTest {
         assertEquals(PHONE_ACTIONS, SelfFeatures.detect("¿Puedes llamar a alguien?"));
         assertEquals(PRIVACY_CHECK, SelfFeatures.detect("¿Cómo sabes que soy yo?"));
         assertEquals(OVERVIEW, SelfFeatures.detect("¿Qué puedes hacer?"));
+        assertEquals(LEARNING, SelfFeatures.detect("¿Qué has aprendido?"));
+        assertEquals(BACKGROUND, SelfFeatures.detect("¿Qué haces en segundo plano?"));
+        assertTrue(SelfFeatures.facts(LEARNING).contains("verificadas"));
+        assertTrue(SelfFeatures.facts(BACKGROUND).contains("reflexión"));
         assertEquals(SALVENTES, SelfFeatures.detect("¿Qué es un Salvente?"));
         assertEquals(SALVENTES, SelfFeatures.detect("Salve, ¿puedes crear una IA para mi madre?"));
         assertEquals(SALVENTES, SelfFeatures.detect("Crea un compañero nuevo para mi sobrino"));

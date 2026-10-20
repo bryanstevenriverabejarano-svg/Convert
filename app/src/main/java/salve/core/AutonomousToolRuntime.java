@@ -10,11 +10,14 @@ import salve.core.autonomy.AutonomousToolCommand;
 import salve.core.autonomy.AutonomousToolLab;
 import salve.core.autonomy.AutonomousToolReply;
 import salve.core.autonomy.FileToolStateStore;
+import salve.core.autonomy.InductiveSkillLab;
 
 /** Application-scoped, local-only tool laboratory. It has no Android app-control or network tools. */
 public final class AutonomousToolRuntime {
     private static volatile AutonomousToolRuntime instance;
     private final File stateFile;
+    private final File inductiveFile;
+    private volatile InductiveSkillLab inductive;
     private final AtomicBoolean paused = new AtomicBoolean();
     private final AtomicLong cancellationEpoch = new AtomicLong();
     private volatile AutonomousToolLab laboratory;
@@ -26,6 +29,7 @@ public final class AutonomousToolRuntime {
     AutonomousToolRuntime(File stateFile) {
         if (stateFile == null) throw new IllegalArgumentException("Archivo ausente.");
         this.stateFile = stateFile;
+        this.inductiveFile = new File(stateFile.getParentFile(), "inductive-skills.json");
     }
     public static AutonomousToolRuntime get(Context context) {
         if (instance == null) {
@@ -36,7 +40,7 @@ public final class AutonomousToolRuntime {
         return instance;
     }
     public static boolean handles(String input) {
-        return learningCommand(input) != 0 || AutonomousToolCommand.parse(input) != null;
+        return learningCommand(input) != 0 || inductiveCommand(input) != 0 || AutonomousToolCommand.parse(input) != null;
     }
     /** Exact commands from the user channel, not inferred from quoted documents or memory. */
     private static int learningCommand(String input) {
@@ -50,6 +54,31 @@ public final class AutonomousToolRuntime {
             default: return 0;
         }
     }
+    /** Commands must originate in the user turn, not retrieved pages or LLM output. */
+    private static int inductiveCommand(String input) {
+        if (input == null || input.length() > AutonomousToolCommand.MAX_INPUT_BYTES) return 0;
+        String value = input.trim();
+        if (value.equalsIgnoreCase("habilidades aprendidas")) return 1;
+        if (value.toLowerCase(java.util.Locale.ROOT).startsWith("aprende habilidad:")) return 2;
+        if (value.toLowerCase(java.util.Locale.ROOT).startsWith("usa habilidad:")) return 3;
+        return 0;
+    }
+
+    private InductiveSkillLab skills() throws Exception {
+        if (inductive == null) {
+            synchronized (this) {
+                if (inductive == null) {
+                    final FileToolStateStore file = new FileToolStateStore(inductiveFile);
+                    inductive = new InductiveSkillLab(new InductiveSkillLab.Store() {
+                        @Override public String read() throws Exception { return file.read(); }
+                        @Override public void write(String json) throws Exception { file.write(json); }
+                    });
+                }
+            }
+        }
+        return inductive;
+    }
+
     public static boolean isPauseCommand(String input) {
         AutonomousToolCommand command = AutonomousToolCommand.parse(input);
         return command != null && command.action == AutonomousToolCommand.Action.PAUSE;
@@ -62,6 +91,34 @@ public final class AutonomousToolRuntime {
         if (current != null) current.pause();
     }
     public String respond(String input, BooleanSupplier stopped) {
+        int inductiveAction = inductiveCommand(input);
+        if (inductiveAction != 0) {
+            if (paused.get()) return "Laboratorio pausado; reanúdalo para usar habilidades.";
+            long epoch = cancellationEpoch.get();
+            BooleanSupplier cancelled = () -> paused.get() || cancellationEpoch.get() != epoch
+                    || Thread.currentThread().isInterrupted()
+                    || (stopped != null && stopped.getAsBoolean());
+            if (cancelled.getAsBoolean()) return "Solicitud cancelada.";
+            try {
+                if (inductiveAction == 1) return skills().catalog();
+                String value = input.trim();
+                JsonObject data = AutonomousToolCommand.parseObject(value.substring(value.indexOf(':') + 1).trim());
+                if (inductiveAction == 2) {
+                    return "Síntesis inductiva: " + skills().learn(data, cancelled)
+                            + ". La certificación solo cubre los casos reservados proporcionados; "
+                            + "no prueba generalización universal ni entrenamiento de pesos.";
+                }
+                if (data.size() != 2 || !data.has("name") || !data.has("input")
+                        || !data.get("name").isJsonPrimitive() || !data.get("name").getAsJsonPrimitive().isString())
+                    return "Uso inválido: requiere name e input.";
+                if (cancelled.getAsBoolean()) return "Solicitud cancelada.";
+                return "Resultado de habilidad guardada: " + skills().apply(data.get("name").getAsString(), data.get("input"));
+            } catch (IllegalArgumentException invalid) {
+                return "Habilidad rechazada: " + invalid.getMessage();
+            } catch (Exception unavailable) {
+                return "No pude certificar o leer la habilidad. No afirmo que haya aprendido.";
+            }
+        }
         int learning = learningCommand(input);
         if (learning != 0) {
             if (Thread.currentThread().isInterrupted() || (stopped != null && stopped.getAsBoolean()))
@@ -150,6 +207,12 @@ public final class AutonomousToolRuntime {
         return laboratory;
     }
     /** Relevant verified program metadata only; never challenge data or autobiographical memory. */
+    /** Read-only capability awareness; no user examples, model text or private memories. */
+    public String learnedSkillsSummary() {
+        try { return skills().catalog(); }
+        catch (Exception unavailable) { return "El catálogo inductivo no está disponible para leerlo."; }
+    }
+
     public String proceduralContextFor(String input) {
         String family = AutonomousToolCommand.offeredFamilyFor(input);
         if (family.isEmpty()) return "";
@@ -171,6 +234,8 @@ public final class AutonomousToolRuntime {
     private static String help() {
         return "Prueba resuelve reto: {\"schema\":1,\"id\":\"consulta\",\"family\":\"dependencies\",\"input\":{\"nodes\":3,\"edges\":[[0,1],[1,2]]}}. "
                 + "También puedes pausar, reanudar o revertir una herramienta. Se admiten cuatro familias acotadas; el laboratorio no cambia el código de la aplicación. "
-                + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental.";
+                + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental. " 
+                + "Laboratorio inductivo: habilidades aprendidas; aprende habilidad: {nombre, train, holdout}; usa habilidad: {name, input}. " 
+                + "Cada ejemplo de train/holdout usa las claves in y out, con listas numéricas.";
     }
 }
