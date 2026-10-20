@@ -86,7 +86,12 @@ public final class ResearchConversation {
                 .replaceFirst("\\s+(?:en internet|en la web|por favor)$", "").trim();
         // URLs have case-sensitive paths; do not send the normalized spelling to the reader.
         Matcher url = Pattern.compile("https?://[^\\s<>]+", Pattern.CASE_INSENSITIVE).matcher(input);
-        if (url.find()) return limit(url.group().replaceFirst("[.,;!?]+$", ""), 2048);
+        if (url.find()) {
+            String originalUrl = url.group().replaceFirst("[.,;!?]+$", "");
+            // Preserve the actual objectives alongside links; a URL alone loses "compare age/studies".
+            if (normalize(originalUrl).equals(topic)) return limit(originalUrl, 2048);
+            return limit(input.trim(), 2048);
+        }
         return limit(topic, 2048);
     }
 

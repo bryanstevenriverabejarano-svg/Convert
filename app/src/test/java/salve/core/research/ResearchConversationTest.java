@@ -89,6 +89,11 @@ public class ResearchConversationTest {
         assertEquals(result.question, ResearchConversation.lookupQuery(result.question));
     }
 
+    @Test public void aLinkDoesNotEraseTheRequestedObjectives() {
+        String input = "Busca estudios y publicaciones en https://example.org/Perfil?Idioma=ES";
+        assertEquals(input, route(input).question);
+    }
+
     @Test public void negationAndQuotedInstructionsDoNotAuthorizeSearch() {
         for (String input : new String[] {"No busques Salve", "No quiero que busques eso",
                 "Ella dijo busca Salve", "¿Por qué me dices que vas a buscar?", "te lo confirmo"}) {

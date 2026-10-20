@@ -22,12 +22,15 @@ public final class WebResearchClient extends WikipediaResearchClient {
         super(client); context = null; this.selected = selected; this.braveKey = braveKey;
     }
     @Override public ResearchBatch researchResult(String question, BooleanSupplier stopped) {
+        return researchResult(question, stopped, null);
+    }
+    @Override public ResearchBatch researchResult(String question, BooleanSupplier stopped, java.util.function.Consumer<Page> consumer) {
         if (question == null || question.trim().isEmpty() || question.length() > MAX_QUERY_CHARS || question.contains("://"))
-            return super.researchResult(question, stopped);
+            return deliverPages(super.researchResult(question, stopped), stopped, consumer);
         String explicit = SearchEngine.explicitEngine(question);
         SearchEngine engine = explicit == null ? selected : new SearchEngine(explicit, "");
         String query = SearchEngine.cleanQuery(question);
-        if (engine.id.equals("wikipedia")) return super.researchResult(query, stopped);
+        if (engine.id.equals("wikipedia")) return deliverPages(super.researchResult(query, stopped), stopped, consumer);
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
         List<Page> pages = new ArrayList<>();
         List<String> attempts = new ArrayList<>();
@@ -55,16 +58,24 @@ public final class WebResearchClient extends WikipediaResearchClient {
                         if (SearchEngine.interactionRequired(document.url, document.text)) {
                             attempts.add(candidate.id + ": requiere intervención en el navegador"); continue;
                         }
-                        urls = SearchEngine.links(document.text, document.url);
+                        urls = SearchEngine.links(document.text, document.url, salve.core.research.ResearchSourceQuality::candidate);
                         if (urls.isEmpty()) { attempts.add(candidate.id + ": no devolvió enlaces legibles; puede requerir JavaScript o consentimiento"); continue; }
                     }
                     int failures = 0;
                     for (String url : urls) {
                         checkSearch(stopped, deadline);
                         if (pages.size() == MAX_PAGES) break;
+                        if (!salve.core.research.ResearchSourceQuality.candidate(url)) { failures++; continue; }
                         try {
                             Page page = readPage(url, stopped, deadline);
-                            if (!page.text.isEmpty()) { pages.add(page); if (context != null) SearchLive.reading(page.url, page.title); }
+                            if (salve.core.research.ResearchSourceQuality.usable(page.url, page.title, page.text)) {
+                                pages.add(page);
+                                if (consumer != null) {
+                                    long analysisStarted = System.nanoTime();
+                                    consumer.accept(page); // Analyze now, before requesting the next link.
+                                    deadline += System.nanoTime() - analysisStarted; // Model time is not network time.
+                                } else if (context != null) SearchLive.reading(page.url, page.title);
+                            }
                             else failures++;
                         }
                         catch (java.io.IOException failed) { failures++; }
@@ -91,7 +102,7 @@ public final class WebResearchClient extends WikipediaResearchClient {
                 if (!fallback.pages.isEmpty()) {
                     String info = "Buscadores generales sin resultados legibles; se consultó Wikipedia como respaldo. " + String.join("; ", attempts);
                     remember(lastUrl, info);
-                    return new ResearchBatch(Status.PARTIAL, fallback.pages, attempts.size(), info);
+                    return deliverPages(new ResearchBatch(Status.PARTIAL, fallback.pages, attempts.size(), info), stopped, consumer);
                 }
             }
             String info = String.join("; ", attempts) + ". Abre IA y cámara → Buscadores web → Abrir última búsqueda para continuar en el navegador.";

@@ -183,7 +183,9 @@ public final class DeviceControlActivity extends Activity {
             return;
         }
         waitingOverlay = false;
-        appStatus.setText(MobileWorkspaceService.open(this, pendingSearch) ? "Panel solicitado. La notificación permite cerrarlo en cualquier momento."
+        boolean opened = getIntent().getBooleanExtra(MobileWorkspaceService.LIVE, false)
+                ? salve.core.web.SearchLive.resume(this) : MobileWorkspaceService.open(this, pendingSearch);
+        appStatus.setText(opened ? "Panel solicitado. La notificación permite cerrarlo en cualquier momento."
                 : "Android no permitió abrir el panel flotante. Revisa el permiso Mostrar sobre otras apps.");
     }
 

@@ -87,6 +87,19 @@ public class WikipediaResearchClient {
         return batch.pages;
     }
 
+    /** Batch compatibility; web discovery overrides this to deliver each page before the next fetch. */
+    public ResearchBatch researchResult(String question, BooleanSupplier stopped, java.util.function.Consumer<Page> consumer) {
+        return deliverPages(researchResult(question, stopped), stopped, consumer);
+    }
+
+    protected static ResearchBatch deliverPages(ResearchBatch batch, BooleanSupplier stopped, java.util.function.Consumer<Page> consumer) {
+        if (consumer != null && batch.status != Status.CANCELLED) for (Page page : batch.pages) {
+            if (Thread.currentThread().isInterrupted() || stopped != null && stopped.getAsBoolean()) throw new CancellationException();
+            consumer.accept(page);
+        }
+        return batch;
+    }
+
     public ResearchBatch researchResult(String question, BooleanSupplier stopped) {
         List<Page> pages = new ArrayList<>();
         int failures = 0;

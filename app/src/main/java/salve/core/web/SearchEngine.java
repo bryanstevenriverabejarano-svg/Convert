@@ -63,10 +63,13 @@ public final class SearchEngine {
                 || text.contains("id='captcha") || text.contains("g-recaptcha");
     }
     public static List<String> links(String html, String base) {
+        return links(html, base, url -> true);
+    }
+    public static List<String> links(String html, String base, java.util.function.Predicate<String> candidate) {
         LinkedHashSet<String> result = new LinkedHashSet<>();
         Matcher rss = Pattern.compile("(?is)<link\\b[^>]*>([^<]{1,2048})</link>").matcher(html);
         int inspected = 0;
-        while (rss.find() && result.size() < 6 && inspected++ < 100) add(result, rss.group(1), base);
+        while (rss.find() && result.size() < 6 && inspected++ < 100) add(result, rss.group(1), base, candidate);
         Matcher anchors = Pattern.compile("(?is)<a\\b").matcher(html);
         Pattern href = Pattern.compile("(?is)\\bhref\\s*=\\s*([\"'])(.*?)\\1");
         int cursor = 0; inspected = 0;
@@ -75,11 +78,11 @@ public final class SearchEngine {
             if (end < 0 || end - from > 4096) { cursor = Math.min(html.length(), from + 4096); continue; }
             cursor = end + 1;
             Matcher link = href.matcher(html.substring(from, end));
-            if (link.find()) add(result, link.group(2), base);
+            if (link.find()) add(result, link.group(2), base, candidate);
         }
         return new ArrayList<>(result);
     }
-    private static void add(Set<String> result, String raw, String base) {
+    private static void add(Set<String> result, String raw, String base, java.util.function.Predicate<String> candidate) {
         try {
             String value = raw.trim().replace("&amp;", "&").replace("&#38;", "&").replace("<![CDATA[", "").replace("]]>", "");
             URI uri = URI.create(base).resolve(value);
@@ -99,7 +102,7 @@ public final class SearchEngine {
             }
             value = uri.toString(); host = uri.getHost();
             if (value.length() <= 500 && NetworkResourcePolicy.validateKnowledgeUrl(value).allowed
-                    && !isEngineHost(host) && !host.equalsIgnoreCase(URI.create(base).getHost())) result.add(value);
+                    && !isEngineHost(host) && !host.equalsIgnoreCase(URI.create(base).getHost()) && candidate.test(value)) result.add(value);
         } catch (RuntimeException malformed) { /* One malformed result cannot discard its siblings. */ }
     }
     private static boolean isEngineHost(String host) {
