@@ -20,14 +20,14 @@ public class InductiveSkillLabTest {
     private static JsonObject obj(String text) { return JsonParser.parseString(text).getAsJsonObject(); }
     private static JsonObject request(String holdout) {
         return obj("{\"name\":\"odd_dedup\",\"train\":["
-                + "{\"in\":[3,-2,3,4],\"out\":[3,4]},"
-                + "{\"in\":[-1,2,2,-3],\"out\":[2]},"
-                + "{\"in\":[8,-4,8,1],\"out\":[8,1]}],\"holdout\":" + holdout + "}");
+                + "{\"in\":[3,-2,3,4],\"out\":[3]},"
+                + "{\"in\":[-1,2,2,-3],\"out\":[-1,-3]},"
+                + "{\"in\":[8,-4,8,1],\"out\":[1]}],\"holdout\":" + holdout + "}");
     }
     private static final String HELDOUT = "["
-            + "{\"in\":[5,-7,5,2],\"out\":[5,2]},"
-            + "{\"in\":[-9,6,6,3],\"out\":[6,3]},"
-            + "{\"in\":[0,7,7,-3],\"out\":[7]}]";
+            + "{\"in\":[5,-7,5,2],\"out\":[5,-7]},"
+            + "{\"in\":[-9,6,6,3],\"out\":[-9,3]},"
+            + "{\"in\":[0,7,7,-3],\"out\":[7,-3]}]";
 
     @Test public void learnsNovelCompositionAndAppliesToUnseenInputsAfterRestart() throws Exception {
         Memory memory = new Memory();
@@ -35,7 +35,7 @@ public class InductiveSkillLabTest {
         JsonObject report = lab.learn(request(HELDOUT), () -> false);
         assertEquals("CERTIFIED_ON_PROVIDED_HOLDOUT", report.get("status").getAsString());
         assertTrue(report.get("certified").getAsBoolean());
-        assertEquals("[\"filter_odd\",\"unique\"]", report.get("program").toString());
+        assertEquals("[\"unique\",\"filter_odd\"]", report.get("program").toString());
         assertEquals("[11,9]", lab.apply("odd_dedup", JsonParser.parseString("[11,4,11,-2,9]")).toString());
         assertFalse(memory.value.contains("[-9,6,6,3]")); // no examples in memory
         InductiveSkillLab reload = new InductiveSkillLab(memory);
