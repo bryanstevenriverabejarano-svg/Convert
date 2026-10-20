@@ -3017,6 +3017,13 @@ public class MotorConversacional {
             if (query.isEmpty() || query.length() > 160) throw new IllegalArgumentException("Consulta vacía o demasiado larga");
             List<String> known = new java.util.ArrayList<>();
             for (salve.core.identity.PeopleGraph.PersonEntity p : mind().peopleGraph().people()) known.add(p.name);
+            if (salve.core.research.ResearchIntent.privateProfile(input) || salve.core.research.ResearchIntent.privateProfile(query)) {
+                salve.core.web.SearchLive.activity("No hago perfiles de personas particulares; no busco.");
+                return new CognitiveTurn.Receipt("PERFIL_PRIVADO: NO has buscado nada. Bryan pide datos personales (redes, edad, gustos, "
+                        + "personalidad…) de una persona particular y no haces perfiles de particulares. Díselo con naturalidad: "
+                        + "si es alguien público, que pregunte algo concreto de su trabajo público; si la conoce, ofrécele ayuda "
+                        + "para hablar con ella. No digas que estás buscando.");
+            }
             if (!salve.core.identity.NetworkPrivacy.safeForNetwork(query, known)) {
                 salve.core.web.SearchLive.activity("No envío «" + query + "» a internet: lleva datos personales o un nombre de la familia.");
                 return new CognitiveTurn.Receipt("CONSULTA_PRIVADA: NO has buscado nada. La consulta lleva datos personales o el nombre "
@@ -3225,7 +3232,8 @@ public class MotorConversacional {
 
     private String ejecutarInvestigacionPublica(String question) {
         String turnId = java.util.UUID.randomUUID().toString();
-        String liveHint = mostrarBusqueda(question);
+        // La ventana en directo enseña cada búsqueda ya razonada, no la frase entera de Bryan.
+        java.util.concurrent.atomic.AtomicReference<String> liveHintRef = new java.util.concurrent.atomic.AtomicReference<>();
         WikipediaResearchClient reader = researchReader(question);
         int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
         salve.core.research.PublicResearchCoordinator.Result result =
@@ -3234,7 +3242,12 @@ public class MotorConversacional {
                                 llm != null && llm.usesOwnedInference(), false,
                                 gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
                                 () -> generarRespuestaConversacionalLocal(prompt)), budget)
+                        .withProgress(this::estado, query -> {
+                            String hint = mostrarBusqueda(query);
+                            if (hint != null) liveHintRef.compareAndSet(null, hint);
+                        })
                         .runConversation(question, () -> closed || !isVoiceContextCurrent());
+        String liveHint = liveHintRef.get();
         String answer = result.toConversationText();
         if (!closed && isVoiceContextCurrent()) {
             try {
@@ -3426,8 +3439,8 @@ public class MotorConversacional {
                         : "Abierta: ahí verás en directo lo que pienso, lo que busco en Google, las páginas que leo y lo que te escribo. "
                         + "Toca una página de la lista para abrirla y revisarla conmigo.";
             }
-            abrirPermisoMiniVentana();
-            return "Para enseñarte mis búsquedas necesito permiso para aparecer sobre otras apps. Te abro el ajuste: activa Salve y vuelve.";
+            String asked = salve.core.web.SearchLive.show(context);
+            return asked != null ? asked : "Abierta.";
         }
         salve.core.web.MediaRequest media = salve.core.web.MediaRequest.parse(entrada);
         if (media == null) return null;
@@ -3451,15 +3464,6 @@ public class MotorConversacional {
         return "Te abro YouTube con «" + media.query + "». "
                 + (salve.core.web.SearchLive.canShow(context) ? "(Ahora hay poca memoria libre para la mini ventana.)"
                 : "Si prefieres que suene en una mini ventana sobre la conversación, di «muestra tus búsquedas» y da el permiso.");
-    }
-
-    private void abrirPermisoMiniVentana() {
-        try {
-            context.startActivity(new android.content.Intent(context, salve.presentation.ui.DeviceControlActivity.class)
-                    .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PANEL, true)
-                    .putExtra(salve.services.MobileWorkspaceService.QUERY, "")
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
-        } catch (RuntimeException unavailable) { Log.w(TAG, "No pude abrir el permiso de mini ventana"); }
     }
 
     private boolean creatorSide() {

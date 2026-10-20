@@ -211,5 +211,40 @@ public class PublicResearchCoordinatorTest {
         assertEquals(4, result.modelCalls);
         assertTrue(result.toConversationText().contains("Resultado [1]."));
     }
-}
 
+    @Test public void privateProfileIsDeclinedWithoutSearchingOrThinking() {
+        AtomicInteger reads = new AtomicInteger(), thoughts = new AtomicInteger();
+        PublicResearchCoordinator.Result result = new PublicResearchCoordinator((q, stop) -> { reads.incrementAndGet(); return batch(page("a")); },
+                (phase, prompt) -> { thoughts.incrementAndGet(); return success("{}"); }, 3200)
+                .runConversation("busca en instagram a michell agredo, gustos y personalidad", () -> false);
+        assertEquals(PublicResearchCoordinator.Status.PRIVATE_PERSON, result.status);
+        assertEquals(0, reads.get());
+        assertEquals(0, thoughts.get());
+        assertTrue(result.toConversationText().contains("no lo hago"));
+    }
+
+    @Test public void reasonedQueriesRunInOrderAndJunkIsDiscardedBeforeContrasting() {
+        java.util.List<String> queries = new ArrayList<>();
+        java.util.List<String> steps = new ArrayList<>();
+        AtomicReference<String> contrast = new AtomicReference<>();
+        PublicResearchCoordinator.Result result = new PublicResearchCoordinator((q, stop) -> {
+            queries.add(q);
+            return batch(new WikipediaResearchClient.Page("https://www.portada.com/", "Portada"),
+                    new WikipediaResearchClient.Page("https://example.org/" + queries.size(), "Contenido útil " + q));
+        }, (phase, prompt) -> {
+            if (phase == PublicResearchCoordinator.Phase.QUERY)
+                return success("{\"objetivo\":\"Qué fue y quién ganó\",\"consultas\":[\"batalla de Vitoria\",\"batalla de Vitoria resultado\"]}");
+            if (phase == PublicResearchCoordinator.Phase.PLAN) return success(FINISH);
+            contrast.set(prompt);
+            return success("Lo que dice cada fuente: [1] fecha; [2] vencedor; [5] inventada.\nConclusión: ganó el bando aliado [2].");
+        }, 3200).withProgress(steps::add, null).runConversation("busca la batalla de vitoria y quien gano", () -> false);
+        assertEquals(java.util.Arrays.asList("batalla de Vitoria", "batalla de Vitoria resultado"), queries);
+        assertEquals(PublicResearchCoordinator.Status.ANSWERED, result.status);
+        assertEquals(2, result.sources.size());
+        assertEquals(3, result.modelCalls); // razonar, decidir si basta, contrastar
+        assertTrue(contrast.get().contains("Qué fue y quién ganó"));
+        assertFalse(result.answer.contains("[5]"));
+        assertTrue(steps.stream().anyMatch(t -> t.startsWith("Descarto www.portada.com")));
+        assertTrue(steps.contains("Contrasto lo que dice cada fuente…"));
+    }
+}

@@ -1065,6 +1065,8 @@ public class MainActivity extends AppCompatActivity {
             catch (RuntimeException unavailable) { android.util.Log.w("Salve/Agent", "Planes no disponibles; se conservan sus datos."); }
         });
         activityResumed = true;
+        // Si Salve pidió el permiso de su ventana y Bryan acaba de darlo, la abre sola.
+        try { salve.core.web.SearchLive.resumePending(this); } catch (RuntimeException ignored) { }
         // Verificación del dueño (rostro/huella/PIN) solo si el sistema está libre: nunca durante
         // un turno de conversación ni mientras se carga el modelo.
         salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(this);

@@ -57,7 +57,7 @@ public final class SearchLive {
         if (query == null || query.trim().isEmpty() || !enabled(context)) return null;
         Listener current = listener;
         if (current != null) { MAIN.post(() -> current.onSearch(query)); return null; }
-        if (!canShow(context)) return "Si quieres ver mis búsquedas en directo, di «muestra tus búsquedas» y permite que aparezca sobre otras apps.";
+        if (!canShow(context)) return askOverlay(context, query);
         if (lowMemory(context)) return "No abro la mini ventana ahora: queda poca memoria y la necesito para pensar.";
         return salve.services.MobileWorkspaceService.open(context, query) ? null
                 : "Android no me dejó abrir la mini ventana.";
@@ -67,9 +67,47 @@ public final class SearchLive {
     public static String show(Context context) {
         if (!enabled(context)) return null;
         if (listener != null) return null;
-        if (!canShow(context)) return "Para enseñarte lo que hago necesito permiso para aparecer sobre otras apps.";
+        if (!canShow(context)) return askOverlay(context, LIVE_ONLY);
         if (lowMemory(context)) return "Ahora queda poca memoria libre; abro la ventana cuando tenga más.";
         return salve.services.MobileWorkspaceService.openLive(context) ? null : "Android no me dejó abrir la mini ventana.";
+    }
+
+    private static final String PENDING = "pending_window", ASKED_AT = "overlay_asked_at", LIVE_ONLY = "\u0000live";
+    /** No vuelve a abrir el ajuste solo más de una vez cada 12 h si Bryan no lo activó. */
+    private static final long ASK_EVERY_MS = 12L * 60 * 60 * 1000;
+
+    /**
+     * Android no deja que una app se dé a sí misma el permiso de aparecer sobre otras apps: lo
+     * activa Bryan una vez. Salve abre directamente ese ajuste, recuerda qué quería enseñar y,
+     * al volver con el permiso dado, abre la ventana sola ({@link #resumePending}).
+     */
+    static String askOverlay(Context context, String pending) {
+        android.content.SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        prefs.edit().putString(PENDING, pending).apply();
+        long now = System.currentTimeMillis();
+        if (now - prefs.getLong(ASKED_AT, 0) < ASK_EVERY_MS)
+            return "Mi ventana está esperando el permiso «Mostrar sobre otras apps»; cuando lo actives, la abro sola.";
+        try {
+            context.startActivity(new android.content.Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:" + context.getPackageName()))
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            prefs.edit().putLong(ASKED_AT, now).apply();
+            return "Te abro el ajuste para poder enseñarte mi ventana: activa «Mostrar sobre otras apps» para Salve y vuelve. "
+                    + "Solo hace falta una vez; después abro mis ventanas yo sola.";
+        } catch (RuntimeException unavailable) {
+            return "Activa «Mostrar sobre otras apps» para Salve en Ajustes y abriré mis ventanas yo sola.";
+        }
+    }
+
+    /** Al volver a Salve: si ya hay permiso y quedó algo por enseñar, lo abre sin que se lo pidan. */
+    public static void resumePending(Context context) {
+        android.content.SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String pending = prefs.getString(PENDING, null);
+        if (pending == null || !canShow(context) || !enabled(context)) return;
+        prefs.edit().remove(PENDING).remove(ASKED_AT).apply();
+        if (listener != null) { if (!LIVE_ONLY.equals(pending)) { Listener l = listener; MAIN.post(() -> l.onSearch(pending)); } return; }
+        if (LIVE_ONLY.equals(pending)) salve.services.MobileWorkspaceService.openLive(context);
+        else salve.services.MobileWorkspaceService.open(context, pending);
     }
 
     /** Lo que está haciendo (solo si la ventana está abierta; si no, no cuesta nada). */
