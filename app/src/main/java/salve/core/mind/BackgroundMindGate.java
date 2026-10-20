@@ -47,6 +47,9 @@ public final class BackgroundMindGate {
         }
     }
 
+    private static final BackgroundMindGate INSTANCE = new BackgroundMindGate();
+    public static BackgroundMindGate get() { return INSTANCE; }
+
     private Task active;
     private long sequence;
     private final EnumMap<Task, Integer> completed = new EnumMap<>(Task.class);
