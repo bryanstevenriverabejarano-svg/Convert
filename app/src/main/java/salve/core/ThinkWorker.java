@@ -65,6 +65,7 @@ public class ThinkWorker extends Worker {
             runtime.runCycle(this::isStopped);
             if (isStopped()) return Result.success();
             Log.i(TAG, "Invocacion del ciclo de objetivos finalizada.");
+            lease.complete();
             return Result.success();
         } catch (Exception error) {
             if (isStopped()) return Result.success();
