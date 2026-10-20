@@ -61,6 +61,33 @@ public final class ModelMemoryPolicy {
         return 0;
     }
 
+    /** Gemma (LiteRT-LM): sus pesos se mapean del archivo, no se reservan de golpe. */
+    public static boolean isLiteRt(String id) {
+        return LocalModelPolicy.FALLBACK.equals(id) || LocalModelPolicy.GEMMA_E4B.equals(id);
+    }
+
+    /**
+     * Admisión para cargar Gemma de verdad. Si no caben ni 4.096 tokens con la RAM «disponible»
+     * que dice Android, pero el móvil tiene RAM total de sobra, se intenta igualmente con 4.096:
+     * Android cuenta como ocupada la memoria de apps cerradas que guarda en caché y la libera en
+     * cuanto alguien la pide, y los pesos se leen del archivo por partes. Antes Salve se rendía y
+     * Bryan tenía que «limpiar la RAM» a mano (Galaxy de 10,82 GiB con 2,71 GiB «disponibles»).
+     * Sigue exigiendo libre todo lo que no son pesos (motor, visión y reserva de Android).
+     */
+    public static int admitLiteRt(String id, Snapshot ram, boolean weightsResident, boolean vision) {
+        int strict = selectLiteRtContext(id, ram, weightsResident, vision);
+        if (strict != 0) return strict;
+        return roomyDevice(id, ram, weightsResident, vision) ? LITERT_STANDARD : 0;
+    }
+
+    /** ¿RAM total de sobra (el doble de lo necesario) y libre al menos lo que no son pesos? */
+    static boolean roomyDevice(String id, Snapshot ram, boolean weightsResident, boolean vision) {
+        if (!ram.known() || ram.low || weightsResident) return false; // con pesos residentes ya se mide bien
+        long need = requiredLiteRt(id, false, ram.threshold, vision, LITERT_STANDARD);
+        long withoutWeights = requiredLiteRt(id, true, ram.threshold, vision, LITERT_STANDARD);
+        return ram.total >= 2 * need && ram.available >= withoutWeights;
+    }
+
     public static boolean canLoad(String id, Snapshot ram, boolean loaded) {
         return ram.known() && !ram.low && ram.available >= required(id, loaded, ram.threshold);
     }
@@ -73,7 +100,10 @@ public final class ModelMemoryPolicy {
     }
     /** An already resident engine will be released on activation; do not charge both models here. */
     public static boolean canPrepare(String id, Snapshot ram, boolean residentEngine) {
-        return residentEngine || selectContext(id, ram, false) != 0;
+        if (residentEngine || selectContext(id, ram, false) != 0) return true;
+        // Descargar Gemma no gasta RAM y la carga vuelve a medir: solo se frena si el móvil, aun
+        // con toda su RAM libre, no podría con ella. Antes bastaban unas apps en caché para no descargar.
+        return isLiteRt(id) && ram.known() && ram.total >= requiredLiteRt(id, false, ram.threshold, false, LITERT_STANDARD);
     }
     /** During evaluation the KV/context is already allocated: do not charge its budget twice. */
     public static boolean underPressure(Snapshot ram) {
