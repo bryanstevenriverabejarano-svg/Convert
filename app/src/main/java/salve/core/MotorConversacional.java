@@ -1864,8 +1864,18 @@ public class MotorConversacional {
         List<String> known = new java.util.ArrayList<>();
         for (salve.core.identity.PeopleGraph.PersonEntity p : mind().peopleGraph().people()) known.add(p.name);
         if (!salve.core.identity.NetworkPrivacy.safeForNetwork(subject, known)) { referenceFailure = "era algo privado"; return null; }
-        mostrarBusqueda("dibujo de " + subject);
-        estado("Buscando imágenes de referencia de «" + subject + "» en internet…");
+        // Como una persona: mira Google Imágenes en la ventana en directo mientras consulta las fuentes libres.
+        estado("Buscando referencias de «" + subject + "»: Google Imágenes en la ventana y Wikimedia Commons…");
+        StringBuffer googleWhy = new StringBuffer(); // lo escriben dos hilos
+        java.util.concurrent.FutureTask<List<salve.core.web.SearchLive.Thumb>> google = new java.util.concurrent.FutureTask<>(() -> {
+            StringBuilder why = new StringBuilder();
+            List<salve.core.web.SearchLive.Thumb> seen = salve.core.web.SearchLive.lookAtImages(context, subject, 22_000, why);
+            if (why.length() > 0) googleWhy.append(why);
+            return seen;
+        });
+        Thread googleThread = new Thread(google, "salve-google-imagenes");
+        googleThread.setDaemon(true);
+        googleThread.start();
         okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
                 .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
                 .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
@@ -1909,25 +1919,35 @@ public class MotorConversacional {
         } catch (RuntimeException ignored) { /* sigue con el orden de siempre */ }
         ultimaMirada = null;
         salve.sketch.SketchJournal journal = salve.sketch.Sketches.journal(context);
-        long deadline = System.currentTimeMillis() + 45_000;
+        long deadline = System.currentTimeMillis() + 60_000;
         try {
             List<String> used = improving ? journal.usedReferences(subject) : java.util.Collections.emptyList();
-            List<salve.sketch.ImageReferenceSearch.Candidate> candidates =
-                    search.search(subject, concept == null ? null : concept.english, 7, used);
+            List<salve.sketch.ImageReferenceSearch.Candidate> commons;
+            java.io.IOException commonsError = null;
+            try { commons = search.search(subject, concept == null ? null : concept.english, 7, used); }
+            catch (java.io.IOException failed) { commons = java.util.Collections.emptyList(); commonsError = failed; }
+            // Las de Google van primero: las ha mirado con sus ojos y se parecen a lo que pidió Bryan.
+            List<salve.sketch.ImageReferenceSearch.Candidate> fromGoogle = miraMiniaturas(google, subject, used, googleWhy);
+            List<salve.sketch.ImageReferenceSearch.Candidate> candidates = new java.util.ArrayList<>(fromGoogle);
+            candidates.addAll(commons);
+            String googleNote = fromGoogle.isEmpty() && googleWhy.length() > 0 ? " Google Imágenes: " + googleWhy + "." : "";
             if (candidates.isEmpty()) {
+                if (commonsError != null) throw new java.io.IOException(commonsError.getMessage() + googleNote, commonsError);
                 if (used.isEmpty() && fuente != null) aprenderFuente(fuente, false, "0 imágenes (" + search.diagnostic() + ")");
-                referenceFailure = (used.isEmpty() ? "no había imágenes libres de «" + subject + "»"
-                        : "no quedaban imágenes distintas de las que ya usaste") + " [" + search.diagnostic() + "]";
-                turnSketchStatus = "Busqué referencias de «" + subject + "» en Wikimedia Commons y no encontré imágenes ("
-                        + search.diagnostic() + ").";
+                referenceFailure = (used.isEmpty() ? "no había imágenes de «" + subject + "»"
+                        : "no quedaban imágenes distintas de las que ya usaste") + " [" + search.diagnostic() + "]" + googleNote;
+                turnSketchStatus = "Busqué referencias de «" + subject + "» en Google Imágenes y Wikimedia Commons y no encontré "
+                        + "imágenes (" + search.diagnostic() + ")." + googleNote;
                 return null;
             }
             List<Object[]> scored = new java.util.ArrayList<>(); // {candidato, trazado, puntuación}
             int analyzed = 0, cropped = 0, failed = 0;
             for (salve.sketch.ImageReferenceSearch.Candidate c : candidates) {
-                if (closed || System.currentTimeMillis() > deadline || analyzed >= 5) break;
+                if (closed || (analyzed > 0 && System.currentTimeMillis() > deadline) || analyzed >= 6) break;
                 try {
-                    estado("Analizando la referencia " + (analyzed + 1) + " de " + Math.min(5, candidates.size()) + ": «" + c.label() + "»…");
+                    if (c.fromScreen()) salve.core.web.SearchLive.markImage(c.screenIndex, c.label(), false);
+                    estado("Analizando la referencia " + (analyzed + 1) + " de " + Math.min(6, candidates.size()) + ": «" + c.label()
+                            + "» (" + c.source + ")…");
                     byte[] bytes = search.download(c, 3_000_000);
                     // En una foto, primero mira dónde está el objeto y lo recorta: calca sólo eso, no el fondo.
                     float[] box = c.drawing || cropped >= 2 ? null : dondeEsta(bytes, subject);
@@ -1968,6 +1988,7 @@ public class MotorConversacional {
                         .append(look.seen.isEmpty() ? "no se reconocía" : "parecía " + look.seen);
             }
             salve.sketch.ImageReferenceSearch.Candidate best = (salve.sketch.ImageReferenceSearch.Candidate) chosen[0];
+            if (best.fromScreen()) salve.core.web.SearchLive.markImage(best.screenIndex, best.label(), true);
             ultimaMirada = chosenLook;
             if (fuente != null) aprenderFuente(fuente, true, "«" + best.label() + "»");
             salve.sketch.ImageTracer.Result bestTrace = (salve.sketch.ImageTracer.Result) chosen[1];
@@ -1992,10 +2013,12 @@ public class MotorConversacional {
             parts.add(new salve.sketch.SketchLibrary.Part("silueta", "el contorno que da la forma de " + subject, 0, 1));
             if (ordered.size() > 1) parts.add(new salve.sketch.SketchLibrary.Part("detalles", "las líneas de dentro", 1, ordered.size()));
             salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(context, subject, ordered, bestTrace.aspect, "web", parts);
-            String how = "busqué referencias en Wikimedia Commons" + (concept != null && !concept.english.isEmpty()
+            String how = "busqué referencias" + (fromGoogle.isEmpty() ? "" : " mirando Google Imágenes en la ventana ("
+                    + fromGoogle.size() + (fromGoogle.size() == 1 ? " miniatura útil)" : " miniaturas útiles)") + " y")
+                    + " en Wikimedia Commons" + (concept != null && !concept.english.isEmpty()
                     ? " (como «" + concept.english + "», priorizando siluetas y dibujos de línea)" : "")
-                    + ", analicé " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegí «" + best.label() + "» ("
-                    + (best.drawing ? "dibujo vectorial" : "foto") + "); me quedé con sus contornos principales: "
+                    + ", analicé " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegí «" + best.label() + "» de "
+                    + best.source + " (" + (best.drawing ? "un dibujo" : "una foto") + "); me quedé con sus contornos principales: "
                     + bestTrace.geometry.describe()
                     + (cropped > 0 ? " En las fotos, primero miré dónde estaba y recorté sólo eso." : "")
                     + " No lo copié tal cual: " + mine.describe() + "; " + vectors.describe() + "."
@@ -2007,13 +2030,13 @@ public class MotorConversacional {
             attempt.selfCheck = chosenLook == null ? null : chosenLook.describe(subject); attempt.wish = wish;
             journal.record(subject, attempt);
             registrarAccion(salve.core.mind.SelfActionLog.Kind.WEB_REFERENCE, subject, how);
-            turnSketchStatus = "Referencia: «" + best.label() + "» de Wikimedia Commons (" + analyzed + " analizadas"
+            turnSketchStatus = "Referencia: «" + best.label() + "» de " + best.source + " (" + analyzed + " analizadas"
                     + (cropped > 0 ? ", " + cropped + " recortadas" : "") + "); " + mine.describe() + "; "
                     + vectors.segments() + " curvas de Bézier propias.";
             referenceNote = "ACCION_REALIZADA: " + (improving ? "has rehecho «" + subject + "» tú misma sin copiar la versión anterior: " : "")
                     + "pensaste cómo es («" + (concept == null ? subject : concept.summary()) + "»), buscaste referencias en internet, "
-                    + "analizaste " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegiste «" + best.label() + "» ("
-                    + (best.drawing ? "un dibujo vectorial" : "una foto") + ")"
+                    + "analizaste " + analyzed + (analyzed == 1 ? " imagen" : " imágenes") + " y elegiste «" + best.label() + "» de "
+                    + best.source + " (" + (best.drawing ? "un dibujo" : "una foto") + ")"
                     + (discarded.length() > 0 ? "; antes " + discarded : "")
                     + (chosenLook != null ? ". Al mirar tu dibujo: " + chosenLook.describe(subject) : "")
                     + ". Ya lo estás dibujando y lo has aprendido así. Si no se parece a lo que quería, dilo y ofrece otra referencia."
@@ -2031,6 +2054,51 @@ public class MotorConversacional {
 
     /** Decodifica una imagen descargada a ≤320 px y analiza su geometría. */
     private salve.sketch.ImageTracer.Result trazarBytes(byte[] bytes) { return trazarBytes(bytes, null); }
+
+    /**
+     * Espera a lo que vio en Google Imágenes y mira las primeras miniaturas con sus ojos, como haría
+     * una persona: se queda con las que de verdad muestran lo pedido y anota si son dibujos o fotos.
+     * Sin visión, se queda con las primeras. Nunca lanza: sin miniaturas, lista vacía y el motivo en {@code why}.
+     */
+    private List<salve.sketch.ImageReferenceSearch.Candidate> miraMiniaturas(
+            java.util.concurrent.Future<List<salve.core.web.SearchLive.Thumb>> google, String subject,
+            List<String> used, StringBuffer why) {
+        List<salve.sketch.ImageReferenceSearch.Candidate> out = new java.util.ArrayList<>();
+        List<salve.core.web.SearchLive.Thumb> thumbs;
+        try { thumbs = google.get(24, java.util.concurrent.TimeUnit.SECONDS); }
+        catch (java.util.concurrent.TimeoutException slow) { google.cancel(true); why.append("no cargó a tiempo"); return out; }
+        catch (InterruptedException stop) { Thread.currentThread().interrupt(); return out; }
+        catch (java.util.concurrent.ExecutionException | RuntimeException failed) { why.append("falló al mirar la página"); return out; }
+        if (thumbs == null || thumbs.isEmpty()) return out;
+        boolean eyes = llm != null && llm.supportsVision();
+        int looked = 0, rejected = 0;
+        for (salve.core.web.SearchLive.Thumb thumb : thumbs) {
+            if (closed || out.size() >= 3 || looked >= 4) break;
+            salve.sketch.ImageReferenceSearch.Candidate c;
+            try { c = salve.sketch.ImageReferenceSearch.Candidate.fromScreen(thumb.alt, thumb.bytes, thumb.href, thumb.index); }
+            catch (IllegalArgumentException empty) { continue; }
+            if (used.contains(c.imageUrl)) continue; // al mejorar no repite la misma miniatura
+            if (!eyes) { out.add(c); continue; }
+            looked++;
+            salve.core.web.SearchLive.markImage(thumb.index, c.label(), false);
+            estado("Miro la miniatura " + looked + " de Google Imágenes: «" + c.label() + "»…");
+            Bitmap image = null;
+            try {
+                image = android.graphics.BitmapFactory.decodeByteArray(thumb.bytes, 0, thumb.bytes.length);
+                if (image == null) continue;
+                ModelResult r = llm.generateImageResult(salve.sketch.SketchTalk.thumbnailPrompt(subject), image);
+                salve.sketch.SketchTalk.Thumbnail seen = r != null && r.isSuccess()
+                        ? salve.sketch.SketchTalk.parseThumbnail(r.getText()) : null;
+                if (seen != null && !seen.useful()) { rejected++; continue; }
+                out.add(seen != null && seen.drawing && !c.drawing ? c.seenAs(true) : c);
+            } catch (Exception | OutOfMemoryError skip) {
+                Log.w(TAG, "No pude mirar una miniatura", skip);
+            } finally { if (image != null) image.recycle(); }
+        }
+        if (out.isEmpty()) why.append(rejected > 0 ? "miré " + looked + " miniaturas y ninguna mostraba «" + subject + "»"
+                : "no pude usar sus miniaturas");
+        return out;
+    }
 
     /** Con su visión, dónde está el objeto en la foto ({izq, arriba, der, abajo} en fracciones), o null. */
     private float[] dondeEsta(byte[] bytes, String subject) {

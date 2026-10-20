@@ -76,7 +76,19 @@ public final class MobileWorkspaceService extends Service {
             typed = tail.length() > 220 ? "…" + tail.substring(tail.length() - 219) : tail; typedShown = typed.length();
             renderFeed();
         }
+        @Override public void onImages(String subject, salve.core.web.SearchLive.ImagesCallback callback) { lookAtImages(subject, callback); }
+        @Override public void onMarkImage(int index, String label, boolean chosen) {
+            if (destroyed) return;
+            WebView view = web;
+            if (view != null) view.evaluateJavascript(salve.core.web.GoogleImages.markJs(index, chosen), null);
+            feed((chosen ? "✔ Elijo «" : "👁 Miro «") + shortText(label, 60) + "»");
+        }
     };
+    /** Quien espera las miniaturas de Google Imágenes (null si no hay una búsqueda de imágenes en curso). */
+    private salve.core.web.SearchLive.ImagesCallback pendingImages;
+    private int imagesAttempts;
+    private final Runnable collectImages = this::collectImages;
+    private final Runnable imagesTimeout = () -> finishImages(null, "Google Imágenes no terminó de cargar");
     /** Lo que Salve va haciendo (se enseña lo más reciente arriba). */
     private final java.util.ArrayDeque<String> feed = new java.util.ArrayDeque<>();
     private final java.util.ArrayDeque<String> readingUrls = new java.util.ArrayDeque<>();
@@ -313,6 +325,7 @@ public final class MobileWorkspaceService extends Service {
                 if (view != web || pageFailed || paused || recovery.state() == BrowserRecovery.State.WAITING_NETWORK
                         || recovery.state() == BrowserRecovery.State.FAILED) return;
                 recovery.ready();
+                if (pendingImages != null) { imagesPageReady(url); return; }
                 if (mediaQuery != null && mediaAutoplay && url.contains("/results")) { mediaAttempts = 0; findFirstVideo(); return; }
                 if (mediaQuery != null && url.contains("/watch")) { startVideo(); return; }
                 report("Página cargada · " + Uri.parse(url).getHost() + ". Puedes abrir los resultados. Si pide verificación, complétala aquí o en tu navegador.");
@@ -322,10 +335,15 @@ public final class MobileWorkspaceService extends Service {
                 pageFailed = true;
                 boolean retry = error.getErrorCode() == ERROR_HOST_LOOKUP || error.getErrorCode() == ERROR_CONNECT || error.getErrorCode() == ERROR_TIMEOUT;
                 recovery.failed(retry); nextRetry = SystemClock.elapsedRealtime() + 3000;
+                if (pendingImages != null && !retry) finishImages(null, "Google Imágenes no cargó");
                 report(recovery.state() == BrowserRecovery.State.WAITING_NETWORK ? "Conexión interrumpida. Recuperaré esta búsqueda si vuelve la red (máximo 2 intentos)." : "No se pudo cargar esta página. Puedes volver a buscar o abrir el navegador.");
             }
             @Override public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
-                if (view == web && request.isForMainFrame()) { pageFailed = true; recovery.failed(false); report("El sitio respondió HTTP " + response.getStatusCode() + ". No repetiré esta petición automáticamente."); }
+                if (view == web && request.isForMainFrame()) {
+                    pageFailed = true; recovery.failed(false); report("El sitio respondió HTTP " + response.getStatusCode() + ". No repetiré esta petición automáticamente.");
+                    if (pendingImages != null) finishImages(null, response.getStatusCode() == 429
+                            ? "Google pidió verificación (puedes completarla en la ventana)" : "Google respondió HTTP " + response.getStatusCode());
+                }
             }
             @Override public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel(); if (view == web) { pageFailed = true; recovery.failed(false); report("El certificado HTTPS no es válido. Carga detenida."); }
@@ -346,6 +364,7 @@ public final class MobileWorkspaceService extends Service {
         if (reviewing || locked()) { report("Termina la acción pendiente y desbloquea el móvil para buscar."); return; }
         try {
             mediaQuery = null; // Una búsqueda normal nunca reproduce sola.
+            finishImages(null, "empezó otra búsqueda en la ventana");
             String value = query.getText().toString();
             String url = MobileBrowserPolicy.searchUrl(WebSearchSettings.load(this, value), value);
             disposeBrowser(); createWebView(); // Isolates callbacks from the old search and any old forms.
@@ -356,6 +375,107 @@ public final class MobileWorkspaceService extends Service {
             else report("Sin conexión. Buscaré cuando vuelva la red durante los próximos 2 minutos.");
         } catch (IllegalArgumentException invalid) { report(invalid.getMessage()); }
         catch (RuntimeException unavailable) { recovery.pause(); report("No pude iniciar WebView. Comprueba que Android System WebView esté instalado y actualizado."); }
+    }
+    /**
+     * Google Imágenes en la ventana, para que Salve mire referencias como una persona: abre la
+     * búsqueda, espera a que se vean las miniaturas y se las pasa. Bryan ve lo mismo que ella.
+     */
+    private void lookAtImages(String subject, salve.core.web.SearchLive.ImagesCallback callback) {
+        if (destroyed || query == null) { callback.done(null, "la ventana está cerrada"); return; }
+        if (reviewing || locked()) { callback.done(null, "el móvil está bloqueado o hay una acción pendiente"); return; }
+        finishImages(null, "otra búsqueda de imágenes la sustituyó");
+        String url;
+        try { url = salve.core.web.GoogleImages.url(subject); }
+        catch (IllegalArgumentException invalid) { callback.done(null, invalid.getMessage()); return; }
+        if (!MobileBrowserPolicy.allowed(url)) { callback.done(null, "la ventana no puede abrir Google Imágenes"); return; }
+        try {
+            mediaQuery = null; readings.clear(); readingUrls.clear(); showReadings();
+            disposeBrowser(); createWebView();
+            paused = false; pageFailed = false;
+            pendingImages = callback; imagesAttempts = 0;
+            recovery.begin(url, online(), SystemClock.elapsedRealtime());
+            browsing = true; tab(true); collapse(false); releaseFocus(); applyMode();
+            query.setText(subject);
+            feed("🖼 Miro Google Imágenes: «" + shortText(subject, 60) + "»");
+            main.postDelayed(imagesTimeout, 20_000);
+            if (recovery.state() == BrowserRecovery.State.LOADING) web.loadUrl(url);
+            else finishImages(null, "sin conexión");
+        } catch (RuntimeException unavailable) { finishImages(null, "no pude abrir el navegador de la ventana"); }
+    }
+    private void imagesPageReady(String url) {
+        switch (salve.core.web.GoogleImages.blocker(url)) {
+            case VERIFICATION:
+                feed("⚠ Google pide verificación. Si quieres, complétala aquí.");
+                finishImages(null, "Google pidió verificación (puedes completarla en la ventana)"); return;
+            case CONSENT:
+                feed("⚠ Google pregunta por las cookies. Elige en la ventana y vuelve a pedírmelo.");
+                finishImages(null, "Google pidió aceptar o rechazar cookies en la ventana"); return;
+            case NONE:
+                report("Mirando las miniaturas de Google Imágenes…");
+                main.removeCallbacks(collectImages);
+                main.postDelayed(collectImages, 900); // las miniaturas terminan de pintarse tras cargar
+                return;
+            default:
+                finishImages(null, "Google llevó a otra página");
+        }
+    }
+    /** Lee las miniaturas visibles; si aún no hay suficientes, espera un poco y vuelve a mirar. */
+    private void collectImages() {
+        WebView view = web;
+        if (view == null || destroyed || pendingImages == null) return;
+        view.evaluateJavascript(salve.core.web.GoogleImages.COLLECT_JS, value -> {
+            if (destroyed || web != view || pendingImages == null) return;
+            salve.core.web.GoogleImages.Page page = salve.core.web.GoogleImages.parse(value);
+            if (page.spots.size() < 4 && ++imagesAttempts < 6) { main.postDelayed(collectImages, 700); return; }
+            java.util.List<salve.core.web.SearchLive.Thumb> thumbs = thumbs(view, page);
+            feed(thumbs.isEmpty() ? "⚠ No veo miniaturas en Google Imágenes" : "👁 Veo " + thumbs.size() + " miniaturas en Google Imágenes");
+            finishImages(thumbs, thumbs.isEmpty() ? "no vi miniaturas en la página" : null);
+        });
+    }
+    /** Cada miniatura: la incrustada en la página o, si no la hay, recortada de lo que se ve en pantalla. */
+    private java.util.List<salve.core.web.SearchLive.Thumb> thumbs(WebView view, salve.core.web.GoogleImages.Page page) {
+        java.util.List<salve.core.web.SearchLive.Thumb> out = new java.util.ArrayList<>();
+        android.graphics.Bitmap screen = null;
+        try {
+            for (salve.core.web.GoogleImages.Spot spot : page.spots) {
+                if (out.size() >= 8) break;
+                byte[] bytes = spot.bytes;
+                if (bytes == null && page.viewportW > 0 && spot.visible(page.viewportW, page.viewportH)) {
+                    if (screen == null) screen = capture(view);
+                    if (screen != null) bytes = crop(screen, spot, view.getWidth() / page.viewportW);
+                }
+                if (bytes != null) out.add(new salve.core.web.SearchLive.Thumb(spot.index, spot.alt, spot.href, bytes));
+            }
+        } finally { if (screen != null) screen.recycle(); }
+        return out;
+    }
+    /** Lo que la ventana enseña ahora mismo, como una captura. */
+    private android.graphics.Bitmap capture(WebView view) {
+        if (view.getWidth() <= 0 || view.getHeight() <= 0 || view.getVisibility() != View.VISIBLE) return null;
+        try {
+            android.graphics.Bitmap shot = android.graphics.Bitmap.createBitmap(view.getWidth(), view.getHeight(), android.graphics.Bitmap.Config.ARGB_8888);
+            view.draw(new android.graphics.Canvas(shot));
+            return shot;
+        } catch (RuntimeException | OutOfMemoryError unavailable) { return null; }
+    }
+    private static byte[] crop(android.graphics.Bitmap screen, salve.core.web.GoogleImages.Spot spot, float scale) {
+        int x = Math.max(0, Math.round(spot.x * scale)), y = Math.max(0, Math.round(spot.y * scale));
+        int w = Math.min(screen.getWidth() - x, Math.round(spot.w * scale)), h = Math.min(screen.getHeight() - y, Math.round(spot.h * scale));
+        if (w < 24 || h < 24) return null;
+        android.graphics.Bitmap part = null;
+        try {
+            part = android.graphics.Bitmap.createBitmap(screen, x, y, w, h);
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            part.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+            return out.toByteArray();
+        } catch (RuntimeException | OutOfMemoryError unavailable) { return null; }
+        finally { if (part != null && part != screen) part.recycle(); }
+    }
+    private void finishImages(java.util.List<salve.core.web.SearchLive.Thumb> thumbs, String problem) {
+        salve.core.web.SearchLive.ImagesCallback callback = pendingImages;
+        pendingImages = null;
+        main.removeCallbacks(imagesTimeout); main.removeCallbacks(collectImages);
+        if (callback != null) callback.done(thumbs == null ? java.util.Collections.emptyList() : thumbs, problem);
     }
     private void showReadings() {
         if (trace == null) return;
@@ -386,6 +506,7 @@ public final class MobileWorkspaceService extends Service {
     private void playMedia(String value, boolean autoplay) {
         if (reviewing || locked()) { report("Desbloquea el móvil para poner música."); return; }
         String url = salve.core.web.MediaRequest.searchUrl(value);
+        finishImages(null, "la ventana pasó a reproducir música");
         mediaQuery = value; mediaAutoplay = autoplay; readings.clear(); showReadings();
         disposeBrowser(); createWebView();
         paused = false; pageFailed = false;
@@ -444,6 +565,7 @@ public final class MobileWorkspaceService extends Service {
     }
     private void pause() {
         paused = true; recovery.pause(); if (web != null) web.stopLoading(); pendingText = "";
+        finishImages(null, "pausaste la ventana");
         SalveAccessibilityService service = SalveAccessibilityService.getInstance();
         if (reviewing && service != null) service.cancelarConfirmacion();
         releaseFocus(); report("Panel pausado. Búsqueda y acción pendiente detenidas; pulsa Buscar para empezar de nuevo.");
@@ -580,6 +702,7 @@ public final class MobileWorkspaceService extends Service {
     }
     @Override public void onConfigurationChanged(Configuration configuration) { super.onConfigurationChanged(configuration); if (layout != null) { bounds(); update(); } }
     @Override public void onDestroy() {
+        finishImages(null, "la ventana se cerró");
         destroyed = true; main.removeCallbacksAndMessages(null); recovery.pause(); salve.core.web.SearchLive.unregister(live);
         if (receiverRegistered) unregisterReceiver(screen);
         if (networkRegistered) try { connectivity.unregisterNetworkCallback(network); } catch (RuntimeException ignored) { }
