@@ -31,9 +31,10 @@ public class ImageReferenceSearchTest {
         assertTrue(found.get(0).drawing);
         for (ImageReferenceSearch.Candidate c : found) {
             assertTrue(c.imageUrl, ImageReferenceSearch.allowedImage(c.imageUrl));
-            assertFalse("nunca usa la dirección de otro servidor", c.imageUrl.contains("example.com"));
         }
-        try { search.download(new ImageReferenceSearch.Candidate("x", "https://example.com/a.png", "", false), 10); fail(); }
+        assertTrue("otro servidor público también vale: lo decide si cumple con lo pedido",
+                found.stream().anyMatch(c -> c.imageUrl.equals("https://example.com/x.png")));
+        try { search.download(new ImageReferenceSearch.Candidate("x", "https://192.168.1.5/a.png", "", false), 10); fail(); }
         catch (java.io.IOException expected) { }
     }
 
@@ -69,20 +70,43 @@ public class ImageReferenceSearchTest {
                 "https://commons.wikimedia.org/wiki/Special:FilePath/../w/api.php"));
     }
 
-    @Test public void thumbnailsFromOtherHostsAreAskedByName() {
-        // «origen ajeno×6» en el móvil: la miniatura de la API no era de upload.wikimedia.org.
+    @Test public void thumbnailsFromOtherServersAreUsed() {
+        // «origen ajeno×6» en el móvil: Salve no se limita por el servidor, solo por si cumple con lo pedido.
         String json = "{\"query\":{\"pages\":["
                 + "{\"title\":\"File:Gorilla icon.svg\",\"index\":1,\"imageinfo\":[{\"mime\":\"image/svg+xml\","
                 + "\"thumburl\":\"https://elsewhere.example/thumb/g.png\"}]},"
                 + "{\"title\":\"File:Gorilla sketch.png\",\"index\":2,\"imageinfo\":[{\"mime\":\"image/png\","
-                + "\"thumburl\":\"//upload.wikimedia.org/thumb/s.png\"}]}]}}";
-        List<ImageReferenceSearch.Candidate> found = ImageReferenceSearch.parseCommons(json, null);
-        assertEquals(2, found.size());
-        assertEquals("https://commons.wikimedia.org/wiki/Special:FilePath/Gorilla_icon.svg?width=480", found.get(0).imageUrl);
+                + "\"thumburl\":\"//upload.wikimedia.org/thumb/s.png\"}]},"
+                + "{\"title\":\"File:Gorilla home.png\",\"index\":3,\"imageinfo\":[{\"mime\":\"image/png\","
+                + "\"thumburl\":\"https://192.168.1.10/x.png\"}]}]}}";
+        StringBuilder why = new StringBuilder();
+        List<ImageReferenceSearch.Candidate> found = ImageReferenceSearch.parseCommons(json, why);
+        assertEquals(3, found.size());
+        assertEquals("https://elsewhere.example/thumb/g.png", found.get(0).imageUrl);
         assertEquals("https://upload.wikimedia.org/thumb/s.png", found.get(1).imageUrl);
+        assertEquals("la red de casa no: se pide por nombre a Commons",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/Gorilla_home.png?width=480", found.get(2).imageUrl);
+        assertTrue(why.toString(), why.toString().contains("de otro servidor"));
         assertEquals("https://upload.wikimedia.org/a.png", ImageReferenceSearch.wikimediaThumb("http://upload.wikimedia.org/a.png"));
-        assertNull(ImageReferenceSearch.wikimediaThumb("https://upload.wikimedia.org.evil.example/a.png"));
         assertNull(ImageReferenceSearch.wikimediaThumb("https://upload.wikimedia.org/../x"));
+    }
+
+    @Test public void anyPublicServerButNeverTheHomeNetwork() throws Exception {
+        assertTrue(ImageReferenceSearch.publicHttps("https://images.example.org/gorila.png"));
+        assertTrue(ImageReferenceSearch.allowedImage("https://cdn.otro-servidor.com/a/b.jpg?w=480"));
+        assertFalse("sin cifrar", ImageReferenceSearch.publicHttps("http://images.example.org/gorila.png"));
+        assertFalse(ImageReferenceSearch.publicHttps("https://192.168.1.1/admin.png"));
+        assertFalse(ImageReferenceSearch.publicHttps("https://[::1]/a.png"));
+        assertFalse(ImageReferenceSearch.publicHttps("https://localhost/a.png"));
+        assertFalse(ImageReferenceSearch.publicHttps("https://router.local/a.png"));
+        assertFalse(ImageReferenceSearch.publicHttps("https://nas/a.png"));
+        assertFalse(ImageReferenceSearch.publicHttps("https://user:pass@example.org/a.png"));
+        assertFalse(ImageReferenceSearch.publicHttps("file:///sdcard/a.png"));
+        assertTrue(ImageReferenceSearch.privateAddress(java.net.InetAddress.getByName("192.168.1.20")));
+        assertTrue(ImageReferenceSearch.privateAddress(java.net.InetAddress.getByName("10.0.0.2")));
+        assertTrue(ImageReferenceSearch.privateAddress(java.net.InetAddress.getByName("127.0.0.1")));
+        assertTrue(ImageReferenceSearch.privateAddress(java.net.InetAddress.getByName("fd00::1")));
+        assertFalse(ImageReferenceSearch.privateAddress(java.net.InetAddress.getByName("208.80.154.240")));
     }
 
     @Test public void theRequestIsNotPartOfTheObject() {

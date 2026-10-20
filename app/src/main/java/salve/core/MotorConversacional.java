@@ -1887,8 +1887,17 @@ public class MotorConversacional {
                 // IPv4 primero: en muchas redes móviles IPv6 no responde y cada petición agota el tiempo.
                 .dns(host -> {
                     java.util.List<java.net.InetAddress> all = new java.util.ArrayList<>(okhttp3.Dns.SYSTEM.lookup(host));
+                    // Las imágenes pueden venir de cualquier servidor público, nunca de la red de casa ni del móvil.
+                    all.removeIf(salve.sketch.ImageReferenceSearch::privateAddress);
+                    if (all.isEmpty()) throw new java.net.UnknownHostException(host + " no es un servidor público");
                     all.sort((x, y) -> Boolean.compare(!(x instanceof java.net.Inet4Address), !(y instanceof java.net.Inet4Address)));
                     return all;
+                })
+                // Cada salto de una redirección también tiene que ser HTTPS público.
+                .addNetworkInterceptor(chain -> {
+                    if (!salve.sketch.ImageReferenceSearch.publicHttps(chain.request().url().toString()))
+                        throw new java.io.IOException("Redirección a un origen no público");
+                    return chain.proceed(chain.request());
                 })
                 .retryOnConnectionFailure(true).build();
         salve.sketch.ImageReferenceSearch search = new salve.sketch.ImageReferenceSearch((url, maxBytes) -> {
