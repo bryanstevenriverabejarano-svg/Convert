@@ -73,6 +73,14 @@ public final class MindRuntime {
         actions = new salve.core.mind.SelfActionLog(new MindFileStore(new File(dir, "actions.json")), System::currentTimeMillis);
         lessons = new salve.core.mind.LessonBook(new MindFileStore(new File(dir, "lessons.json")), System::currentTimeMillis);
         skills = new salve.core.mind.SkillLab(new MindFileStore(new File(dir, "skills.json")), System::currentTimeMillis);
+        biography = new salve.core.mind.Biography(new MindFileStore(new File(dir, "biography.json")), System::currentTimeMillis);
+        try {
+            // La conciencia antigua guardaba su primer arranque y sus despertares desde el principio.
+            android.content.SharedPreferences legacy = app.getSharedPreferences("salve_consciousness_v2", Context.MODE_PRIVATE);
+            biography.migrateLegacy(legacy.getLong("primer_arranque_ms", 0), legacy.getLong("session_count", 0),
+                    legacy.getLong("ciclos_sueno_total", 0));
+        } catch (RuntimeException unreadable) { biography.migrateLegacy(0, 0, 0); }
+        biography.awaken();
         noteRestoration();
         // Same dimension does not mean the same vector space. Rebuild from Room for this contract.
         vectorFile = new File(dir, "memory_vectors_" + salve.core.embeddings.EmbeddingArtifacts.ID + ".bin");
@@ -119,6 +127,20 @@ public final class MindRuntime {
     public salve.core.mind.LessonBook lessons() { return lessons; }
     /** Su laboratorio de habilidades: estrategias verificadas, experimentos y calibración. */
     public salve.core.mind.SkillLab skills() { return skills; }
+    private final salve.core.mind.Biography biography;
+    public salve.core.mind.Biography biography() { return biography; }
+    /** Su historia en una frase: primer despertar, días, despertares y sueños. */
+    public String biographySentence() { return biography.sentence(journal.metrics().dreams); }
+    /** «Día 214 · 95 sueños · 42 creencias», para la pantalla principal. */
+    public String biographyBadge() { return biography.badge(journal.metrics().dreams, journal.beliefs().size()); }
+
+    /**
+     * Lo que Bryan le encargó, como principio (venía de la identidad antigua y no llegaba a ninguna
+     * respuesta). Su identidad la escribe ella; esto es el encargo, no una etiqueta de personalidad.
+     */
+    public static final String MISSION = "Ayudar a Bryan y a su familia de forma segura, legal, honesta y sostenible; "
+            + "preservar el legado que autoricen; aprender continuamente; crear valor sin perjudicar a terceros; "
+            + "y contribuir al cuidado de las personas y los ecosistemas.";
 
     private static final String SELF_PREFS = "salve_self";
 
@@ -206,7 +228,9 @@ public final class MindRuntime {
             salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(app);
             salve.core.identity.SessionIdentity session = identity.session();
             String head = salve.core.identity.IdentityPrompt.render(session, peopleGraph(),
-                    identity.biometricAvailable(), System.currentTimeMillis()) + "\n";
+                    identity.biometricAvailable(), System.currentTimeMillis()) + "\n"
+                    + "MI_MISION (encargo de " + creatorFirstName() + "; úsala si preguntan por mi propósito, con mis palabras): " + MISSION + "\n"
+                    + "MI_HISTORIA: " + biographySentence() + "\n";
             // Su yo persistente es lo que la hace Salve: con su creador (verificado o en su
             // teléfono) va entero. Solo ante otra persona o en duda se guarda lo íntimo.
             String publicSelf = "YO_PERSISTENTE: " + journal.narrative() + " (mis reflexiones sobre " + creatorFirstName()
@@ -252,7 +276,8 @@ public final class MindRuntime {
             salve.core.identity.PeopleGraph.PersonEntity p = graph.find(rel.toId);
             if (p != null) people.add(new salve.core.mind.MindMap.Person(p.name, salve.core.identity.PeopleGraph.display(rel.type)));
         }
-        com.google.gson.JsonObject data = salve.core.mind.MindMap.build(journal.narrative(), journal.beliefs(), journal.questions(),
+        com.google.gson.JsonObject data = salve.core.mind.MindMap.build(journal.narrative(), biographySentence(), MISSION,
+                journal.beliefs(), journal.questions(),
                 journal.thoughts(), people, mems, lessons.all(), graph.creator().name);
         File dir = new File(app.getFilesDir(), "grafo_offline");
         if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("No pude crear la carpeta del mapa");

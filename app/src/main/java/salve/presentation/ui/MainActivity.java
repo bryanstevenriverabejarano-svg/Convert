@@ -163,7 +163,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean activityResumed;
     
     // ===== CONCIENCIA FUNCIONAL =====
-    private salve.core.IdentidadNucleo identidadNucleo;
     private TextView tvNivelConciencia;
 
     // ===== ESTADO INTERNO =====
@@ -886,18 +885,9 @@ public class MainActivity extends AppCompatActivity {
         }
         // <<< aquí no tocamos MotorConversacional internamente, sólo dejamos la info preparada
 
-        // ==== CONCIENCIA FUNCIONAL ====
-        try {
-            tvNivelConciencia = findViewById(R.id.tvNivelConciencia);
-            identidadNucleo = salve.core.IdentidadNucleo.getInstance(this);
-
-            // Background inference belongs to the single, pausable goal worker.
-            actualizarNivelConcienciaUI();
-            Log.d("Salve::Main", "Conciencia funcional inicializada. Nivel: "
-                    + identidadNucleo.getNivelFuncionalLabel());
-        } catch (Exception e) {
-            Log.e("Salve::Main", "Error inicializando conciencia funcional (no fatal)", e);
-        }
+        // ==== SU HISTORIA (antes «nivel de conciencia», que era un contador de mensajes) ====
+        tvNivelConciencia = findViewById(R.id.tvNivelConciencia);
+        actualizarNivelConcienciaUI();
 
         modelDownloadViewModel = new ViewModelProvider(this).get(ModelDownloadViewModel.class);
 
@@ -1501,12 +1491,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // ==== CONCIENCIA FUNCIONAL: UI ====
+    /** «Día 214 · 95 sueños · 42 creencias»: datos reales de su mente, leídos fuera del hilo principal. */
     private void actualizarNivelConcienciaUI() {
-        if (tvNivelConciencia != null && identidadNucleo != null) {
-            String nivel = identidadNucleo.getNivelFuncionalLabel();
-            long exp = identidadNucleo.getExperienciasTotales();
-            tvNivelConciencia.setText("Nivel: " + nivel + " | Exp: " + exp);
-        }
+        if (tvNivelConciencia == null) return;
+        TextView label = tvNivelConciencia;
+        new Thread(() -> {
+            String badge;
+            try { badge = salve.core.MindRuntime.get(getApplicationContext()).biographyBadge(); }
+            catch (RuntimeException unavailable) { return; }
+            runOnUiThread(() -> label.setText(badge));
+        }, "Salve-Historia").start();
     }
 
     private void verificarPermisoCamara() {

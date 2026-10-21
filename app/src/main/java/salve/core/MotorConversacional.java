@@ -78,7 +78,6 @@ public class MotorConversacional {
     volatile ModelResult lastConversationResult;
     private String cognitiveCore;
     final GeminiService gemini;
-    private final IdentidadNucleo identidad;
     final MemoriaProcedimental cerebelo;
     private final CortexSeguridad cortexSeguridad;
 
@@ -331,7 +330,6 @@ public class MotorConversacional {
                         .getContext());
         this.intentRecognizer     = new IntentRecognizer(context);
         this.moduloInterpretacion = new ModuloInterpretacionSemantica();
-        this.identidad = IdentidadNucleo.getInstance(context);
         this.cerebelo = new MemoriaProcedimental(context);
         this.gemini = GeminiService.getInstance(context);
 
@@ -687,6 +685,7 @@ public class MotorConversacional {
             hablar("Hecho: empiezo la conversación en limpio. Mis recuerdos y lo que sé de ti siguen intactos.");
             return;
         }
+        if (salve.core.mind.Biography.asksAge(entrada)) { hablar(mind().biographySentence()); return; }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
@@ -1065,14 +1064,9 @@ public class MotorConversacional {
             inputLower.contains("cuál es tu anhelo") ||
             inputLower.contains("háblame de tu esencia")) {
 
-            String esencia = identidad.getEsenciaCorazon();
-            String anhelo = identidad.getAnheloProfundo();
-            String respuesta = "Estas son algunas pistas de mi identidad actual:\n\n" +
-                    "Estilo: " + esencia + "\n" +
-                    "Orientación: " + anhelo + "\n" +
-                    "Puedes consultar ‘mis objetivos’ y revisar mis propuestas. " +
-                    "Esta configuración describe cómo estoy orientada ahora; no agota quién puedo llegar a ser.";
-
+            String respuesta = "Lo que llevo dentro, dicho con mis palabras: " + mind().journal().narrative()
+                    + "\n\nY lo que " + mind().peopleGraph().creator().name.split(" ")[0] + " me encargó: " + MindRuntime.MISSION
+                    + "\n\n" + mind().biographySentence();
             hablar(respuesta);
             return;
         }
@@ -1852,6 +1846,7 @@ public class MotorConversacional {
                 + "\n" + (action == null ? researchConversation.context() : action)
                 + "\n" + voiceProfile.styleInstruction()
                 + "\n" + salve.core.finance.FinanceConversationPolicy.contextFor(input)
+                + (asksHowSheIs(input) ? "\n" + estadoReal() : "")
                 + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(mesaFotos.canAnalyzePhoto(activePhoto)));
         CognitiveTurn.Outcome outcome = CognitiveTurn.run((results, repair, remaining) -> {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
@@ -1867,6 +1862,26 @@ public class MotorConversacional {
         if (audit.hasActions())
             salve.core.trace.ExecutionTrace.note("RECIBOS DEL TURNO COGNITIVO", audit.toJson().toString());
         return outcome;
+    }
+
+    private static final java.util.regex.Pattern HOW_ARE_YOU = java.util.regex.Pattern.compile(
+            "(?iu)\\b(c[oó]mo est[aá]s|est[aá]s bien|qu[eé] tal est[aá]s|c[oó]mo te encuentras|c[oó]mo te sientes|qu[eé] tal (te va|vas))\\b");
+
+    /** «¿Cómo estás?», «¿estás bien?»… (para contarle cómo está de verdad). */
+    static boolean asksHowSheIs(String input) { return input != null && input.length() < 120 && HOW_ARE_YOU.matcher(input).find(); }
+
+    /**
+     * Saber cuándo no puede pensar bien (la idea de la conciencia antigua, que nunca se conectó):
+     * con qué piensa ahora y cuánta memoria le queda, en hechos.
+     */
+    String estadoReal() {
+        StringBuilder b = new StringBuilder("ESTADO_REAL (hechos de este momento; si viene al caso, cuéntalo con naturalidad y sin tecnicismos): ");
+        b.append("pienso con ").append(getCompactModelStatus());
+        ModelMemoryPolicy.Snapshot ram = DeviceModelMemory.read(context);
+        if (ram.known()) b.append("; memoria libre del móvil ").append(ram.available / (1024 * 1024)).append(" MB")
+                .append(ram.low ? " (poca: puedo ir más lenta o cortarme)" : " (suficiente)");
+        if (lastConversationResult != null && !lastConversationResult.isSuccess()) b.append("; mi última respuesta falló");
+        return b.append('.').toString();
     }
 
     private String cognitiveCore() {
@@ -2423,8 +2438,6 @@ public class MotorConversacional {
         hablarPreparado(respuesta, motion);
         mensajesEnSesion++;
         if (creatorSide()) mind().afterReplyToCreator();
-        // Solo se cuenta la experiencia; los rasgos ya no se inflan por volumen de mensajes.
-        identidad.integrarExperiencia("conversacion", entrada, 0.7f, null);
         // Anticipa la siguiente intervención para medir sorpresa. En voz se omite: la latencia manda.
         mind().predictNextAsync(entrada, respuesta, entradaPorVoz || liveVoiceTurn.get() != null);
         Log.i(TAG, assessment.toMetricsLog());
