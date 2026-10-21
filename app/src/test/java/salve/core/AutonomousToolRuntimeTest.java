@@ -16,6 +16,25 @@ public class AutonomousToolRuntimeTest {
     private static final String CHALLENGE = "{\"schema\":1,\"id\":\"consulta\",\"family\":\"dependencies\","
             + "\"input\":{\"nodes\":3,\"edges\":[[0,1],[1,2]]}}";
 
+    @Test public void explicitBlindLearningExperimentDoesNotInstallOrWritePersonalHistory() {
+        File state = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(state);
+        assertTrue(AutonomousToolRuntime.handles("experimento de aprendizaje"));
+        assertFalse(AutonomousToolRuntime.handles("puedes experimentar con algo"));
+        String report = runtime.respond("experimento de aprendizaje", () -> false);
+        assertTrue(report, report.contains("EXPERIMENTO DE APRENDIZAJE LOCAL"));
+        assertTrue(report, report.contains("\"skill_installed\":false"));
+        assertTrue(report, report.contains("\"final_exam_reused_for_training\":false"));
+        assertFalse("no instalar ninguna habilidad desde el experimento",
+                new File(folder.getRoot(), "inductive-skills.json").exists());
+        assertFalse(state.exists());
+        assertFalse(new File(folder.getRoot(), "proposed-inductive-skill.json").exists());
+        runtime.pause();
+        assertTrue(runtime.respond("experimento de aprendizaje", () -> false)
+                .contains("laboratorio pausado"));
+        assertFalse(new File(folder.getRoot(), "inductive-skills.json").exists());
+    }
+
     @Test public void directCommandRunsRealLabAndPersistsVerifiedTool() throws Exception {
         File file = new File(folder.getRoot(), "tools.json");
         String result = new AutonomousToolRuntime(file).respond("resuelve reto: " + CHALLENGE, () -> false);
