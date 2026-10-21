@@ -46,6 +46,8 @@ public class AgentArithmeticTaskTest {
         AgentRun r = new AgentRun();
         r.goal = "Calcula 34 + 87";
         assertNull(AgentPolicy.denial(r, "math.compute", r.goal));
+        assertNotNull("un cálculo local no debe activar búsquedas externas",
+                AgentPolicy.denial(r, "web.search", r.goal));
         assertNotNull(AgentPolicy.denial(r, "math.compute", "Calcula 35 + 87"));
         r.codeAllowed = true;
         assertNotNull(AgentPolicy.denial(r, "math.compute", r.goal));
