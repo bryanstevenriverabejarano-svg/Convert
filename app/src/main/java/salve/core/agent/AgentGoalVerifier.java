@@ -1,6 +1,9 @@
 package salve.core.agent;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -10,8 +13,17 @@ public final class AgentGoalVerifier {
     public static final class Result {
         public final Verdict verdict;
         public final String criterion, evidenceId;
+        public final List<String> evidenceIds;
         Result(Verdict verdict, String criterion, String evidenceId) {
-            this.verdict = verdict; this.criterion = criterion; this.evidenceId = evidenceId;
+            this(verdict, criterion, evidenceId,
+                    evidenceId.isEmpty() ? Collections.emptyList()
+                            : Collections.singletonList(evidenceId));
+        }
+        Result(Verdict verdict, String criterion, String evidenceId, List<String> evidenceIds) {
+            this.verdict = verdict;
+            this.criterion = criterion;
+            this.evidenceId = evidenceId;
+            this.evidenceIds = Collections.unmodifiableList(new ArrayList<>(evidenceIds));
         }
     }
     private AgentGoalVerifier() { }
@@ -20,6 +32,10 @@ public final class AgentGoalVerifier {
     public static Result evaluate(AgentRun run) {
         if (run == null || run.goal == null || run.codeAllowed)
             return new Result(Verdict.UNKNOWN, "NONE", "");
+        // Concrete two-step goals are tried before the legacy one-URL parser.
+        // Unbounded research and synthesis are still unsupported.
+        Result steps = AgentMultiStepVerifier.evaluate(run);
+        if (steps != null) return steps;
         String phrase = run.goal.trim();
         String lower = phrase.toLowerCase(Locale.ROOT);
         String address = null;
