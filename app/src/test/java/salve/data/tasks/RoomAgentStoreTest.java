@@ -88,6 +88,52 @@ public class RoomAgentStoreTest {
         }, tools("SUCCESS"));
         assertEquals("SUCCEEDED", done.status); assertEquals(1, done.observations.size());
     }
+    @Test public void twoPublicReadStepsAreVerifiedAndPersistBothControllerReceipts() {
+        String first = "https://example.org/alpha-unseen";
+        String second = "https://example.net/beta-unseen";
+        AgentRun created = store.create("Lee " + first + " y " + second, false, "", now);
+        AgentEngine.Model model = prompt -> {
+            JsonObject data = JsonParser.parseString(
+                    prompt.substring(prompt.indexOf("DATOS=") + 6)).getAsJsonObject();
+            if (data.has("respuesta"))
+                return response("{\"verdict\":\"pass\",\"issue\":\"\"}");
+            com.google.gson.JsonArray observations = data.getAsJsonArray("observaciones");
+            if (observations.size() == 0)
+                return response("{\"tool\":\"web.read\",\"input\":\"" + first + "\"}");
+            if (observations.size() == 1)
+                return response("{\"tool\":\"web.read\",\"input\":\"" + second + "\"}");
+            String one = observations.get(0).getAsJsonObject().get("id").getAsString();
+            String two = observations.get(1).getAsJsonObject().get("id").getAsString();
+            return response("{\"answer\":\"He leído ambas fuentes públicas.\",\"evidence\":[\""
+                    + one + "\",\"" + two + "\"]}");
+        };
+        AgentEngine.Tools tools = new AgentEngine.Tools() {
+            public String capabilities(AgentRun run) { return "web.read"; }
+            public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call,
+                                                java.util.function.BooleanSupplier stop) {
+                assertEquals("web.read", call.tool);
+                assertTrue(call.input.equals(first) || call.input.equals(second));
+                AgentRun.Observation observation = new AgentRun.Observation(call.id, call.tool,
+                        "SUCCESS", "Páginas públicas recibidas");
+                observation.sources.add(call.input);
+                return observation;
+            }
+        };
+        AgentRun result = execute(created.id, model, tools);
+        assertEquals("SUCCEEDED", result.status);
+        assertEquals("VERIFIED", result.goalVerification);
+        assertEquals("PUBLIC_READ_SET", result.verificationCriterion);
+        assertEquals(2, result.verificationEvidenceIds.size());
+        assertEquals(result.observations.get(0).id, result.verificationEvidenceIds.get(0));
+        assertEquals(result.observations.get(1).id, result.verificationEvidenceIds.get(1));
+        assertEquals(2, result.observations.size());
+        db.close(); open();
+        AgentRun restored = store.get(created.id);
+        assertEquals("VERIFIED", restored.goalVerification);
+        assertEquals(result.verificationEvidenceIds, restored.verificationEvidenceIds);
+        assertEquals(1, memories());
+    }
+
     @Test public void directPublicReadIsIndependentlyVerifiedAndSurvivesRestart() {
         String url = "https://example.org/manual";
         AgentRun created = store.create("Lee " + url, false, "", now);
