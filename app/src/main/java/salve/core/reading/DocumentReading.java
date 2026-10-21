@@ -37,15 +37,72 @@ public final class DocumentReading {
     }
 
     /**
+     * Recompone los párrafos de un PDF. El extractor devuelve una línea por cada línea impresa
+     * («En su mente,» / «la realidad se traducía…»): se unen las líneas de un mismo párrafo, se
+     * arreglan las palabras partidas con guion y se separa donde acaba un párrafo (línea que
+     * termina en punto y es más corta que las demás) o hay un título (línea corta sin punto).
+     */
+    public static List<String> paragraphs(String text) {
+        List<String> out = new ArrayList<>();
+        if (text == null) return out;
+        String clean = text.replace("\r", "").replace(' ', ' ').replaceAll("[ \\t]+", " ");
+        for (String block : clean.split("\\n\\s*\\n")) {
+            String[] lines = block.split("\\n");
+            List<Integer> lens = new ArrayList<>();
+            for (String l : lines) if (!l.trim().isEmpty()) lens.add(l.trim().length());
+            if (lens.isEmpty()) continue;
+            Collections.sort(lens);
+            int typical = lens.get((int) Math.floor((lens.size() - 1) * 0.8));
+            StringBuilder cur = new StringBuilder();
+            for (String raw : lines) {
+                String line = raw.trim();
+                if (line.isEmpty()) continue;
+                boolean endsSentence = line.matches(".*[.!?…»”\":]$");
+                boolean shortLine = line.length() < typical * 0.75;
+                boolean heading = shortLine && !endsSentence && !line.matches(".*[,;]$") && line.length() <= 70
+                        && Character.isUpperCase(line.codePointAt(0)) && lens.size() > 1;
+                if (heading) {
+                    if (cur.length() > 0) { out.add(cur.toString().trim()); cur.setLength(0); }
+                    out.add(line);
+                    continue;
+                }
+                if (cur.length() > 0) {
+                    if (cur.charAt(cur.length() - 1) == '-' && Character.isLowerCase(line.codePointAt(0))) cur.setLength(cur.length() - 1);
+                    else cur.append(' ');
+                }
+                cur.append(line);
+                if (endsSentence && (shortLine || typical < 25 || lens.size() == 1)) { out.add(cur.toString().trim()); cur.setLength(0); }
+            }
+            if (cur.length() > 0) out.add(cur.toString().trim());
+        }
+        return out;
+    }
+
+    /** Un párrafo para la voz: entero si cabe; si no, cortado por frases (nunca a mitad de palabra). */
+    public static List<String> speechPieces(String paragraph, int max) {
+        List<String> out = new ArrayList<>();
+        String p = paragraph == null ? "" : paragraph.trim();
+        int limit = Math.max(200, max);
+        while (p.length() > limit) {
+            int cut = Math.max(p.lastIndexOf(". ", limit), Math.max(p.lastIndexOf("? ", limit), p.lastIndexOf("! ", limit)));
+            if (cut < limit / 3) cut = p.lastIndexOf(' ', limit);
+            if (cut <= 0) cut = limit;
+            out.add(p.substring(0, cut + 1).trim());
+            p = p.substring(cut + 1).trim();
+        }
+        if (!p.isEmpty()) out.add(p);
+        return out;
+    }
+
+    /**
      * Trocea por párrafos (sin cortar frases si se puede). Si salen más de {@link #MAX_CHUNKS},
      * se queda con partes repartidas por todo el texto, siempre el principio y el final.
      */
     public static Plan plan(String text) {
         List<String> all = new ArrayList<>();
-        String clean = text == null ? "" : text.replace("\r", "").replaceAll("[ \\t]+", " ").replaceAll("\\n{3,}", "\n\n").trim();
         StringBuilder cur = new StringBuilder();
-        for (String para : clean.split("\\n\\s*\\n|\\n(?=[A-ZÁÉÍÓÚÑ¿¡—«-])")) {
-            String p = para.replace('\n', ' ').trim();
+        for (String para : paragraphs(text)) {
+            String p = para.trim();
             if (p.isEmpty()) continue;
             while (p.length() > CHUNK_CHARS) {
                 int cut = p.lastIndexOf(". ", CHUNK_CHARS);
@@ -80,6 +137,11 @@ public final class DocumentReading {
 
     /** El análisis final, a partir de sus notas. Pide JSON para separar bien cada cosa. */
     public static String finalPrompt(Mode mode, String title, List<String> notes, boolean sampled) {
+        return finalPrompt(mode, title, notes, sampled, mode != Mode.LEARN);
+    }
+
+    /** @param opinion pedirle también su opinión sincera (en «otro» siempre va) */
+    public static String finalPrompt(Mode mode, String title, List<String> notes, boolean sampled, boolean opinion) {
         StringBuilder b = new StringBuilder("Has leído «").append(safe(title)).append("»")
                 .append(sampled ? " (era largo: leíste partes repartidas por todo el texto)" : "").append(". Tus notas, en orden:\n");
         for (int i = 0; i < notes.size(); i++) b.append("- Parte ").append(i + 1).append(": ").append(notes.get(i)).append('\n');
@@ -88,12 +150,13 @@ public final class DocumentReading {
             case STORY:
                 b.append("{\"titulo\":\"…\",\"resumen\":\"la historia en 3-5 frases, como se la contarías a Bryan\",\"personajes\":[\"nombre: cómo es\"],"
                         + "\"lugares\":[\"…\"],\"tema\":\"…\",\"moraleja\":\"… o vacío\",\"escenas\":[\"una frase por escena que se pueda dibujar, "
-                        + "con sus objetos (como mucho 4)\"],\"opinion\":\"qué te ha parecido, en 1-2 frases, con sinceridad\"}");
+                        + "con sus objetos (como mucho 4)\"]" + (opinion ? ",\"opinion\":\"qué te ha parecido, en 2-3 frases, con sinceridad\"" : "") + "}");
                 break;
             case LEARN:
                 b.append("{\"titulo\":\"…\",\"resumen\":\"de qué trata en 2-3 frases\",\"ideas\":[\"las ideas clave (como mucho 6)\"],"
                         + "\"datos\":[\"datos concretos que merece recordar\"],\"aprendi\":\"lo nuevo que has aprendido, en 1-2 frases\","
-                        + "\"preguntas\":[\"lo que te queda por entender\"]}");
+                        + "\"preguntas\":[\"lo que te queda por entender\"]" + (opinion ? ",\"opinion\":\"tu opinión sincera en 2-3 frases\"" : "")
+                        + ",\"escenas\":[\"si algo se puede dibujar (un objeto, un lugar), una frase por cada cosa (como mucho 3)\"]}");
                 break;
             default:
                 b.append("{\"titulo\":\"…\",\"resumen\":\"de qué trata en 2-3 frases\",\"fortalezas\":[\"…\"],\"debilidades\":[\"…\"],"
@@ -112,7 +175,13 @@ public final class DocumentReading {
         Analysis(Mode mode) { this.mode = mode; }
 
         /** Lo que le dice a Bryan. Párrafos separados (en un cuento, cada escena puede llevar su dibujo). */
-        public String spoken(boolean saved, boolean sampled) {
+        public String spoken(boolean saved, boolean sampled) { return spoken(saved, sampled, mode != Mode.LEARN, false); }
+
+        /**
+         * @param withOpinion incluir su opinión
+         * @param illustrated en un documento para aprender, las cosas dibujables van en párrafos propios (para su dibujo)
+         */
+        public String spoken(boolean saved, boolean sampled, boolean withOpinion, boolean illustrated) {
             StringBuilder b = new StringBuilder();
             switch (mode) {
                 case STORY:
@@ -121,9 +190,9 @@ public final class DocumentReading {
                     if (!places.isEmpty()) b.append(" Pasa en ").append(String.join(", ", places)).append('.');
                     if (!moral.isEmpty()) b.append("\n\nLo que nos enseña: ").append(moral);
                     for (String s : scenes) b.append("\n\n").append(s);
-                    if (!opinion.isEmpty()) b.append("\n\n").append(opinion);
-                    if (saved) b.append("\n\nLo he guardado en mis cuentos y en mis recuerdos: pídeme «léeme el cuento de ")
-                            .append(shortTitle(title)).append("» cuando quieras.");
+                    if (withOpinion && !opinion.isEmpty()) b.append("\n\nQué me ha parecido: ").append(opinion);
+                    b.append(saved ? "\n\nLo he guardado en mis cuentos y en mis recuerdos: pídeme «léeme el cuento de " + shortTitle(title)
+                            + "» cuando quieras." : "\n\nNo lo he guardado, como me pediste.");
                     break;
                 case LEARN:
                     b.append("He leído «").append(title).append("». ").append(summary);
@@ -131,7 +200,9 @@ public final class DocumentReading {
                     if (!facts.isEmpty()) b.append("\n\nDatos que me quedo:\n• ").append(String.join("\n• ", facts));
                     if (!learned.isEmpty()) b.append("\n\nLo nuevo para mí: ").append(learned);
                     if (!questions.isEmpty()) b.append("\n\nMe queda por entender: ").append(String.join("; ", questions)).append('.');
-                    if (saved) b.append("\n\nLo he guardado en mis recuerdos.");
+                    if (illustrated) for (String s : scenes) b.append("\n\n").append(s);
+                    if (withOpinion && !opinion.isEmpty()) b.append("\n\nMi opinión: ").append(opinion);
+                    b.append(saved ? "\n\nLo he guardado en mis recuerdos." : "\n\nNo lo he guardado, como me pediste.");
                     break;
                 default:
                     b.append("He leído «").append(title).append("». ").append(summary);
@@ -139,7 +210,7 @@ public final class DocumentReading {
                     if (!weaknesses.isEmpty()) b.append("\n\nLo más flojo:\n• ").append(String.join("\n• ", weaknesses));
                     if (!opinion.isEmpty()) b.append("\n\nMi opinión: ").append(opinion);
                     if (!improvements.isEmpty()) b.append("\n\nQué mejoraría:\n• ").append(String.join("\n• ", improvements));
-                    b.append("\n\nNo lo he guardado en mis recuerdos, como me pediste.");
+                    b.append(saved ? "\n\nLo he guardado en mis recuerdos, con mi opinión." : "\n\nNo lo he guardado en mis recuerdos, como me pediste.");
             }
             if (sampled) b.append("\n\n(Era largo, así que leí partes repartidas por todo el texto, no cada página.)");
             return b.toString().trim();
@@ -150,6 +221,9 @@ public final class DocumentReading {
             if (mode == Mode.STORY) return "Leí el cuento «" + title + "» el " + date + ": " + summary
                     + (characters.isEmpty() ? "" : " Personajes: " + String.join("; ", characters) + ".")
                     + (moral.isEmpty() ? "" : " Moraleja: " + moral) + (opinion.isEmpty() ? "" : " Me pareció: " + opinion);
+            if (mode == Mode.OPINION) return "Leí «" + title + "» el " + date + ": " + summary
+                    + (opinion.isEmpty() ? "" : " Mi opinión: " + opinion)
+                    + (weaknesses.isEmpty() ? "" : " Lo más flojo: " + String.join("; ", weaknesses) + ".");
             return "Leí «" + title + "» el " + date + " para aprender: " + summary
                     + (ideas.isEmpty() ? "" : " Ideas: " + String.join("; ", ideas) + ".")
                     + (facts.isEmpty() ? "" : " Datos: " + String.join("; ", facts) + ".")

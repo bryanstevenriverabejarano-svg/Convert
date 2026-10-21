@@ -2334,9 +2334,49 @@ public class MotorConversacional {
      * «aprender» (guardar lo importante) u «opinar» (analizar y opinar sin guardar nada)
      */
     public void leerDocumento(String name, String text, String mode) {
-        salve.core.reading.DocumentReading.Mode m = "cuento".equals(mode) ? salve.core.reading.DocumentReading.Mode.STORY
-                : "aprender".equals(mode) ? salve.core.reading.DocumentReading.Mode.LEARN : salve.core.reading.DocumentReading.Mode.OPINION;
+        salve.core.reading.DocumentReading.Mode m = modoLectura(mode);
         lectura.leer(name, text, m);
+    }
+
+    /** Con opciones combinables: ilustrarlo, opinar y guardarlo (o no). */
+    public void leerDocumento(String name, String text, String mode, boolean illustrate, boolean opinion, boolean save) {
+        lectura.leer(name, text, modoLectura(mode), illustrate, opinion, save);
+    }
+
+    private static salve.core.reading.DocumentReading.Mode modoLectura(String mode) {
+        return "cuento".equals(mode) ? salve.core.reading.DocumentReading.Mode.STORY
+                : "aprender".equals(mode) ? salve.core.reading.DocumentReading.Mode.LEARN : salve.core.reading.DocumentReading.Mode.OPINION;
+    }
+
+    private volatile boolean leyendoTexto;
+
+    /**
+     * Lee un texto en voz alta párrafo a párrafo, cada uno entero y en cola (sin cortar el anterior
+     * ni pasar por el filtro de bucles, que quitaba palabras repetidas como «de» o «la»). En el chat
+     * aparece una sola vez, con sus párrafos. Si Bryan habla o Salve responde, se detiene.
+     */
+    public synchronized void leerEnVozAlta(String title, String text) {
+        java.util.List<String> paras = salve.core.reading.DocumentReading.paragraphs(text);
+        if (paras.isEmpty() || closed) return;
+        SalveListener l = listener;
+        if (l != null) l.onHablar("Te lo leo: «" + salve.core.ReadingDesk.cleanTitle(title) + "»\n\n" + String.join("\n\n", paras));
+        if (tts == null || !ttsReady || listening) return;
+        leyendoTexto = true;
+        int max = Math.min(3500, TextToSpeech.getMaxSpeechInputLength());
+        for (String p : paras)
+            for (String piece : salve.core.reading.DocumentReading.speechPieces(p, max)) {
+                try { tts.speak(piece, TextToSpeech.QUEUE_ADD, null, "salve_read_" + (++utteranceSequence)); }
+                catch (RuntimeException unavailable) { leyendoTexto = false; return; }
+            }
+    }
+
+    /** ¿Sigue leyendo en voz alta un documento? */
+    boolean leyendoEnVozAlta() {
+        if (!leyendoTexto) return false;
+        boolean speaking;
+        try { speaking = tts != null && tts.isSpeaking(); } catch (RuntimeException e) { speaking = false; }
+        if (!speaking) leyendoTexto = false;
+        return speaking;
     }
 
 

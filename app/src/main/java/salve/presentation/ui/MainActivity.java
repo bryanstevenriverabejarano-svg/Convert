@@ -1307,26 +1307,45 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /** ¿Qué hace Salve con lo que le das? Guardarlo o no lo decide Bryan, cada vez. */
+    /**
+     * ¿Qué hace Salve con lo que le das? El tipo (cuento, para aprender u otro) propone opciones y
+     * Bryan las combina como quiera: ilustrarlo, que opine, guardarlo o no, y leerlo en voz alta.
+     */
     private void mostrarModoLectura(String name, String texto) {
-        String[] modos = {"Es un cuento: entiéndelo, ilústralo y guárdalo en tus cuentos",
-                "Para aprender: guarda lo importante en tus recuerdos",
-                "Solo léelo y dame tu opinión (no guardes nada)"};
-        final int[] elegido = {0};
-        android.widget.CheckBox voz = new android.widget.CheckBox(this);
-        voz.setText("Léemelo también en voz alta");
-        int pad = (int) (20 * getResources().getDisplayMetrics().density);
-        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
-        box.setPadding(pad, 0, pad, 0); box.addView(voz);
+        float dp = getResources().getDisplayMetrics().density;
+        LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding((int) (20 * dp), (int) (8 * dp), (int) (20 * dp), 0);
+        android.widget.RadioGroup tipo = new android.widget.RadioGroup(this);
+        String[] tipos = {"Un cuento", "Para aprender", "Otro (informe, examen…)"};
+        int[] ids = new int[tipos.length];
+        for (int i = 0; i < tipos.length; i++) {
+            android.widget.RadioButton r = new android.widget.RadioButton(this);
+            ids[i] = android.view.View.generateViewId(); r.setId(ids[i]); r.setText(tipos[i]);
+            tipo.addView(r);
+        }
+        form.addView(tipo);
+        android.widget.CheckBox ilustrar = new android.widget.CheckBox(this); ilustrar.setText("Ilústralo (dibuja lo que se pueda)");
+        android.widget.CheckBox opinar = new android.widget.CheckBox(this); opinar.setText("Dame tu opinión");
+        android.widget.CheckBox guardar = new android.widget.CheckBox(this); guardar.setText("Guárdalo en tus recuerdos (y en tus cuentos si es un cuento)");
+        android.widget.CheckBox voz = new android.widget.CheckBox(this); voz.setText("Léemelo en voz alta, párrafo a párrafo");
+        form.addView(ilustrar); form.addView(opinar); form.addView(guardar); form.addView(voz);
+        // Cada tipo propone lo habitual; luego se puede cambiar.
+        tipo.setOnCheckedChangeListener((g, id) -> {
+            boolean cuento = id == ids[0], aprender = id == ids[1];
+            ilustrar.setChecked(cuento); opinar.setChecked(!aprender); guardar.setChecked(cuento || aprender);
+        });
+        tipo.check(ids[0]);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this); scroll.addView(form);
         new AlertDialog.Builder(this).setTitle("«" + name + "» (" + Math.max(1, texto.length() / 1800) + " pág. aprox.)")
-                .setSingleChoiceItems(modos, 0, (d, which) -> elegido[0] = which)
-                .setView(box)
+                .setView(scroll)
                 .setPositiveButton("Leer", (d, which) -> {
                     if (motorConversacional == null) return;
-                    String modo = elegido[0] == 0 ? "cuento" : elegido[0] == 1 ? "aprender" : "opinar";
-                    motorConversacional.leerDocumento(name, texto, modo);
-                    if (voz.isChecked()) speakTextInChunks(texto);
-                    if (elegido[0] != 2) guardarAprendizaje(elegido[0] == 0 ? "cuento" : "documento", texto);
+                    // Lo que está marcado al pulsar «Leer» (no un valor recordado de antes).
+                    int checked = tipo.getCheckedRadioButtonId();
+                    String modo = checked == ids[1] ? "aprender" : checked == ids[2] ? "opinar" : "cuento";
+                    motorConversacional.leerDocumento(name, texto, modo, ilustrar.isChecked(), opinar.isChecked(), guardar.isChecked());
+                    if (voz.isChecked()) motorConversacional.leerEnVozAlta(name, texto);
+                    if (guardar.isChecked()) guardarAprendizaje("cuento".equals(modo) ? "cuento" : "documento", texto);
                 })
                 .setNegativeButton("Cancelar", null).show();
     }
