@@ -48,6 +48,7 @@ public final class AgentExperience {
         });
         JsonArray plans = new JsonArray();
         Map<String, int[]> counts = new LinkedHashMap<>();
+        int independentlyVerifiedGoals = 0;
         for (AgentRun previous : candidates) {
             if (plans.size() >= 3) break;
             boolean included = false;
@@ -58,7 +59,14 @@ public final class AgentExperience {
                 counts.computeIfAbsent(o.tool, ignored -> new int[4])[index]++;
                 included = true;
             }
-            if (included) plans.add(previous.id);
+            if (included) {
+                plans.add(previous.id);
+                // Only independently rechecked outcomes count as verified goals.
+                // Raw tool SUCCESS and model "pass" remain operational statistics.
+                if ("VERIFIED".equals(previous.goalVerification)
+                        && AgentGoalVerifier.evaluate(previous).verdict == AgentGoalVerifier.Verdict.VERIFIED)
+                    independentlyVerifiedGoals++;
+            }
         }
         if (plans.isEmpty()) return "";
         JsonObject result = new JsonObject(); result.addProperty("version", 1); result.add("planes", plans);
@@ -70,6 +78,7 @@ public final class AgentExperience {
             tools.add(item);
         }
         result.add("herramientas", tools);
+        result.addProperty("objetivos_verificados", independentlyVerifiedGoals);
         String json = result.toString();
         return json.length() <= MAX_CONTEXT ? json : "";
     }
@@ -78,7 +87,9 @@ public final class AgentExperience {
         if (context.isEmpty()) return true;
         try {
             JsonObject o = JsonParser.parseString(context).getAsJsonObject();
-            if (o.size() != 3 || !integer(o.get("version"), 1, 1)) return false;
+            if ((o.size() != 3 && o.size() != 4) || !integer(o.get("version"), 1, 1)
+                    || o.has("objetivos_verificados")
+                    && !integer(o.get("objetivos_verificados"), 0, 3)) return false;
             JsonArray plans = o.getAsJsonArray("planes"), tools = o.getAsJsonArray("herramientas");
             if (plans.isEmpty() || plans.size() > 3 || tools.isEmpty() || tools.size() > AgentPolicy.TOOLS.size()) return false;
             Set<String> ids = new HashSet<>(), names = new HashSet<>();
@@ -108,6 +119,10 @@ public final class AgentExperience {
                     .append(item.get("parcial").getAsInt()).append(" parciales, ").append(item.get("error").getAsInt())
                     .append(" errores, ").append(item.get("bloqueo").getAsInt()).append(" bloqueos.\n");
         }
+        if (data.has("objetivos_verificados"))
+            text.append("Objetivos con criterio determinista satisfecho: ")
+                    .append(data.get("objetivos_verificados").getAsInt())
+                    .append(". No equivale a éxito general del modelo.\n");
         text.append("Planes de origen: ");
         for (JsonElement id : data.getAsJsonArray("planes")) text.append(id.getAsString(), 0, Math.min(8, id.getAsString().length())).append(' ');
         return text.toString();
