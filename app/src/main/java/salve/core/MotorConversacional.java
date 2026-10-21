@@ -81,7 +81,7 @@ public class MotorConversacional {
     final GeminiService gemini;
     private final ConsciousnessState conciencia;
     private final IdentidadNucleo identidad;
-    private final MemoriaProcedimental cerebelo;
+    final MemoriaProcedimental cerebelo;
     private final CortexSeguridad cortexSeguridad;
 
     private HipocampoSemantico hipocampo;
@@ -104,14 +104,14 @@ public class MotorConversacional {
     private volatile boolean listening;
     volatile boolean closed;
     // Only the visible conversation opts in; background workers do not drive the character.
-    private volatile AvatarMotionController.Session avatarSession;
-    private final ThreadLocal<Long> avatarTurn = new ThreadLocal<>();
-    private final ThreadLocal<Long> voiceTurn = new ThreadLocal<>();
+    volatile AvatarMotionController.Session avatarSession;
+    final ThreadLocal<Long> avatarTurn = new ThreadLocal<>();
+    final ThreadLocal<Long> voiceTurn = new ThreadLocal<>();
     private final VoiceTurnGate voiceTurnGate = new VoiceTurnGate();
     private long utteranceSequence;
     private volatile String activeUtterance;
     private final salve.core.voice.LiveVoiceChannel liveVoiceChannel = new salve.core.voice.LiveVoiceChannel();
-    private final ThreadLocal<salve.core.voice.LiveVoiceChannel.Ticket> liveVoiceTurn = new ThreadLocal<>();
+    final ThreadLocal<salve.core.voice.LiveVoiceChannel.Ticket> liveVoiceTurn = new ThreadLocal<>();
     private final ThreadLocal<salve.core.voice.VoiceReplyBatch<PendingVoiceResponse>> liveVoiceBatch = new ThreadLocal<>();
     private final ThreadLocal<Boolean> silentVoiceReplies = new ThreadLocal<>();
     private salve.core.voice.LiveVoiceChannel.Ticket activeUtteranceOwner;
@@ -128,13 +128,13 @@ public class MotorConversacional {
     }
 
     /** Preserve ownership across a task without leaking it into the next task on that thread. */
-    private void withVoiceContext(salve.core.voice.LiveVoiceChannel.Ticket owner,
+     void withVoiceContext(salve.core.voice.LiveVoiceChannel.Ticket owner,
                                   salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch,
                                   Runnable action) {
         withVoiceContext(owner, batch, false, action);
     }
 
-    private void withVoiceContext(salve.core.voice.LiveVoiceChannel.Ticket owner,
+     void withVoiceContext(salve.core.voice.LiveVoiceChannel.Ticket owner,
                                   salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch,
                                   boolean silent, Runnable action) {
         salve.core.voice.LiveVoiceChannel.Ticket previousOwner = liveVoiceTurn.get();
@@ -184,15 +184,6 @@ public class MotorConversacional {
         }
     }
 
-    private void postConversationTask(Runnable action) {
-        VoiceContinuation continuation = new VoiceContinuation();
-        try {
-            if (!toolHandler.post(() -> continuation.run(action))) continuation.abandon();
-        } catch (RuntimeException rejected) {
-            continuation.abandon();
-            throw rejected;
-        }
-    }
 
     private <T> void enqueueConversationTask(ColamensajesCognitivos.Prioridad priority, String label,
                                             java.util.concurrent.Callable<T> action) {
@@ -213,7 +204,7 @@ public class MotorConversacional {
         }
     }
 
-    private <T> void startConversationCallback(java.util.function.Consumer<java.util.function.Consumer<T>> start,
+     <T> void startConversationCallback(java.util.function.Consumer<java.util.function.Consumer<T>> start,
                                                 java.util.function.Consumer<T> result) {
         VoiceContinuation continuation = new VoiceContinuation();
         if (!isVoiceContextCurrent()) { continuation.abandon(); return; }
@@ -223,7 +214,7 @@ public class MotorConversacional {
         }
     }
 
-    private void publishConversationWeb(String title, String html, GestorDespliegueWeb.WebDeployCallback result) {
+     void publishConversationWeb(String title, String html, GestorDespliegueWeb.WebDeployCallback result) {
         VoiceContinuation continuation = new VoiceContinuation();
         if (!isVoiceContextCurrent()) { continuation.abandon(); return; }
         try {
@@ -236,7 +227,7 @@ public class MotorConversacional {
         }
     }
 
-    private boolean deferLegacyVoiceFlow() {
+     boolean deferLegacyVoiceFlow() {
         if (liveVoiceTurn.get() == null) return false;
         hablar("Ese flujo todavía necesita el chat escrito para mostrar sus pasos y resultados. "
                 + "No lo he iniciado desde el modo voz.");
@@ -259,7 +250,7 @@ public class MotorConversacional {
             new salve.core.research.ResearchConversation();
     private final DeviceClockContext deviceClock = new DeviceClockContext();
     private final salve.core.finance.PersonalBudgetService personalBudget;
-    private final GoalAutonomyRuntime goalAutonomy;
+    final GoalAutonomyRuntime goalAutonomy;
     private volatile MindRuntime mindRuntime;
     /** Permiso explícito de Bryan para enviar la foto activa a Gemini una sola vez. */
     private volatile boolean cloudPhotoOnce;
@@ -271,15 +262,13 @@ public class MotorConversacional {
         return value;
     }
     final AutonomousToolRuntime autonomousTools;
-    private static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
-    private static final long MEMORY_DELETION_TTL_MS = 2 * 60 * 1000L;
-    private volatile PendingToolAction pendingToolAction;
-    private final android.os.Handler toolHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private java.util.function.Consumer<Boolean> routineStepCompletion;
-    private long routineStepVersion;
-    private long activeRoutineEpoch;
-    private final java.util.concurrent.atomic.AtomicLong routineCancellationEpoch = new java.util.concurrent.atomic.AtomicLong();
-    private PendingMemoryDeletion pendingMemoryDeletion;
+    volatile PendingToolAction pendingToolAction;
+    final android.os.Handler toolHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+     java.util.function.Consumer<Boolean> routineStepCompletion;
+     long routineStepVersion;
+     long activeRoutineEpoch;
+    final java.util.concurrent.atomic.AtomicLong routineCancellationEpoch = new java.util.concurrent.atomic.AtomicLong();
+     PendingMemoryDeletion pendingMemoryDeletion;
 
     private boolean esperandoParamsGlifo = false;
     private int indiceParamGlifo = 0;
@@ -294,7 +283,7 @@ public class MotorConversacional {
         void onHablar(String texto);
     }
     public interface VoiceConversationListener extends salve.core.voice.LiveVoiceChannel.Listener { }
-    private SalveListener listener;
+     SalveListener listener;
 
     public void setListener(SalveListener listener) {
         this.listener = listener;
@@ -442,11 +431,11 @@ public class MotorConversacional {
         return VoiceSelectionPolicy.recognitionLanguageTag(choice);
     }
 
-    private void encolarEntrada(String entrada, boolean entradaPorVoz, boolean forcePrivateBudget) {
+     void encolarEntrada(String entrada, boolean entradaPorVoz, boolean forcePrivateBudget) {
         encolarEntrada(entrada, entradaPorVoz, forcePrivateBudget, null, null);
     }
 
-    private void encolarEntrada(String entrada, boolean entradaPorVoz, boolean forcePrivateBudget,
+     void encolarEntrada(String entrada, boolean entradaPorVoz, boolean forcePrivateBudget,
                                 salve.core.voice.LiveVoiceChannel.Ticket ticket,
                                 salve.core.voice.VoiceReplyBatch<PendingVoiceResponse> batch) {
         if (closed || entrada == null || entrada.trim().isEmpty()) return;
@@ -592,14 +581,14 @@ public class MotorConversacional {
         turnSketchStatus = null;
         turnSketchSubject = null;
         estado("Leyendo lo que me dices…");
-        String privateCheckpoint = puntoCriticoPrivado(entrada, entradaPorVoz, privateBudgetTurn);
+        String privateCheckpoint = mesaIdentidad.puntoCriticoPrivado(entrada, entradaPorVoz, privateBudgetTurn);
         if (privateCheckpoint != null) { hablar(privateCheckpoint); return; }
         turnFeatureOffer.set(null); // una oferta de un turno anterior nunca se cuela en este
-        String featureAnswer = respuestaOfertaPropia(entrada);
+        String featureAnswer = mesaFunciones.respuestaOfertaPropia(entrada);
         if (featureAnswer != null) { hablar(featureAnswer); return; }
-        String homeAnswer = respuestaHogar(entrada);
+        String homeAnswer = mesaFunciones.respuestaHogar(entrada);
         if (homeAnswer != null) { hablar(homeAnswer); return; }
-        String homeOrder = ordenHogar(entrada);
+        String homeOrder = mesaFunciones.ordenHogar(entrada);
         if (homeOrder != null) { hablar(homeOrder); return; }
         salve.core.mind.AttentionSchema.get().attend(salve.core.mind.AttentionSchema.topic(entrada),
                 salve.core.mind.AttentionSchema.Source.CONVERSATION, System.currentTimeMillis());
@@ -692,7 +681,7 @@ public class MotorConversacional {
             deliverResponse(motion.text, motion, false, true, true);
             return;
         }
-        String identityResponse = comandoIdentidad(entrada);
+        String identityResponse = mesaIdentidad.comandoIdentidad(entrada);
         if (identityResponse != null) { hablar(identityResponse); return; }
         if (salve.core.memory.TypoTolerantText.normalize(entrada).replaceFirst("^salve ", "")
                 .matches("(?:juega|ponte a jugar|vete a jugar)(?: un rato| un poco)?(?: tu sola| sola| por tu cuenta)?")) {
@@ -776,7 +765,7 @@ public class MotorConversacional {
             deliverResponse(userIdentity, AvatarMotionProtocol.parse(""), true, true, false);
             return;
         }
-        String selfConfirmed = storyTurn ? null : confirmarQueEsElCreador(entrada);
+        String selfConfirmed = storyTurn ? null : mesaIdentidad.confirmarQueEsElCreador(entrada);
         if (selfConfirmed != null) {
             deliverResponse(selfConfirmed, AvatarMotionProtocol.parse(""), true, true, false);
             return;
@@ -786,7 +775,7 @@ public class MotorConversacional {
 
         String approvalInput = entrada.trim().toLowerCase(Locale.ROOT);
         if (approvalInput.equals("confirmar olvido")) {
-            confirmarOlvidoPendiente();
+            mesaAcciones.confirmarOlvidoPendiente();
             return;
         }
         if (approvalInput.equals("cancelar olvido")) {
@@ -795,7 +784,7 @@ public class MotorConversacional {
             return;
         }
         if (approvalInput.equals("confirmar acción") || approvalInput.equals("confirmar accion")) {
-            confirmarAccionPendiente();
+            mesaAcciones.confirmarAccionPendiente();
             return;
         }
 
@@ -877,9 +866,9 @@ public class MotorConversacional {
             return;
         }
         String sketchContext = experienceContext + drawingContext + nubeContexto() + entenderHilo(entrada)
-                + conocimientoPropio(entrada)
-                + estrategiaRespuesta() + misActualizaciones(entrada) + misHabilidades(entrada);
-        if (procesarControlExplicito(entrada)) return;
+                + mesaFunciones.conocimientoPropio(entrada)
+                + estrategiaRespuesta() + mesaFunciones.misActualizaciones(entrada) + misHabilidades(entrada);
+        if (mesaAcciones.procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
         if (BuscadorDescargadorModelos.esSolicitudExplicita(entrada)) {
@@ -922,7 +911,7 @@ public class MotorConversacional {
             inputLower.contains("aprende a programar")) {
 
             hablar("Prepararé un fragmento de código y pediré una revisión. Te mostraré el resultado y lo que siga pendiente de probar.");
-            generarYGuardarCodigo(entrada);
+            mesaCodigo.generarYGuardarCodigo(entrada);
             return;
         }
 
@@ -960,7 +949,7 @@ public class MotorConversacional {
         if (inputLower.startsWith("escribe en el teclado")) {
             String text = entrada.substring("escribe en el teclado".length()).trim();
             if (text.isEmpty()) hablar("Indica el texto exacto que quieres escribir y selecciona el campo de destino.");
-            else prepararAccion(PendingToolAction.writeText(text, System.currentTimeMillis()));
+            else mesaAcciones.prepararAccion(PendingToolAction.writeText(text, System.currentTimeMillis()));
             return;
         }
 
@@ -1061,7 +1050,7 @@ public class MotorConversacional {
                         org.json.JSONObject comando = new org.json.JSONObject(jsonString);
 
                         int idObjetivo = comando.getInt("id_nodo");
-                        prepararAccion(PendingToolAction.tapNode(idObjetivo, System.currentTimeMillis()));
+                        mesaAcciones.prepararAccion(PendingToolAction.tapNode(idObjetivo, System.currentTimeMillis()));
 
                     } catch (Exception e) {
                         hablar("Mis tensores fallaron al generar las coordenadas de acción.");
@@ -1204,7 +1193,7 @@ public class MotorConversacional {
                 + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext() + sketchContext;
         // Si quien habla se presenta como otra persona, cambia el estado y no se pisa el perfil de Bryan.
         // En una historia, «soy el explorador Aric» es su personaje: no cambia quién habla ni su perfil.
-        boolean otherSpeaker = !storyTurn && registrarIdentidadDeclarada(entrada);
+        boolean otherSpeaker = !storyTurn && mesaIdentidad.registrarIdentidadDeclarada(entrada);
         if (storyTurn) responseContext += salve.core.conversation.StoryMode.promptBlock(story, entrada);
         if (!storyTurn && intent.type != IntentType.GUARDAR_RECUERDO && !otherSpeaker && creatorSide()) {
             MemoryProfileFact profileFact = MemoryWritePolicy.extractProfileFact(entrada);
@@ -1218,7 +1207,7 @@ public class MotorConversacional {
                 memoria.guardarRecuerdo(entrada, emocionDetectada, 7,
                         Arrays.asList("hecho_usuario", "declaracion_directa"));
             }
-            String learned = aprenderDatosPersonales(entrada, profileFact);
+            String learned = mesaIdentidad.aprenderDatosPersonales(entrada, profileFact);
             if (learned != null) {
                 mind().indexNewMemoriesAsync();
                 deliverResponse(learned, AvatarMotionProtocol.parse(""), true, true, false);
@@ -1415,52 +1404,8 @@ public class MotorConversacional {
         } catch (RuntimeException ignored) { return ""; }
     }
 
-    private volatile java.util.List<salve.core.mind.SelfUpdates.Update> selfUpdates;
 
-    private java.util.List<salve.core.mind.SelfUpdates.Update> selfUpdates() {
-        java.util.List<salve.core.mind.SelfUpdates.Update> u = selfUpdates;
-        if (u != null) return u;
-        try (java.io.InputStream in = context.getAssets().open("self/updates.json")) {
-            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
-            byte[] buffer = new byte[8192]; int n;
-            while ((n = in.read(buffer)) != -1) bytes.write(buffer, 0, n);
-            u = salve.core.mind.SelfUpdates.parse(new String(bytes.toByteArray(), java.nio.charset.StandardCharsets.UTF_8));
-        } catch (java.io.IOException | RuntimeException missing) { u = java.util.Collections.emptyList(); }
-        return selfUpdates = u;
-    }
 
-    /**
-     * Conciencia de sus propias actualizaciones: si le preguntan, sabe qué le cambiaron (hechos, no
-     * inventos); y la primera vez que habla tras instalar una versión nueva, nota lo que trae.
-     */
-    private String misActualizaciones(String entrada) {
-        try {
-            java.util.List<salve.core.mind.SelfUpdates.Update> all = selfUpdates();
-            if (all.isEmpty()) return "";
-            android.content.SharedPreferences prefs = context.getSharedPreferences("salve_self_updates", Context.MODE_PRIVATE);
-            long installed = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).lastUpdateTime;
-            String lastSeen = prefs.getString("last_seen", null);
-            java.util.List<salve.core.mind.SelfUpdates.Update> fresh = salve.core.mind.SelfUpdates.since(all, lastSeen);
-            String latest = all.get(all.size() - 1).id;
-            StringBuilder out = new StringBuilder();
-            if (installed != prefs.getLong("installed_at", 0L) && !fresh.isEmpty()) {
-                StringBuilder titles = new StringBuilder();
-                for (int i = Math.max(0, fresh.size() - 6); i < fresh.size(); i++)
-                    titles.append(titles.length() == 0 ? "" : "; ").append(fresh.get(i).title);
-                registrarAccion(salve.core.mind.SelfActionLog.Kind.UPDATED, "me actualizaron",
-                        "instalaron una versión nueva con: " + titles);
-                if (lastSeen != null) out.append(" | ME_ACTUALIZARON: desde la última vez te instalaron una versión nueva con: ")
-                        .append(titles).append(". Si viene al caso, coméntalo en una frase.");
-            }
-            prefs.edit().putLong("installed_at", installed).putString("last_seen", latest).apply();
-            if (salve.core.mind.SelfUpdates.asksAbout(entrada))
-                out.append(" | MIS_ACTUALIZACIONES (hechos: lo que me cambiaron, de lo más reciente a lo más antiguo):")
-                        .append(salve.core.mind.SelfUpdates.render(all, 5, 900))
-                        .append("\nOpina con criterio propio: qué notas distinto, qué te parece más útil y qué te falta todavía. "
-                                + "Habla de esto, no de tu personalidad en general, y no inventes cambios que no estén en la lista.");
-            return out.toString();
-        } catch (Exception ignored) { return ""; }
-    }
 
     // ───────────── laboratorio de habilidades: coordinación fuera del motor ─────────────
     final salve.core.conversation.ConversationSkillCoordinator skillCoordinator =
@@ -1601,175 +1546,14 @@ public class MotorConversacional {
             return true;
         }
         if (input.equals("que ves") || input.equals("qué ves") || input.equals("reconoce esto")) {
-            reconocerEntornoVisual();
+            mesaFotos.reconocerEntornoVisual();
             return true;
         }
         return false;
     }
 
-    private boolean procesarControlExplicito(String original) {
-        // Órdenes directas del usuario (nunca salida del modelo ni texto de páginas o mensajes).
-        salve.core.devicecontrol.AppActionCommand action = salve.core.devicecontrol.AppActionCommand.parse(original);
-        if (action != null) {
-            postConversationTask(() -> {
-                if (closed) return;
-                switch (action.type) {
-                    case NAVIGATE:
-                        hablar(salve.devices.PhoneActions.navigate(context, action.target)
-                                ? "Abro la ruta a " + action.target + "." : "No encontré ninguna app de mapas para abrir la ruta.");
-                        break;
-                    case MUSIC:
-                        hablar(salve.devices.PhoneActions.playMusic(context, action.target)
-                                ? "Pongo " + action.target + "." : "No encontré Spotify ni otra app de música que acepte búsquedas.");
-                        break;
-                    case CALL:
-                        try {
-                            context.startActivity(new Intent(context, salve.presentation.ui.DeviceControlActivity.class)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_CALL, action.target));
-                            hablar("Busco a " + action.target + ". Confirma en pantalla antes de que llame.");
-                        } catch (RuntimeException unavailable) { hablar("No pude abrir el panel de llamadas."); }
-                        break;
-                }
-            });
-            return true;
-        }
-        salve.core.devicecontrol.MobileCommand mobile = salve.core.devicecontrol.MobileCommand.parse(original);
-        if (mobile != null) {
-            postConversationTask(() -> {
-                if (closed) return;
-                Intent panel = new Intent(context, salve.presentation.ui.DeviceControlActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                if (mobile.type == salve.core.devicecontrol.MobileCommand.Type.WHATSAPP) {
-                    panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PHONE, mobile.draft.getPhone())
-                            .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_MESSAGE, mobile.draft.getMessage());
-                } else {
-                    panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PANEL, true)
-                            .putExtra(salve.services.MobileWorkspaceService.QUERY, mobile.query);
-                }
-                try {
-                    context.startActivity(panel);
-                    hablar(mobile.draft == null ? "Abro el panel flotante de Salve. Si Android lo pide, activa Mostrar sobre otras apps."
-                            : "He preparado el borrador. Revisa el número y el texto antes de abrirlo en WhatsApp; todavía no se ha enviado.");
-                } catch (RuntimeException unavailable) { hablar("No pude abrir el panel móvil. Puedes abrirlo desde Mi móvil."); }
-            });
-            return true;
-        }
-        salve.core.tools.AssistantControlCommand command = salve.core.tools.AssistantControlCommand.parse(original);
-        if (command == null) return false;
-        switch (command.type) {
-            case FINANCES:
-                abrirPanel(salve.presentation.ui.BusinessFinanceActivity.class);
-                hablar("Abro el análisis local de costes, margen y punto de equilibrio. Introduce las cifras de tu negocio.");
-                return true;
-            case DEVICES:
-                abrirPanel(salve.presentation.ui.DeviceControlActivity.class);
-                hablar("Abro Mi móvil: aplicaciones, borradores de WhatsApp y dispositivos.");
-                return true;
-            case ROOM:
-                abrirPanel(salve.presentation.ui.AvatarRoomActivity.class);
-                return true;
-            case LIST_RECIPES:
-                List<String> names = cerebelo.listarHabilidades();
-                hablar(names.isEmpty() ? "No hay herramientas virtuales guardadas. Puedes decir: aprende la rutina nombre: objetivo."
-                        : "Herramientas guardadas: " + android.text.TextUtils.join(", ", names));
-                return true;
-            case CANCEL_RECIPE:
-                cerebelo.cancelarHabilidad();
-                cancelarPasoRutina();
-                hablar("He detenido la rutina y descartado el paso pendiente.");
-                return true;
-            case DELETE_RECIPE:
-                try {
-                    hablar(cerebelo.eliminarHabilidad(command.argument) ? "He eliminado esa receta." : "No pude eliminar una receta con ese nombre.");
-                } catch (RuntimeException invalid) {
-                    hablar("El nombre de la receta no es válido. Di ‘mis herramientas’ para ver los nombres guardados.");
-                }
-                return true;
-            case RUN_RECIPE:
-                if (deferLegacyVoiceFlow()) return true;
-                if (cerebelo.conoceHabilidad(command.argument)) cerebelo.ejecutarHabilidad(command.argument, this);
-                else hablar("No hay una herramienta guardada con ese nombre. Di ‘mis herramientas’ para verlas.");
-                return true;
-            case LEARN_RECIPE:
-                aprenderRutinaVerificada(command.argument);
-                return true;
-            case PAJAMAS:
-                this.<String>startConversationCallback(callback -> avatarDesignTool.wearTemplate("pajamas", callback), this::hablar);
-                return true;
-            case DAY:
-                this.<String>startConversationCallback(callback -> avatarDesignTool.wearTemplate("original_dress", callback), this::hablar);
-                return true;
-            default:
-                postConversationTask(() -> {
-                    if (closed) return;
-                    salve.avatar.AvatarStore store = salve.avatar.AvatarStore.get(context);
-                    store.change(state -> {
-                        switch (command.type) {
-                            case WALK:
-                                state.walkTo(state.getX() < .5f ? .9f : .1f);
-                                hablar("He indicado al personaje que camine por su habitación.");
-                                break;
-                            case BED:
-                                state.createBed();
-                                hablar("Aquí tienes mi cama. Puedes decirme «acuéstate» o «guarda la cama».");
-                                break;
-                            case HIDE_BED:
-                                state.removeBed();
-                                hablar("He guardado la cama.");
-                                break;
-                            case SLEEP:
-                                if (!state.sleep()) hablar("Dime «cama» para prepararla primero.");
-                                else hablar("El personaje está acostado en su cama.");
-                                break;
-                            case WAKE:
-                                state.wake();
-                                hablar("He indicado al personaje que se levante.");
-                                break;
-                            default: break;
-                        }
-                    });
-                });
-                return true;
-        }
-    }
 
-    private void abrirPanel(Class<?> activity) {
-        postConversationTask(() -> {
-            if (closed) return;
-            try { context.startActivity(new Intent(context, activity).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
-            catch (RuntimeException e) { hablar("No pude abrir ese panel."); }
-        });
-    }
 
-    private void aprenderRutinaVerificada(String request) {
-        int separator = request.indexOf(':');
-        String name = (separator >= 0 ? request.substring(0, separator) : request).trim();
-        String objective = (separator >= 0 ? request.substring(separator + 1) : request).trim();
-        if (name.isEmpty() || name.length() > 64 || objective.isEmpty()) {
-            hablar("Usa: aprende la rutina nombre: objetivo. El nombre puede tener hasta 64 caracteres.");
-            return;
-        }
-        if (llm == null) { hablar("Necesito un modelo local activo para proponer la receta."); return; }
-        String prompt = "Propón una herramienta virtual para esta petición: " + objective
-                + "\nDevuelve solo un JSON Array de 1 a 8 pasos. Acciones disponibles: "
-                + "ABRIR_APP con paquete; ESCRIBIR con paquete y texto exacto; TAP_ID con paquete y texto exacto del botón. "
-                + "No uses coordenadas ni IDs numéricos. No inventes campos, destinatarios, mensajes ni nombres de botones. "
-                + "Si falta información imprescindible devuelve []. Cada paso de escritura o toque requiere revisión del usuario. "
-                + "No propongas enviar, pagar, borrar, instalar o publicar sin una petición explícita concreta. "
-                + "Ejemplo de esquema: [{\"tool\":\"ABRIR_APP\",\"paquete\":\"com.whatsapp\"}].";
-        ModelResult proposal = llm.generateResult(prompt, SalveLLM.Role.PLANIFICADOR);
-        if (!proposal.isSuccess()) { hablar("No pude generar la receta: " + proposal.getError()); return; }
-        try {
-            String raw = proposal.getText();
-            int first = raw.indexOf('['), last = raw.lastIndexOf(']');
-            if (first < 0 || last <= first) throw new IllegalArgumentException("El modelo no devolvió pasos válidos");
-            cerebelo.aprenderHabilidad(name, raw.substring(first, last + 1));
-            hablar("Guardé la receta ‘" + name + "’. Aún no está probada. Di ‘ejecuta la herramienta " + name
-                    + "’ para comprobar cada paso, o ‘borra la herramienta " + name + "’ para eliminarla.");
-        } catch (RuntimeException e) {
-            hablar("No guardé la receta: " + e.getMessage() + ". Describe la app y el contenido que quieres usar.");
-        }
-    }
 
     private final java.util.concurrent.atomic.AtomicBoolean cloudRestoreRunning = new java.util.concurrent.atomic.AtomicBoolean();
     private final ExecutorService cloudExecutor = Executors.newSingleThreadExecutor();
@@ -2064,78 +1848,10 @@ public class MotorConversacional {
         return false;
     }
 
-    private void generarYGuardarCodigo(String peticionUsuario) {
-        // Already on conversationExecutor: one author and one reviewer, no extra resident model.
-        String reviewerModel = getReviewerModel();
-        AuthorReviewerCodeCoordinator coordinator = new AuthorReviewerCodeCoordinator(
-                () -> llm == null || llm.usesOwnedInference(),
-                codeProvider(false, false, reviewerModel), codeProvider(false, true, reviewerModel),
-                gemini.isAvailable() ? codeProvider(true, false, reviewerModel) : null,
-                gemini.isAvailable() ? codeProvider(true, true, reviewerModel) : null);
-        String previousCode = previousCodeContext(peticionUsuario);
-        if (referencesPreviousCode(peticionUsuario) && previousCode.isEmpty() && !peticionUsuario.contains("```")) {
-            hablar("El fragmento anterior ya no está completo en mi contexto. Pega la función que quieres modificar para que pueda trabajar sobre su código exacto.");
-            return;
-        }
-        AuthorReviewerCodeCoordinator.Result result = coordinator.generate(peticionUsuario, previousCode);
-        if (!isVoiceContextCurrent()) return;
-        String summary;
-        if (result.status == AuthorReviewerCodeCoordinator.Status.REVIEWED) {
-            summary = "He preparado el fragmento y una revisión del modelo. Aún no está compilado ni probado.";
-        } else if (!result.code.isEmpty()) {
-            summary = "Tengo un borrador, pero la revisión quedó pendiente. No lo considero validado.";
-        } else {
-            summary = "No pude completar el código. " + result.summary;
-        }
-        if (!result.code.isEmpty()) {
-            String artifact = summary + "\nAutora: " + result.authorProvider + "\nRevisora: " + result.reviewerProvider
-                    + "\nLlamadas: " + result.providerCalls + "/" + AuthorReviewerCodeCoordinator.MAX_PROVIDER_CALLS
-                    + "\nRevisión: " + result.summary + "\n\n```java\n" + result.code + "\n```";
-            // Retain the actual fragment for follow-up corrections, without reading code aloud.
-            conversationSession.addAssistant(artifact);
-            deliverResponse(summary, AvatarMotionProtocol.parse(summary), false);
-            if (listener != null) listener.onHablar(artifact);
-        } else hablar(summary);
-        Log.i(TAG, "code_team status=" + result.status + " calls=" + result.providerCalls);
-    }
 
-    private AuthorReviewerCodeCoordinator.Provider codeProvider(boolean cloud, boolean reviewing, String reviewerModel) {
-        return new AuthorReviewerCodeCoordinator.Provider() {
-            @Override public String name() {
-                return cloud ? "Gemini " + (reviewing && !reviewerModel.isEmpty() ? reviewerModel : gemini.getModelName())
-                        : "Modelo local seleccionado (rol " + (reviewing ? "revisora" : "autora") + ")";
-            }
-            @Override public ModelResult generate(String prompt) {
-                if (cloud) return gemini.generateResultSync(prompt, null, reviewing ? reviewerModel : null);
-                return llm == null ? ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Sin modelo local.", 0)
-                        : llm.generateResult(prompt, reviewing ? SalveLLM.Role.EVALUADOR : SalveLLM.Role.SISTEMA);
-            }
-        };
-    }
 
-    private String previousCodeContext(String request) {
-        if (!referencesPreviousCode(request)) return "";
-        List<salve.core.conversation.ChatMessage> messages = conversationSession.snapshot();
-        for (int i = messages.size() - 1; i >= 0; i--) {
-            salve.core.conversation.ChatMessage message = messages.get(i);
-            if (message.getRole() != salve.core.conversation.ChatMessage.Role.ASSISTANT) continue;
-            String value = message.getContent();
-            int start = value.indexOf("```java\n"), end = value.lastIndexOf("```");
-            if (start >= 0 && end > start + 8) return value.substring(start + 8, end).trim();
-        }
-        return "";
-    }
 
-    private boolean referencesPreviousCode(String request) {
-        String text = java.text.Normalizer.normalize(request.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "");
-        return text.contains("anterior") || text.contains("esa funcion") || text.contains("ese codigo")
-                || text.contains("ese fragmento") || text.contains("lo que has escrito");
-    }
 
-    public String getReviewerModel() {
-        return context.getSharedPreferences("salve_code_team", Context.MODE_PRIVATE).getString("reviewer_model", "");
-    }
 
     public boolean setReviewerModel(String name) {
         String value = name == null ? "" : name.trim();
@@ -2144,7 +1860,7 @@ public class MotorConversacional {
     }
 
     /** Same contract for cloud/local text, voice and explicit photos. Specialized research keeps its protocol. */
-    private CognitiveTurn.Outcome runCognitiveTurn(String input, String contextInfo, String action,
+     CognitiveTurn.Outcome runCognitiveTurn(String input, String contextInfo, String action,
             boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis) {
         return runCognitiveTurn(input, contextInfo, action, voice, evidence, photoAnalysis, null, null);
     }
@@ -2177,11 +1893,11 @@ public class MotorConversacional {
                 + "\n" + (action == null ? researchConversation.context() : action)
                 + "\n" + voiceProfile.styleInstruction()
                 + "\n" + salve.core.finance.FinanceConversationPolicy.contextFor(input)
-                + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(canAnalyzePhoto(activePhoto)));
+                + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(mesaFotos.canAnalyzePhoto(activePhoto)));
         CognitiveTurn.Outcome outcome = CognitiveTurn.run((results, repair, remaining) -> {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
             // Con foto, la imagen ocupa contexto (Gemma 4: 4.096 tokens con entrada, imagen y salida).
-            if (activePhoto != null && canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
+            if (activePhoto != null && mesaFotos.canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
             String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1700),
                     memory, details, turnHistory != null ? turnHistory : conversationSession.snapshot(), tools, results, repair, remaining, budget);
             return generateWithConversationPhoto(prompt);
@@ -2304,100 +2020,11 @@ public class MotorConversacional {
         return "No me salió bien la respuesta: " + result.getError() + " Si me lo dices de otra forma, lo intento de nuevo.";
     }
 
-    /** The caller transfers ownership; a bounded private copy is retained as visual memory. */
-    public void procesarImagen(String pregunta, Bitmap foto) {
-        procesarImagen(pregunta, foto, llm != null && llm.usesOwnedInference());
-    }
 
-    public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly) {
-        procesarImagen(pregunta, foto, localOnly, "", "", "");
-    }
 
-    public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly,
-                              String personName, String relationship, String position) {
-        if (foto == null || foto.isRecycled()) { hablar("No recibí una foto válida."); return; }
-        goalAutonomy.userActivity();
-        String entrada = pregunta == null || pregunta.trim().isEmpty() ? "Describe esta foto." : pregunta.trim();
-        try {
-            conversationExecutor.execute(() -> {
-                AvatarMotionController.Session session = avatarSession;
-                long turn = beginConversationTurn(entrada);
-                avatarTurn.set(turn);
-                goalAutonomy.beginUserTurn();
-                try {
-                    if (closed) return;
-                    VisualMemoryRecord saved = visualMemories.capture(foto, entrada, personName, relationship, position, localOnly);
-                    setActivePhoto(saved);
-                    rememberDeclaredSelf(saved);
-                    // «Esto es un mueble, dibújame uno»: analiza la geometría, aprende y dibuja.
-                    turnSketchTag.set(null);
-                    String photoSketch = dibujo.dibujarFoto(foto, salve.sketch.PhotoSketchRequest.parse(entrada, true));
-                    if (!canAnalyzePhoto(saved) && photoSketch != null) {
-                        conversationSession.addUser(entrada + " [Foto guardada: " + saved.id + "]");
-                        hablar(photoSketch);
-                        return;
-                    }
-                    if (!canAnalyzePhoto(saved)) {
-                        conversationSession.addUser(entrada + " [Foto guardada: " + saved.id + "]");
-                        hablar("He guardado la foto" + (saved.personName.isEmpty() ? "." : " con el nombre que confirmaste: " + saved.personName + ".")
-                                + " Dolphin procesa texto, así que no he analizado la imagen. Puedes seguir hablando conmigo "
-                                + "y usar los datos que has añadido; para analizar los píxeles hace falta un modelo con visión.");
-                        return;
-                    }
-                    String visualInput = entrada + " [Foto guardada y adjunta: " + saved.id + "]";
-                    conversationSession.addUser(visualInput);
-                    CognitiveTurn.Outcome cognitive = runCognitiveTurn(visualInput,
-                            "CONSULTA_VISUAL: describe sólo lo observable; los recuerdos no prueban lo que aparece en la foto."
-                                    + (photoSketch == null ? "" : " | " + photoSketchContext),
-                            null, false, memoria.recuperarContextoConversacional(entrada), true);
-                    ModelResult result = cognitive.result;
-                    String respuesta = result.isSuccess() ? result.getText() : modelFailureMessage(result);
-                    AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse("");
-                    if (!result.isSuccess() && session != null) AvatarMotionController.get().error(session, turn);
-                    if (result.isSuccess()) setActivePhoto(visualMemories.update(saved.withAnalysis(respuesta)));
-                    hablarPreparado(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)), motion);
-                } catch (Exception failure) {
-                    hablar("No pude completar el guardado o análisis de la foto. "
-                            + "Revisa Fotos guardadas antes de volver a enviarla.");
-                    Log.w(TAG, "Fallo del archivo visual", failure);
-                } finally {
-                    goalAutonomy.endUserTurn();
-                    if (session != null) AvatarMotionController.get().endTurn(session, turn);
-                    avatarTurn.remove();
-                    voiceTurn.remove();
-                    foto.recycle();
-                }
-            });
-        } catch (java.util.concurrent.RejectedExecutionException e) {
-            foto.recycle();
-        }
-    }
 
-    private boolean canAnalyzePhoto(VisualMemoryRecord photo) {
-        boolean local = (llm != null && llm.usesOwnedInference()) || photo.localOnly;
-        return local ? llm != null && llm.supportsVision() : true;
-    }
 
-    private static final java.util.regex.Pattern SELF_CONFIRMATION = java.util.regex.Pattern.compile(
-            "^(?:s[ií][, ]+)?(?:claro[, ]+)?(?:s[ií][, ]+)?soy yo(?: mismo| misma)?(?:[, ]+tu creador)?[.!¡ ]*$",
-            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
 
-    /**
-     * «Sí, soy yo» tras «si eres tú, dime…»: en su teléfono y sin nombre guardado, guarda el
-     * nombre del creador. No sube a verificado: eso lo hace la huella o el rostro.
-     */
-    private String confirmarQueEsElCreador(String entrada) {
-        if (entrada == null || !SELF_CONFIRMATION.matcher(entrada.trim()).matches()) return null;
-        if (!creatorSide() || mind().interlocutor().name != null) return null;
-        String name = mind().peopleGraph().creator().name;
-        memoria.guardarDatoPerfil("Me llamo " + name + ".", "name");
-        memoria.guardarDatoPerfil("Soy tu creador.", "relation");
-        mind().indexNewMemoriesAsync();
-        salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
-        return "Hola, " + name + ". Te tengo de nuevo: lo guardo para no volver a preguntártelo."
-                + (identity.biometricAvailable() && identity.session().state() != salve.core.identity.SessionIdentity.State.VERIFIED_CREATOR
-                ? " Si quieres abrir mis reflexiones contigo, di «verifícame»." : "");
-    }
 
 
     /** «Empecemos de nuevo»: limpia el historial reciente (no la memoria) si arrastra respuestas raras. */
@@ -2428,295 +2055,42 @@ public class MotorConversacional {
 
 
 
-    private boolean creatorSide() {
+     boolean creatorSide() {
         return salve.core.identity.IdentityManager.get(context).session().isCreatorSide();
     }
 
-    private static final java.util.regex.Pattern VERIFY_REQUEST = java.util.regex.Pattern.compile(
-            "^\\s*(?:salve[, ]+)?(?:verif[ií]ca(?:me)?|comprueba que soy yo|confirma que soy yo|pon(?:go)? (?:mi )?huella|"
-                    + "(?:confirma(?:r)?|verifica(?:r)?|comprueba|comprobar) (?:mi |la )?identidad|"
-                    + "quiero verificarme|verif[ií]came con (?:la )?(?:huella|cara|rostro))\\b.*",
-            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
-    private static final java.util.regex.Pattern NOT_CREATOR = java.util.regex.Pattern.compile(
-            "\\b(?:no soy (?:bryan|tu creador)|te (?:est[aá] )?habla(?:ndo)? otra persona|soy otra persona|"
-                    + "no es bryan quien (?:te )?habla)\\b",
-            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
 
-    /**
-     * Órdenes explícitas sobre quién habla. La verificación usa el diálogo del sistema (huella,
-     * rostro o PIN): es ligero y no compite con el modelo, y solo se abre cuando se pide.
-     */
-    private String comandoIdentidad(String entrada) {
-        salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
-        String first = mind().peopleGraph().creator().name.split(" ")[0];
-        if (NOT_CREATOR.matcher(entrada).find()) {
-            identity.session().onNotCreator();
-            identity.clearVerification();
-            // Otra persona: el historial y la foto de Bryan no pasan a su conversación.
-            limpiarContextoConversacional();
-            return "De acuerdo, no eres " + first + ". Encantada; ¿cómo te llamas?";
-        }
-        if (!VERIFY_REQUEST.matcher(entrada).matches()) return null;
-        if (!identity.biometricAvailable())
-            return "Este teléfono no tiene huella, rostro ni PIN configurados, así que no puedo verificarte con él. "
-                    + "Puedes activarlo en los ajustes de seguridad de Android.";
-        identity.requestVerification("Confirma que eres " + first, ok -> toolHandler.post(() -> hablar(ok
-                ? "Ya está, " + first + ": eres tú. Puedo hablarte con toda confianza."
-                : "No he podido confirmarlo. Si eres " + first + ", inténtalo de nuevo cuando quieras; mientras, guardo tus recuerdos.")));
-        return "Abro la verificación del teléfono: pon tu huella o mira a la pantalla.";
-    }
 
     /** Oferta pendiente de abrir una de sus pantallas («¿Quieres que te abra mi constelación…?»). */
-    private final java.util.concurrent.atomic.AtomicReference<String> turnFeatureOffer = new java.util.concurrent.atomic.AtomicReference<>();
-    private volatile salve.core.mind.SelfFeatures.Feature pendingFeature;
-    private volatile long pendingFeatureUntil;
+    final java.util.concurrent.atomic.AtomicReference<String> turnFeatureOffer = new java.util.concurrent.atomic.AtomicReference<>();
+    volatile salve.core.mind.SelfFeatures.Feature pendingFeature;
+    volatile long pendingFeatureUntil;
 
-    /**
-     * Autoconocimiento: si se habla de una de sus funciones, el modelo recibe qué es y su estado real
-     * (sin red: solo lo guardado en el móvil). Con el creador, además, se prepara la oferta de abrirla.
-     */
-    private String conocimientoPropio(String entrada) {
-        try {
-            salve.core.mind.SelfFeatures.Feature feature = salve.core.mind.SelfFeatures.detect(entrada);
-            if (feature == null || salve.core.devicecontrol.AppActionCommand.parse(entrada) != null) return "";
-            boolean creator = creatorSide();
-            salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
-            String offer = creator ? salve.core.mind.SelfFeatures.offer(feature, identity.biometricAvailable()) : null;
-            if (feature == salve.core.mind.SelfFeatures.Feature.PRIVACY_CHECK
-                    && !identity.session().needsPrivateCheckpoint(identity.biometricAvailable(), System.currentTimeMillis())) offer = null;
-            turnFeatureOffer.set(offer == null ? null : feature.name() + "|" + offer);
-            return salve.core.mind.SelfFeatures.promptBlock(feature, creator ? estadoFuncion(feature) : "", offer);
-        } catch (RuntimeException unavailable) { return ""; }
-    }
 
-    private String estadoFuncion(salve.core.mind.SelfFeatures.Feature feature) {
-        switch (feature) {
-            case NODES:
-            case OVERVIEW: {
-                salve.core.compute.ComputeNodeStore store = new salve.core.compute.ComputeNodeStore(context);
-                java.util.List<salve.core.compute.ComputeNode> nodes = store.load();
-                if (nodes.isEmpty()) return "Bryan aún no ha registrado ningún nodo";
-                java.util.Map<String, String> locations;
-                try { locations = new salve.core.privatefamily.FamilyVault(context).read().locations; }
-                catch (RuntimeException unreadable) { locations = java.util.Collections.emptyMap(); }
-                StringBuilder out = new StringBuilder(nodes.size() + (nodes.size() == 1 ? " nodo registrado: " : " nodos registrados: "));
-                for (int i = 0; i < nodes.size(); i++) {
-                    salve.core.compute.ComputeNode node = nodes.get(i);
-                    String place = salve.core.privatefamily.LocationSync.place(salve.core.privatefamily.LocationSync.current(
-                            locations, node.id, System.currentTimeMillis() / 1000));
-                    if (place.isEmpty()) place = store.locationLabel(node.id);
-                    out.append(i == 0 ? "" : ", ").append(node.name).append(place.isEmpty() ? "" : " en " + place)
-                            .append(store.nodeEnabled(node.id) ? " (activo para tareas)" : " (desactivado)");
-                }
-                out.append("; conexión con TLS mutuo (el nodo solo acepta mi certificado)");
-                out.append("; envíos a nodos ").append(llm != null && llm.isDistributedEnabled() ? "activados" : "desactivados")
-                        .append(". No sé si están encendidos ahora: eso se comprueba al abrir la constelación");
-                return out.toString();
-            }
-            case SALVENTES: {
-                java.util.List<salve.core.salvente.SalventeProfile> all = salve.data.salvente.SalventeRepository.get(context).all();
-                if (all.isEmpty()) return "aún no he creado ningún Salvente";
-                StringBuilder out = new StringBuilder("he creado " + all.size() + (all.size() == 1 ? " Salvente: " : " Salventes: "));
-                for (int i = 0; i < all.size(); i++) {
-                    salve.core.salvente.SalventeProfile p = all.get(i);
-                    out.append(i == 0 ? "" : ", ").append(p.name).append(" (para ").append(p.purpose.length() > 60 ? p.purpose.substring(0, 57) + "…" : p.purpose)
-                            .append(p.state == salve.core.salvente.SalventeProfile.State.PAUSADO ? ", en pausa)" : ")");
-                }
-                return out.append(". No conozco el contenido de sus recuerdos").toString();
-            }
-            case CONTINUITY:
-                return new salve.data.continuity.SalveContinuity(context).describe();
-            case LEARNING:
-                return autonomousTools.learnedSkillsSummary().replace("\\n", " ")
-                        + "; estrategias de dibujo, referencias y respuesta: "
-                        + salve.core.mind.SkillLab.defaults().size() + " habilidades base"
-                        + ". Cada resultado requiere evidencia; no he entrenado mis pesos";
-            case BACKGROUND: {
-                salve.core.mind.BackgroundMindGate.Snapshot snapshot =
-                        salve.core.mind.BackgroundMindGate.get().snapshot();
-                return "mente " + (mind().journal().isPaused() ? "pausada" : "habilitada")
-                        + "; tarea cognitiva en curso: " + (snapshot.active == null ? "ninguna" : snapshot.active.name())
-                        + "; ciclos observados en este proceso: " + snapshot.completions
-                        + ". Los trabajos programados no prueban que hayan corrido ni que hayan aprendido";
-            }
-            case WEB_SEARCH:
-                return "buscador elegido: " + salve.core.web.WebSearchSettings.load(context, "").id + "; clave de Brave: "
-                        + (salve.core.web.WebSearchKeyStore.hasBraveKey(context) ? "guardada" : "sin configurar");
-            case PRIVACY_CHECK: {
-                salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
-                if (!identity.biometricAvailable()) return "este teléfono no tiene huella, rostro ni PIN configurados";
-                return identity.session().state() == salve.core.identity.SessionIdentity.State.VERIFIED_CREATOR
-                        ? "Bryan está verificado ahora mismo" : "no hay una verificación vigente";
-            }
-            default: return "";
-        }
-    }
 
     // ── Hogar: Home Assistant local a través de un nodo. Orden explícita → confirmación → acción ──
 
-    private static final class HomePending {
+    static final class HomePending {
         final salve.core.compute.ComputeNode node; final salve.core.home.HomeCommand command;
         final salve.core.home.HomeCommand.Entity entity; final long until;
         HomePending(salve.core.compute.ComputeNode node, salve.core.home.HomeCommand command, salve.core.home.HomeCommand.Entity entity, long until) {
             this.node = node; this.command = command; this.entity = entity; this.until = until;
         }
     }
-    private volatile HomePending pendingHome;
 
-    /** Orden de casa dicha por Bryan: busca el dispositivo y pide confirmación. Nunca actúa aquí. */
-    private String ordenHogar(String entrada) {
-        salve.core.home.HomeCommand command = salve.core.home.HomeCommand.parse(entrada);
-        if (command == null) return null;
-        if (!creatorSide()) return "Solo Bryan puede controlar los dispositivos de casa.";
-        salve.core.compute.ComputeHttpTransport transport = new salve.core.compute.ComputeHttpTransport(context);
-        String lastProblem = null;
-        for (salve.core.compute.ComputeNode node : new salve.core.compute.ComputeNodeStore(context).load()) {
-            java.util.List<salve.core.home.HomeCommand.Entity> entities = new java.util.ArrayList<>();
-            try {
-                for (com.google.gson.JsonElement el : transport.home(node, () -> closed).getAsJsonArray("entities")) {
-                    com.google.gson.JsonObject o = el.getAsJsonObject();
-                    entities.add(new salve.core.home.HomeCommand.Entity(o.get("entity").getAsString(), o.get("name").getAsString(),
-                            o.get("domain").getAsString(), o.get("state").getAsString()));
-                }
-            } catch (java.io.IOException | RuntimeException failure) {
-                if (failure.getMessage() == null || !failure.getMessage().contains("(404)")) lastProblem = node.name;
-                continue;
-            }
-            salve.core.home.HomeCommand.Match match = command.resolve(entities);
-            if (match.entity == null) {
-                java.util.List<String> names = new java.util.ArrayList<>();
-                for (salve.core.home.HomeCommand.Entity e : match.candidates) names.add(e.name);
-                return names.isEmpty() ? "No encuentro ese dispositivo entre los que me has permitido en " + node.name + "."
-                        : "¿Cuál de estos? " + android.text.TextUtils.join(", ", names) + ".";
-            }
-            pendingHome = new HomePending(node, command, match.entity, System.currentTimeMillis() + 60_000);
-            return command.confirmation(match.entity) + " Di «sí» para hacerlo.";
-        }
-        return lastProblem != null ? "No pude hablar con " + lastProblem + " para controlar la casa. ¿Está encendido Salve Nodo?"
-                : "Ninguno de tus nodos tiene conectado Home Assistant. Actívalo en Salve Nodo con --reconfigurar.";
-    }
 
-    /** Respuesta a la confirmación del hogar: solo un «sí» claro, en el minuto siguiente, actúa. */
-    private String respuestaHogar(String entrada) {
-        HomePending pending = pendingHome;
-        pendingHome = null;
-        if (pending == null || System.currentTimeMillis() > pending.until) return null;
-        if (salve.core.mind.SelfFeatures.declines(entrada)) return "Vale, no lo toco.";
-        if (!salve.core.mind.SelfFeatures.accepts(entrada)) return null;
-        try {
-            com.google.gson.JsonObject result = new salve.core.compute.ComputeHttpTransport(context).homeAction(pending.node,
-                    pending.entity.id, pending.command.action.service, pending.command.value, () -> closed);
-            String state = result.getAsJsonObject("entity").get("state").getAsString();
-            return "Hecho: «" + pending.entity.name + "» " + homeState(state) + ".";
-        } catch (java.io.IOException | RuntimeException failure) {
-            String m = failure.getMessage() == null ? "" : failure.getMessage();
-            if (m.contains("(429)")) return "He hecho demasiados cambios seguidos en la casa; espera un minuto.";
-            if (m.contains("(403)")) return "Ese dispositivo o esa acción no están permitidos en Salve Nodo.";
-            if (m.contains("(502)") || m.contains("(504)")) return "Salve Nodo no pudo hablar con Home Assistant.";
-            return "No pude hacerlo: no hay conexión con " + pending.node.name + ".";
-        }
-    }
 
-    private static String homeState(String state) {
-        switch (state) {
-            case "on": return "está encendido";
-            case "off": return "está apagado";
-            case "open": case "opening": return "se está abriendo";
-            case "closed": case "closing": return "se está cerrando";
-            case "heat": case "cool": case "auto": case "heat_cool": return "está en marcha";
-            default: return "ha recibido la orden (estado: " + state + ")";
-        }
-    }
 
-    /** Respuesta del usuario a la oferta del turno anterior. Solo un «sí» claro abre algo. */
-    private String respuestaOfertaPropia(String entrada) {
-        salve.core.mind.SelfFeatures.Feature feature = pendingFeature;
-        pendingFeature = null;
-        if (feature == null || System.currentTimeMillis() > pendingFeatureUntil) return null;
-        if (salve.core.mind.SelfFeatures.declines(entrada)) return "Vale. Cuando quieras, me lo pides.";
-        if (!salve.core.mind.SelfFeatures.accepts(entrada)) return null;
-        if (feature == salve.core.mind.SelfFeatures.Feature.NODES) {
-            try {
-                context.startActivity(new Intent(context, salve.presentation.ui.NodeConstellationActivity.class)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                return "Abro mi constelación. Toca cualquier nodo para ver su ficha.";
-            } catch (RuntimeException unavailable) { return "No pude abrir la constelación. Está en Nodos de cómputo → Ver constelación."; }
-        }
-        if (feature == salve.core.mind.SelfFeatures.Feature.SALVENTES) {
-            try {
-                context.startActivity(new Intent(context, salve.presentation.ui.SalventeGenesisActivity.class)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                return "Abro la génesis. Cuéntame para qué o para quién es y te propongo uno; no se crea hasta que lo apruebes.";
-            } catch (RuntimeException unavailable) { return "No pude abrirla. Está en IA y cámara → Salventes (génesis)."; }
-        }
-        if (feature == salve.core.mind.SelfFeatures.Feature.CONTINUITY) {
-            try {
-                context.startActivity(new Intent(context, salve.presentation.ui.ContinuityActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                return "Abro mi continuidad. Desde ahí puedes guardar mi memoria sellada en tu Guardián.";
-            } catch (RuntimeException unavailable) { return "No pude abrirla. Está en IA y cámara → Continuidad (Guardián)."; }
-        }
-        if (feature == salve.core.mind.SelfFeatures.Feature.PRIVACY_CHECK) {
-            String first = mind().peopleGraph().creator().name.split(" ")[0];
-            salve.core.identity.IdentityManager.get(context).requestVerification("Confirma que eres " + first,
-                    ok -> toolHandler.post(() -> hablar(ok ? "Listo, " + first + ": verificado." : "No he podido confirmarlo.")));
-            return "Abro la verificación del teléfono: pon tu huella o mira a la pantalla.";
-        }
-        return null;
-    }
 
-    /**
-     * «Punto crítico»: una petición de algo privado (quién soy, mi familia, mis recuerdos, dinero…)
-     * cuando solo se presume que habla el creador. Antes de que el turno cargue memoria o perfil,
-     * se pide la verificación del sistema (huella, rostro con prueba de vida del propio Android o
-     * PIN). Si se confirma, el mismo turno se repite ya verificado; si no, lo privado no se toca.
-     * Sin biometría configurada en el teléfono se mantiene el comportamiento anterior.
-     */
-    private String puntoCriticoPrivado(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
-        if (!salve.core.identity.SensitiveRequest.needsVerification(entrada, privateBudgetTurn)) return null;
-        salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(context);
-        if (!identity.session().needsPrivateCheckpoint(identity.biometricAvailable(), System.currentTimeMillis())) return null;
-        String first = mind().peopleGraph().creator().name.split(" ")[0];
-        identity.requestVerification("Para hablar de algo privado de " + first, ok -> toolHandler.post(() -> {
-            if (closed) return;
-            if (ok) encolarEntrada(entrada, entradaPorVoz, privateBudgetTurn);
-            else hablar("No he podido confirmar que eres " + first + ", así que eso lo guardo para él. "
-                    + "Si eres tú, di «verifícame» cuando quieras.");
-        }));
-        return "Eso es privado de " + first + ". Antes de responder, confirma que eres tú: pon tu huella o mira a la pantalla.";
-    }
 
-    /**
-     * Un nombre declarado distinto del creador conocido cambia el estado (familiar o invitado) en
-     * lugar de sobrescribir el perfil. Devuelve true si quien habla no es el creador.
-     */
-    private boolean registrarIdentidadDeclarada(String entrada) {
-        if (entrada == null || entrada.trim().endsWith("?")) return !creatorSide();
-        String declared = salve.core.mind.Interlocutor.extractName(entrada);
-        String known = mind().interlocutor().name;
-        salve.core.identity.SessionIdentity session = salve.core.identity.IdentityManager.get(context).session();
-        boolean wasCreator = session.isCreatorSide();
-        if (declared != null && (known != null || !session.isCreatorSide())) {
-            salve.core.identity.PeopleGraph graph = mind().peopleGraph();
-            session.onDeclaredName(declared, graph.creator().name, graph.familyPairs(), System.currentTimeMillis());
-        }
-        if (wasCreator && !session.isCreatorSide()) {
-            // Cambio de interlocutor: lo hablado con Bryan no entra en el contexto de otra persona.
-            limpiarContextoConversacional();
-            conversationSession.addUser(entrada);
-        }
-        return !session.isCreatorSide();
-    }
 
-    private void rememberDeclaredSelf(VisualMemoryRecord record) {
-        if (record.identifiesUser() && creatorSide()) memoria.guardarDatoPerfil("Mi nombre es " + record.personName, "name");
-    }
 
     private ModelResult generateWithConversationPhoto(String prompt) {
         VisualMemoryRecord photo = activePhoto;
         boolean cloudOnce = cloudPhotoOnce && photo != null;
         cloudPhotoOnce = false;
         boolean localOnly = !cloudOnce && ((llm != null && llm.usesOwnedInference()) || (photo != null && photo.localOnly));
-        if (photo == null || !canAnalyzePhoto(photo)) return ConversationModelRouter.generate(false, localOnly, false,
+        if (photo == null || !mesaFotos.canAnalyzePhoto(photo)) return ConversationModelRouter.generate(false, localOnly, false,
                 gemini.isAvailable() ? () -> generarRespuestaGemini(prompt) : null,
                 () -> generarRespuestaConversacionalLocal(prompt));
         Bitmap image = null;
@@ -2735,7 +2109,7 @@ public class MotorConversacional {
 
     public void setPhotoListener(java.util.function.Consumer<VisualMemoryRecord> listener) { photoListener = listener; }
 
-    private void setActivePhoto(VisualMemoryRecord photo) {
+     void setActivePhoto(VisualMemoryRecord photo) {
         if (closed) return;
         activePhoto = photo;
         java.util.function.Consumer<VisualMemoryRecord> listener = photoListener;
@@ -2747,42 +2121,14 @@ public class MotorConversacional {
         catch (java.util.concurrent.RejectedExecutionException ignored) { }
     }
 
-    public void seleccionarFotoGuardada(String id) {
-        try { conversationExecutor.execute(() -> {
-            if (closed) return;
-            try {
-                VisualMemoryRecord record = visualMemories.store.read(id);
-                if (record == null) { hablar("No encuentro esa foto guardada."); return; }
-                setActivePhoto(record);
-                conversationSession.addUser("He seleccionado la foto guardada " + record.id + ": " + record.question);
-                hablar("La foto seleccionada está en el contexto del chat. Puedes preguntarme sobre ella.");
-            } catch (Exception error) { hablar("No pude recuperar esa foto guardada."); }
-        }); } catch (java.util.concurrent.RejectedExecutionException ignored) { }
-    }
 
-    public void identificarFoto(String id, String name, String relation, String position) {
-        try { conversationExecutor.execute(() -> {
-            if (closed) return;
-            try {
-                VisualMemoryRecord record = visualMemories.store.read(id);
-                if (record == null) { hablar("No encuentro esa foto guardada."); return; }
-                VisualMemoryRecord updated = visualMemories.update(record.identify(name, relation, position));
-                rememberDeclaredSelf(updated);
-                if (activePhoto != null && activePhoto.id.equals(id)) setActivePhoto(updated);
-                conversationSession.addUser("Corrección de identidad declarada para la foto " + id + ": "
-                        + updated.personName + "; relación: " + updated.relationship + "; posición: " + updated.position);
-                hablar(name.trim().isEmpty() ? "He quitado la identidad de esa foto."
-                        : "He guardado tu identificación de esa persona y actualizado su relación con la foto.");
-            } catch (Exception error) { hablar("No pude guardar la identificación de esa foto."); }
-        }); } catch (java.util.concurrent.RejectedExecutionException ignored) { }
-    }
 
     public synchronized void hablar(String texto) {
         AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(texto);
         hablarPreparado(motion.text, motion);
     }
 
-    private synchronized void hablarPreparado(String texto, AvatarMotionProtocol.Result motion) {
+    synchronized void hablarPreparado(String texto, AvatarMotionProtocol.Result motion) {
         deliverResponse(texto, motion, true);
     }
 
@@ -2916,6 +2262,21 @@ public class MotorConversacional {
 
     /** Examen fijo de conversación («hazte el examen»): mismas piezas que un turno, sin efectos. */
     final ConversationExamRunner examen = new ConversationExamRunner(this);
+    /** Lo que sabe de sí misma y sus funciones (estado de cada una, ofertas para abrirlas, sus actualizaciones) y las órdenes de casa con confirmación. */
+    final SelfFeaturesDesk mesaFunciones = new SelfFeaturesDesk(this);
+    /** Quién le habla: verificación con el teléfono, puntos críticos antes de lo privado, presentaciones de otras personas y datos personales que Bryan le cuenta. */
+    final IdentityDesk mesaIdentidad = new IdentityDesk(this);
+    /** Acciones en el móvil: órdenes explícitas, rutinas verificadas, acciones pendientes de confirmar y su ejecución aprobada. */
+    final PhoneActionsDesk mesaAcciones = new PhoneActionsDesk(this);
+    /** Escribir código cuando Bryan lo pide: autor y revisor, con el código anterior como contexto. */
+    final CodeDesk mesaCodigo = new CodeDesk(this);
+    /** Fotos en la conversación: analizarlas, elegir una guardada, reconocer a quien aparece y el entorno visual. */
+    final PhotoDesk mesaFotos = new PhotoDesk(this);
+
+
+
+
+
 
 
 
@@ -2939,7 +2300,7 @@ public class MotorConversacional {
         return turn == null ? 0L : turn;
     }
 
-    private synchronized long beginConversationTurn(String input) {
+    synchronized long beginConversationTurn(String input) {
         if (liveVoiceTurn.get() == null && liveVoiceChannel.isActive()) {
             // An old queued chat/photo cannot revoke a live session's utterance.
             voiceTurn.set(0L);
@@ -3096,37 +2457,6 @@ public class MotorConversacional {
         }
     }
 
-    /**
-     * Guarda nombre y familia aunque no vayan al principio de la frase («Jajaja sí, soy Bryan»,
-     * «Bueno sí, me llamo Bryan…», «mi hermana se llama Ana»). Devuelve un acuse breve cuando el
-     * mensaje es solo una presentación; si trae además una petición, devuelve null y responde el modelo.
-     */
-    private String aprenderDatosPersonales(String entrada, MemoryProfileFact profileFact) {
-        if (entrada == null || entrada.trim().endsWith("?")) return null;
-        salve.core.mind.Interlocutor.Known before = mind().interlocutor();
-        String name = salve.core.mind.Interlocutor.extractName(entrada);
-        boolean nameIsNew = name != null && !name.equalsIgnoreCase(before.name == null ? "" : before.name);
-        if (nameIsNew && (profileFact == null || !"name".equals(profileFact.getCategory())))
-            memoria.guardarDatoPerfil("Me llamo " + name + ".", "name");
-        java.util.List<salve.core.mind.FamilyFacts.Member> family = salve.core.mind.FamilyFacts.parse(entrada);
-        for (salve.core.mind.FamilyFacts.Member member : family) memoria.guardarDatoPerfil(member.statement(), member.category());
-        if (!nameIsNew && family.isEmpty()) return null;
-        if (entrada.trim().split("\\s+").length > 16) return null;
-        StringBuilder ack = new StringBuilder();
-        if (nameIsNew) {
-            boolean creator = before.declaredCreator || salve.core.mind.Interlocutor.declaresCreator(entrada);
-            ack.append(before.name == null ? "Anotado: te llamas " + name : "Actualizo tu nombre: ahora te llamas " + name)
-                    .append(creator ? " y te presentaste como mi creador" : "").append('.');
-        }
-        if (!family.isEmpty()) {
-            java.util.List<String> parts = new java.util.ArrayList<>();
-            for (salve.core.mind.FamilyFacts.Member member : family)
-                parts.add(member.statement().replaceFirst("^Mi ", "tu ").replaceAll("[.]$", ""));
-            ack.append(ack.length() == 0 ? "Anotado: " : " También anoto: ").append(String.join("; ", parts)).append('.');
-        }
-        ack.append(" Lo recordaré en las próximas conversaciones.");
-        return ack.toString();
-    }
 
     private void responderYRegistrarCalidad(String entrada, String respuesta,
                                             TurnQualityAssessment assessment, AvatarMotionProtocol.Result motion,
@@ -3144,64 +2474,8 @@ public class MotorConversacional {
         }
     }
 
-    // External actions retain approval; the local laboratory accepts only a bounded data DSL.
-    /** Execute a validated recipe step; callbacks describe the Android action, not the user's whole goal. */
-    public void ejecutarPasoRutina(String json, java.util.function.Consumer<Boolean> completed) {
-        final long epoch = routineCancellationEpoch.get();
-        toolHandler.post(() -> {
-            if (closed || epoch != routineCancellationEpoch.get() || routineStepCompletion != null || pendingToolAction != null) {
-                completed.accept(false);
-                return;
-            }
-            long version = ++routineStepVersion;
-            activeRoutineEpoch = epoch;
-            routineStepCompletion = completed;
-            try {
-                SalveAccessibilityService service = SalveAccessibilityService.getInstance();
-                if (service == null || !service.isControlEnabled()) {
-                    hablar("Activa Accesibilidad en Mi móvil para ejecutar y comprobar la rutina.");
-                    terminarPasoRutina(version, false);
-                    return;
-                }
-                org.json.JSONObject action = new org.json.JSONObject(json);
-                String type = action.getString("tool"), targetPackage = action.getString("paquete");
-                if (type.equals("ABRIR_APP")) {
-                    Intent launch = context.getPackageManager().getLaunchIntentForPackage(targetPackage);
-                    if (launch == null) { terminarPasoRutina(version, false); return; }
-                    if (epoch != routineCancellationEpoch.get()) { terminarPasoRutina(version, false); return; }
-                    context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                    comprobarAppAbierta(version, targetPackage, android.os.SystemClock.elapsedRealtime() + 5000);
-                    return;
-                }
-                String text = action.getString("texto");
-                if (!type.equals("ESCRIBIR") && !type.equals("TAP_ID")) {
-                    terminarPasoRutina(version, false);
-                    return;
-                }
-                String description = type.equals("ESCRIBIR")
-                        ? "Reemplazar el texto del campo seleccionado por:\n\n" + text
-                        : "Tocar el elemento cuyo texto exacto es:\n\n" + text;
-                if (epoch != routineCancellationEpoch.get()) { terminarPasoRutina(version, false); return; }
-                service.solicitarConfirmacion(targetPackage, description, approved -> {
-                    if (version != routineStepVersion || routineStepCompletion == null) return;
-                    if (!approved || closed || epoch != routineCancellationEpoch.get()
-                            || !targetPackage.equals(service.getActivePackageName())) {
-                        terminarPasoRutina(version, false);
-                    } else if (type.equals("ESCRIBIR")) {
-                        terminarPasoRutina(version, service.escribirTextoEnPantalla(targetPackage, text));
-                    } else {
-                        service.tocarTextoExacto(targetPackage, text,
-                                success -> terminarPasoRutina(version, success));
-                    }
-                });
-            } catch (Exception e) {
-                Log.w(TAG, "Paso de herramienta rechazado: " + e.getClass().getSimpleName());
-                terminarPasoRutina(version, false);
-            }
-        });
-    }
 
-    private void comprobarAppAbierta(long version, String targetPackage, long deadline) {
+     void comprobarAppAbierta(long version, String targetPackage, long deadline) {
         if (version != routineStepVersion || routineStepCompletion == null) return;
         SalveAccessibilityService service = SalveAccessibilityService.getInstance();
         if (closed || activeRoutineEpoch != routineCancellationEpoch.get()
@@ -3211,7 +2485,7 @@ public class MotorConversacional {
         toolHandler.postDelayed(() -> comprobarAppAbierta(version, targetPackage, deadline), 200);
     }
 
-    private void terminarPasoRutina(long version, boolean success) {
+     void terminarPasoRutina(long version, boolean success) {
         if (version != routineStepVersion || routineStepCompletion == null) return;
         java.util.function.Consumer<Boolean> completed = routineStepCompletion;
         routineStepCompletion = null;
@@ -3230,111 +2504,8 @@ public class MotorConversacional {
         });
     }
 
-     void prepararAccion(PendingToolAction action) {
-        postConversationTask(() -> {
-            if (closed || cerebelo.rutinaEnCurso() || pendingToolAction != null) {
-                hablar("Termina o cancela la acción actual antes de preparar otra.");
-                return;
-            }
-            pendingToolAction = action;
-            if (action.getType() == PendingToolAction.Type.DEPLOY_WEB) {
-                hablar("He preparado la acción: " + action.describe()
-                        + ". Di ‘confirmar acción’ para ejecutarla o ‘cancelar acción’ para descartarla.");
-                return;
-            }
-            SalveAccessibilityService service = SalveAccessibilityService.getInstance();
-            String targetPackage = service == null ? null : service.getActivePackageName();
-            if (targetPackage == null || targetPackage.isEmpty()) {
-                pendingToolAction = null;
-                hablar("No pude preparar el control de pantalla. Revisa Accesibilidad en Mi móvil.");
-                return;
-            }
-            String description = action.describe();
-            if (action.getType() == PendingToolAction.Type.WRITE_TEXT) description += ":\n\n" + action.getPayload();
-            final boolean voiceRequest = liveVoiceTurn.get() != null;
-            if (voiceRequest) hablar("Revisa y confirma la acción en la tarjeta de la pantalla. "
-                    + "El resultado de esa confirmación se mostrará por escrito.");
-            service.solicitarConfirmacion(targetPackage, description, approved -> {
-                // Human review is a later interaction, not a retained voice turn.
-                Runnable decision = () -> {
-                    if (pendingToolAction != action) return;
-                    pendingToolAction = null;
-                    if (approved && !closed) ejecutarAccionAprobada(action, targetPackage);
-                    else hablar("Acción descartada o pantalla modificada. No ejecuté ese paso.");
-                };
-                if (voiceRequest) withVoiceContext(null, null, true, decision);
-                else decision.run();
-            });
-        });
-    }
 
-    private void confirmarAccionPendiente() {
-        postConversationTask(() -> {
-            PendingToolAction action = pendingToolAction;
-            if (action == null) { hablar("No hay ninguna acción pendiente."); return; }
-            if (action.getType() != PendingToolAction.Type.DEPLOY_WEB) {
-                hablar("Revisa el destino y el contenido en la tarjeta sobre la aplicación. Puedes confirmar o cancelar allí.");
-                return;
-            }
-            pendingToolAction = null;
-            ejecutarAccionAprobada(action, null);
-        });
-    }
 
-    private void ejecutarAccionAprobada(PendingToolAction action, String targetPackage) {
-        if (action.isExpired(System.currentTimeMillis(), TOOL_APPROVAL_TTL_MS)) {
-            hablar("La acción pendiente ha caducado. Pídeme que la prepare de nuevo.");
-            return;
-        }
-        Log.i(TAG, "Ejecutando herramienta aprobada: " + action.getType());
-        switch (action.getType()) {
-            case TAP:
-                int x = action.getFirstNumber();
-                int y = action.getSecondNumber();
-                if (salve.services.SalveAccessibilityService.getInstance() != null) {
-                    SalveAccessibilityService service = salve.services.SalveAccessibilityService.getInstance();
-                    this.<Boolean>startConversationCallback(callback -> service.simularTap(x, y, callback::accept),
-                            completed -> hablar(completed ? "Android completó el gesto en las coordenadas indicadas."
-                                    : "Android no pudo completar el gesto."));
-                } else {
-                    hablar("No pude hacer el toque porque Accesibilidad está desactivada.");
-                }
-                break;
-            case TAP_NODE:
-                if (salve.services.SalveAccessibilityService.getInstance() != null) {
-                    SalveAccessibilityService service = salve.services.SalveAccessibilityService.getInstance();
-                    this.<Boolean>startConversationCallback(callback -> service.simularTapPorId(action.getFirstNumber(), callback::accept),
-                            completed -> hablar(completed
-                                    ? "Android aceptó el toque sobre el elemento indicado."
-                                    : "La pantalla cambió o no pude tocar el elemento. Analízala de nuevo."));
-                } else {
-                    hablar("No pude hacer el toque porque Accesibilidad está desactivada.");
-                }
-                break;
-            case WRITE_TEXT:
-                if (salve.services.SalveAccessibilityService.getInstance() != null) {
-                    boolean exito = salve.services.SalveAccessibilityService.getInstance()
-                            .escribirTextoEnPantalla(targetPackage, action.getPayload());
-                    if (exito) hablar("Acción confirmada: he escrito el texto en la pantalla.");
-                    else hablar("No pude escribir. Quizás no hay un campo de texto seleccionado.");
-                } else {
-                    hablar("No pude escribir porque Accesibilidad está desactivada.");
-                }
-                break;
-            case DEPLOY_WEB:
-                hablar("Acción confirmada: iniciando el despliegue.");
-                publishConversationWeb("Salve_AutoDeploy", action.getPayload(), new GestorDespliegueWeb.WebDeployCallback() {
-                    @Override public void onExito(String urlPublica) {
-                        hablar("Despliegue exitoso. Mi nueva interfaz vive en: " + urlPublica);
-                    }
-                    @Override public void onError(String error) {
-                        hablar("Fallo en el protocolo de red al publicar.");
-                    }
-                });
-                break;
-
-        }
-    }
 
     private void anclarRealidadVisual(String original) {
         List<Bitmap> frames = VideoAnalysisManager.getInstance().getRecentFrames();
@@ -3345,33 +2516,6 @@ public class MotorConversacional {
         hablar("He asimilado visualmente '" + concepto + "'.");
     }
 
-    private void reconocerEntornoVisual() {
-        // Ambient camera frames never become implicit cloud uploads.
-        if (llm == null || !llm.usesOwnedInference()) {
-            hablar("Usa IA y cámara para tomar una foto y confirmar su análisis con Gemini.");
-            return;
-        }
-        List<Bitmap> frames = VideoAnalysisManager.getInstance().getRecentFrames();
-        if (frames == null || frames.isEmpty()) { hablar("Usa IA y cámara para tomar una foto y analizarla."); return; }
-        Bitmap snapshot = null;
-        try {
-            // The camera recycles its buffer while native model initialization may still be running.
-            Bitmap frame = frames.get(frames.size() - 1);
-            if (frame == null || frame.isRecycled()) throw new IllegalStateException("Frame no disponible");
-            snapshot = frame.copy(Bitmap.Config.ARGB_8888, false);
-            if (snapshot == null) throw new IllegalStateException("No se pudo copiar el frame");
-            final Bitmap foto = snapshot;
-            ModelResult result = ConversationModelRouter.generate(true, true, llm.supportsVision(), null,
-                    () -> llm.generateImageResult("Nombra el objeto principal de la imagen con una sola palabra.", foto));
-            String respuesta = result.isSuccess() ? "Detecto: " + result.getText() : modelFailureMessage(result);
-            hablar(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)));
-        } catch (RuntimeException e) {
-            Log.w(TAG, "No se pudo analizar el frame local", e);
-            hablar("No pude analizar esa imagen. Usa IA y cámara para tomar una foto nueva.");
-        } finally {
-            if (snapshot != null) snapshot.recycle();
-        }
-    }
 
     private String extraerConcepto(String frase) {
         return frase.toLowerCase().replaceAll("[.,!?¿¡\"]", "").trim();
@@ -3386,7 +2530,7 @@ public class MotorConversacional {
         }); } catch (java.util.concurrent.RejectedExecutionException ignored) { }
     }
 
-    private void limpiarContextoConversacional() {
+     void limpiarContextoConversacional() {
         conversationSession.clear();
         researchConversation.clear();
         setActivePhoto(null);
@@ -3443,27 +2587,6 @@ public class MotorConversacional {
         return null;
     }
 
-    private void confirmarOlvidoPendiente() {
-        if (pendingMemoryDeletion == null) {
-            hablar("No hay ningún olvido pendiente de confirmación.");
-            return;
-        }
-        PendingMemoryDeletion pending = pendingMemoryDeletion;
-        pendingMemoryDeletion = null;
-        if (pending.isExpired(System.currentTimeMillis(), MEMORY_DELETION_TTL_MS)) {
-            hablar("La solicitud de olvido ha caducado. Pídemela de nuevo si todavía quieres borrar ese dato.");
-            return;
-        }
-        MemoryForgetRequest request = pending.getRequest();
-        boolean deleted = memoria.eliminarDatoPerfil(request.getCategory());
-        if (deleted) {
-            // The short-term checkpoint must not reintroduce a profile fact just forgotten.
-            limpiarContextoConversacional();
-            hablar("He borrado " + request.getDescription() + " de la memoria de perfil.");
-        } else {
-            hablar("No encontré un dato de perfil etiquetado como " + request.getDescription() + ". No he borrado otros recuerdos.");
-        }
-    }
 
     private String manejarAgregarMision(IntentRecognizer.Intent intent) {
         String m = intent.slots.get("mision");
@@ -3493,4 +2616,19 @@ public class MotorConversacional {
 
     // Delegados para quien llama desde fuera (la lógica vive en ResearchDesk).
     WikipediaResearchClient researchReader(String question) { return mesaInvestigacion.researchReader(question); }
+
+    // Delegados para quien llama desde fuera (la lógica vive en PhoneActionsDesk).
+    public void ejecutarPasoRutina(String json, java.util.function.Consumer<Boolean> completed) { mesaAcciones.ejecutarPasoRutina(json, completed); }
+    void prepararAccion(PendingToolAction action) { mesaAcciones.prepararAccion(action); }
+
+    // Delegados para quien llama desde fuera (la lógica vive en CodeDesk).
+    public String getReviewerModel() { return mesaCodigo.getReviewerModel(); }
+
+    // Delegados para quien llama desde fuera (la lógica vive en PhotoDesk).
+    public void identificarFoto(String id, String name, String relation, String position) { mesaFotos.identificarFoto(id, name, relation, position); }
+    public void procesarImagen(String pregunta, Bitmap foto) { mesaFotos.procesarImagen(pregunta, foto); }
+    public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly) { mesaFotos.procesarImagen(pregunta, foto, localOnly); }
+    public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly,
+                              String personName, String relationship, String position) { mesaFotos.procesarImagen(pregunta, foto, localOnly, personName, relationship, position); }
+    public void seleccionarFotoGuardada(String id) { mesaFotos.seleccionarFotoGuardada(id); }
 }
