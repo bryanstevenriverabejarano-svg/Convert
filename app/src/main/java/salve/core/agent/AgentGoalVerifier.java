@@ -32,6 +32,8 @@ public final class AgentGoalVerifier {
     public static Result evaluate(AgentRun run) {
         if (run == null || run.goal == null || run.codeAllowed)
             return new Result(Verdict.UNKNOWN, "NONE", "");
+        Result arithmetic = AgentArithmeticVerifier.evaluate(run);
+        if (arithmetic != null) return arithmetic;
         // Concrete two-step goals are tried before the legacy one-URL parser.
         // Unbounded research and synthesis are still unsupported.
         Result steps = AgentMultiStepVerifier.evaluate(run);
