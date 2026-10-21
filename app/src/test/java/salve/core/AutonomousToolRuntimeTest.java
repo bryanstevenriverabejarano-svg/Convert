@@ -106,6 +106,29 @@ public class AutonomousToolRuntimeTest {
         assertEquals("", AutonomousToolRuntime.instructionFor("¿Qué hora es?"));
     }
 
+    @Test public void threeStageSkillIsLearnedThroughRealUserCommandAndSurvivesRestart() {
+        File file = new File(folder.getRoot(), "tools.json");
+        String training = "{\"name\":\"sorted_unique_odds\",\"train\":["
+                + "{\"in\":[7,3,7,4,1,3],\"out\":[1,3,7]},"
+                + "{\"in\":[-1,2,-3,7,-1,7],\"out\":[-3,-1,7]},"
+                + "{\"in\":[9,8,3,9,2,-5,3],\"out\":[-5,3,9]}],"
+                + "\"holdout\":["
+                + "{\"in\":[5,-7,5,2,-1],\"out\":[-7,-1,5]},"
+                + "{\"in\":[1,8,7,1,-7,3],\"out\":[-7,1,3,7]},"
+                + "{\"in\":[4,6,2,0,5],\"out\":[5]}]}";
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
+        String learned = runtime.respond("aprende habilidad: " + training, () -> false);
+        assertTrue(learned, learned.contains("CERTIFIED_ON_PROVIDED_HOLDOUT"));
+        assertTrue(learned, learned.contains("candidates_tested"));
+        assertTrue(learned, learned.contains("selected_length"));
+        String request = "usa habilidad: {\"name\":\"sorted_unique_odds\",\"input\":[5,3,5,2,1]}";
+        String output = new AutonomousToolRuntime(file).respond(request, () -> false);
+        assertTrue(output, output.contains("[1,3,5]"));
+        assertTrue(new File(folder.getRoot(), "inductive-skills.json").isFile());
+        assertFalse("los ejemplos no deben guardarse en el estado",
+                new File(folder.getRoot(), "inductive-skills.json").length() > 1500);
+    }
+
     @Test public void proceduralMemorySurvivesRestartWithoutExposingChallengeData() {
         File file = new File(folder.getRoot(), "tools.json");
         AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
