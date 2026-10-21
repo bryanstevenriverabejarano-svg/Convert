@@ -694,6 +694,15 @@ public class MotorConversacional {
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
+        if (salve.core.mind.MindMapCommand.matches(entrada)) {
+            if (!creatorSide()) { hablar("El mapa de mi mente tiene recuerdos privados de Bryan; solo se lo enseño a él."); return; }
+            try {
+                context.startActivity(new Intent(context, salve.presentation.ui.MindMapActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                hablar("Te abro el mapa de mi mente: mis creencias con los recuerdos en que se basan, mis preguntas, lo que he aprendido, "
+                        + "las personas que conozco y los temas de mis recuerdos. Toca cualquier punto para ver qué es.");
+            } catch (RuntimeException unavailable) { hablar("No pude abrir el mapa. Está en el menú → Reflexiones → Mapa de su mente."); }
+            return;
+        }
         String mindResponse = mind().handleCommand(entrada);
         if (mindResponse != null) {
             deliverResponse(mindResponse, AvatarMotionProtocol.parse(""), false, true, true);

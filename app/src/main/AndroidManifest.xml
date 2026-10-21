@@ -119,6 +119,10 @@
         <activity android:name="salve.presentation.ui.SalventeGenesisActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.SalventeChatActivity" android:exported="false" android:theme="@style/Theme.Salve"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name="salve.presentation.ui.MindMapActivity"
+            android:exported="false" />
+
         <activity android:name="salve.presentation.ui.ExecutionJournalActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.AgentPlansActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.ToolBridgeActivity" android:exported="false" android:theme="@style/Theme.Salve" />

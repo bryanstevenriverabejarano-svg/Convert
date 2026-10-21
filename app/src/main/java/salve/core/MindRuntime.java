@@ -219,6 +219,50 @@ public final class MindRuntime {
         } catch (RuntimeException failure) { return ""; }
     }
 
+    /**
+     * Mapa de su mente con datos reales (creencias con sus recuerdos de origen, preguntas,
+     * pensamientos, lecciones, personas y temas). Lee la base de datos: llamar fuera del hilo
+     * principal. Devuelve la página guardada en el almacenamiento privado de la app.
+     */
+    public File exportMindMap() throws java.io.IOException {
+        List<RecuerdoEntity> rows = new ArrayList<>(memories.recientes(400));
+        java.util.Set<Integer> have = new HashSet<>();
+        for (RecuerdoEntity r : rows) have.add(r.id);
+        List<Integer> wanted = new ArrayList<>();
+        for (salve.core.mind.SelfModel.Belief b : journal.beliefs())
+            if (b.sources != null) for (String src : b.sources) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("^recuerdos?:(\\d+)$").matcher(src == null ? "" : src.trim());
+                if (m.matches()) { int id = Integer.parseInt(m.group(1)); if (have.add(id)) wanted.add(id); }
+            }
+        if (!wanted.isEmpty()) rows.addAll(memories.porIds(wanted));
+        List<salve.core.mind.MindMap.Memory> mems = new ArrayList<>();
+        for (RecuerdoEntity r : rows) {
+            if (r == null || r.frase == null) continue;
+            List<String> tags = new ArrayList<>();
+            try {
+                if (r.etiquetas != null && r.etiquetas.trim().startsWith("["))
+                    for (com.google.gson.JsonElement e : com.google.gson.JsonParser.parseString(r.etiquetas).getAsJsonArray())
+                        if (e.isJsonPrimitive()) tags.add(e.getAsString());
+            } catch (RuntimeException ignored) { /* etiquetas antiguas sin JSON */ }
+            mems.add(new salve.core.mind.MindMap.Memory(r.id, r.frase, tags, r.timestamp, r.intensidad));
+        }
+        salve.core.identity.PeopleGraph graph = peopleGraph();
+        List<salve.core.mind.MindMap.Person> people = new ArrayList<>();
+        for (salve.core.identity.PeopleGraph.Relationship rel : graph.relationships()) {
+            salve.core.identity.PeopleGraph.PersonEntity p = graph.find(rel.toId);
+            if (p != null) people.add(new salve.core.mind.MindMap.Person(p.name, salve.core.identity.PeopleGraph.display(rel.type)));
+        }
+        com.google.gson.JsonObject data = salve.core.mind.MindMap.build(journal.narrative(), journal.beliefs(), journal.questions(),
+                journal.thoughts(), people, mems, lessons.all(), graph.creator().name);
+        File dir = new File(app.getFilesDir(), "grafo_offline");
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("No pude crear la carpeta del mapa");
+        File html = new File(dir, "mapa_mente.html");
+        try (java.io.Writer w = new java.io.OutputStreamWriter(new java.io.FileOutputStream(html), java.nio.charset.StandardCharsets.UTF_8)) {
+            w.write(salve.core.mind.MindMap.html(data));
+        }
+        return html;
+    }
+
     /** Árbol de personas calculado desde el perfil guardado (una sola fuente de verdad). */
     public salve.core.identity.PeopleGraph peopleGraph() {
         List<String[]> family = new ArrayList<>();

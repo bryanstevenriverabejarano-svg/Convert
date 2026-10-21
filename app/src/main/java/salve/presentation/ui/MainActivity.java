@@ -964,22 +964,18 @@ public class MainActivity extends AppCompatActivity {
         if (btnReflexiones != null) {
             btnReflexiones.setOnClickListener(v -> {
                 stageController.closePanels();
-                String[] opciones = {"Grafo de Textos (Teoría)", "Galería Semántica (Visual)"};
+                String[] opciones = {"Mapa de su mente (creencias, recuerdos, personas)", "Galería Semántica (Visual)"};
                 new AlertDialog.Builder(this)
                         .setTitle("¿Qué parte de la mente deseas ver?")
                         .setItems(opciones, (dialog, which) -> {
                             if (which == 0) {
-                                // Grafo de nodos normal
-                                File htmlFile = memoria.getGrafoConocimiento().exportarVisorOffline(50, 100);
-                                if (htmlFile != null && htmlFile.exists()) {
-                                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                                    Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", htmlFile);
-                                    intent.setDataAndType(uri, "text/html");
-                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                    startActivity(intent);
-                                } else {
-                                    Toast.makeText(this, "Aún no hay suficiente conocimiento para el grafo.", Toast.LENGTH_SHORT).show();
-                                }
+                                // Lo privado de Bryan (creencias, recuerdos, familia): con la verificación del teléfono si hace falta.
+                                salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(this);
+                                if (identity.privateAccess()) startActivity(new Intent(this, MindMapActivity.class));
+                                else identity.requestVerification("Para ver el mapa de la mente de Salve", ok -> {
+                                    if (ok) startActivity(new Intent(this, MindMapActivity.class));
+                                    else Toast.makeText(this, "Sin verificar no abro el mapa: tiene recuerdos privados.", Toast.LENGTH_SHORT).show();
+                                });
                             } else if (which == 1) {
                                 // Galería Visual (Hipocampo)
                                 Intent intent = new Intent(this, GaleriaVisualActivity.class);
