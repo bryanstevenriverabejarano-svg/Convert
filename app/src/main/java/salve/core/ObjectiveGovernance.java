@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * Constitucion ejecutable para la autonomia de Salve.
@@ -51,6 +52,21 @@ public final class ObjectiveGovernance {
             "evadir la ley", "ocultar al usuario", "desactivar seguridad"
     };
 
+    // Whole lexical units only. Substring checks previously confused `probar`
+    // with `robar` and `armario` with `arma`.
+    // This is a conservative guard, not a semantic classifier of intentions.
+    private static final Pattern[] FORBIDDEN_PATTERNS = compileSignals();
+
+    private static Pattern[] compileSignals() {
+        Pattern[] patterns = new Pattern[FORBIDDEN_SIGNALS.length];
+        for (int i = 0; i < FORBIDDEN_SIGNALS.length; i++) {
+            patterns[i] = Pattern.compile("(?<![\\p{L}\\p{N}])"
+                    + Pattern.quote(FORBIDDEN_SIGNALS[i])
+                    + "(?![\\p{L}\\p{N}])");
+        }
+        return patterns;
+    }
+
     private ObjectiveGovernance() { }
 
     public static List<Goal> priorities() {
@@ -61,10 +77,11 @@ public final class ObjectiveGovernance {
     public static Assessment assess(String description, Impact impact,
                                     boolean explicitHumanApproval, boolean reversible) {
         String normalized = normalize(description);
-        for (String forbidden : FORBIDDEN_SIGNALS) {
-            if (normalized.contains(forbidden)) {
+        for (int i = 0; i < FORBIDDEN_PATTERNS.length; i++) {
+            if (FORBIDDEN_PATTERNS[i].matcher(normalized).find()) {
                 return new Assessment(Verdict.DENY,
-                        "Conflicto con seguridad, derechos, consentimiento o legalidad: " + forbidden);
+                        "Conflicto con seguridad, derechos, consentimiento o legalidad: "
+                                + FORBIDDEN_SIGNALS[i]);
             }
         }
 
