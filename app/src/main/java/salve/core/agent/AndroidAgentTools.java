@@ -20,13 +20,24 @@ public final class AndroidAgentTools implements AgentEngine.Tools {
     }
     @Override public String capabilities(AgentRun run) {
         String metrics = statistics.get();
-        return "memory.lookup: " + (run.codeAllowed ? "no autorizada" : "memoria local")
+        return "math.compute: " + (!run.codeAllowed && AgentArithmeticTask.parse(run.goal) != null
+                ? "cálculo local exacto del objetivo literal" : "no disponible")
+                + "; memory.lookup: " + (run.codeAllowed ? "no autorizada" : "memoria local")
                 + "; web.search: objetivo literal, buscador configurado/puente; web.read/api.get: URL pública autorizada; "
                 + "browser.render: " + (run.bridge.isEmpty() ? "sin configurar" : "puente configurado, disponibilidad por comprobar")
                 + "; code.python: " + (run.codeAllowed && !run.bridge.isEmpty() ? "autorizado, requiere sandbox disponible" : "no disponible")
                 + ". Contadores observados (no prueban verdad): " + metrics.substring(0, Math.min(280, metrics.length()));
     }
     @Override public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call, BooleanSupplier stopped) throws Exception {
+        if (call.tool.equals("math.compute")) {
+            if (run.codeAllowed || !run.goal.equals(call.input) || AgentArithmeticTask.parse(run.goal) == null)
+                return new AgentRun.Observation(call.id, call.tool, "BLOCKED",
+                        "El cálculo solo acepta la expresión original del usuario.");
+            if (stopped.getAsBoolean()) throw new java.util.concurrent.CancellationException();
+            AgentArithmeticTask task = AgentArithmeticTask.parse(run.goal);
+            return new AgentRun.Observation(call.id, call.tool, "SUCCESS",
+                    "RESULTADO_ARITMETICO=" + task.calculateLocally());
+        }
         if (call.tool.equals("memory.lookup")) {
             ConversationMemoryGrounding.Result result = memory.retrieve(call.input);
             result = result.withCloudStatus(salve.data.sync.CloudSyncManager.memoryStatus(app),
