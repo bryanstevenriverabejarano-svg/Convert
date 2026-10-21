@@ -17,7 +17,7 @@ public final class MemoryHealth {
     public static boolean isCommand(String input) {
         String t = Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replaceAll("[¿?¡!.,;:]+", " ").replaceAll("\\s+", " ").trim().replaceFirst("^salve ", "");
-        return t.matches("(?:como (?:esta|va|anda) tu memoria|estado de tu memoria|(?:dime |muestrame )?el estado de tu memoria|"
+        return t.matches("(?:(?:como|que tal) (?:esta|va|anda|estan|van)? ?(?:tu|la) memoria(?: hoy| ahora)?|estado de tu memoria|(?:dime |muestrame )?el estado de tu memoria|"
                 + "tu memoria funciona(?: bien)?|funciona tu memoria|como estan tus recuerdos|revisa tu memoria|"
                 + "(?:tienes|funciona) (?:la )?(?:memoria|busqueda) por significado|estado de (?:tus|los) vectores)");
     }

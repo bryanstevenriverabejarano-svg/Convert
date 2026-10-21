@@ -43,7 +43,10 @@ public final class MindMap {
     private static final Pattern TECH_TAG = Pattern.compile(
             "^(hecho_usuario|declaracion_directa|memoria_(manual|auto)|profile:.*|manifiesto|identidad_creativa|investigacion_publica|"
             + "nube|cloud.*|sync.*|sistema|auto.*|interno|diagnostico|registro|evento|turno|conversacion|chat|voz|texto|"
-            + "dibujo_.*|sketch.*|research.*|web.*|tool.*|herramienta.*|accion.*|recibo.*|[a-z]+_[0-9a-f]{6,}|\\d+)$");
+            + "dibujo_.*|sketch.*|research.*|web.*|tool.*|herramienta.*|accion.*|recibo.*|[a-z]+_[0-9a-f]{6,}|\\d+|"
+            // Origen o formato del registro, no de qué trata: llenaban el mapa de «pcloud», «user_message»…
+            + "pcloud|diario_local|user_message|voice_message|assistant_message|memory|memoria|message|mensaje|"
+            + "imagen|foto|fotos|visual.*|photo.*|importante|recuerdo|recuerdos|local|remoto|restaurado|legacy)$");
     private static final Pattern SOURCE_MEMORY = Pattern.compile("^recuerdos?:(\\d+)$");
 
     private final JsonArray nodes = new JsonArray(), edges = new JsonArray();
@@ -188,6 +191,31 @@ public final class MindMap {
                 0.2 + Math.min(0.6, mem.intensity / 15.0));
     }
 
+    /**
+     * Pone foto a los nodos: a cada persona (por su primer nombre) y a cada recuerdo de una foto.
+     * Las imágenes llegan ya reducidas como data:image/jpeg;base64 (no se lee nada de fuera).
+     */
+    public static void attachImages(JsonObject map, Map<String, String> personByFirstName, Map<Integer, String> memoryById) {
+        if (map == null || !map.has("nodes")) return;
+        for (com.google.gson.JsonElement e : map.getAsJsonArray("nodes")) {
+            JsonObject n = e.getAsJsonObject();
+            String id = n.get("id").getAsString(), type = n.get("type").getAsString();
+            String img = null;
+            if ("persona".equals(type) && personByFirstName != null) img = personByFirstName.get(norm(n.get("label").getAsString()));
+            else if ("recuerdo".equals(type) && memoryById != null && id.startsWith("m:")) {
+                try { img = memoryById.get(Integer.parseInt(id.substring(2))); } catch (NumberFormatException ignored) { }
+            }
+            if (img != null && img.startsWith("data:image/")) n.addProperty("img", img);
+        }
+    }
+
+    /** El identificador de foto que aparece en el texto de un recuerdo visual («Foto dc6c…»), o null. */
+    public static String photoId(String memoryText) {
+        java.util.regex.Matcher m = PHOTO.matcher(memoryText == null ? "" : memoryText);
+        return m.find() ? m.group(1) : null;
+    }
+    private static final Pattern PHOTO = Pattern.compile("\\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\b");
+
     private void node(String id, String label, String type, String detail, double weight) {
         if (!ids.add(id)) return;
         JsonObject o = new JsonObject();
@@ -234,10 +262,10 @@ public final class MindMap {
                 + "canvas{display:block;width:100%;touch-action:none}"
                 + "#card{position:fixed;left:12px;right:12px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;"
                 + "padding:12px 14px;max-height:45%;overflow:auto;display:none;white-space:pre-wrap}#card b{display:block;margin-bottom:4px}"
-                + "#card small{color:var(--muted)}#x{float:right;background:none;border:none;color:var(--muted);font-size:18px}"
+                + "#card small{color:var(--muted)}#ci{display:none;float:left;width:96px;height:96px;object-fit:cover;border-radius:50%;margin:0 12px 6px 0;border:2px solid var(--line)}#x{float:right;background:none;border:none;color:var(--muted);font-size:18px}"
                 + "</style></head><body><header><h1>Mapa de mi mente</h1><div id=\"stats\"></div></header>"
                 + "<div id=\"chips\"></div><input id=\"q\" placeholder=\"Buscar en mi mente…\"><canvas id=\"c\"></canvas>"
-                + "<div id=\"card\"><button id=\"x\" aria-label=\"Cerrar\">×</button><b id=\"ct\"></b><small id=\"ck\"></small><div id=\"cd\"></div></div>"
+                + "<div id=\"card\"><button id=\"x\" aria-label=\"Cerrar\">×</button><img id=\"ci\" alt=\"\"><b id=\"ct\"></b><small id=\"ck\"></small><div id=\"cd\"></div></div>"
                 + "<script>const D=" + json + ";\n"
                 + "const COL={yo:'#7fd8ff',persona:'#ffd27f',creencia:'#8be39a',creencia_dudosa:'#ff9a8b',pregunta:'#c9a2ff',pensamiento:'#9ab8ff',leccion:'#ffb3e0',tema:'#f2f28a',recuerdo:'#6f8aa6'};\n"
                 + "const NAME={yo:'Yo',persona:'Personas',creencia:'Creencias',creencia_dudosa:'Dudas',pregunta:'Preguntas',pensamiento:'Pensamientos',leccion:'Lecciones',tema:'Temas',recuerdo:'Recuerdos'};\n"
@@ -263,11 +291,16 @@ public final class MindMap {
                 + "for(const n of N){if(!isFinite(n.vx)||!isFinite(n.vy)){n.vx=n.vy=0}if(!isFinite(n.x)||!isFinite(n.y)){n.x=Math.random()*80-40;n.y=Math.random()*80-40}"
                 + "if(n.id==='yo'){n.x*=.9;n.y*=.9;n.vx=n.vy=0;continue}n.vx-=n.x*.002;n.vy-=n.y*.002;n.vx*=.85;n.vy*=.85;"
                 + "const v=Math.hypot(n.vx,n.vy);if(v>12){n.vx*=12/v;n.vy*=12/v}n.x+=n.vx;n.y+=n.vy}}\n"
-                + "function r(n){return 5+n.w*12+(n.id==='yo'?10:0)}\n"
+                + "function r(n){return 5+n.w*12+(n.id==='yo'?10:0)+(n.img&&n.type==='persona'?8:0)}\n"
+                + "for(const n of N)if(n.img){const im=new Image();im.src=n.img;n.im=im}\n"
+                // Siempre con nombre: ella, las personas y los temas; el resto al acercarse o al buscar (antes se amontonaban).
+                + "const ALWAYS={yo:1,persona:1,tema:1};\n"
                 + "function draw(){cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,W,H);cx.translate(W/2+ox,H/2+oy);cx.scale(scale,scale);"
                 + "cx.lineWidth=1/scale;for(const e of E){const a=idx[e.from],b=idx[e.to];if(!vis(a)||!vis(b))continue;cx.strokeStyle=(hit(a)||hit(b))?'#ffffffaa':'#2a405899';cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke()}"
                 + "for(const n of N){if(!vis(n))continue;cx.globalAlpha=query&&!hit(n)?.25:1;cx.fillStyle=COL[n.type]||'#aaa';cx.beginPath();cx.arc(n.x,n.y,r(n),0,7);cx.fill();"
-                + "if(n.type!=='recuerdo'||scale>1.4||hit(n)){cx.fillStyle='#dcecff';cx.font=(n.id==='yo'?14:11)/Math.max(.7,scale)+'px system-ui';cx.textAlign='center';cx.fillText(n.label.slice(0,28),n.x,n.y+r(n)+12/Math.max(.7,scale))}}cx.globalAlpha=1}\n"
+                + "if(n.im&&n.im.complete&&n.im.naturalWidth){const q=r(n)-2;cx.save();cx.beginPath();cx.arc(n.x,n.y,q,0,7);cx.closePath();cx.clip();"
+                + "const s2=Math.min(n.im.naturalWidth,n.im.naturalHeight);cx.drawImage(n.im,(n.im.naturalWidth-s2)/2,(n.im.naturalHeight-s2)/2,s2,s2,n.x-q,n.y-q,2*q,2*q);cx.restore()}"
+                + "if(ALWAYS[n.type]||scale>1.5||hit(n)){cx.fillStyle='#dcecff';cx.font=(n.id==='yo'?14:11)/Math.max(.7,scale)+'px system-ui';cx.textAlign='center';cx.fillText(n.label.slice(0,28),n.x,n.y+r(n)+12/Math.max(.7,scale))}}cx.globalAlpha=1}\n"
                 + "function fit(){let a=1e9,b=-1e9,c=1e9,d=-1e9;for(const n of N){if(!vis(n)||!isFinite(n.x)||!isFinite(n.y))continue;a=Math.min(a,n.x);b=Math.max(b,n.x);c=Math.min(c,n.y);d=Math.max(d,n.y)}"
                 + "if(a>b||W<=0||H<=0)return;scale=Math.max(.3,Math.min(1.6,Math.min((W-40)/(b-a+60),(H-40)/(d-c+60))));ox=-(a+b)/2*scale;oy=-(c+d)/2*scale}\n"
                 + "let failed=0;(function loop(){try{sized();step();if(!touched&&++ticks%30===0&&ticks<=300)fit();draw()}catch(err){if(++failed===1)document.getElementById('stats').textContent+=' · error al dibujar: '+err.message}requestAnimationFrame(loop)})();\n"
@@ -280,6 +313,7 @@ public final class MindMap {
                 + "cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',up);"
                 + "cv.addEventListener('mousedown',down);addEventListener('mousemove',move);addEventListener('mouseup',up);cv.addEventListener('wheel',e=>{touched=true;scale=Math.max(.3,Math.min(4,scale*(e.deltaY<0?1.1:.9)));e.preventDefault()},{passive:false});\n"
                 + "function show(n){const rel=E.filter(e=>e.from===n.id||e.to===n.id).map(e=>e.from===n.id?'→ '+e.kind+': '+idx[e.to].label:'← '+e.kind+': '+idx[e.from].label);"
+                + "const ci=document.getElementById('ci');if(n.img){ci.src=n.img;ci.style.display='block'}else{ci.removeAttribute('src');ci.style.display='none'}"
                 + "document.getElementById('ct').textContent=n.label;document.getElementById('ck').textContent=NAME[n.type]||n.type;"
                 + "document.getElementById('cd').textContent='\\n'+n.detail+(rel.length?'\\n\\n'+rel.slice(0,12).join('\\n'):'');document.getElementById('card').style.display='block'}\n"
                 + "document.getElementById('x').onclick=()=>document.getElementById('card').style.display='none';\n"

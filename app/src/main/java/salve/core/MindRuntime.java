@@ -322,6 +322,7 @@ public final class MindRuntime {
         com.google.gson.JsonObject data = salve.core.mind.MindMap.build(journal.narrative(), biographySentence(), MISSION,
                 journal.beliefs(), journal.questions(),
                 journal.thoughts(), people, mems, lessons.all(), graph.creator().name);
+        attachPhotos(data, rows);
         File dir = new File(app.getFilesDir(), "grafo_offline");
         if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("No pude crear la carpeta del mapa");
         File html = new File(dir, "mapa_mente.html");
@@ -329,6 +330,59 @@ public final class MindRuntime {
             w.write(salve.core.mind.MindMap.html(data));
         }
         return html;
+    }
+
+    /**
+     * Fotos en el mapa: la cara de cada persona (su foto más reciente en la memoria visual) y la
+     * miniatura de cada recuerdo que es una foto. Miniaturas pequeñas dentro de la página, sin red.
+     */
+    private void attachPhotos(com.google.gson.JsonObject data, List<RecuerdoEntity> rows) {
+        try {
+            salve.core.visual.VisualMemoryStore store = new salve.core.visual.VisualMemoryRepository(app).store;
+            java.util.Map<String, String> byPerson = new java.util.HashMap<>();
+            java.util.Map<String, Long> newest = new java.util.HashMap<>();
+            for (salve.core.visual.VisualMemoryRecord v : store.list()) {
+                if (v == null || v.personName == null || v.personName.trim().isEmpty()) continue;
+                String first = java.text.Normalizer.normalize(v.personName.trim().split("\\s+")[0].toLowerCase(java.util.Locale.ROOT),
+                        java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+                if (newest.containsKey(first) && newest.get(first) >= v.createdAt) continue;
+                String thumb = thumbnail(store.imageFile(v.id), 160);
+                if (thumb != null) { byPerson.put(first, thumb); newest.put(first, v.createdAt); }
+            }
+            java.util.Map<Integer, String> byMemory = new java.util.HashMap<>();
+            for (RecuerdoEntity r : rows) {
+                if (byMemory.size() >= 30 || r == null) continue;
+                String photo = salve.core.mind.MindMap.photoId(r.frase);
+                if (photo == null) continue;
+                String thumb = thumbnail(store.imageFile(photo), 128);
+                if (thumb != null) byMemory.put(r.id, thumb);
+            }
+            salve.core.mind.MindMap.attachImages(data, byPerson, byMemory);
+        } catch (Exception unavailable) { /* el mapa se ve igual, sin fotos */ }
+    }
+
+    /** JPEG pequeño en data: URI, o null si no hay foto legible. */
+    private static String thumbnail(File file, int size) {
+        if (file == null || !file.isFile() || file.length() > salve.core.visual.VisualMemoryStore.MAX_IMAGE_BYTES) return null;
+        android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        o.inJustDecodeBounds = true;
+        android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath(), o);
+        if (o.outWidth < 1 || o.outHeight < 1) return null;
+        int sample = 1;
+        while (Math.min(o.outWidth, o.outHeight) / (sample * 2) >= size) sample *= 2;
+        android.graphics.BitmapFactory.Options d = new android.graphics.BitmapFactory.Options();
+        d.inSampleSize = sample;
+        android.graphics.Bitmap full = android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath(), d);
+        if (full == null) return null;
+        int side = Math.min(full.getWidth(), full.getHeight());
+        android.graphics.Bitmap square = android.graphics.Bitmap.createBitmap(full, (full.getWidth() - side) / 2, (full.getHeight() - side) / 2, side, side);
+        android.graphics.Bitmap small = android.graphics.Bitmap.createScaledBitmap(square, size, size, true);
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        small.compress(android.graphics.Bitmap.CompressFormat.JPEG, 72, out);
+        if (small != square) small.recycle();
+        if (square != full) square.recycle();
+        full.recycle();
+        return "data:image/jpeg;base64," + android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP);
     }
 
     /** Árbol de personas calculado desde el perfil guardado (una sola fuente de verdad). */

@@ -72,6 +72,8 @@ public final class CognitivePrompt {
         if (CLOUD.matcher(input).matches() && available.containsKey("cloud.sync")) first.add("cloud.sync");
         if (RESEARCH.matcher(input).matches() && available.containsKey("web.search")) first.add("web.search");
         if (drawing && available.containsKey("sketch.draw")) first.add(0, "sketch.draw");
+        if (available.containsKey(salve.core.mind.SelfFunctions.TOOL) && salve.core.mind.SelfFunctions.offered(input))
+            first.add(0, salve.core.mind.SelfFunctions.TOOL);
         if (first.isEmpty()) return available;
         Map<String, CognitiveTurn.Tool> ordered = new java.util.LinkedHashMap<>();
         // Dentro del vestuario, crear va antes que listar o vestir: es la más grande y la que se perdía.

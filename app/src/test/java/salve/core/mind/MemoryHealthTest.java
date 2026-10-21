@@ -11,6 +11,8 @@ public class MemoryHealthTest {
         assertTrue(MemoryHealth.isCommand("¿Cómo está tu memoria?"));
         assertTrue(MemoryHealth.isCommand("Salve, estado de tu memoria"));
         assertTrue(MemoryHealth.isCommand("¿Tienes memoria por significado?"));
+        assertTrue(MemoryHealth.isCommand("Que tal tu memoria?"));
+        assertTrue(MemoryHealth.isCommand("¿Qué tal va la memoria?"));
         assertFalse(MemoryHealth.isCommand("tengo mala memoria para los nombres"));
     }
 
