@@ -257,6 +257,12 @@ public final class AgentEngine {
     private void checkpoint(AgentRun run) { if (!store.save(run, clock.getAsLong())) throw new CancellationException(); }
     private void finish(AgentRun run, String status, String error) {
         run.status = status; run.error = error;
+        AgentGoalVerifier.Result verified = AgentGoalVerifier.evaluate(run);
+        run.goalVerification = verified.verdict.name();
+        run.verificationCriterion = verified.criterion;
+        run.verificationEvidence = verified.evidenceId;
+        // An LLM reviewer can close a plan, but cannot set an independently
+        // verified outcome by asserting "pass" in its own JSON.
         if (!store.finish(run, clock.getAsLong())) throw new CancellationException();
     }
     private static void check(BooleanSupplier stopped) { if (stopped.getAsBoolean()) throw new CancellationException(); }
