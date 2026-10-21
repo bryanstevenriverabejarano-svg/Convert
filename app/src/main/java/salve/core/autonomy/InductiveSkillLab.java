@@ -30,6 +30,8 @@ public final class InductiveSkillLab {
             "reverse", "sort", "unique", "abs", "negate", "filter_even",
             "filter_odd", "square", "plus_one", "minus_one"));
     private static final int MAX_ITEMS = 24;
+    private static final int MAX_PROGRAM_LENGTH = 3;
+    private static final int MAX_CANDIDATES = 1110; // 10 + 10² + 10³; finite search.
     private static final int MAX_SKILLS = 16;
     private static final int MAX_EXAMPLES = 32;
     private static final int MAX_VALUE = 10000;
@@ -90,7 +92,7 @@ public final class InductiveSkillLab {
     }
     private static List<String> parseProgram(JsonElement el) {
         if (el == null || !el.isJsonArray() || el.getAsJsonArray().size() < 1
-                || el.getAsJsonArray().size() > 2) throw new IllegalArgumentException("Programa inválido");
+                || el.getAsJsonArray().size() > MAX_PROGRAM_LENGTH) throw new IllegalArgumentException("Programa inválido");
         List<String> ops = new ArrayList<>();
         for (JsonElement e : el.getAsJsonArray()) {
             if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isString()
@@ -166,22 +168,49 @@ public final class InductiveSkillLab {
         for (Example h : holdout) for (Example t : train)
             if (h.in.equals(t.in)) throw new IllegalArgumentException("Los ejemplos reservados deben ser inéditos");
     }
-    /** Enumerate a finite grammar using training only. Preference is shortest, then fixed op order. */
-    private static List<String> synthesize(List<Example> train, BooleanSupplier stopped) {
-        List<List<String>> candidates = new ArrayList<>();
-        for (String first : OPS) candidates.add(Collections.singletonList(first));
-        for (String first : OPS) for (String second : OPS)
-            candidates.add(Arrays.asList(first, second));
-        for (List<String> candidate : candidates) {
-            if (stopped.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
-            boolean fits = true;
-            for (Example e : train) {
-                try { if (!execute(candidate, e.in).equals(e.out)) { fits = false; break; } }
-                catch (IllegalArgumentException invalid) { fits = false; break; }
-            }
-            if (fits) return candidate;
+    /**
+     * Compare all finite candidate programs on TRAINING ONLY. Return the shortest
+     * matching candidate (stable grammar order) with auditable candidate counts.
+     * Reserved examples are not visible to synthesis or ranking.
+     */
+    private static final class Search {
+        final List<String> program;
+        final int tested, matching;
+        Search(List<String> program, int tested, int matching) {
+            this.program = program; this.tested = tested; this.matching = matching;
         }
-        return null;
+    }
+    private static Search synthesize(List<Example> train, BooleanSupplier stopped) {
+        List<String> best = null;
+        int checked = 0, matching = 0;
+        for (String first : OPS) {
+            checked++;
+            if (stopped.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
+            List<String> candidate = Collections.singletonList(first);
+            if (fitsTraining(candidate, train, stopped)) { matching++; if (best == null) best = candidate; }
+        }
+        for (String first : OPS) for (String second : OPS) {
+            checked++;
+            if (stopped.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
+            List<String> candidate = Arrays.asList(first, second);
+            if (fitsTraining(candidate, train, stopped)) { matching++; if (best == null) best = candidate; }
+        }
+        for (String first : OPS) for (String second : OPS) for (String third : OPS) {
+            checked++;
+            if (stopped.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
+            List<String> candidate = Arrays.asList(first, second, third);
+            if (fitsTraining(candidate, train, stopped)) { matching++; if (best == null) best = candidate; }
+        }
+        if (checked != MAX_CANDIDATES) throw new IllegalStateException("Presupuesto de candidatos inconsistente");
+        return new Search(best, checked, matching);
+    }
+    private static boolean fitsTraining(List<String> candidate, List<Example> train, BooleanSupplier stopped) {
+        for (Example e : train) {
+            if (stopped.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
+            try { if (!execute(candidate, e.in).equals(e.out)) return false; }
+            catch (IllegalArgumentException invalid) { return false; }
+        }
+        return true;
     }
     private static JsonObject cleanRecord(List<String> program, int train, int holdout) {
         JsonObject record = new JsonObject();
@@ -203,14 +232,19 @@ public final class InductiveSkillLab {
         List<Example> holdout = examples(request.get("holdout"));
         checkSeparation(train, holdout);
         BooleanSupplier cancel = stopped == null ? () -> false : stopped;
-        List<String> program = synthesize(train, cancel);
+        Search search = synthesize(train, cancel);
+        List<String> program = search.program;
         JsonObject result = new JsonObject();
         result.addProperty("name", name);
+        result.addProperty("candidates_tested", search.tested);
+        result.addProperty("candidates_matching_training", search.matching);
+        result.addProperty("max_program_length", MAX_PROGRAM_LENGTH);
         if (program == null) {
             result.addProperty("status", "NO_CANDIDATE");
             return result;
         }
         result.add("program", cleanRecord(program, train.size(), holdout.size()).get("program"));
+        result.addProperty("selected_length", program.size());
         for (Example test : holdout) {
             if (cancel.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
             try {
