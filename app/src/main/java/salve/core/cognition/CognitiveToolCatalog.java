@@ -37,6 +37,8 @@ public final class CognitiveToolCatalog {
         if (dispatch == null) throw new IllegalArgumentException("No hay ejecutor autorizado.");
         Map<String, CognitiveTurn.Tool> tools = new LinkedHashMap<>();
         if (photoAnalysis) return tools; // Photo-only requests never perform an action.
+        String safeInput = input == null ? "" : input;
+        String request = safeInput.toLowerCase(Locale.ROOT);
 
         if (verifiedCreator) add(tools, "memory.lookup",
                 "{}: recupera recuerdos de la petición actual", dispatch);
@@ -46,13 +48,14 @@ public final class CognitiveToolCatalog {
         add(tools, "sketch.draw",
                 "{motivos:string}: dibujas algo (si no lo conoces, buscas referencias), ej. 'arbol+luna'",
                 dispatch, "motivos");
-        // Restoring private cloud memories is not a capability of guest conversations.
-        if (verifiedCreator) add(tools, "cloud.sync",
+        // Private cloud synchronization requires both private-session access and
+        // explicit intent in the current user turn, not the model's curiosity.
+        if (verifiedCreator && request.matches("(?s).*(sincroniz|p ?cloud|la nube|sube mis recuerdos|restaura mi memoria).*"))
+            add(tools, "cloud.sync",
                 "{}: sincronizas tú misma con pCloud (traes recuerdos, fotos, dibujos y tu mente; subes lo nuevo)",
                 dispatch);
         add(tools, "runtime.status", "{}: mide estado y RAM", dispatch);
 
-        String safeInput = input == null ? "" : input;
         String family = AutonomousToolCommand.offeredFamilyFor(safeInput);
         if (!family.isEmpty()) add(tools, "SOLVE_CHALLENGE",
                 "{challenge:{schema:1,id:'consulta',family:'" + family + "',input:"
@@ -60,7 +63,6 @@ public final class CognitiveToolCatalog {
                 + "}}; enteros explícitos, <=14 elementos, capacidad<=100",
                 dispatch, "challenge");
 
-        String request = safeInput.toLowerCase(Locale.ROOT);
         // Both explicit user intent and a connected accessibility service are
         // necessary to *propose* these calls; the Android executor requires
         // independent per-action approval before dispatching any side effect.
