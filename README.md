@@ -1,5 +1,12 @@
 # Salve para Android
 
+> **Estado del proyecto (21 de octubre de 2026):** empieza por
+> [Estado actual y límites de validación](docs/ESTADO_ACTUAL.md).
+> Distingue funciones en `main`, experimentos históricos y cambios aún sin fusionar
+> (PR [#199](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/199)
+> y [#200](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/200)).
+> La presencia de código no demuestra que haya pasado una prueba real de teléfono.
+
 > La arquitectura, los límites de autonomía y la hoja de ruta de evolución segura de
 > Salve se documentan en [GOBERNANZA_Y_EVOLUCION.md](GOBERNANZA_Y_EVOLUCION.md).
 
@@ -27,11 +34,41 @@ delegar cuentos, reflexiones y otras tareas de texto pesadas, con respaldo local
 Incluye el microcomponente Python, límites y prueba de conexión.
 Consulta [instalación y alcance del cómputo distribuido](docs/COMPUTO_DISTRIBUIDO.md).
 
-## Modelo local principal
+## Modelos de conversación y visión
 
-Salve prioriza Dolphin 3.0 Llama 3.2 3B Q4_K_M (2,02 GB), con llama.cpp para
-Android. Gemma solo se prepara tras un fallo de Dolphin y se reutiliza si ya está
-descargado. Consulta [instalación, límites y pruebas](docs/dolphin-android.md).
+La política de selección automática en `LocalModelPolicy.kt` es **Dolphin 3.0
+Llama 3.1 8B Q4_K_M → Dolphin 3.0 Llama 3.2 3B Q4_K_M → Gemma 4 E2B**. Dolphin
+es texto local mediante llama.cpp; Gemma E2B conserva la ruta de visión cuando está
+activo. **Gemma 4 E4B es opcional**, fuera de esa escalera. Disponer de 12 GB de
+RAM comercial no garantiza poder cargar el 8B: se mide la memoria libre real y se
+requiere una prueba de generación antes de presentar un motor como activo.
+
+El archivo `app/src/main/assets/config/models.json` contiene el artefacto fijado
+de Gemma E2B; no representa por sí solo todos los modelos admitidos. Para cifras,
+recuperación, cambios automáticos y validaciones:
+[Modelos Dolphin y respaldo](docs/dolphin-android.md).
+
+## Memoria semántica en español
+
+Salve cuenta con una vía de memoria híbrida (consulta por palabras y candidatos
+semánticos). H2 incorpora el contrato **multilingual-e5-small INT8** y su
+tokenizador SentencePiece, descargados y verificados fuera del APK. Se activan
+solo si están disponibles y superan la calibración; la prueba ARM64 en el
+teléfono sigue siendo necesaria.
+
+Consulta [H2: memoria multilingüe](docs/H2_MEMORIA_MULTILINGUE.md) y
+[mente persistente](docs/MENTE_PERSISTENTE.md).
+
+## Investigación y decisiones situacionales
+
+La investigación pública puede planificar consultas, leer páginas una a una y
+conservar evidencia; consulta [investigación guiada](scripts/RESEARCH_INTENT.md).
+
+**Todavía en propuestas no fusionadas:** la [PR #199](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/199)
+añade registro literal de ejecución y la
+[PR #200](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/200)
+plantea deliberación situacional con evaluación de prioridades y riesgos.
+No confundas sus documentos de rama con funciones ya presentes en `main`.
 
 ## Apariencia de Salve
 
@@ -157,48 +194,16 @@ Solo puede existir un supervisor por repositorio. Procesa una propuesta por
 ciclo, aplica retroceso exponencial tras errores y se detiene al alcanzar el
 límite configurado de fallos consecutivos.
 
-## Modelos locales compatibles
+## Integraciones heredadas y opcionales
 
-Salve usa **MLC en Android**. Un GGUF de Ollama no es intercambiable con este motor y
-no basta con descargar la pagina HTML de Hugging Face o un archivo de pesos aislado.
-La descarga integrada obtiene ahora el manifiesto del repositorio, baja el
-`mlc-chat-config.json`, el tokenizador y todos los `params_shard_*.bin`, permite
-reanudar los archivos parciales y activa el modelo al terminar.
+Los apartados históricos de MLC/Qwen y los ejemplos de Live2D no describen el
+modelo local predeterminado ni el renderizador principal de Salve. Las clases
+de compatibilidad pueden seguir presentes para pruebas e importaciones, pero no
+deben confundirse con una activación demostrada. La ruta principal actual está
+descrita en [Modelos Dolphin](docs/dolphin-android.md) y
+[Avatar realista 2D](docs/SALVE_AVATAR_2D.md).
 
-El modelo predeterminado es pequeño para funcionar en mas telefonos:
+## Mapa de documentación
 
-* [Qwen2.5 0.5B Instruct, cuantizado para MLC](https://huggingface.co/mlc-ai/Qwen2.5-0.5B-Instruct-q4f16_1-MLC): conversación, español y tareas generales.
-
-Alternativas oficiales para preparar en una compilación propia, si el dispositivo
-tiene suficiente RAM y almacenamiento:
-
-* [Qwen2.5 Coder 1.5B Instruct](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct): mejor para aprender y explicar programación; hay que convertirlo/empaquetarlo con MLC antes de usarlo en esta app.
-* [Catálogo de modelos preconvertidos de MLC](https://huggingface.co/mlc-ai/models): permite elegir otra cuantización MLC compatible.
-* [Guía oficial de empaquetado para Android](https://llm.mlc.ai/docs/deploy/android.html): el `model_lib` del modelo elegido debe incluirse al crear la APK.
-
-Para cambiar el modelo descargado automáticamente, modifica
-`app/src/main/assets/config/models.json` usando `huggingFaceRepo` (formato
-`organización/repositorio`) y vuelve a empaquetar su librería con `mlc_llm package`.
-OneDrive puede servir como copia de seguridad, pero no como catálogo automático:
-sus enlaces compartidos cambian o devuelven HTML y no garantizan reanudación ni un
-manifiesto verificable.
-
-Checkout [Documentation page](https://llm.mlc.ai/docs/deploy/android.html) for more information.
-
-- run `mlc_llm package`
-- open this `MLCChat/` folder as a project in Android Studio
-
-## Live2D Cubism SDK (Android)
-
-Para animar el personaje con Live2D Cubism SDK for Native:
-
-1. Descarga el SDK desde el portal oficial de Live2D (requiere cuenta). Extrae los binarios y headers del paquete `CubismSdkForNative`.
-2. Añade el SDK como módulo o dependencia local en el proyecto Android. La app incluye un wrapper neutral en `app/src/main/java/salve/live2d` para evitar dependencias directas mientras el SDK no esté presente.
-3. Exporta el modelo desde Cubism Editor:
-   - Genera el archivo `.moc3`.
-   - Configura la física del cabello (flequillo y mechones) con grupos de péndulo y parámetros de entrada (inclinación de cabeza, movimientos X/Y).
-   - Exporta el archivo `*.physics3.json`.
-4. Copia el `.moc3`, texturas, y `*.physics3.json` dentro de `app/src/main/assets/live2d/` o una ruta accesible por la app.
-5. Implementa el puente con el SDK en una clase que implemente `Live2DParameterSink` y úsala con `Live2DTouchController` para enlazar la interacción táctil a parámetros como `ParamAngleX` y `ParamAngleY`.
-
-El ejemplo `Live2DCanvasView` muestra cómo enganchar un controlador sin depender directamente del SDK y mantiene el proyecto compilable hasta que se agreguen las librerías.
+Consulta [Estado actual](docs/ESTADO_ACTUAL.md) como índice de las capacidades,
+evidencia de pruebas, funcionalidades propuestas y auditorías históricas.
