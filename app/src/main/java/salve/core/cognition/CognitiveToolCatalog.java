@@ -76,8 +76,11 @@ public final class CognitiveToolCatalog {
                     dispatch, "codigo");
         if (request.matches("(?s).*(avatar|vestuario|ropa|vestido|pijama|armario).*")) {
             add(tools, "AVATAR_LIST", "{}: lista diseños locales", dispatch);
-            add(tools, "AVATAR_WEAR", "{name:string}: viste diseño existente",
-                    dispatch, "name");
+            // A design may be selected by name OR by an existing id.
+            // AvatarDesignRequest.parse performs the strict alternative-key check.
+            tools.put("AVATAR_WEAR", new CognitiveTurn.Tool(
+                    "{name:string} o {id:string}: viste diseño existente",
+                    args -> dispatch.execute("AVATAR_WEAR", args.deepCopy())));
             // Native AvatarDesignRequest continues to validate all fields, including
             // optional wear and immutable presets, before execution.
             add(tools, "AVATAR_CREATE",
