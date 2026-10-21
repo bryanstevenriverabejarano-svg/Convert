@@ -12,6 +12,7 @@ import salve.core.autonomy.AutonomousToolReply;
 import salve.core.autonomy.FileToolStateStore;
 import salve.core.autonomy.InductiveSkillLab;
 import salve.core.autonomy.InductiveSkillProposal;
+import salve.core.autonomy.BlindSkillTransferExperiment;
 import salve.core.agent.AgentRun;
 import salve.core.agent.AgentSkillGapDetector;
 import java.util.List;
@@ -49,7 +50,8 @@ public final class AutonomousToolRuntime {
     }
     public static boolean handles(String input) {
         return learningCommand(input) != 0 || inductiveCommand(input) != 0
-                || proposalCommand(input) != 0 || AutonomousToolCommand.parse(input) != null;
+                || proposalCommand(input) != 0 || experimentCommand(input)
+                || AutonomousToolCommand.parse(input) != null;
     }
     /** Exact commands from the user channel, not inferred from quoted documents or memory. */
     private static int learningCommand(String input) {
@@ -71,6 +73,11 @@ public final class AutonomousToolRuntime {
         if (value.toLowerCase(java.util.Locale.ROOT).startsWith("aprende habilidad:")) return 2;
         if (value.toLowerCase(java.util.Locale.ROOT).startsWith("usa habilidad:")) return 3;
         return 0;
+    }
+
+    /** Experimental challenge explicitly requested in the user's own turn. */
+    private static boolean experimentCommand(String input) {
+        return input != null && input.trim().equalsIgnoreCase("experimento de aprendizaje");
     }
 
     /** Explicit, user-channel approval; never parse proposals from LLM or retrieved pages. */
@@ -282,6 +289,27 @@ public final class AutonomousToolRuntime {
         if (current != null) current.pause();
     }
     public String respond(String input, BooleanSupplier stopped) {
+        if (experimentCommand(input)) {
+            if (paused.get()) return "Experimento cancelado: laboratorio pausado.";
+            long epoch = cancellationEpoch.get();
+            BooleanSupplier cancelled = () -> paused.get() || cancellationEpoch.get() != epoch
+                    || Thread.currentThread().isInterrupted()
+                    || stopped != null && stopped.getAsBoolean();
+            try {
+                if (cancelled.getAsBoolean()) return "Experimento cancelado.";
+                BlindSkillTransferExperiment.Result report =
+                        BlindSkillTransferExperiment.runNewChallenge(cancelled);
+                return "EXPERIMENTO DE APRENDIZAJE LOCAL (sin instalación): " + report.report()
+                        + ". La prueba final es nueva y solo se consulta tras congelar el programa. "
+                        + "Si falla, el examen se conserva como resultado negativo, "
+                        + "no se usa para ajustar y aprobar el mismo candidato. "
+                        + "Prueba limitada a listas numéricas; no demuestra AGI.";
+            } catch (Exception failure) {
+                return cancelled.getAsBoolean() ? "Experimento cancelado."
+                        : "Experimento fallido sin instalar habilidad: "
+                        + failure.getClass().getSimpleName();
+            }
+        }
         if (proposalCommand(input) != 0) return proposalReply(input, stopped);
         int inductiveAction = inductiveCommand(input);
         if (inductiveAction != 0) {
@@ -428,7 +456,8 @@ public final class AutonomousToolRuntime {
                 + "También puedes pausar, reanudar o revertir una herramienta. Se admiten cuatro familias acotadas; el laboratorio no cambia el código de la aplicación. "
                 + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental. " 
                 + "Laboratorio inductivo: habilidades aprendidas; aprende habilidad: {nombre, train, holdout}; usa habilidad: {name, input}. "
-                + "Propuestas locales: propón habilidad: ordenar impares sin repetir; aprueba habilidad ID; descarta habilidad ID. " 
+                + "Propuestas locales: propón habilidad: ordenar impares sin repetir; aprueba habilidad ID; descarta habilidad ID. "
+                + "Experimento controlado: experimento de aprendizaje (reintentos solo en desarrollo y examen final no reutilizado). " 
                 + "Cada ejemplo de train/holdout usa las claves in y out, con listas numéricas.";
     }
 }
