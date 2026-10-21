@@ -95,18 +95,18 @@ public final class SituationalDecisionFrame {
         JsonArray priorities = new JsonArray();
         for (String priority : statedPriorities) priorities.add(priority);
         frame.add("user_fragments_unverified", priorities);
-        frame.addProperty("possible_time_pressure", possibleTimePressure);
-        frame.addProperty("decision_rule", "compare alternatives; preserve options; no assumed feelings or permissions");
+        frame.addProperty("time_hint", possibleTimePressure);
+        
         JsonArray evaluation = new JsonArray();
-        for (String axis : new String[]{"urgency", "irreversibility", "cost_of_inaction",
+        for (String axis : new String[]{"urgency", "irreversibility", "opportunity_cost",
                 "impact_on_people", "uncertainty"}) evaluation.add(axis);
-        frame.add("evaluation_axes_not_facts", evaluation);
+        frame.add("checks", evaluation);
         JsonArray alternatives = new JsonArray();
-        alternatives.add("seek_option_preserving_goals");
-        alternatives.add("explain_tradeoff_without_imposing_choice");
-        alternatives.add("clarify_only_decisive_unknown");
-        if (toolCatalogAvailable) alternatives.add("propose_catalog_tool_controller_checks_permission");
-        frame.add("candidate_approaches_not_actions", alternatives);
+        alternatives.add("preserve_both_if_possible");
+        alternatives.add("explain_tradeoff_no_imposition");
+        alternatives.add("clarify_only_decisive");
+        if (toolCatalogAvailable) alternatives.add("tool_only_if_controller_allows");
+        frame.add("approaches", alternatives);
         frame.addProperty("tool_available", toolCatalogAvailable);
         JsonArray observations = new JsonArray();
         for (ReceiptStatus receipt : receipts) {
@@ -115,7 +115,7 @@ public final class SituationalDecisionFrame {
             item.addProperty("status", receipt.status);
             observations.add(item);
         }
-        frame.add("receipts_observed_not_goal_proof", observations);
+        frame.add("receipts_not_proof", observations);
         return frame;
     }
 
