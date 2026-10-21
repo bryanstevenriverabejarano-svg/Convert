@@ -15,7 +15,7 @@ import java.util.function.BooleanSupplier;
 public final class InductiveSkillProposal {
     public enum Kind { SORT_UNIQUE_ODDS, SORT_UNIQUE_EVENS }
     private static final int[][] TRAIN = {
-            {7,3,7,4,1,3}, {-1,2,-3,7,-1,7}, {9,8,3,9,2,-5,3},
+            {7,3,7,4,1,3,4}, {-1,2,-3,7,-1,7,2}, {9,8,3,9,2,-5,3,8},
             {7,7,-7,4,0,1}, {6,4,3,-9,3,0,1}, {-11,2,-11,5,5,3,3}
     };
     private static final int[][] HOLDOUT = {
