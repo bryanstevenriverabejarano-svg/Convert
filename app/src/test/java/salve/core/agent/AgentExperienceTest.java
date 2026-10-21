@@ -72,6 +72,34 @@ public class AgentExperienceTest {
         o.status = "BLOCKED"; assertTrue(AgentExperience.repeatFeedback(run, call).contains("permisos"));
         assertNull(AgentExperience.repeatFeedback(run, new AgentRun.Pending("new", call.tool, "otra consulta")));
     }
+    @Test public void independentlyCheckedReadEntersNextRelatedExperience() {
+        String url = "https://example.org/manual";
+        AgentRun previous = completed("source", "Lee " + url);
+        previous.observations.clear();
+        AgentRun.Observation receipt =
+                new AgentRun.Observation("read-1", "web.read", "SUCCESS", "Contenido leído");
+        receipt.fingerprint = AgentExperience.fingerprint("web.read", url);
+        receipt.sources.add(url);
+        previous.observations.add(receipt);
+        previous.answer = "He leído la fuente.";
+        previous.evidence.add("read-1");
+        AgentGoalVerifier.Result checked = AgentGoalVerifier.evaluate(previous);
+        assertEquals(AgentGoalVerifier.Verdict.VERIFIED, checked.verdict);
+        previous.goalVerification = checked.verdict.name();
+        previous.verificationCriterion = checked.criterion;
+        previous.verificationEvidence = checked.evidenceId;
+        AgentRun next = run("next", previous.goal);
+        String metadata = AgentExperience.contextFor(next,
+                Collections.singletonList(previous), NOW);
+        assertFalse(metadata.isEmpty());
+        assertEquals(1, JsonParser.parseString(metadata).getAsJsonObject()
+                .get("objetivos_verificados").getAsInt());
+        previous.goalVerification = "UNKNOWN";
+        metadata = AgentExperience.contextFor(next, Collections.singletonList(previous), NOW);
+        assertEquals(0, JsonParser.parseString(metadata).getAsJsonObject()
+                .get("objetivos_verificados").getAsInt());
+    }
+
     @Test public void verifiedOutcomeCountIsValidatedAndCannotBeForgedInContext() {
         AgentRun current = run("new", "Recuerda el origen de Salve");
         AgentRun previous = completed("old", "Consulta el origen de Salve");
