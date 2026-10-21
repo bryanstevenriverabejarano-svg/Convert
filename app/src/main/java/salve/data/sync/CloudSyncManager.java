@@ -81,6 +81,7 @@ public final class CloudSyncManager {
             {"nobackup", "mind/skills.json", ROOT + "/mind/skills.json"},
             {"nobackup", BIOGRAPHY, ROOT + "/" + BIOGRAPHY},
             {"nobackup", PEOPLE, ROOT + "/" + PEOPLE},
+            {"nobackup", "mind/milestones.json", ROOT + "/mind/milestones.json"},
     };
 
     /**

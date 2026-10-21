@@ -957,8 +957,25 @@ final class DrawingStudio {
                 + ". Cuéntaselo en una o dos frases, sin repetir la lista de coordenadas." + ESTILO_DIBUJO;
     }
 
+    /** Su último dibujo, aunque la app se haya reiniciado (para «guarda este dibujo»). */
+    salve.sketch.SketchScene ultimoDibujo() {
+        if (lastDrawnScene != null) return lastDrawnScene;
+        SharedPreferences p = motor.context.getSharedPreferences("salve_last_drawing", Context.MODE_PRIVATE);
+        String key = p.getString("key", null);
+        salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(motor.context);
+        return key == null || library == null ? null : salve.sketch.SketchScene.fromKey(library, key);
+    }
+
+    /** Cuándo hizo su último dibujo (ms), aunque la app se haya reiniciado. */
+    long ultimoDibujoEn() {
+        if (lastDrawnScene != null) return motor.lastDrawnAt;
+        return motor.context.getSharedPreferences("salve_last_drawing", Context.MODE_PRIVATE).getLong("at", 0);
+    }
+
     void empezarDibujo(salve.sketch.SketchScene scene) {
         salve.sketch.Sketches.show(scene);
+        motor.context.getSharedPreferences("salve_last_drawing", Context.MODE_PRIVATE).edit()
+                .putString("key", scene.key).putLong("at", System.currentTimeMillis()).apply();
         motor.turnSketchTag.set(salve.sketch.SketchProtocol.tag(scene));
         lastDrawnScene = scene;
         motor.lastDrawnAt = System.currentTimeMillis();

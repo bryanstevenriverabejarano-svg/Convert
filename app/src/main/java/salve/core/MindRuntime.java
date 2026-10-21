@@ -75,6 +75,7 @@ public final class MindRuntime {
         skills = new salve.core.mind.SkillLab(new MindFileStore(new File(dir, "skills.json")), System::currentTimeMillis);
         biography = new salve.core.mind.Biography(new MindFileStore(new File(dir, "biography.json")), System::currentTimeMillis);
         people = new salve.core.mind.PersonFamiliarity(new MindFileStore(new File(dir, "people.json")), System::currentTimeMillis);
+        milestones = new salve.core.mind.Milestones(new MindFileStore(new File(dir, "milestones.json")), System::currentTimeMillis);
         try {
             // La conciencia antigua guardaba su primer arranque y sus despertares desde el principio.
             android.content.SharedPreferences legacy = app.getSharedPreferences("salve_consciousness_v2", Context.MODE_PRIVATE);
@@ -130,6 +131,9 @@ public final class MindRuntime {
     public salve.core.mind.SkillLab skills() { return skills; }
     private final salve.core.mind.Biography biography;
     private final salve.core.mind.PersonFamiliarity people;
+    private final salve.core.mind.Milestones milestones;
+    /** Momentos que Bryan marcó como importantes (su primer dibujo de una escena…). */
+    public salve.core.mind.Milestones milestones() { return milestones; }
     /** Cuánto está cada persona en su vida (para que sus recuerdos con ella pesen más). */
     public salve.core.mind.PersonFamiliarity people() { return people; }
 
@@ -273,7 +277,8 @@ public final class MindRuntime {
             String head = salve.core.identity.IdentityPrompt.render(session, peopleGraph(),
                     identity.biometricAvailable(), System.currentTimeMillis()) + "\n"
                     + "MI_MISION (encargo de " + creatorFirstName() + "; úsala si preguntan por mi propósito, con mis palabras): " + MISSION + "\n"
-                    + "MI_HISTORIA: " + biographySentence() + "\n";
+                    + "MI_HISTORIA: " + biographySentence() + "\n"
+                    + (milestones.all().isEmpty() ? "" : milestones.forPrompt(3) + "\n");
             // Su yo persistente es lo que la hace Salve: con su creador (verificado o en su
             // teléfono) va entero. Solo ante otra persona o en duda se guarda lo íntimo.
             String publicSelf = "YO_PERSISTENTE: " + journal.narrative() + " (mis reflexiones sobre " + creatorFirstName()
