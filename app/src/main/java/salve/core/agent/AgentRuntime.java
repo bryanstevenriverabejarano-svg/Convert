@@ -68,6 +68,15 @@ public final class AgentRuntime {
                     },
                     new AndroidAgentTools(app, store::statistics), System::currentTimeMillis)
                     .run(id, () -> stopped.getAsBoolean() || GoalAutonomyRuntime.get(app).hasActiveConversation());
+            if (result != null && result.terminal() && !store.paused()
+                    && !stopped.getAsBoolean() && !GoalAutonomyRuntime.get(app).hasActiveConversation()) {
+                // Proposal only: no installation, no notification permission, no model judgement.
+                try {
+                    salve.core.AutonomousToolRuntime.get(app).observeFailedPlanHistory(
+                            store.recent(), () -> stopped.getAsBoolean()
+                                    || GoalAutonomyRuntime.get(app).hasActiveConversation());
+                } catch (RuntimeException ignored) { /* The agent result remains committed. */ }
+            }
             if (result != null && result.terminal() && CloudSyncManager.isEnabled(app)) {
                 try { SyncWorker.enqueueWhenOnline(app); } catch (RuntimeException ignored) { }
             }
@@ -109,7 +118,8 @@ public final class AgentRuntime {
                         + ". Memoria local, lectura pública y APIs HTTPS disponibles; "
                         + (bridge().isEmpty() ? "navegador/código externos sin configurar. Di ‘configura herramientas’."
                         : "puente configurado; cada ejecución comprueba su disponibilidad.")
-                        + "\nModelos: " + SalveLLM.getInstance(app).getStatusDescription() + "\nResultados operativos: " + store.statistics();
+                        + "\nModelos: " + SalveLLM.getInstance(app).getStatusDescription() + "\nResultados operativos: " + store.statistics()
+                        + "\n" + salve.core.AutonomousToolRuntime.get(app).pendingSkillSuggestion();
             case LIST:
                 StringBuilder list = new StringBuilder(store.paused() ? "Planes pausados:\n" : "Planes:\n");
                 List<AgentRun> all = store.recent();
@@ -119,7 +129,9 @@ public final class AgentRuntime {
                             .append(" · ")
                             .append(r.goal.substring(0, Math.min(100, r.goal.length()))).append('\n');
                 }
-                return list.append("Consulta ‘resultado de mi último plan’, ‘cancela plan ID’ o ‘reanuda plan ID’.").toString();
+                return list.append("Consulta ‘resultado de mi último plan’, ‘cancela plan ID’ o ‘reanuda plan ID’.")
+                        .append('\n').append(salve.core.AutonomousToolRuntime.get(app).pendingSkillSuggestion())
+                        .toString();
             default:
                 AgentRun run = resolve(command.argument);
                 if (run == null) return "No encuentro un plan único con ese identificador.";
