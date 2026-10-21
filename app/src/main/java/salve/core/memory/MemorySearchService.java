@@ -21,6 +21,15 @@ public final class MemorySearchService {
         }
     }
     public Result search(MemorySearchQuery query, boolean personalHistory, int limit) {
+        return search(query, personalHistory, limit, null, MemorySalience.When.ANY);
+    }
+
+    /**
+     * @param people nombre → peso de cercanía (puede ser null)
+     * @param when si la pregunta pide algo reciente o antiguo
+     */
+    public Result search(MemorySearchQuery query, boolean personalHistory, int limit,
+                         java.util.Map<String, Double> people, MemorySalience.When when) {
         if (limit < 0 || limit > 4) throw new IllegalArgumentException("Memory result budget exceeded");
         Map<Integer, RecuerdoEntity> found = new LinkedHashMap<>();
         LinkedHashMap<String, Integer> requests = new LinkedHashMap<>();
@@ -44,9 +53,11 @@ public final class MemorySearchService {
         }
         List<MemoryEvidenceRanker.Candidate> candidates = new ArrayList<>();
         for (RecuerdoEntity record : found.values())
-            candidates.add(new MemoryEvidenceRanker.Candidate(record.id, record.frase, record.timestamp));
+            candidates.add(new MemoryEvidenceRanker.Candidate(record.id, record.frase, record.timestamp,
+                    MemorySalience.score(record.frase, record.intensidad, people)));
         List<RecuerdoEntity> selected = new ArrayList<>();
-        for (Integer id : MemoryEvidenceRanker.rankExpanded(candidates, query, limit)) selected.add(found.get(id));
+        for (Integer id : MemoryEvidenceRanker.rankExpanded(candidates, query, limit, when == null ? MemorySalience.When.ANY : when))
+            selected.add(found.get(id));
         return new Result(selected, failed, query.hasExpansion());
     }
 }

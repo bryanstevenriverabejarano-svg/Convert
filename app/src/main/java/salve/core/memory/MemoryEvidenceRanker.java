@@ -16,14 +16,26 @@ public final class MemoryEvidenceRanker {
         public final int id;
         public final String text;
         public final long timestamp;
-        public Candidate(int id, String text, long timestamp) {
-            this.id = id; this.text = text == null ? "" : text; this.timestamp = timestamp;
+        /** 0..1 de {@link MemorySalience#score}: desempata a igualdad de parecido. */
+        public final double salience;
+        public Candidate(int id, String text, long timestamp) { this(id, text, timestamp, 0); }
+        public Candidate(int id, String text, long timestamp, double salience) {
+            this.id = id; this.text = text == null ? "" : text; this.timestamp = timestamp; this.salience = salience;
         }
     }
     private MemoryEvidenceRanker() {}
 
     /** Group coverage first, exact vocabulary second; opposing statements remain separate. */
     public static List<Integer> rankExpanded(List<Candidate> candidates, MemorySearchQuery query, int limit) {
+        return rankExpanded(candidates, query, limit, MemorySalience.When.ANY);
+    }
+
+    /**
+     * Primero el parecido con la pregunta (temas y palabras exactas); a igualdad, si pide algo
+     * reciente o antiguo manda la fecha, después lo que más le importó y por último lo más nuevo.
+     */
+    public static List<Integer> rankExpanded(List<Candidate> candidates, MemorySearchQuery query, int limit,
+                                             MemorySalience.When when) {
         if (candidates == null || candidates.size() > MAX_EXPANDED_CANDIDATES
                 || query == null || limit < 0 || limit > 4) throw new IllegalArgumentException("Evidence budget exceeded");
         List<Scored> unique = new ArrayList<>();
@@ -37,8 +49,14 @@ public final class MemoryEvidenceRanker {
             for (String term : query.terms()) if (words.contains(term)) exact++;
             unique.add(new Scored(candidate, groups, exact));
         }
-        unique.sort(Comparator.<Scored>comparingInt(c -> c.groups).reversed()
-                .thenComparing(Comparator.comparingInt((Scored c) -> c.exact).reversed())
+        Comparator<Scored> order = Comparator.<Scored>comparingInt(c -> c.groups).reversed()
+                .thenComparing(Comparator.comparingInt((Scored c) -> c.exact).reversed());
+        if (when == MemorySalience.When.RECENT)
+            order = order.thenComparing(Comparator.comparingLong((Scored c) -> c.record.timestamp).reversed());
+        else if (when == MemorySalience.When.OLD)
+            order = order.thenComparing(Comparator.comparingLong((Scored c) -> c.record.timestamp <= 0 ? Long.MAX_VALUE : c.record.timestamp));
+        unique.sort(order
+                .thenComparing(Comparator.comparingDouble((Scored c) -> c.record.salience).reversed())
                 .thenComparing(Comparator.comparingLong((Scored c) -> c.record.timestamp).reversed())
                 .thenComparingInt(c -> c.record.id));
         List<Integer> result = new ArrayList<>();

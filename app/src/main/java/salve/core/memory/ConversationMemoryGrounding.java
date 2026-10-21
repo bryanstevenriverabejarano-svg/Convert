@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -78,6 +79,18 @@ public final class ConversationMemoryGrounding {
 
     public void setSemanticRecall(SemanticRecall recall) { this.semantic = recall; }
 
+    /** Cercanía de cada persona (nombre normalizado → 0..1); la amígdala de la búsqueda. */
+    private volatile java.util.function.Supplier<Map<String, Double>> people;
+    private volatile java.util.function.LongSupplier clock = System::currentTimeMillis;
+    public void setPeopleWeights(java.util.function.Supplier<Map<String, Double>> weights) { this.people = weights; }
+    public void setClock(java.util.function.LongSupplier clock) { if (clock != null) this.clock = clock; }
+
+    private Map<String, Double> peopleWeights() {
+        java.util.function.Supplier<Map<String, Double>> p = people;
+        if (p == null) return null;
+        try { return p.get(); } catch (RuntimeException unavailable) { return null; }
+    }
+
     private final RecuerdoDao memories;
     private final KnowledgeNodeDao nodes;
     private final KnowledgeRelationDao relations;
@@ -108,6 +121,7 @@ public final class ConversationMemoryGrounding {
                 || text.matches(".*\\b(recuerdas|recuerdos?|memoria|dije|hablamos)\\b.*");
     }
     public Result retrieve(String input) {
+        Evidence.now = clock.getAsLong();
         int chronological = simpleChronology(input);
         if (chronological != 0) return chronology(chronological, normalize(input).contains("conmigo") || normalize(input).contains("juntos"));
         String normalized = normalize(input);
@@ -134,10 +148,15 @@ public final class ConversationMemoryGrounding {
         }
         MemorySearchQuery query = MemorySearchQuery.parse(input);
         boolean personal = normalized.matches(".*\\b(te dije|hablamos|conmigo|juntos|mi|mis|mio)\\b.*");
-        MemorySearchService.Result search = new MemorySearchService(memories).search(query, personal, MAX_RECORDS);
+        MemorySalience.When when = MemorySalience.when(input);
+        Map<String, Double> weights = peopleWeights();
+        MemorySearchService.Result search = new MemorySearchService(memories).search(query, personal, MAX_RECORDS, weights, when);
         if (search.failed) out.error();
         List<RecuerdoEntity> semanticOnly = new ArrayList<>();
         List<RecuerdoEntity> ordered = fuseSemantic(input, search.records, personal, semanticOnly);
+        // Los que solo encontró por significado también pasan por la amígdala y el tiempo: entre
+        // dos recuerdos que dicen casi lo mismo, la fecha y lo que le importó deciden.
+        ordered = reorderBySalience(ordered, search.records, weights, when);
         for (RecuerdoEntity record : ordered) {
             if (semanticOnly.contains(record)) out.memory(record, "recuerdo_por_significado");
             else out.memory(record, "recuerdo", query);
@@ -193,6 +212,34 @@ public final class ConversationMemoryGrounding {
             if (!lexicalIds.contains(id)) semanticOnly.add(r);
         }
         return fused.isEmpty() ? lexical : Collections.unmodifiableList(fused);
+    }
+
+    /**
+     * Mantiene el orden de la fusión pero, en recuerdos que llegan seguidos con el mismo origen
+     * (léxico o semántico), aplica el tiempo pedido y después la importancia. Nunca saca a uno
+     * de su tramo: un recuerdo que se parece poco no adelanta a uno que se parece mucho.
+     */
+    static List<RecuerdoEntity> reorderBySalience(List<RecuerdoEntity> ordered, List<RecuerdoEntity> lexical,
+                                                  Map<String, Double> weights, MemorySalience.When when) {
+        if (ordered == null || ordered.size() < 2 || ordered == lexical) return ordered;
+        List<RecuerdoEntity> out = new ArrayList<>(ordered);
+        Set<Integer> lexicalIds = new HashSet<>();
+        for (RecuerdoEntity r : lexical) lexicalIds.add(r.id);
+        int start = 0;
+        while (start < out.size()) {
+            boolean lex = lexicalIds.contains(out.get(start).id);
+            int end = start + 1;
+            while (end < out.size() && lexicalIds.contains(out.get(end).id) == lex) end++;
+            if (!lex && end - start > 1) {
+                List<RecuerdoEntity> run = out.subList(start, end);
+                java.util.Comparator<RecuerdoEntity> c = (a, b) -> 0;
+                if (when == MemorySalience.When.RECENT) c = java.util.Comparator.comparingLong((RecuerdoEntity r) -> r.timestamp).reversed();
+                else if (when == MemorySalience.When.OLD) c = java.util.Comparator.comparingLong((RecuerdoEntity r) -> r.timestamp <= 0 ? Long.MAX_VALUE : r.timestamp);
+                if (when != MemorySalience.When.ANY) run.sort(c);
+            }
+            start = end;
+        }
+        return Collections.unmodifiableList(out);
     }
 
     private Result chronology(int direction, boolean shared) {
@@ -344,6 +391,8 @@ public final class ConversationMemoryGrounding {
         return value.append('"').toString();
     }
     private static final class Evidence {
+        /** Para «hace 3 días» junto a cada recuerdo (0 = sin reloj: no se pone). */
+        static volatile long now;
         private final int budget;
         private final StringBuilder body = new StringBuilder();
         private boolean failed, evidence, clipped;
@@ -361,7 +410,9 @@ public final class ConversationMemoryGrounding {
             if (append("{\"fuente\":\"recuerdos:" + r.id + "\",\"tipo\":" + json(kind)
                     + ",\"origen\":" + json(isConfiguration(r) ? "configuracion_sistema" : MemoryProvenance.storage(r))
                     + ",\"naturaleza\":" + json(MemoryProvenance.kind(r))
-                    + ",\"fecha_registro\":" + json(date(r.timestamp)) + ",\"fecha_legible\":" + json(readable(r.timestamp)) + ",\"texto\":"
+                    + ",\"fecha_registro\":" + json(date(r.timestamp)) + ",\"fecha_legible\":" + json(readable(r.timestamp))
+                    + (now > 0 && r.timestamp > 0 ? ",\"cuando\":" + json(MemorySalience.ago(r.timestamp, now)) : "")
+                    + (r.intensidad >= 7 ? ",\"importancia\":\"alta\"" : "") + ",\"texto\":"
                     + json(query == null ? shorten(r.frase, 620) : MemoryEvidenceExcerpt.extract(r.frase, query, 620)) + "}")) evidence = true;
         }
         private boolean node(KnowledgeNodeEntity n) {

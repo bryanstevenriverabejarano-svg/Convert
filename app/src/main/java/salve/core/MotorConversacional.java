@@ -687,6 +687,10 @@ public class MotorConversacional {
         }
         if (salve.core.mind.Biography.asksAge(entrada)) { hablar(mind().biographySentence()); return; }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
+        if (salve.core.mind.MemoryHealth.isCommand(entrada)) {
+            hablar(creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.");
+            return;
+        }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
@@ -753,6 +757,7 @@ public class MotorConversacional {
         final boolean storyTurn = salve.core.conversation.StoryMode.enter(story, entrada, System.currentTimeMillis());
         if (storyTurn) saveStory(story);
         conversationSession.addUser(entrada);
+        if (!storyTurn) mind().notePeople(entrada, creatorSide());
         // «¿Sabes quién soy?» se responde con la memoria del perfil, no con el modelo: los modelos
         // pequeños confunden la pregunta con «¿quién eres?» y hablan de sí mismos.
         String userIdentity = storyTurn ? null : mind().userIdentityAnswer(entrada);

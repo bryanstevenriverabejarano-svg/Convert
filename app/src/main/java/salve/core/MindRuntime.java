@@ -74,6 +74,7 @@ public final class MindRuntime {
         lessons = new salve.core.mind.LessonBook(new MindFileStore(new File(dir, "lessons.json")), System::currentTimeMillis);
         skills = new salve.core.mind.SkillLab(new MindFileStore(new File(dir, "skills.json")), System::currentTimeMillis);
         biography = new salve.core.mind.Biography(new MindFileStore(new File(dir, "biography.json")), System::currentTimeMillis);
+        people = new salve.core.mind.PersonFamiliarity(new MindFileStore(new File(dir, "people.json")), System::currentTimeMillis);
         try {
             // La conciencia antigua guardaba su primer arranque y sus despertares desde el principio.
             android.content.SharedPreferences legacy = app.getSharedPreferences("salve_consciousness_v2", Context.MODE_PRIVATE);
@@ -128,6 +129,30 @@ public final class MindRuntime {
     /** Su laboratorio de habilidades: estrategias verificadas, experimentos y calibración. */
     public salve.core.mind.SkillLab skills() { return skills; }
     private final salve.core.mind.Biography biography;
+    private final salve.core.mind.PersonFamiliarity people;
+    /** Cuánto está cada persona en su vida (para que sus recuerdos con ella pesen más). */
+    public salve.core.mind.PersonFamiliarity people() { return people; }
+
+    /**
+     * Cuenta este mensaje: si habla su creador, una conversación más con él; y cada persona conocida
+     * que se nombre. En segundo plano (escribe un archivo pequeño).
+     */
+    public void notePeople(String input, boolean fromCreator) {
+        if (input == null || input.trim().isEmpty()) return;
+        background.execute(() -> {
+            try {
+                salve.core.identity.PeopleGraph graph = peopleGraph();
+                java.util.List<String> names = new ArrayList<>();
+                for (salve.core.identity.PeopleGraph.PersonEntity p : graph.people()) names.add(p.name);
+                String creator = graph.creator().name;
+                if (fromCreator) {
+                    people.saw(creator);
+                    names.remove(creator); // hablar con él ya cuenta; nombrarse a sí mismo no suma otra
+                }
+                people.sawIn(input, names);
+            } catch (RuntimeException ignored) { /* sin perfil aún */ }
+        });
+    }
     public salve.core.mind.Biography biography() { return biography; }
     private final AtomicBoolean biographyAnchored = new AtomicBoolean();
     /**
@@ -494,9 +519,34 @@ public final class MindRuntime {
     public void warmUpEmbeddings() {
         if (embeddings != null || !embedderLoading.compareAndSet(false, true)) return;
         background.execute(() -> {
-            try { loadEmbeddings(); }
+            try { if (loadEmbeddings() != null) indexAll(); }
             finally { embedderLoading.set(false); }
         });
+    }
+
+    /**
+     * Da vector a todos los recuerdos que no lo tienen (antes iba de 32 en 32 por mensaje: con
+     * cientos de recuerdos tardaba días en poder buscarlos todos por significado).
+     */
+    private void indexAll() {
+        for (int round = 0; round < 400; round++) if (indexMissing(INDEX_BATCH, () -> false) == 0) break;
+    }
+
+    /** «¿Cómo está tu memoria?», con datos reales. Fuera del hilo principal. */
+    public String memoryHealth() {
+        int total = 0;
+        try { total = memories.contarTodos(); } catch (RuntimeException ignored) { }
+        EmbeddingCalibration.Result c = calibration;
+        salve.core.mind.MemoryHealth.Semantic state;
+        String detail;
+        if (embeddings != null && c != null && c.passed) { state = salve.core.mind.MemoryHealth.Semantic.READY; detail = c.describe(); }
+        else if (!EmbeddingsIndex.artifacts(app).installed()) {
+            salve.work.EmbeddingDownloadWorker.enqueue(app, false);
+            state = salve.core.mind.MemoryHealth.Semantic.DOWNLOADING; detail = salve.work.EmbeddingDownloadWorker.describe(app);
+        } else if (c == null) { warmUpEmbeddings(); state = salve.core.mind.MemoryHealth.Semantic.LOADING; detail = ""; }
+        else { state = salve.core.mind.MemoryHealth.Semantic.FAILED; detail = c.describe(); }
+        if (state == salve.core.mind.MemoryHealth.Semantic.READY) background.execute(this::indexAll);
+        return salve.core.mind.MemoryHealth.describe(total, vectors.size(), state, detail, people.closest(3));
     }
 
     /** Download completion is independent of app/chat lifetimes. Recalibrate and rebuild derived vectors. */
