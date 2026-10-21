@@ -205,6 +205,51 @@ public class RoomAgentStoreTest {
         assertEquals(1, done.observations.size());
     }
 
+    @Test public void failedResearchAutonomouslyTestsOnlyAuthorizedPublicUrlAndKeepsProof() {
+        String goal = "Investiga https://example.org/study";
+        AgentRun plan = store.create(goal, false, "", now);
+        AtomicInteger searches = new AtomicInteger(), reads = new AtomicInteger();
+        AgentEngine.Model model = prompt -> {
+            JsonObject data = JsonParser.parseString(
+                    prompt.substring(prompt.indexOf("DATOS=") + 6)).getAsJsonObject();
+            if (data.has("respuesta")) return response("{\\"verdict\\":\\"pass\\",\\"issue\\":\\"\\"}");
+            for (com.google.gson.JsonElement item : data.getAsJsonArray("observaciones")) {
+                JsonObject observation = item.getAsJsonObject();
+                if ("web.read".equals(observation.get("tool").getAsString())
+                        && "SUCCESS".equals(observation.get("status").getAsString())) {
+                    return response("{\\"answer\\":\\"He leído la fuente pública indicada.\\",\\"evidence\\":[\\""
+                            + observation.get("id").getAsString() + "\\"]}");
+                }
+            }
+            return response("{\\"tool\\":\\"web.search\\",\\"input\\":\\"" + goal + "\\"}");
+        };
+        AgentEngine.Tools tools = new AgentEngine.Tools() {
+            public String capabilities(AgentRun run) { return "web.search, web.read"; }
+            public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call,
+                                                 java.util.function.BooleanSupplier stopped) {
+                if ("web.search".equals(call.tool)) {
+                    searches.incrementAndGet();
+                    return new AgentRun.Observation(call.id, call.tool, "ERROR", "Buscador no disponible");
+                }
+                assertEquals("web.read", call.tool);
+                assertEquals("https://example.org/study", call.input);
+                reads.incrementAndGet();
+                AgentRun.Observation observed = new AgentRun.Observation(
+                        call.id, call.tool, "SUCCESS", "Contenido público recibido");
+                observed.sources.add(call.input);
+                return observed;
+            }
+        };
+        AgentRun result = execute(plan.id, model, tools);
+        assertEquals("SUCCEEDED", result.status);
+        assertEquals(2, searches.get());
+        assertEquals(1, reads.get());
+        assertEquals(3, result.observations.size());
+        assertEquals(1, result.skippedRepeats);
+        assertEquals("web.read", result.observations.get(2).tool);
+        assertEquals(1, memories());
+    }
+
     @Test public void smallFallbackContextStillProducesCompleteJsonWithinBudget() {
         AgentRun r = create(); AgentRun claimed = store.claim(r.id, "old", now);
         for (int i = 0; i < 6; i++) claimed.outline.add("\"\\\n".repeat(50));
