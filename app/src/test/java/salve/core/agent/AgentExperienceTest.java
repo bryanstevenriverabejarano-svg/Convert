@@ -100,6 +100,44 @@ public class AgentExperienceTest {
                 .get("objetivos_verificados").getAsInt());
     }
 
+    @Test public void onlyFullyVerifiedTwoPageGoalTransfersIntoFutureOperationalExperience() {
+        String first = "https://example.org/alpha-unseen";
+        String second = "https://example.net/beta-unseen";
+        AgentRun previous = run("source", "Lee " + first + " y " + second);
+        previous.status = "SUCCEEDED";
+        previous.answer = "Leí las dos fuentes";
+        String[] urls = {first, second};
+        for (int i = 0; i < 2; i++) {
+            AgentRun.Observation read = new AgentRun.Observation("receipt-" + i,
+                    "web.read", "SUCCESS", "Página recibida");
+            read.fingerprint = AgentExperience.fingerprint("web.read", urls[i]);
+            read.sources.add(urls[i]);
+            previous.observations.add(read);
+            previous.evidence.add(read.id);
+        }
+        AgentGoalVerifier.Result verification = AgentGoalVerifier.evaluate(previous);
+        assertEquals(AgentGoalVerifier.Verdict.VERIFIED, verification.verdict);
+        previous.goalVerification = verification.verdict.name();
+        previous.verificationCriterion = verification.criterion;
+        previous.verificationEvidence = verification.evidenceId;
+        previous.verificationEvidenceIds = verification.evidenceIds;
+        AgentRun next = run("new", previous.goal);
+        String context = AgentExperience.contextFor(next,
+                Collections.singletonList(previous), NOW);
+        assertTrue(AgentExperience.valid(context));
+        assertEquals(1, JsonParser.parseString(context).getAsJsonObject()
+                .get("objetivos_verificados").getAsInt());
+
+        previous.observations.get(1).status = "ERROR";
+        context = AgentExperience.contextFor(next, Collections.singletonList(previous), NOW);
+        assertEquals(0, JsonParser.parseString(context).getAsJsonObject()
+                .get("objetivos_verificados").getAsInt());
+        previous.observations.get(1).status = "SUCCESS";
+        previous.codeAllowed = true;
+        assertEquals("", AgentExperience.contextFor(next,
+                Collections.singletonList(previous), NOW));
+    }
+
     @Test public void verifiedOutcomeCountIsValidatedAndCannotBeForgedInContext() {
         AgentRun current = run("new", "Recuerda el origen de Salve");
         AgentRun previous = completed("old", "Consulta el origen de Salve");
