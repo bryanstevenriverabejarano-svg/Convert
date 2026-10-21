@@ -142,9 +142,8 @@ public final class AutonomousToolRuntime {
             }
             JsonObject pending = pendingSkill();
             if (pending == null) return "No existe ninguna propuesta pendiente.";
-            String suppliedId = raw.substring(raw.indexOf(' ') + "aprueba".length() + 1).trim();
-            // For both 'aprueba habilidad ID' and 'descarta habilidad ID', take the final token.
-            suppliedId = raw.substring(raw.lastIndexOf(' ') + 1);
+            // User approval must include the full, exact proposal UUID.
+            String suppliedId = raw.substring(raw.lastIndexOf(' ') + 1);
             if (!pending.get("id").getAsString().equals(suppliedId))
                 return "El identificador no corresponde a la propuesta pendiente; no cambié nada.";
             if (pending.get("expires").getAsLong() < System.currentTimeMillis())
