@@ -130,7 +130,7 @@ public final class CognitivePrompt {
             JsonObject frame = situation.toJson();
             task.add("decision_frame", frame);
             int afterFrame = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
-            if (afterFrame < 260) task.remove("decision_frame");
+            if (afterFrame < 210) task.remove("decision_frame");
         }
         int remaining = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
         if (remaining < 120) throw new IllegalArgumentException("Catálogo o estado demasiado grande para el contexto");
