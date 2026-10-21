@@ -114,7 +114,9 @@ public final class AgentRuntime {
                 StringBuilder list = new StringBuilder(store.paused() ? "Planes pausados:\n" : "Planes:\n");
                 List<AgentRun> all = store.recent();
                 for (int i = 0; i < Math.min(10, all.size()); i++) {
-                    AgentRun r = all.get(i); list.append(shortId(r.id)).append(" · ").append(r.status).append(" · ")
+                    AgentRun r = all.get(i); list.append(shortId(r.id)).append(" · ").append(r.status)
+                            .append(r.terminal() ? " · verificación " + r.goalVerification : "")
+                            .append(" · ")
                             .append(r.goal.substring(0, Math.min(100, r.goal.length()))).append('\n');
                 }
                 return list.append("Consulta ‘resultado de mi último plan’, ‘cancela plan ID’ o ‘reanuda plan ID’.").toString();
@@ -140,6 +142,14 @@ public final class AgentRuntime {
     }
     private String describe(AgentRun run) {
         StringBuilder text = new StringBuilder("Plan ").append(shortId(run.id)).append(" · ").append(run.status).append('\n');
+        if (run.terminal()) {
+            text.append("Comprobación independiente: ").append(run.goalVerification)
+                    .append(" (criterio ").append(run.verificationCriterion).append(").\n");
+            if (!run.verificationEvidence.isEmpty())
+                text.append("Recibo vinculado: ").append(run.verificationEvidence).append('\n');
+            if ("UNKNOWN".equals(run.goalVerification))
+                text.append("No hay un verificador determinista de ese objetivo; la revisión del modelo no lo demuestra.\n");
+        }
         if (!run.experience.isEmpty()) text.append(AgentExperience.describe(run.experience)).append('\n');
         if (run.skippedRepeats > 0) text.append("Llamadas repetidas evitadas: ").append(run.skippedRepeats).append('\n');
         if (!run.outline.isEmpty()) text.append("Plan actual: ").append(String.join(" → ", run.outline)).append('\n');

@@ -9,6 +9,8 @@ public final class AgentRun {
     public int version = 1;
     public String id, goal, owner = "", status = "QUEUED", bridge = "", error = "", answer = "", feedback = "";
     public String experience = "";
+    /** Audited separately: SUCCEEDED alone is only the model-reviewed agent status. */
+    public String goalVerification = "UNKNOWN", verificationCriterion = "NONE", verificationEvidence = "";
     public boolean codeAllowed;
     public long createdAt, updatedAt, leaseUntil;
     public int modelCalls, revisions, attempts;
@@ -44,6 +46,13 @@ public final class AgentRun {
                 || run.outline == null || run.evidence == null || run.providers == null
                 || run.owner == null || run.bridge == null || run.error == null || run.answer == null || run.feedback == null
                 || !AgentExperience.valid(run.experience) || run.codeAllowed && !run.experience.isEmpty()
+                || run.goalVerification == null || run.verificationCriterion == null || run.verificationEvidence == null
+                || !java.util.Arrays.asList("UNKNOWN", "VERIFIED", "PARTIAL", "NOT_VERIFIED").contains(run.goalVerification)
+                || !java.util.Arrays.asList("NONE", "PUBLIC_READ").contains(run.verificationCriterion)
+                || run.verificationEvidence.length() > 60
+                || !run.verificationEvidence.isEmpty() && !run.verificationEvidence.matches("[a-zA-Z0-9-]{1,60}")
+                || (run.goalVerification.equals("VERIFIED") != !run.verificationEvidence.isEmpty())
+                || (run.verificationCriterion.equals("NONE") && !run.goalVerification.equals("UNKNOWN"))
                 || run.skippedRepeats < 0 || run.skippedRepeats > 32
                 || run.goal.length() > 2048 || run.id.length() > 60 || run.answer.length() > 2500
                 || run.outline.size() > 6 || run.evidence.size() > 8 || run.providers.size() > AgentEngine.MAX_MODEL_CALLS
