@@ -22,8 +22,12 @@ public final class AgentPolicy {
                 : "El cálculo requiere una petición aritmética explícita y exacta.";
         if (tool.equals("memory.lookup")) return run.codeAllowed
                 ? "Los planes de código usan el objetivo explícito y fuentes públicas, no la memoria personal." : null;
-        if (tool.equals("web.search")) return run.goal.equals(input) ? null
-                : "La consulta pública debe ser el objetivo original; no se envían recuerdos privados como búsquedas.";
+        if (tool.equals("web.search")) {
+            if (AgentArithmeticTask.parse(run.goal) != null)
+                return "El cálculo aritmético se resuelve localmente, sin búsquedas públicas.";
+            return run.goal.equals(input) ? null
+                    : "La consulta pública debe ser el objetivo original; no se envían recuerdos privados como búsquedas.";
+        }
         if (tool.equals("code.python")) return !run.codeAllowed ? "Este plan no tiene autorización para código remoto."
                 : run.bridge.isEmpty() ? "Falta configurar el puente de herramientas." : null;
         if (!NetworkResourcePolicy.validateKnowledgeUrl(input).allowed) return "URL pública HTTPS no válida.";
