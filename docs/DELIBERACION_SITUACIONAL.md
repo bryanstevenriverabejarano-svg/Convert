@@ -33,6 +33,21 @@ Salve ya usa `CognitivePrompt` + `CognitiveTurn` para decidir entre respuesta y 
 
 `CognitiveContractTest.conflictingHumanPrioritiesAppearInBothPromptSizes` comprueba inclusión de las reglas de valores en el núcleo completo y en el compacto, conservación de la entrada, límite de caracteres y ausencia de herramientas inventadas en el catálogo. Esa prueba **no mide razonamiento semántico**: las pruebas de comportamiento requieren inferencia local real.
 
-## Siguiente iteración arquitectónica (no implementada aquí)
+## Segunda iteración: marco situacional observable (implementada en esta rama)
 
-Un `SituationalDecisionFrame` tipado, producido a partir del turno y evidencia, podría representar objetivos, personas afectadas, restricciones, opciones, permisos, resultados esperados y comprobaciones. El controlador debería exigir pruebas observables antes de ejecutar acciones. Habría que introducirlo sin romper el JSON ni agotar el contexto de Dolphin/Gemma y probarlo con escenarios nuevos, no solo ejemplos memorizados.
+`SituationalDecisionFrame.observe` recibe el mensaje actual, los recibos ya emitidos por `CognitiveTurn` y el catálogo **real** de herramientas. Cuando detecta una petición de decisión, posible conflicto o presión temporal explícita, produce un objeto JSON breve en `TASK_STATE.decision_frame` que contiene:
+
+- `type`: `POTENTIAL_CONFLICT`, `DECISION_REQUEST` o `TIME_CONSTRAINT`.
+- `user_fragments_unverified`: fragmentos literales, acotados y atribuibles al usuario. Son prioridades **candidatas**, no hechos verificados ni preferencias inferidas.
+- `possible_time_pressure`: indicio textual, no una medición del reloj ni prueba de urgencia.
+- `decision_rule`: comparar alternativas, conservar opciones y no asumir emociones ni permisos.
+- `tool_available`: indicador de catálogo no vacío, **no** concesión de permiso.
+- `receipts_observed_not_goal_proof`: estados limitados de recibos del controlador, sin volver a insertar el contenido bruto de herramientas ni convertir `completed` en éxito real externo.
+
+El marco se recalcula al recibir nuevas observaciones dentro de la inferencia normal (sin otro modelo ni inferencias adicionales) y se omite en turnos corrientes para ahorrar memoria. El presupuesto limita su tamaño; si no cabe, se omite y permanece la instrucción de deliberación en el núcleo. `CognitiveTurn` mantiene autorización, validación de herramienta, cancelación, límites y recibos.
+
+**Limitación importante:** la extracción textual inicial de conflicto/urgencia es heurística y puede fallar ante formulaciones implícitas, múltiples hablantes o frases complejas. No identifica intenciones ocultas ni constituye comprensión semántica profunda. La evaluación de alternativas corresponde al LLM sobre la evidencia disponible.
+
+## Próximo incremento (pendiente)
+
+Para una arquitectura verdaderamente orientada a resultados faltan propuestas tipadas de opciones evaluadas con criterios verificables (beneficios, reversibilidad, riesgo, costo y autorizaciones), aprendizaje de decisiones con feedback observable y pruebas contrafactuales con escenarios nuevos. Es importante diseñarlo sin dar a un prompt o a una inferencia facultades para autorizar acciones.
