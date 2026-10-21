@@ -129,6 +129,64 @@ public class AutonomousToolRuntimeTest {
                 new File(folder.getRoot(), "inductive-skills.json").length() > 1500);
     }
 
+    @Test public void proposalRequiresExactConsentAndPersistsOnlySafeMetadata() throws Exception {
+        File file = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime proposer = new AutonomousToolRuntime(file);
+        assertTrue(AutonomousToolRuntime.handles("propón habilidad: ordenar impares sin repetir"));
+        assertTrue(AutonomousToolRuntime.handles("propuestas de habilidades"));
+        assertFalse(AutonomousToolRuntime.handles("quiero que modifiques mi teléfono"));
+        String proposed = proposer.respond("propón habilidad: ordenar impares sin repetir", () -> false);
+        assertTrue(proposed, proposed.contains("Propuesta NO instalada"));
+        assertTrue(proposed, proposed.contains("96/96"));
+        File pending = new File(folder.getRoot(), "proposed-inductive-skill.json");
+        File installed = new File(folder.getRoot(), "inductive-skills.json");
+        assertTrue(pending.isFile());
+        assertFalse(installed.exists()); // No promotion without user approval.
+        String metadata = new String(Files.readAllBytes(pending.toPath()), StandardCharsets.UTF_8);
+        assertFalse(metadata.contains("\\"train\\""));
+        assertFalse(metadata.contains("\\"holdout\\""));
+        String id = com.google.gson.JsonParser.parseString(metadata)
+                .getAsJsonObject().get("id").getAsString();
+        AutonomousToolRuntime afterRestart = new AutonomousToolRuntime(file);
+        assertTrue(afterRestart.respond("propuestas de habilidades", () -> false).contains(id));
+        assertTrue(afterRestart.respond("aprueba habilidad 00000000-0000-0000-0000-000000000000",
+                () -> false).contains("no corresponde"));
+        assertFalse(installed.exists());
+        String success = afterRestart.respond("aprueba habilidad " + id, () -> false);
+        assertTrue(success, success.contains("aprobada, verificada y guardada"));
+        assertTrue(installed.isFile());
+        assertFalse(pending.exists());
+        String use = new AutonomousToolRuntime(file).respond(
+                "usa habilidad: {\\"name\\":\\"auto_odd_sorted\\",\\"input\\":[7,3,7,2,1]}", () -> false);
+        assertTrue(use, use.contains("[1,3,7]"));
+        assertTrue(afterRestart.respond("aprueba habilidad " + id, () -> false)
+                .contains("No existe ninguna propuesta"));
+    }
+
+    @Test public void proposalsCanBeDiscardedOrCancelledWithoutWritingInstalledSkills() {
+        File file = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
+        assertTrue(runtime.respond("propón habilidad: ordenar pares sin repetir", () -> true)
+                .contains("cancelada"));
+        assertFalse(new File(folder.getRoot(), "inductive-skills.json").exists());
+        String proposed = runtime.respond("propón habilidad: ordenar pares sin repetir", () -> false);
+        assertTrue(proposed, proposed.contains("Propuesta NO instalada"));
+        String id = com.google.gson.JsonParser.parseString(
+                readPending(new File(folder.getRoot(), "proposed-inductive-skill.json")))
+                .getAsJsonObject().get("id").getAsString();
+        assertTrue(runtime.respond("descarta habilidad " + id, () -> false)
+                .contains("Propuesta descartada"));
+        assertFalse(new File(folder.getRoot(), "inductive-skills.json").exists());
+        runtime.pause();
+        assertTrue(runtime.respond("propón habilidad: ordenar pares sin repetir", () -> false)
+                .contains("pausado"));
+        assertFalse(new File(folder.getRoot(), "inductive-skills.json").exists());
+    }
+    private static String readPending(File file) {
+        try { return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8); }
+        catch (java.io.IOException error) { throw new AssertionError(error); }
+    }
+
     @Test public void proceduralMemorySurvivesRestartWithoutExposingChallengeData() {
         File file = new File(folder.getRoot(), "tools.json");
         AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
