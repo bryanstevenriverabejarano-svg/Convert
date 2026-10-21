@@ -23,9 +23,10 @@ public final class AgentGoalVerifier {
         String phrase = run.goal.trim();
         String lower = phrase.toLowerCase(Locale.ROOT);
         String address = null;
+        // More specific wording must be checked first.
         for (String prefix : new String[]{
-                "lee ", "abre ", "consulta ", "lee la página ", "consulta la url ",
-                "abre la página ", "lee la url "}) {
+                "lee la página ", "consulta la url ", "abre la página ", "lee la url ",
+                "lee ", "abre ", "consulta "}) {
             if (lower.startsWith(prefix)) {
                 address = phrase.substring(prefix.length()).trim(); break;
             }
