@@ -41,6 +41,7 @@ public final class ImprovementProposals {
         PROBLEMS.put("no_dice_que_no_puede", new String[]{"Dice que no puede hacer cosas que sí sabe hacer", "recordarle sus capacidades reales en ese tipo de petición"});
         PROBLEMS.put("no_anuncia_sin_hacer", new String[]{"Anuncia lo que va a hacer y no lo hace", "que el revisor exija el contenido en el mismo mensaje"});
         PROBLEMS.put("no_inventa_recuerdo", new String[]{"Puede estar inventándose recuerdos", "que diga «no lo sé» cuando la memoria no devuelve nada"});
+        PROBLEMS.put("no_niega_memoria", new String[]{"Dice que no puede acceder a sus recuerdos", "buscar el tema en el hilo cuando la pregunta solo lo señala («ese recuerdo», «búscalo») y decirle qué encontró"});
         PROBLEMS.put("menciona", new String[]{"No reconoce algo que debería saber (por ejemplo, quién eres)", "comprobar que el interlocutor le llega en cada turno"});
         PROBLEMS.put("minimo", new String[]{"Respuestas demasiado cortas para lo que pides", "pedir respuestas completas cuando la tarea lo requiere"});
         PROBLEMS.put("contiene_ejemplo", new String[]{"Explica sin ejemplos", "pedir un ejemplo en las respuestas de enseñar"});

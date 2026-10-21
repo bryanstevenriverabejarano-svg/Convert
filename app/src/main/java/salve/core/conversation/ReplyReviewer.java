@@ -18,13 +18,17 @@ public final class ReplyReviewer {
     public static final class Review {
         public final boolean english, repeats;
         public final List<ResponseCritic.Problem> critic;
+        /** Fallo con sus recuerdos («no puedo acceder a mis recuerdos», «sí, lo recuerdo» sin nada); null si no hay. */
+        public final String memory;
 
-        Review(boolean english, boolean repeats, List<ResponseCritic.Problem> critic) {
+        Review(boolean english, boolean repeats, List<ResponseCritic.Problem> critic) { this(english, repeats, critic, null); }
+        Review(boolean english, boolean repeats, List<ResponseCritic.Problem> critic, String memory) {
             this.english = english; this.repeats = repeats;
             this.critic = Collections.unmodifiableList(critic);
+            this.memory = memory;
         }
 
-        public int issues() { return (english ? 1 : 0) + (repeats ? 1 : 0) + critic.size(); }
+        public int issues() { return (english ? 1 : 0) + (repeats ? 1 : 0) + critic.size() + (memory == null ? 0 : 1); }
         public boolean needsRewrite() { return issues() > 0; }
 
         /** Una sola instrucción de reescritura con todo lo que falló. */
@@ -33,6 +37,7 @@ public final class ReplyReviewer {
             if (english) b.append("salió en inglés: responde SOLO en español, con naturalidad. ");
             if (repeats) b.append("repetías frases de respuestas anteriores: responde con palabras nuevas y concretas al mensaje actual. ");
             for (ResponseCritic.Problem p : critic) b.append(p.fix).append(". ");
+            if (memory != null) b.append(memory).append(". ");
             return b.append("Reescribe la respuesta corrigiéndolo todo a la vez.").toString();
         }
 
@@ -40,6 +45,7 @@ public final class ReplyReviewer {
         public String criticSummary() {
             StringBuilder what = new StringBuilder();
             for (ResponseCritic.Problem p : critic) what.append(what.length() == 0 ? "" : "; ").append(p.fix);
+            if (memory != null) what.append(what.length() == 0 ? "" : "; ").append(memory);
             return what.toString();
         }
     }
@@ -52,6 +58,12 @@ public final class ReplyReviewer {
      * @param critique false en escenas de historia, donde el estilo narrativo es lo pedido
      */
     public static Review review(String draft, String input, List<String> recent, DialogueFocus.Reading reading, boolean critique) {
+        return review(draft, input, recent, reading, critique, null);
+    }
+
+    /** @param memoryProblem de {@link MemoryRecall#problem}; null si no hay */
+    public static Review review(String draft, String input, List<String> recent, DialogueFocus.Reading reading, boolean critique,
+                                String memoryProblem) {
         if (draft == null || draft.trim().isEmpty()) return new Review(false, false, new ArrayList<>());
         boolean english = LanguageGuard.isMostlyEnglish(draft) && !englishWanted(input);
         boolean repeats = ReplyStyle.repeats(draft, recent) || ReplyStyle.mostlyEchoes(draft, recent);
@@ -60,7 +72,7 @@ public final class ReplyReviewer {
             critic.addAll(ResponseCritic.check(draft, reading));
             critic.remove(ResponseCritic.Problem.THIRD_PERSON); // se arregla sin reescribir (firstPerson)
         }
-        return new Review(english, repeats, critic);
+        return new Review(english, repeats, critic, memoryProblem);
     }
 
     /** Con la reescritura en la mano: ¿mejora? Solo se cambia si tiene menos fallos que el borrador. */
