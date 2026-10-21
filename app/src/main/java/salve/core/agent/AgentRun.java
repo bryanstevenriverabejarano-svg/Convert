@@ -50,7 +50,7 @@ public final class AgentRun {
                 || !AgentExperience.valid(run.experience) || run.codeAllowed && !run.experience.isEmpty()
                 || run.goalVerification == null || run.verificationCriterion == null || run.verificationEvidence == null
                 || !java.util.Arrays.asList("UNKNOWN", "VERIFIED", "PARTIAL", "NOT_VERIFIED").contains(run.goalVerification)
-                || !java.util.Arrays.asList("NONE", "PUBLIC_READ", "PUBLIC_READ_SET").contains(run.verificationCriterion)
+                || !java.util.Arrays.asList("NONE", "PUBLIC_READ", "PUBLIC_READ_SET", "ARITHMETIC_EXACT").contains(run.verificationCriterion)
                 || run.verificationEvidenceIds == null || run.verificationEvidenceIds.size() > 2
                 || !run.verificationEvidenceIds.isEmpty()
                         && !run.verificationEvidence.equals(run.verificationEvidenceIds.get(0))

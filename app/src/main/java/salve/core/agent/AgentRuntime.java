@@ -158,7 +158,13 @@ public final class AgentRuntime {
         if (!run.outline.isEmpty()) text.append("Plan actual: ").append(String.join(" → ", run.outline)).append('\n');
         for (AgentRun.Observation o : run.observations) text.append(o.tool).append(" · ").append(o.status).append(" · ")
                 .append(o.text.substring(0, Math.min(run.answer.isEmpty() ? 700 : 120, o.text.length()))).append('\n');
-        if (!run.answer.isEmpty()) text.append("Resultado:\n").append(run.answer).append('\n');
+        if (!run.answer.isEmpty()) {
+            if ("ARITHMETIC_EXACT".equals(run.verificationCriterion)
+                    && !"VERIFIED".equals(run.goalVerification))
+                text.append("Borrador rechazado por la comprobación numérica (NO usar como resultado):\n");
+            else text.append("Resultado:\n");
+            text.append(run.answer).append('\n');
+        }
         for (AgentRun.Observation o : run.observations) if (run.evidence.contains(o.id))
             text.append("Fuente ").append(o.id).append(": ").append(String.join(" ", o.sources)).append('\n');
         if (!run.error.isEmpty()) text.append(run.error).append('\n');

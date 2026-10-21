@@ -113,7 +113,12 @@ public final class RoomAgentStore implements AgentEngine.Store {
         return db.runInTransaction(() -> {
             if (!owns(run.id, run.owner) || !run.terminal()) return false;
             if (dao.save(run.id, run.owner, run.encode(), run.status, now, 0) != 1) return false;
-            if (!run.answer.isEmpty() && (run.status.equals("SUCCEEDED") || run.status.equals("PARTIAL"))) {
+            // A wrong arithmetic artifact must remain in the auditable agent journal,
+            // never be promoted to a durable knowledge memory or cloud outbox.
+            boolean rejectedArithmetic = "ARITHMETIC_EXACT".equals(run.verificationCriterion)
+                    && !"VERIFIED".equals(run.goalVerification);
+            if (!run.answer.isEmpty() && !rejectedArithmetic
+                    && (run.status.equals("SUCCEEDED") || run.status.equals("PARTIAL"))) {
                 RecuerdoEntity memory = new RecuerdoEntity();
                 StringBuilder text = new StringBuilder("Resultado de plan solicitado: ").append(run.goal)
                         .append("\nEstado de ejecución/revisión: ").append(run.status)
