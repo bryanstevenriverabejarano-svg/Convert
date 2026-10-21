@@ -25,7 +25,7 @@ public final class SelfActionLog {
         SELF_CORRECT("corregirme antes de responder"), LEARN_LESSON("aprender de un error"),
         UPDATED("recibir una actualización"), EXPERIMENT("probar una estrategia nueva"),
         ADOPT("adoptar una estrategia que funcionó mejor"), REVERT("revertir un experimento que no mejoró"),
-        CREATE_SALVENTE("crear un Salvente"), CONTINUITY("conservar mi memoria"), SEE_SCENE("mirar una foto con calma");
+        CREATE_SALVENTE("crear un Salvente"), CONTINUITY("conservar mi memoria"), SEE_SCENE("mirar una foto con calma"), READ("leer un documento");
         public final String label;
         Kind(String label) { this.label = label; }
     }

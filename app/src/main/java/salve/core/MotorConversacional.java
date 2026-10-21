@@ -687,6 +687,11 @@ public class MotorConversacional {
         }
         if (salve.core.mind.Biography.asksAge(entrada)) { hablar(mind().biographySentence()); return; }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
+        // «¿Qué cuentos tienes?», «léeme el cuento de …»: su estantería de cuentos leídos.
+        if (creatorSide()) {
+            String cuentos = lectura.comandoCuentos(entrada);
+            if (cuentos != null) { hablar(cuentos); return; }
+        }
         // «Guarda este dibujo, es importante»: un hito que recuerda siempre (y puede volver a enseñar).
         salve.sketch.SketchScene ultimoDibujo = salve.core.mind.Milestones.asksToSaveDrawing(entrada) ? dibujo.ultimoDibujo() : null;
         long desdeDibujo = System.currentTimeMillis() - dibujo.ultimoDibujoEn();
@@ -2322,6 +2327,17 @@ public class MotorConversacional {
     final CodeDesk mesaCodigo = new CodeDesk(this);
     /** Fotos en la conversación: analizarlas, elegir una guardada, reconocer a quien aparece y el entorno visual. */
     final PhotoDesk mesaFotos = new PhotoDesk(this);
+    final ReadingDesk lectura = new ReadingDesk(this);
+
+    /**
+     * Un documento para leer. @param mode «cuento» (entenderlo, ilustrarlo y guardarlo en sus cuentos),
+     * «aprender» (guardar lo importante) u «opinar» (analizar y opinar sin guardar nada)
+     */
+    public void leerDocumento(String name, String text, String mode) {
+        salve.core.reading.DocumentReading.Mode m = "cuento".equals(mode) ? salve.core.reading.DocumentReading.Mode.STORY
+                : "aprender".equals(mode) ? salve.core.reading.DocumentReading.Mode.LEARN : salve.core.reading.DocumentReading.Mode.OPINION;
+        lectura.leer(name, text, m);
+    }
 
 
 
