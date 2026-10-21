@@ -30,7 +30,14 @@ public final class CognitiveTurn {
     public static final class Outcome {
         public final ModelResult result;
         public final boolean handedOff;
-        private Outcome(ModelResult result, boolean handedOff) { this.result = result; this.handedOff = handedOff; }
+        private final JsonArray receipts;
+        private Outcome(ModelResult result, boolean handedOff, JsonArray receipts) {
+            this.result = result;
+            this.handedOff = handedOff;
+            this.receipts = receipts.deepCopy();
+        }
+        /** Controller-generated tool receipts, never untrusted model thoughts. */
+        public JsonArray receipts() { return receipts.deepCopy(); }
     }
     private CognitiveTurn() { }
     public static Outcome run(Model model, Map<String, Tool> available, BooleanSupplier cancelled) {
@@ -47,7 +54,7 @@ public final class CognitiveTurn {
             try { last = model.generate(receipts.deepCopy(), repair, toolsClosed ? 0 : MAX_TOOLS - actions); }
             catch (RuntimeException unavailable) { return stopped(ModelResult.Status.ERROR, "No pude preparar o completar la inferencia", receipts); }
             if (cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()) return stopped(ModelResult.Status.CANCELLED, "Turno cancelado", receipts);
-            if (!last.isSuccess()) return new Outcome(last, false);
+            if (!last.isSuccess()) return new Outcome(last, false, receipts);
             CognitiveReply reply;
             try { reply = CognitiveReply.parseForConversation(last.getText()); }
             catch (IllegalArgumentException invalid) {
@@ -63,7 +70,7 @@ public final class CognitiveTurn {
             }
             repair = false;
             if (reply.name == null) return new Outcome(ModelResult.success(reply.message, last.getLatencyMillis())
-                    .withProvider(last.getProvider()), false);
+                    .withProvider(last.getProvider()), false, receipts);
             if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Se agotó el presupuesto antes de ejecutar la acción", receipts);
             Tool tool = tools.get(reply.name);
             if (tool == null) return stopped(ModelResult.Status.ERROR, "La herramienta solicitada no está disponible en este turno; no la ejecuté", receipts);
@@ -80,7 +87,12 @@ public final class CognitiveTurn {
             receipt.addProperty("observed_at_ms", System.currentTimeMillis());
             try {
                 Receipt result = tool.operation.execute(reply.arguments.deepCopy());
-                if (result.handoff) return new Outcome(ModelResult.success("", last.getLatencyMillis()), true);
+                if (result.handoff) {
+                    receipt.addProperty("status", "handoff");
+                    receipt.addProperty("data", "Pendiente de aprobación o resultado externo.");
+                    receipts.add(receipt);
+                    return new Outcome(ModelResult.success("", last.getLatencyMillis()), true, receipts);
+                }
                 receipt.addProperty("status", "completed");
                 receipt.addProperty("data", result.data);
             } catch (RuntimeException failure) {
@@ -102,6 +114,6 @@ public final class CognitiveTurn {
                         .append(receipt.get("status").getAsString().equals("completed") ? "completado" : "sin éxito confirmado").append(';');
             }
         }
-        return new Outcome(ModelResult.failure(status, progress.toString(), 0), false);
+        return new Outcome(ModelResult.failure(status, progress.toString(), 0), false, receipts);
     }
 }
