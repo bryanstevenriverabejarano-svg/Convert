@@ -168,6 +168,7 @@ public class RoomAgentStoreTest {
         AgentRun restored = store.get(created.id);
         assertEquals("VERIFIED", restored.goalVerification);
         assertEquals(done.verificationEvidence, restored.verificationEvidence);
+        assertEquals(1, memories());
     }
 
     @Test public void modelPassCannotMarkWrongArithmeticAnswerSucceeded() {
@@ -197,6 +198,9 @@ public class RoomAgentStoreTest {
         assertEquals("NOT_VERIFIED", finished.goalVerification);
         assertTrue(finished.error.contains("aritmética independiente"));
         assertEquals(1, finished.observations.size());
+        assertEquals("un cálculo incorrecto nunca entra en memoria permanente", 0, memories());
+        assertTrue("sincronización no publica datos erróneos",
+                db.syncEventDao().getPending(20).isEmpty());
     }
 
     @Test public void directPublicReadIsIndependentlyVerifiedAndSurvivesRestart() {
