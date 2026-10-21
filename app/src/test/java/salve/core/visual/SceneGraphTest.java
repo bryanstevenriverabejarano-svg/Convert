@@ -88,4 +88,12 @@ public class SceneGraphTest {
         assertEquals(1, g.matches(java.util.Arrays.asList("escritorio"), "Un escritorio con un portátil"));
         assertEquals("portátil", g.prominent(1).get(0).name);
     }
+
+    @Test public void bryansListOfObjectsHelpsTheModel() {
+        assertEquals("libro, tijeras, relog", SceneGraph.cleanHints("Libro, tijeras, relog"));
+        assertEquals("libro, tijeras, reloj", SceneGraph.cleanHints("un libro, unas tijeras y el reloj"));
+        assertEquals("", SceneGraph.cleanHints("  "));
+        assertTrue(SceneGraph.prompt("libro, tijeras").startsWith("Bryan dice que en la foto hay: libro, tijeras."));
+        assertFalse(SceneGraph.prompt("").contains("Bryan dice"));
+    }
 }

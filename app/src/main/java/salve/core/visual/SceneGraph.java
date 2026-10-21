@@ -72,13 +72,32 @@ public final class SceneGraph {
         this.relations = Collections.unmodifiableList(relate(items));
     }
 
-    /** Lo que se le pide al modelo de visión: objetos y cajas, nada más. */
-    public static String prompt() {
-        return "Mira la foto y enumera los objetos que se ven (como máximo " + MAX_OBJECTS + "), con nombres cortos en español. "
+    public static String prompt() { return prompt(""); }
+
+    /**
+     * Lo que se le pide al modelo de visión: objetos y cajas, nada más.
+     * @param hints lo que Bryan dice que hay («libro, tijeras, reloj»): nombres que usar si los ve
+     */
+    public static String prompt(String hints) {
+        String known = cleanHints(hints);
+        return (known.isEmpty() ? "" : "Bryan dice que en la foto hay: " + known + ". Si los ves, usa esos nombres y busca dónde está "
+                + "cada uno; añade otros objetos que veas. ")
+                + "Mira la foto y enumera los objetos que se ven (como máximo " + MAX_OBJECTS + "), con nombres cortos en español. "
                 + "Para cada uno da su caja en porcentaje de la imagen: x1,y1 es la esquina de arriba a la izquierda y x2,y2 la de "
                 + "abajo a la derecha, de 0 a 100. Si sabes el color, ponlo. No describas nada más. Responde SOLO con JSON así: "
                 + "{\"objetos\":[{\"nombre\":\"taza\",\"color\":\"blanca\",\"caja\":[60,55,75,70]},"
                 + "{\"nombre\":\"mesa\",\"color\":\"marrón\",\"caja\":[10,62,95,100]}]}";
+    }
+
+    /** «Libro, tijeras, relog» → «libro, tijeras, relog»: separado por comas, sin símbolos, como mucho 12. */
+    public static String cleanHints(String raw) {
+        if (raw == null) return "";
+        List<String> out = new ArrayList<>();
+        for (String part : raw.split("[,;/\\n]|\\by\\b")) {
+            String n = cleanName(part);
+            if (!n.isEmpty() && !out.contains(n) && out.size() < MAX_OBJECTS) out.add(n);
+        }
+        return String.join(", ", out);
     }
 
     /**

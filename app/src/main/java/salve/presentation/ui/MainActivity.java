@@ -2167,16 +2167,41 @@ public class MainActivity extends AppCompatActivity {
         preview.setImageBitmap(photo); preview.setAdjustViewBounds(true);
         preview.setMaxHeight((int) (180 * getResources().getDisplayMetrics().density));
         preview.setContentDescription("Foto que enviarás con tu mensaje"); form.addView(preview);
+        // Qué tipo de foto es: los datos de persona solo tienen sentido con personas.
+        android.widget.RadioGroup kind = new android.widget.RadioGroup(this);
+        kind.setOrientation(android.widget.RadioGroup.HORIZONTAL);
+        String[] kinds = {"Cosas o un sitio", "Personas", "Otra"};
+        for (int i = 0; i < kinds.length; i++) {
+            android.widget.RadioButton b = new android.widget.RadioButton(this);
+            b.setId(android.view.View.generateViewId()); b.setText(kinds[i]); b.setTag(i);
+            kind.addView(b);
+            if (i == 0) kind.check(b.getId());
+        }
+        form.addView(kind);
         EditText message = photoField(form, "Pregunta o contexto de la foto", question == null ? "" : question);
+        EditText objects = photoField(form, "Qué hay (opcional): libro, tijeras, reloj…", "");
         EditText name = photoField(form, "Nombre de la persona (opcional)", "");
         EditText relation = photoField(form, "Relación contigo: yo, mi hermano…", "");
         EditText position = photoField(form, "Quién es: única persona, izquierda…", "");
+        java.util.function.IntSupplier selected = () -> {
+            android.view.View v = kind.findViewById(kind.getCheckedRadioButtonId());
+            return v == null ? 0 : (Integer) v.getTag();
+        };
+        Runnable showFields = () -> {
+            int k = selected.getAsInt();
+            objects.setVisibility(k == 0 ? android.view.View.VISIBLE : android.view.View.GONE);
+            int person = k == 1 ? android.view.View.VISIBLE : android.view.View.GONE;
+            name.setVisibility(person); relation.setVisibility(person); position.setVisibility(person);
+        };
+        kind.setOnCheckedChangeListener((g, id) -> showFields.run());
+        showFields.run();
         TextView info = new TextView(this);
         boolean canAnalyze = !localOnly || SalveLLM.getInstance(this).supportsVision();
         info.setText((localOnly
                 ? (canAnalyze ? "La imagen se analizará en el móvil. " : "Dolphin conserva la foto y los datos que indiques, pero no puede analizar sus píxeles. ")
                 : "Se enviará la foto y el mensaje a Gemini (Google) para analizarlos. ")
-                + "El nombre lo confirmas tú. Escribe «yo» en relación para asociarla a tu perfil. "
+                + "Con cosas o un sitio, separo cada objeto y dónde está; con personas, el nombre lo confirmas tú "
+                + "(escribe «yo» en relación para asociarla a tu perfil). "
                 + "La foto quedará en el chat y en tus recuerdos. "
                 + (CloudSyncManager.isEnabled(this) ? "También se copiará a pCloud porque la sincronización está activa." : "La sincronización con pCloud está desactivada."));
         form.addView(info);
@@ -2186,12 +2211,15 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("Enviar", null).setNegativeButton("Cancelar", null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if (motorConversacional == null || isDestroyed()) return;
-            if (!name.getText().toString().trim().isEmpty() && position.getText().toString().trim().isEmpty()) {
+            int k = selected.getAsInt();
+            boolean people = k == 1;
+            if (people && !name.getText().toString().trim().isEmpty() && position.getText().toString().trim().isEmpty()) {
                 position.setError("Indica qué persona estás identificando"); return;
             }
             transferred[0] = true;
             motorConversacional.procesarImagen(message.getText().toString(), photo, localOnly,
-                    name.getText().toString(), relation.getText().toString(), position.getText().toString());
+                    people ? name.getText().toString() : "", people ? relation.getText().toString() : "",
+                    people ? position.getText().toString() : "", k == 0 ? objects.getText().toString() : "", k != 2);
             if (inputChat.getText().toString().trim().equals(question == null ? "" : question)) inputChat.setText("");
             dialog.dismiss();
         }));
