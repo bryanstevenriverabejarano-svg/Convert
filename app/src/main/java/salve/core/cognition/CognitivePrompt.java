@@ -114,14 +114,6 @@ public final class CognitivePrompt {
         task.addProperty("authorization", "Objetivo actual; efectos externos: aprobación existente");
         task.addProperty("format_repair", repair);
         if (repair) task.addProperty("correction", "La salida anterior no cumplió el contrato; devuelve sólo el JSON exigido");
-        // Observations and candidates, not a source of permissions or private reasoning.
-        // Recomputed after each tool receipt, while normal greetings retain the old budget.
-        SituationalDecisionFrame situation = SituationalDecisionFrame.observe(input, results, tools);
-        if (situation != null) {
-            JsonObject frame = situation.toJson();
-            if (frame.toString().length() <= Math.min(570, maxChars / 5))
-                task.add("decision_frame", frame);
-        }
         data.add("TASK_STATE", task);
         data.add("TOOL_CATALOG", catalog);
         boolean hasSelf = selfModel != null && !selfModel.trim().isEmpty();
@@ -131,6 +123,15 @@ public final class CognitivePrompt {
         data.addProperty("CONTEXT", "");
         data.add("HISTORY", new JsonArray());
         data.addProperty("USER_INPUT", "");
+        // Frame is optional; never displace the user message or required JSON contract.
+        // This compact observation is recalculated as tool receipts arrive.
+        SituationalDecisionFrame situation = SituationalDecisionFrame.observe(input, results, tools);
+        if (situation != null) {
+            JsonObject frame = situation.toJson();
+            task.add("decision_frame", frame);
+            int afterFrame = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
+            if (afterFrame < 260) task.remove("decision_frame");
+        }
         int remaining = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
         if (remaining < 120) throw new IllegalArgumentException("Catálogo o estado demasiado grande para el contexto");
         remaining -= put(data, "USER_INPUT", input, Math.max(80, remaining * 2 / 5));
