@@ -2,9 +2,11 @@
 
 > **Estado del proyecto (21 de octubre de 2026):** empieza por
 > [Estado actual y límites de validación](docs/ESTADO_ACTUAL.md).
-> Distingue funciones en `main`, experimentos históricos y cambios aún sin fusionar
-> (PR [#199](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/199)
-> y [#200](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/200)).
+> Distingue funciones en `main`, experimentos históricos y nuevas propuestas.
+> Las PR [#199](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/199),
+> [#200](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/200)
+> y [#201](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/201)
+> ya se fusionaron.
 > La presencia de código no demuestra que haya pasado una prueba real de teléfono.
 
 > La arquitectura, los límites de autonomía y la hoja de ruta de evolución segura de
@@ -64,11 +66,13 @@ Consulta [H2: memoria multilingüe](docs/H2_MEMORIA_MULTILINGUE.md) y
 La investigación pública puede planificar consultas, leer páginas una a una y
 conservar evidencia; consulta [investigación guiada](scripts/RESEARCH_INTENT.md).
 
-**Todavía en propuestas no fusionadas:** la [PR #199](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/199)
+**Ya fusionadas:** la [PR #199](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/199)
 añade registro literal de ejecución y la
 [PR #200](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/200)
-plantea deliberación situacional con evaluación de prioridades y riesgos.
-No confundas sus documentos de rama con funciones ya presentes en `main`.
+introduce deliberación situacional con evaluación de prioridades y riesgos.
+La nueva [cohesión cognitiva](docs/COHESION_COGNITIVA.md) está en propuesta:
+coordina fuentes del turno y recibos sin duplicar memoria, herramientas ni modelos.
+Estas estructuras no demuestran por sí solas comprensión humana o conciencia.
 
 ## Apariencia de Salve
 
