@@ -168,6 +168,29 @@ public class CognitiveContractTest {
         CognitiveTurn.Outcome result=CognitiveTurn.run((r,f,n)->ModelResult.success(TOOL.replace("memory.lookup","too_large"),0),selected,()->false);
         assertFalse(result.result.isSuccess());
     }
+    @Test public void conflictingHumanPrioritiesAppearInBothPromptSizes() throws Exception {
+        Path file = Path.of("src/main/assets/prompts/salve_cognitive_core_v1.txt");
+        if (!Files.exists(file)) file = Path.of("app/src/main/assets/prompts/salve_cognitive_core_v1.txt");
+        String core = new String(Files.readAllBytes(file), java.nio.charset.StandardCharsets.UTF_8);
+        String input = "Detecté una señal única, pero debo despedirme de mi padre hoy.";
+        String full = CognitivePrompt.build(core, input, new JsonObject(), "", "",
+                Collections.emptyList(), Collections.emptyMap(), new JsonArray(), false, 0, 10500);
+        assertTrue("Se mantiene el núcleo completo", full.contains("5. CONFLICTOS DE VALORES"));
+        assertTrue(full.contains("6. SOLUCIÓN Y COMPROBACIÓN"));
+        assertTrue(full.contains(input));
+        assertTrue(full.length() <= 10500);
+
+        String compact = CognitivePrompt.build("", input, new JsonObject(), "", "",
+                Collections.emptyList(), Collections.emptyMap(), new JsonArray(), false, 0, 3000);
+        assertTrue(compact.contains("Ante objetivos en conflicto"));
+        assertTrue(compact.contains("alternativas que preserven ambos valores"));
+        assertTrue(compact.contains(input));
+        assertTrue(compact.length() <= 3000);
+        JsonObject data = salve.core.autonomy.AutonomousToolCommand.parseObject(
+                compact.substring(compact.lastIndexOf((char) 10) + 1));
+        assertEquals(0, data.getAsJsonObject("TOOL_CATALOG").size());
+    }
+
     private static Map<String,CognitiveTurn.Tool> tools(AtomicInteger count) {
         Map<String,CognitiveTurn.Tool> tools=new LinkedHashMap<>();
         tools.put("memory.lookup",new CognitiveTurn.Tool("{}: recupera recuerdos de la petición actual",args->{
