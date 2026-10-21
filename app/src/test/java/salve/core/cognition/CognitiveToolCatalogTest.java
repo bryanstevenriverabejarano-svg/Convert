@@ -30,6 +30,16 @@ public class CognitiveToolCatalogTest {
         assertTrue(creator.containsKey("cloud.sync"));
     }
 
+    @Test public void cloudNeverAppearsWithoutExplicitSyncIntent() {
+        Map<String, CognitiveTurn.Tool> tools = CognitiveToolCatalog.build(
+                "¿Cómo te encuentras?", false, true, false, NO_OP);
+        assertFalse(tools.containsKey("cloud.sync"));
+        assertTrue(CognitiveToolCatalog.build("restaura mi memoria de pCloud",
+                false, true, false, NO_OP).containsKey("cloud.sync"));
+        assertFalse(CognitiveToolCatalog.build("restaura mi memoria de pCloud",
+                false, false, false, NO_OP).containsKey("cloud.sync"));
+    }
+
     @Test public void sensitiveToolsRequireBothOriginalIntentAndServiceAvailability() {
         assertFalse(CognitiveToolCatalog.build("toca la pantalla",
                 false, true, false, NO_OP).containsKey("TAP"));
