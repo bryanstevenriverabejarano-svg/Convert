@@ -137,6 +137,20 @@ final class CognitiveToolExecutor {
                         System.currentTimeMillis()));
                 return CognitiveTurn.Receipt.handoff();
             }
+            case salve.core.mind.SelfFunctions.TOOL: {
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Solo para Bryan verificado");
+                String action = salve.core.mind.SelfFunctions.action(CognitiveReply.string(args, "accion"));
+                if (action == null) throw new IllegalArgumentException("Función desconocida");
+                // La función responde ella misma (con sus datos reales) y el turno termina aquí.
+                switch (action) {
+                    case "estado_memoria": m.hablar(m.mind().memoryHealth()); break;
+                    case "examen": m.hablar(m.examen.run()); break;
+                    case "mapa_mente": m.hablar(m.abrirMapaMente()); break;
+                    default: m.hablar(m.examen.proposals());
+                }
+                return CognitiveTurn.Receipt.handoff();
+            }
             case "AVATAR_LIST":
             case "AVATAR_WEAR":
             case "AVATAR_CREATE":

@@ -72,6 +72,7 @@ public final class CloudSyncManager {
 
     /** {archivo local relativo, ruta en pCloud}; base "files" o "nobackup". */
     static final String BIOGRAPHY = "mind/biography.json";
+    static final String PEOPLE = "mind/people.json";
     static final String[][] KNOWLEDGE = {
             {"files", "sketch/learned.json", ROOT + "/sketch/learned.json"},
             {"files", "sketch/journal.json", ROOT + "/sketch/journal.json"},
@@ -79,6 +80,7 @@ public final class CloudSyncManager {
             {"nobackup", "mind/lessons.json", ROOT + "/mind/lessons.json"},
             {"nobackup", "mind/skills.json", ROOT + "/mind/skills.json"},
             {"nobackup", BIOGRAPHY, ROOT + "/" + BIOGRAPHY},
+            {"nobackup", PEOPLE, ROOT + "/" + PEOPLE},
     };
 
     /**
@@ -100,6 +102,12 @@ public final class CloudSyncManager {
                     byte[] remote = provider.downloadBounded(k[2], 64 * 1024);
                     if (remote != null && remote.length > 0) mind.biography().mergeFrom(new String(remote, StandardCharsets.UTF_8));
                     mind.anchorBiographyToMemories(true);
+                }
+                if (PEOPLE.equals(k[1])) {
+                    // Igual con quién es habitual en su vida: se une con la nube antes de subir.
+                    byte[] remote = provider.downloadBounded(k[2], 256 * 1024);
+                    if (remote != null && remote.length > 0)
+                        salve.core.MindRuntime.get(ctx).people().mergeFrom(new String(remote, StandardCharsets.UTF_8));
                 }
                 if (local.isFile()) {
                     byte[] bytes = java.nio.file.Files.readAllBytes(local.toPath());

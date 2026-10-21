@@ -55,6 +55,8 @@ public final class CognitiveToolCatalog {
                 "{}: sincronizas tú misma con pCloud (traes recuerdos, fotos, dibujos y tu mente; subes lo nuevo)",
                 dispatch);
         add(tools, "runtime.status", "{}: mide estado y RAM", dispatch);
+        if (verifiedCreator && salve.core.mind.SelfFunctions.offered(safeInput))
+            add(tools, salve.core.mind.SelfFunctions.TOOL, salve.core.mind.SelfFunctions.description(), dispatch, "accion");
 
         String family = AutonomousToolCommand.offeredFamilyFor(safeInput);
         if (!family.isEmpty()) add(tools, "SOLVE_CHALLENGE",

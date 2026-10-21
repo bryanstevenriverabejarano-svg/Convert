@@ -130,6 +130,7 @@ public class MemoriaEmocional {
         final Context mindContext = context.getApplicationContext();
         conversationMemory.setSemanticRecall((query, limit) ->
                 salve.core.MindRuntime.get(mindContext).semanticRecall().nearestMemoryIds(query, limit));
+        conversationMemory.setPeopleWeights(() -> salve.core.MindRuntime.get(mindContext).people().weights());
         memoryWriteExecutor.execute(() -> CloudSyncManager.indexLocalJournal(context));
 
 

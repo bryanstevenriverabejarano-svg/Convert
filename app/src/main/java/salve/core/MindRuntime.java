@@ -74,6 +74,7 @@ public final class MindRuntime {
         lessons = new salve.core.mind.LessonBook(new MindFileStore(new File(dir, "lessons.json")), System::currentTimeMillis);
         skills = new salve.core.mind.SkillLab(new MindFileStore(new File(dir, "skills.json")), System::currentTimeMillis);
         biography = new salve.core.mind.Biography(new MindFileStore(new File(dir, "biography.json")), System::currentTimeMillis);
+        people = new salve.core.mind.PersonFamiliarity(new MindFileStore(new File(dir, "people.json")), System::currentTimeMillis);
         try {
             // La conciencia antigua guardaba su primer arranque y sus despertares desde el principio.
             android.content.SharedPreferences legacy = app.getSharedPreferences("salve_consciousness_v2", Context.MODE_PRIVATE);
@@ -128,6 +129,30 @@ public final class MindRuntime {
     /** Su laboratorio de habilidades: estrategias verificadas, experimentos y calibración. */
     public salve.core.mind.SkillLab skills() { return skills; }
     private final salve.core.mind.Biography biography;
+    private final salve.core.mind.PersonFamiliarity people;
+    /** Cuánto está cada persona en su vida (para que sus recuerdos con ella pesen más). */
+    public salve.core.mind.PersonFamiliarity people() { return people; }
+
+    /**
+     * Cuenta este mensaje: si habla su creador, una conversación más con él; y cada persona conocida
+     * que se nombre. En segundo plano (escribe un archivo pequeño).
+     */
+    public void notePeople(String input, boolean fromCreator) {
+        if (input == null || input.trim().isEmpty()) return;
+        background.execute(() -> {
+            try {
+                salve.core.identity.PeopleGraph graph = peopleGraph();
+                java.util.List<String> names = new ArrayList<>();
+                for (salve.core.identity.PeopleGraph.PersonEntity p : graph.people()) names.add(p.name);
+                String creator = graph.creator().name;
+                if (fromCreator) {
+                    people.saw(creator);
+                    names.remove(creator); // hablar con él ya cuenta; nombrarse a sí mismo no suma otra
+                }
+                people.sawIn(input, names);
+            } catch (RuntimeException ignored) { /* sin perfil aún */ }
+        });
+    }
     public salve.core.mind.Biography biography() { return biography; }
     private final AtomicBoolean biographyAnchored = new AtomicBoolean();
     /**
@@ -297,6 +322,7 @@ public final class MindRuntime {
         com.google.gson.JsonObject data = salve.core.mind.MindMap.build(journal.narrative(), biographySentence(), MISSION,
                 journal.beliefs(), journal.questions(),
                 journal.thoughts(), people, mems, lessons.all(), graph.creator().name);
+        attachPhotos(data, rows);
         File dir = new File(app.getFilesDir(), "grafo_offline");
         if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("No pude crear la carpeta del mapa");
         File html = new File(dir, "mapa_mente.html");
@@ -304,6 +330,59 @@ public final class MindRuntime {
             w.write(salve.core.mind.MindMap.html(data));
         }
         return html;
+    }
+
+    /**
+     * Fotos en el mapa: la cara de cada persona (su foto más reciente en la memoria visual) y la
+     * miniatura de cada recuerdo que es una foto. Miniaturas pequeñas dentro de la página, sin red.
+     */
+    private void attachPhotos(com.google.gson.JsonObject data, List<RecuerdoEntity> rows) {
+        try {
+            salve.core.visual.VisualMemoryStore store = new salve.core.visual.VisualMemoryRepository(app).store;
+            java.util.Map<String, String> byPerson = new java.util.HashMap<>();
+            java.util.Map<String, Long> newest = new java.util.HashMap<>();
+            for (salve.core.visual.VisualMemoryRecord v : store.list()) {
+                if (v == null || v.personName == null || v.personName.trim().isEmpty()) continue;
+                String first = java.text.Normalizer.normalize(v.personName.trim().split("\\s+")[0].toLowerCase(java.util.Locale.ROOT),
+                        java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+                if (newest.containsKey(first) && newest.get(first) >= v.createdAt) continue;
+                String thumb = thumbnail(store.imageFile(v.id), 160);
+                if (thumb != null) { byPerson.put(first, thumb); newest.put(first, v.createdAt); }
+            }
+            java.util.Map<Integer, String> byMemory = new java.util.HashMap<>();
+            for (RecuerdoEntity r : rows) {
+                if (byMemory.size() >= 30 || r == null) continue;
+                String photo = salve.core.mind.MindMap.photoId(r.frase);
+                if (photo == null) continue;
+                String thumb = thumbnail(store.imageFile(photo), 128);
+                if (thumb != null) byMemory.put(r.id, thumb);
+            }
+            salve.core.mind.MindMap.attachImages(data, byPerson, byMemory);
+        } catch (Exception unavailable) { /* el mapa se ve igual, sin fotos */ }
+    }
+
+    /** JPEG pequeño en data: URI, o null si no hay foto legible. */
+    private static String thumbnail(File file, int size) {
+        if (file == null || !file.isFile() || file.length() > salve.core.visual.VisualMemoryStore.MAX_IMAGE_BYTES) return null;
+        android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        o.inJustDecodeBounds = true;
+        android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath(), o);
+        if (o.outWidth < 1 || o.outHeight < 1) return null;
+        int sample = 1;
+        while (Math.min(o.outWidth, o.outHeight) / (sample * 2) >= size) sample *= 2;
+        android.graphics.BitmapFactory.Options d = new android.graphics.BitmapFactory.Options();
+        d.inSampleSize = sample;
+        android.graphics.Bitmap full = android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath(), d);
+        if (full == null) return null;
+        int side = Math.min(full.getWidth(), full.getHeight());
+        android.graphics.Bitmap square = android.graphics.Bitmap.createBitmap(full, (full.getWidth() - side) / 2, (full.getHeight() - side) / 2, side, side);
+        android.graphics.Bitmap small = android.graphics.Bitmap.createScaledBitmap(square, size, size, true);
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        small.compress(android.graphics.Bitmap.CompressFormat.JPEG, 72, out);
+        if (small != square) small.recycle();
+        if (square != full) square.recycle();
+        full.recycle();
+        return "data:image/jpeg;base64," + android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP);
     }
 
     /** Árbol de personas calculado desde el perfil guardado (una sola fuente de verdad). */
@@ -494,9 +573,48 @@ public final class MindRuntime {
     public void warmUpEmbeddings() {
         if (embeddings != null || !embedderLoading.compareAndSet(false, true)) return;
         background.execute(() -> {
-            try { loadEmbeddings(); }
+            try { if (loadEmbeddings() != null) indexAll(); }
             finally { embedderLoading.set(false); }
         });
+    }
+
+    /**
+     * Da vector a todos los recuerdos que no lo tienen (antes iba de 32 en 32 por mensaje: con
+     * cientos de recuerdos tardaba días en poder buscarlos todos por significado).
+     */
+    private void indexAll() {
+        if (!indexing.compareAndSet(false, true)) return;
+        try { for (int round = 0; round < 400; round++) if (indexMissing(INDEX_BATCH, () -> false) == 0) break; }
+        finally { indexing.set(false); }
+    }
+    private final AtomicBoolean indexing = new AtomicBoolean();
+    /** Último fallo al crear vectores (para contárselo a Bryan), vacío si no hubo. */
+    private volatile String lastIndexError = "";
+
+    /** «¿Cómo está tu memoria?», con datos reales. Fuera del hilo principal. */
+    public String memoryHealth() {
+        int total = 0;
+        try { total = memories.contarTodos(); } catch (RuntimeException ignored) { }
+        EmbeddingCalibration.Result c = calibration;
+        salve.core.mind.MemoryHealth.Semantic state;
+        String detail;
+        if (embeddings != null && c != null && c.passed) { state = salve.core.mind.MemoryHealth.Semantic.READY; detail = c.describe(); }
+        else if (!EmbeddingsIndex.artifacts(app).installed()) {
+            salve.work.EmbeddingDownloadWorker.enqueue(app, false);
+            state = salve.core.mind.MemoryHealth.Semantic.DOWNLOADING; detail = salve.work.EmbeddingDownloadWorker.describe(app);
+        } else if (c == null) { warmUpEmbeddings(); state = salve.core.mind.MemoryHealth.Semantic.LOADING; detail = ""; }
+        else { state = salve.core.mind.MemoryHealth.Semantic.FAILED; detail = c.describe(); }
+        boolean busy = indexing.get();
+        if (state == salve.core.mind.MemoryHealth.Semantic.READY && !busy) { busy = true; background.execute(this::indexAll); }
+        // Tras reinstalar, los recuerdos vuelven de pCloud por lotes: decir cómo va, y empujarlo.
+        String cloud = "";
+        if (salve.data.sync.CloudSyncManager.isPCloudConfigured(app)) {
+            cloud = salve.data.sync.CloudSyncManager.memoryStatus(app);
+            if (!salve.data.sync.CloudSyncManager.memoryRestoreComplete(app)) salve.data.sync.CloudAutoSync.kick(app, "estado de la memoria");
+        }
+        return salve.core.mind.MemoryHealth.describe(total, vectors.size(), state, detail, people.closest(3))
+                + salve.core.mind.MemoryHealth.extra(busy, lastIndexError, cloud,
+                        salve.data.sync.CloudSyncManager.isPCloudConfigured(app) && salve.data.sync.CloudSyncManager.memoryRestoreComplete(app));
     }
 
     /** Download completion is independent of app/chat lifetimes. Recalibrate and rebuild derived vectors. */
@@ -577,6 +695,7 @@ public final class MindRuntime {
             if (vectors.isDirty()) vectors.save(vectorFile);
         } catch (Exception failure) {
             Log.w(TAG, "Indexación semántica interrumpida: " + failure.getClass().getSimpleName());
+            lastIndexError = failure.getClass().getSimpleName();
         }
         return created;
     }

@@ -687,19 +687,15 @@ public class MotorConversacional {
         }
         if (salve.core.mind.Biography.asksAge(entrada)) { hablar(mind().biographySentence()); return; }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
+        if (salve.core.mind.MemoryHealth.isCommand(entrada)) {
+            hablar(creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.");
+            return;
+        }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
-        if (salve.core.mind.MindMapCommand.matches(entrada)) {
-            if (!creatorSide()) { hablar("El mapa de mi mente tiene recuerdos privados de Bryan; solo se lo enseño a él."); return; }
-            try {
-                context.startActivity(new Intent(context, salve.presentation.ui.MindMapActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                hablar("Te abro el mapa de mi mente: mis creencias con los recuerdos en que se basan, mis preguntas, lo que he aprendido, "
-                        + "las personas que conozco y los temas de mis recuerdos. Toca cualquier punto para ver qué es.");
-            } catch (RuntimeException unavailable) { hablar("No pude abrir el mapa. Está en el menú → Reflexiones → Mapa de su mente."); }
-            return;
-        }
+        if (salve.core.mind.MindMapCommand.matches(entrada)) { hablar(abrirMapaMente()); return; }
         String mindResponse = mind().handleCommand(entrada);
         if (mindResponse != null) {
             deliverResponse(mindResponse, AvatarMotionProtocol.parse(""), false, true, true);
@@ -753,6 +749,7 @@ public class MotorConversacional {
         final boolean storyTurn = salve.core.conversation.StoryMode.enter(story, entrada, System.currentTimeMillis());
         if (storyTurn) saveStory(story);
         conversationSession.addUser(entrada);
+        if (!storyTurn) mind().notePeople(entrada, creatorSide());
         // «¿Sabes quién soy?» se responde con la memoria del perfil, no con el modelo: los modelos
         // pequeños confunden la pregunta con «¿quién eres?» y hablan de sí mismos.
         String userIdentity = storyTurn ? null : mind().userIdentityAnswer(entrada);
@@ -1890,6 +1887,16 @@ public class MotorConversacional {
      * Saber cuándo no puede pensar bien (la idea de la conciencia antigua, que nunca se conectó):
      * con qué piensa ahora y cuánta memoria le queda, en hechos.
      */
+    /** Abre el mapa de su mente (solo a Bryan) y dice qué es. */
+    String abrirMapaMente() {
+        if (!creatorSide()) return "El mapa de mi mente tiene recuerdos privados de Bryan; solo se lo enseño a él.";
+        try {
+            context.startActivity(new Intent(context, salve.presentation.ui.MindMapActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            return "Te abro el mapa de mi mente: mis creencias con los recuerdos en que se basan, mis preguntas, lo que he aprendido, "
+                    + "las personas que conozco y los temas de mis recuerdos. Toca cualquier punto para ver qué es.";
+        } catch (RuntimeException unavailable) { return "No pude abrir el mapa. Está en el menú → Reflexiones → Mapa de su mente."; }
+    }
+
     String estadoReal() {
         StringBuilder b = new StringBuilder("ESTADO_REAL (hechos de este momento; si viene al caso, cuéntalo con naturalidad y sin tecnicismos): ");
         b.append("pienso con ").append(getCompactModelStatus());

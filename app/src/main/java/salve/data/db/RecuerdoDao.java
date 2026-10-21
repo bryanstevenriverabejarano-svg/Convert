@@ -37,6 +37,9 @@ public interface RecuerdoDao {
     @Query("SELECT * FROM recuerdos ORDER BY timestamp ASC, id ASC LIMIT 1")
     RecuerdoEntity primerRecuerdo();
 
+    @Query("SELECT COUNT(*) FROM recuerdos")
+    int contarTodos();
+
     /** El más antiguo con fecha (los recuerdos antiguos sin fecha tienen timestamp 0 y no dicen cuándo). */
     @Query("SELECT * FROM recuerdos WHERE timestamp > 0 ORDER BY timestamp ASC, id ASC LIMIT 1")
     RecuerdoEntity primerRecuerdoFechado();
