@@ -143,8 +143,8 @@ public class AutonomousToolRuntimeTest {
         assertTrue(pending.isFile());
         assertFalse(installed.exists()); // No promotion without user approval.
         String metadata = new String(Files.readAllBytes(pending.toPath()), StandardCharsets.UTF_8);
-        assertFalse(metadata.contains("\\"train\\""));
-        assertFalse(metadata.contains("\\"holdout\\""));
+        assertFalse(metadata.contains("\"train\""));
+        assertFalse(metadata.contains("\"holdout\""));
         String id = com.google.gson.JsonParser.parseString(metadata)
                 .getAsJsonObject().get("id").getAsString();
         AutonomousToolRuntime afterRestart = new AutonomousToolRuntime(file);
@@ -157,7 +157,7 @@ public class AutonomousToolRuntimeTest {
         assertTrue(installed.isFile());
         assertFalse(pending.exists());
         String use = new AutonomousToolRuntime(file).respond(
-                "usa habilidad: {\\"name\\":\\"auto_odd_sorted\\",\\"input\\":[7,3,7,2,1]}", () -> false);
+                "usa habilidad: {\"name\":\"auto_odd_sorted\",\"input\":[7,3,7,2,1]}", () -> false);
         assertTrue(use, use.contains("[1,3,7]"));
         assertTrue(afterRestart.respond("aprueba habilidad " + id, () -> false)
                 .contains("No existe ninguna propuesta"));
