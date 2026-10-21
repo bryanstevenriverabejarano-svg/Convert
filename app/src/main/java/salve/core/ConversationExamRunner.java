@@ -51,6 +51,7 @@ final class ConversationExamRunner {
                 + "mientras, no podré contestarte. No toco tus recuerdos ni nuestra conversación.");
         long started = System.currentTimeMillis();
         List<ConversationExam.Grade> grades = new ArrayList<>();
+        List<ConversationExam.Attempt> attempts = new ArrayList<>();
         int n = 0;
         for (ConversationExam.Case c : cases) {
             if (motor.closed) return "Examen interrumpido.";
@@ -63,7 +64,7 @@ final class ConversationExamRunner {
                 attempt = new ConversationExam.Attempt("No me salió bien la respuesta.", null, null);
             }
             ConversationExam.Grade g = ConversationExam.grade(c, attempt);
-            grades.add(g);
+            grades.add(g); attempts.add(attempt);
             Log.i(TAG, c.id + " " + (g.ok() ? "OK" : "FALLA " + g.failed) + " :: " + attempt.reply);
         }
         long millis = System.currentTimeMillis() - started;
@@ -71,7 +72,7 @@ final class ConversationExamRunner {
         Double previous = prefs.contains("last_mark") ? (double) prefs.getFloat("last_mark", 0) : null;
         String report = ConversationExam.report(grades, previous, millis);
         double mark = ConversationExam.mark(grades);
-        save(context, prefs, mark, report, grades);
+        save(context, prefs, mark, report, grades, attempts);
         return report + "\n(Las respuestas completas quedan en mi registro de ejecución; vuelve a pedírmelo tras cada actualización para comparar.)";
     }
 
@@ -203,7 +204,8 @@ final class ConversationExamRunner {
     }
 
     /** Nota y las últimas 20 notas, para comparar; el informe completo en un archivo. */
-    private static void save(Context context, SharedPreferences prefs, double mark, String report, List<ConversationExam.Grade> grades) {
+    private static void save(Context context, SharedPreferences prefs, double mark, String report, List<ConversationExam.Grade> grades,
+                             List<ConversationExam.Attempt> attempts) {
         JsonArray history;
         try { history = JsonParser.parseString(prefs.getString("history", "[]")).getAsJsonArray(); }
         catch (RuntimeException broken) { history = new JsonArray(); }
@@ -222,8 +224,39 @@ final class ConversationExamRunner {
             try (FileOutputStream out = new FileOutputStream(new File(dir, "ultimo.txt"))) {
                 out.write(report.getBytes(StandardCharsets.UTF_8));
             }
+            // Detalle por caso, para las propuestas de mejora («evoluciona», «prográmate»).
+            JsonObject detail = new JsonObject();
+            detail.addProperty("at", System.currentTimeMillis());
+            detail.addProperty("mark", mark);
+            JsonArray cases = new JsonArray();
+            for (int i = 0; i < grades.size(); i++) {
+                ConversationExam.Grade g = grades.get(i);
+                JsonObject c = new JsonObject();
+                c.addProperty("id", g.exam.id); c.addProperty("question", g.exam.question); c.addProperty("topic", g.exam.topic);
+                JsonArray failed = new JsonArray();
+                for (String f : g.failed) failed.add(f);
+                c.add("failed", failed);
+                String reply = i < attempts.size() ? attempts.get(i).reply : "";
+                c.addProperty("reply", reply.length() > 400 ? reply.substring(0, 400) + "…" : reply);
+                cases.add(c);
+            }
+            detail.add("cases", cases);
+            try (FileOutputStream out = new FileOutputStream(new File(dir, "ultimo.json"))) {
+                out.write(detail.toString().getBytes(StandardCharsets.UTF_8));
+            }
         } catch (java.io.IOException ignored) { /* la nota ya está guardada */ }
         salve.core.trace.ExecutionTrace.note("EXAMEN DE CONVERSACIÓN", report);
+    }
+
+    /** Propuestas de mejora desde el último examen y las correcciones de Bryan. */
+    String proposals() {
+        JsonObject exam = null;
+        File file = new File(new File(motor.context.getFilesDir(), "exam"), "ultimo.json");
+        if (file.isFile()) {
+            try { exam = JsonParser.parseString(new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)).getAsJsonObject(); }
+            catch (Exception damaged) { exam = null; }
+        }
+        return salve.core.evaluation.ImprovementProposals.report(exam, motor.mind().lessons().all());
     }
 
     /** Para las pruebas: ¿qué historial ve el modelo en un caso? (sin modelo ni Android). */

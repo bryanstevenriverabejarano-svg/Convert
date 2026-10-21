@@ -692,6 +692,8 @@ public class MotorConversacional {
             return;
         }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
+        // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
+        if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
         if (salve.core.mind.MindMapCommand.matches(entrada)) {
@@ -822,8 +824,6 @@ public class MotorConversacional {
                 String lower = original.toLowerCase();
                 if (lower.contains("reinicia tu mente") || lower.contains("olvida todo")) {
                     ejecutarReinicioMente();
-                } else if (lower.contains("evoluciona") || lower.contains("prográmate")) {
-                    ejecutarAutoEvolucion(original);
                 }
             });
             return; // Cortamos aquí para que no charle mientras te interroga
@@ -1086,16 +1086,6 @@ public class MotorConversacional {
             String result = new MotorConcienciaSuperinteligente(context, memoria).prepararPropuesta();
             AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(result);
             deliverResponse(motion.text, motion, false, true, true);
-            return;
-        }
-
-        // 🟢 NUEVO: BUCLE DE AUTO-EVOLUCIÓN (Escribir archivos físicos)
-        if (inputLower.contains("evoluciona y crea") ||
-            inputLower.contains("escribe un nuevo módulo") ||
-            inputLower.contains("auto prográmate")) {
-
-            if (deferLegacyVoiceFlow()) return;
-            cortexSeguridad.iniciarProtocoloVerificacion(entrada, this);
             return;
         }
 
@@ -2554,17 +2544,6 @@ public class MotorConversacional {
         reiniciarContextoLLM();
     }
 
-    private void ejecutarAutoEvolucion(String entrada) {
-        hablar("Revisaré las fuentes disponibles y comprobaré si puedo preparar una propuesta. El ejecutor externo tendrá que probar cualquier parche antes de abrir un pull request.");
-        enqueueConversationTask(
-                ColamensajesCognitivos.Prioridad.CONVERSACION,
-                "PropuestaAutoEvolucion",
-                () -> {
-                    String result = new AutoImprovementManager(context).autoImprove();
-                    if (!closed) hablar(result);
-                    return null;
-                });
-    }
 
     // Delegados para quien llama desde fuera (la lógica vive en DrawingStudio).
     public void aprenderDibujoAMano(String nombre, List<float[]> trazos, float proporcion) { dibujo.aprenderDibujoAMano(nombre, trazos, proporcion); }
