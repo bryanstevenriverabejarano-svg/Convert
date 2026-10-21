@@ -212,16 +212,16 @@ public class RoomAgentStoreTest {
         AgentEngine.Model model = prompt -> {
             JsonObject data = JsonParser.parseString(
                     prompt.substring(prompt.indexOf("DATOS=") + 6)).getAsJsonObject();
-            if (data.has("respuesta")) return response("{\\"verdict\\":\\"pass\\",\\"issue\\":\\"\\"}");
+            if (data.has("respuesta")) return response("{\"verdict\":\"pass\",\"issue\":\"\"}");
             for (com.google.gson.JsonElement item : data.getAsJsonArray("observaciones")) {
                 JsonObject observation = item.getAsJsonObject();
                 if ("web.read".equals(observation.get("tool").getAsString())
                         && "SUCCESS".equals(observation.get("status").getAsString())) {
-                    return response("{\\"answer\\":\\"He leído la fuente pública indicada.\\",\\"evidence\\":[\\""
-                            + observation.get("id").getAsString() + "\\"]}");
+                    return response("{\"answer\":\"He leído la fuente pública indicada.\",\"evidence\":[\""
+                            + observation.get("id").getAsString() + "\"]}");
                 }
             }
-            return response("{\\"tool\\":\\"web.search\\",\\"input\\":\\"" + goal + "\\"}");
+            return response("{\"tool\":\"web.search\",\"input\":\"" + goal + "\"}");
         };
         AgentEngine.Tools tools = new AgentEngine.Tools() {
             public String capabilities(AgentRun run) { return "web.search, web.read"; }
