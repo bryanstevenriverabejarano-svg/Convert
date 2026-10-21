@@ -30,8 +30,14 @@ public final class InductiveSkillProposal {
         if (need == null) return null;
         String folded = java.text.Normalizer.normalize(need.toLowerCase(java.util.Locale.ROOT),
                 java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "").trim();
-        if (folded.equals("ordenar impares sin repetir")) return Kind.SORT_UNIQUE_ODDS;
-        if (folded.equals("ordenar pares sin repetir")) return Kind.SORT_UNIQUE_EVENS;
+        if (folded.equals("ordenar impares sin repetir")
+                || folded.equals("ordena impares sin repetir")
+                || folded.equals("ordena los numeros impares sin repetir"))
+            return Kind.SORT_UNIQUE_ODDS;
+        if (folded.equals("ordenar pares sin repetir")
+                || folded.equals("ordena pares sin repetir")
+                || folded.equals("ordena los numeros pares sin repetir"))
+            return Kind.SORT_UNIQUE_EVENS;
         return null;
     }
     public static String skillName(Kind kind) {
