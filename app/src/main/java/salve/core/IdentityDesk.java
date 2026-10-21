@@ -52,7 +52,6 @@ import salve.core.visual.VisualMemoryRepository;
 import salve.avatar.AvatarMotionController;
 import salve.avatar.AvatarMotionProtocol;
 import salve.presentation.ui.GaleriaVisualActivity;
-import salve.presentation.ui.ObjetoCreativoActivity;
 import salve.services.SalveAccessibilityService;
 import salve.services.SistemaSensorial;
 import salve.services.VideoAnalysisManager;

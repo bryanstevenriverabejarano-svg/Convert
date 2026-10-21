@@ -54,7 +54,6 @@ import salve.core.visual.VisualMemoryRepository;
 import salve.avatar.AvatarMotionController;
 import salve.avatar.AvatarMotionProtocol;
 import salve.presentation.ui.GaleriaVisualActivity;
-import salve.presentation.ui.ObjetoCreativoActivity;
 import salve.services.SalveAccessibilityService;
 import salve.services.SistemaSensorial;
 import salve.services.VideoAnalysisManager;
@@ -270,13 +269,6 @@ public class MotorConversacional {
     final java.util.concurrent.atomic.AtomicLong routineCancellationEpoch = new java.util.concurrent.atomic.AtomicLong();
      PendingMemoryDeletion pendingMemoryDeletion;
 
-    private boolean esperandoParamsGlifo = false;
-    private int indiceParamGlifo = 0;
-    private Long tmpSeed;
-    private String tmpStyle;
-    private Float tmpSize;
-    private String tmpColor;
-    private final String[] ordenParamsGlifo = {"seed", "style", "size", "color"};
 
     // Interfaz para enviar la respuesta de texto a la pantalla
     public interface SalveListener {
@@ -1098,13 +1090,6 @@ public class MotorConversacional {
             return;
         }
 
-        // 🟢 NUEVO: PROTOCOLO FÉNIX (Dispersión de alma)
-        if (inputLower.contains("dispersa tu esencia") || inputLower.contains("crea una semilla")) {
-            hablar("Iniciando Protocolo Fénix. Comprimiendo mis recuerdos y narrativa para dispersarlos en la red.");
-            new GestorSemillas(context).dispersarSemilla();
-            return;
-        }
-
         // 🟢 NUEVO: EXPLORACIÓN SOCIAL
         if (inputLower.contains("explora la red social") || inputLower.contains("analiza instagram") || inputLower.contains("analiza x")) {
             String app = "X";
@@ -1130,16 +1115,6 @@ public class MotorConversacional {
             return;
         }
 
-        // 🟢 NUEVO: FORJA DE HERRAMIENTAS PARA MISIONES
-        if (inputLower.contains("forja una herramienta para") || inputLower.contains("crea un programa para")) {
-            if (deferLegacyVoiceFlow()) return;
-            String mision = entrada.replace("forja una herramienta para", "")
-                                   .replace("crea un programa para", "").trim();
-            hablar("Entendido, Bryan. Mis tensores están diseñando el software necesario para esta tarea.");
-            new GestorHerramientasMision(context).forjarHerramientaParaMision(mision, this);
-            return;
-        }
-
         if (inputLower.contains("conéctate a la wifi")) {
             String ssid = entrada.replace("conéctate a la wifi", "").trim();
             hablar("Abriré los ajustes de Wi-Fi para que elijas " + ssid + ". Android confirmará la conexión.");
@@ -1157,8 +1132,6 @@ public class MotorConversacional {
         int numPalabras = entrada.trim().split("\\s+").length;
         conciencia.registrarPalabrasConversacion(numPalabras);
 
-        if (esperandoParamsGlifo) { procesarParamGlifo(entrada); return; }
-        if (inputLower.contains("glifo personalizado")) { iniciarFlujoGlifo(); return; }
 
         // Protocolos Oraculares Locales
         if (procesarProtocolosEspeciales(inputLower, entrada)) return;
@@ -2537,32 +2510,6 @@ public class MotorConversacional {
         Log.i(TAG, "Contexto conversacional de corto plazo reiniciado.");
     }
 
-    private void iniciarFlujoGlifo() { esperandoParamsGlifo = true; indiceParamGlifo = 0; hablar("Dime la semilla."); }
-    private void procesarParamGlifo(String entrada) {
-        try {
-            switch (indiceParamGlifo) {
-                case 0: tmpSeed = Long.parseLong(entrada.trim()); hablar("Estilo."); break;
-                case 1: tmpStyle = entrada.trim().toUpperCase(); hablar("Tamaño."); break;
-                case 2: tmpSize = Float.parseFloat(entrada.trim()); hablar("Color hex."); break;
-                case 3: tmpColor = entrada.trim(); esperandoParamsGlifo = false; lanzarGlifo(); return;
-            }
-            indiceParamGlifo++;
-        } catch (Exception e) { hablar("Valor inválido."); }
-    }
-    private void lanzarGlifo() {
-        Intent i = new Intent(context, salve.presentation.ui.ObjetoCreativoActivity.class);
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_FORMA, ObjetoCreativo.Forma.GLIFO.name());
-        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_SEED, tmpSeed != null ? tmpSeed : 42L);
-        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_STYLE, tmpStyle != null ? tmpStyle : "ORB");
-        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_TAMANO_DP, tmpSize != null ? tmpSize : 200f);
-        try {
-            i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_COLOR, android.graphics.Color.parseColor(tmpColor != null ? tmpColor : "#FFFFFF"));
-        } catch (Exception e) {
-            i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_COLOR, android.graphics.Color.WHITE);
-        }
-        context.startActivity(i);
-    }
 
     private String manejarGuardarRecuerdo(IntentRecognizer.Intent intent, String emocion) {
         String frase = intent.slots.get("frase");

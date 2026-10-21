@@ -98,21 +98,16 @@ public class MemoriaEmocional {
     private final List<BlueprintAprendizajeContinuo> learningBlueprints;
     private final GrafoConocimientoVivo grafoConocimiento;
     private final PanelMetricasCreatividad panelMetricas;
-    private final ZonaReservada zonaReservada;
     private final SharedPreferences manifestSyncPrefs;
     private final SharedPreferences revisionPrefs;
-    private final SharedPreferences reliquiasPrefs;
-    private final List<GlifoReliquia> reliquias;
     private int multimodalEtiquetasRegistradas;
     private int multimodalEtiquetasAciertos;
     private double multimodalPrecisionGlobal;
 
     private static final String PREFS_MANIFEST_SYNC = "memoria_manifest_sync";
     private static final String PREFS_REVISION = "memoria_revision_semanal";
-    private static final String PREFS_RELIQUIAS = "salve_reliquias";
     private static final String KEY_MANIFEST_VERSION = "manifest_version";
     private static final String KEY_REVISION_TIMESTAMP = "ultima_revision";
-    private static final String KEY_RELIQUIAS_GLIFOS = "salve_reliquias_glifos";
 
     // ============================================================================
     // Constructor: inicializa RAM, Room, buffer, sinónimos y módulo de comprensión
@@ -135,8 +130,6 @@ public class MemoriaEmocional {
         this.senalesMultimodales= new ArrayList<>();
         this.learningBlueprints = new ArrayList<>();
         this.contextBuffer      = new ArrayDeque<>();
-        this.reliquias          = new ArrayList<>();
-        this.zonaReservada      = new ZonaReservada();
 
         initSynonyms();
         initOrigenes();
@@ -165,12 +158,10 @@ public class MemoriaEmocional {
         panelMetricas = new PanelMetricasCreatividad(context);
         manifestSyncPrefs = context.getSharedPreferences(PREFS_MANIFEST_SYNC, Context.MODE_PRIVATE);
         revisionPrefs = context.getSharedPreferences(PREFS_REVISION, Context.MODE_PRIVATE);
-        reliquiasPrefs = context.getSharedPreferences(PREFS_RELIQUIAS, Context.MODE_PRIVATE);
         multimodalEtiquetasRegistradas = 0;
         multimodalEtiquetasAciertos = 0;
         multimodalPrecisionGlobal = 0.0;
 
-        cargarReliquiasGlifos();
         sincronizarManifiestoCreativo();
     }
 
@@ -191,9 +182,6 @@ public class MemoriaEmocional {
         return result;
     }
 
-    public ZonaReservada getZonaReservada() {
-        return zonaReservada;
-    }
 
     public MultimodalSignal registrarSenalMultimodal(MultimodalSignal.Tipo tipo,
                                                      String etiqueta,
@@ -645,7 +633,6 @@ public class MemoriaEmocional {
         );
         recuerdos.add(r);
         insertarRecuerdoDB(r);
-        zonaReservada.registrarIntensidad((int) Math.round(score * 10));
 
         // ===== NUBE: recuerdo guardado por score =====
         // insertarRecuerdoDB queues the complete record once, including its original tags/date.
@@ -663,7 +650,6 @@ public class MemoriaEmocional {
         );
         recuerdos.add(r);
         insertarRecuerdoDB(r);
-        zonaReservada.registrarIntensidad(intensidad);
 
         // ===== PUENTE DE IMPORTANCIA: Integración con el Grafo en tiempo real =====
         if (intensidad >= 8) {
@@ -1387,116 +1373,5 @@ public class MemoriaEmocional {
                             : String.join(", ", blueprint.getModalidades()));
         }
         return builder.toString();
-    }
-
-    public GlifoReliquia guardarReliquiaGlifo(long seed,
-                                              String style,
-                                              int colorArgb,
-                                              int sizeDp,
-                                              String nota) {
-        String id = UUID.randomUUID().toString();
-        String titulo = "Reliquia #" + (reliquias.size() + 1);
-        String significado = (nota == null || nota.trim().isEmpty())
-                ? "Reliquia forjada por Salve"
-                : nota.trim();
-
-        try {
-            SalveLLM llm = SalveLLM.getInstance(context);
-            if (llm != null) {
-                String prompt = "Genera un título breve (máximo 5 palabras) y un significado simbólico "
-                        + "para un glifo con seed=" + seed + ", estilo=" + style + ". "
-                        + "Devuelve en dos líneas: Titulo: ... y Significado: ...";
-                String respuesta = llm.generate(prompt, SalveLLM.Role.REFLEXION);
-                if (respuesta != null && !respuesta.trim().isEmpty()) {
-                    String lower = respuesta.toLowerCase(Locale.ROOT);
-                    if (!lower.contains("no hay modelo local")
-                            && !lower.contains("no pude preparar")
-                            && !lower.contains("modelo local falló")) {
-                        String[] lineas = respuesta.split("\n");
-                        for (String linea : lineas) {
-                            if (linea.toLowerCase(Locale.ROOT).contains("titulo")) {
-                                String value = linea.split(":", 2).length > 1
-                                        ? linea.split(":", 2)[1].trim()
-                                        : linea.trim();
-                                if (!value.isEmpty()) {
-                                    titulo = value;
-                                }
-                            } else if (linea.toLowerCase(Locale.ROOT).contains("significado")) {
-                                String value = linea.split(":", 2).length > 1
-                                        ? linea.split(":", 2)[1].trim()
-                                        : linea.trim();
-                                if (!value.isEmpty()) {
-                                    significado = value;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        GlifoReliquia reliquia = new GlifoReliquia(
-                id,
-                seed,
-                style,
-                colorArgb,
-                sizeDp,
-                System.currentTimeMillis(),
-                titulo,
-                significado
-        );
-        reliquias.add(reliquia);
-        persistirReliquiasGlifos();
-        return reliquia;
-    }
-
-    public GlifoReliquia getReliquiaPorId(String id) {
-        if (id == null) {
-            return null;
-        }
-        for (GlifoReliquia reliquia : reliquias) {
-            if (id.equalsIgnoreCase(reliquia.getId())) {
-                return reliquia;
-            }
-        }
-        return null;
-    }
-
-    public GlifoReliquia getUltimaReliquia() {
-        if (reliquias.isEmpty()) {
-            return null;
-        }
-        return reliquias.get(reliquias.size() - 1);
-    }
-
-    public List<GlifoReliquia> getReliquias() {
-        return Collections.unmodifiableList(new ArrayList<>(reliquias));
-    }
-
-    private void cargarReliquiasGlifos() {
-        String raw = reliquiasPrefs.getString(KEY_RELIQUIAS_GLIFOS, "[]");
-        if (raw == null || raw.trim().isEmpty()) {
-            return;
-        }
-        try {
-            JSONArray array = new JSONArray(raw);
-            for (int i = 0; i < array.length(); i++) {
-                JSONObject json = array.optJSONObject(i);
-                GlifoReliquia reliquia = GlifoReliquia.fromJson(json);
-                if (reliquia != null) {
-                    reliquias.add(reliquia);
-                }
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "No se pudo cargar reliquias glifos", e);
-        }
-    }
-
-    private void persistirReliquiasGlifos() {
-        JSONArray array = new JSONArray();
-        for (GlifoReliquia reliquia : reliquias) {
-            array.put(reliquia.toJson());
-        }
-        reliquiasPrefs.edit().putString(KEY_RELIQUIAS_GLIFOS, array.toString()).apply();
     }
 }
