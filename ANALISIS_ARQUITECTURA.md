@@ -1,5 +1,13 @@
 # Auditoría funcional de Salve — 2026-09-21
 
+> **Documento histórico, no inventario vigente.** Este análisis refleja
+> pruebas, rutas y decisiones registradas en septiembre de 2026. Desde
+> entonces cambiaron el motor prioritario (Dolphin 8B/3B/Gemma), la
+> memoria semántica (H2/E5) y la continuidad de la conversación.
+> Para el estado de `main` y las PR abiertas al 21-10-2026, consulta
+> [Estado actual](docs/ESTADO_ACTUAL.md). Los hallazgos «antes de este cambio»
+> siguientes deben leerse con su fecha y commit, no como fallos todavía activos.
+>
 La revisión posterior a la integración de Gemma —control del móvil, Bluetooth/NSD, herramientas virtuales, avatar y evolución— está en [CONTROL_DISPOSITIVOS_AVATAR.md](docs/CONTROL_DISPOSITIVOS_AVATAR.md). Incluye diagnóstico, decisiones, código conectado, límites y tareas de validación.
 
 ## Integración de Gemma 4 E2B para Galaxy S24 Ultra — 2026-09-21
