@@ -12,6 +12,9 @@ import salve.core.autonomy.AutonomousToolReply;
 import salve.core.autonomy.FileToolStateStore;
 import salve.core.autonomy.InductiveSkillLab;
 import salve.core.autonomy.InductiveSkillProposal;
+import salve.core.agent.AgentRun;
+import salve.core.agent.AgentSkillGapDetector;
+import java.util.List;
 
 /** Application-scoped, local-only tool laboratory. It has no Android app-control or network tools. */
 public final class AutonomousToolRuntime {
@@ -19,6 +22,7 @@ public final class AutonomousToolRuntime {
     private final File stateFile;
     private final File inductiveFile;
     private final File proposedSkillFile;
+    private final File suggestionCooldownFile;
     private volatile InductiveSkillLab inductive;
     private final AtomicBoolean paused = new AtomicBoolean();
     private final AtomicLong cancellationEpoch = new AtomicLong();
@@ -33,6 +37,7 @@ public final class AutonomousToolRuntime {
         this.stateFile = stateFile;
         this.inductiveFile = new File(stateFile.getParentFile(), "inductive-skills.json");
         this.proposedSkillFile = new File(stateFile.getParentFile(), "proposed-inductive-skill.json");
+        this.suggestionCooldownFile = new File(stateFile.getParentFile(), "auto-skill-suggestion-cooldown.json");
     }
     public static AutonomousToolRuntime get(Context context) {
         if (instance == null) {
@@ -79,6 +84,75 @@ public final class AutonomousToolRuntime {
         return 0;
     }
 
+    /**
+     * Called only by the real plan worker, after a terminal result is journaled.
+     * Never installs or promotes a skill. One pending proposal and a seven-day
+     * cooldown prevent repeated prompts, including after user dismissal.
+     */
+    public synchronized boolean observeFailedPlanHistory(List<AgentRun> plans, BooleanSupplier stopped) {
+        if (paused.get() || stopped != null && stopped.getAsBoolean()) return false;
+        InductiveSkillProposal.Kind kind = AgentSkillGapDetector.detect(plans, System.currentTimeMillis());
+        if (kind == null) return false;
+        long epoch = cancellationEpoch.get();
+        BooleanSupplier cancelled = () -> paused.get() || cancellationEpoch.get() != epoch
+                || Thread.currentThread().isInterrupted()
+                || stopped != null && stopped.getAsBoolean();
+        try {
+            if (cancelled.getAsBoolean() || skills().knows(InductiveSkillProposal.skillName(kind)))
+                return false;
+            JsonObject pending = pendingSkill();
+            if (pending != null && pending.get("expires").getAsLong() >= System.currentTimeMillis())
+                return false;
+            String lastJson = new FileToolStateStore(suggestionCooldownFile).read();
+            if (lastJson != null) {
+                JsonObject last = AutonomousToolCommand.parseObject(lastJson);
+                if (last.size() != 3 || !last.has("schema") || last.get("schema").getAsInt() != 1
+                        || !last.has("kind") || !last.has("until")
+                        || !last.get("kind").getAsString().matches("SORT_UNIQUE_ODDS|SORT_UNIQUE_EVENS"))
+                    return false; // corrupt marker: do not overwrite automatically
+                if (kind.name().equals(last.get("kind").getAsString())
+                        && last.get("until").getAsLong() > System.currentTimeMillis())
+                    return false;
+            }
+            InductiveSkillProposal.Evaluation evaluation = InductiveSkillProposal.evaluate(skills(), kind, cancelled);
+            if (!evaluation.promotable() || cancelled.getAsBoolean()) return false;
+            JsonObject proposal = new JsonObject();
+            proposal.addProperty("schema", 1);
+            proposal.addProperty("id", java.util.UUID.randomUUID().toString());
+            proposal.addProperty("kind", kind.name());
+            proposal.add("program", evaluation.program.deepCopy());
+            proposal.addProperty("expires", System.currentTimeMillis() + 86_400_000L);
+            if (cancelled.getAsBoolean()) return false;
+            // Record suppression BEFORE surfacing the proposal; a failure never installs skills.
+            JsonObject cooldown = new JsonObject();
+            cooldown.addProperty("schema", 1);
+            cooldown.addProperty("kind", kind.name());
+            cooldown.addProperty("until", System.currentTimeMillis() + 7L * 24 * 60 * 60_000L);
+            new FileToolStateStore(suggestionCooldownFile).write(cooldown.toString());
+            if (cancelled.getAsBoolean()) return false;
+            new FileToolStateStore(proposedSkillFile).write(proposal.toString());
+            return true;
+        } catch (Exception failure) {
+            // Never modify existing skills or grant permissions on an observer failure.
+            return false;
+        }
+    }
+
+    /** Read-only summary exposed when the user checks Salve's plan list/status. */
+    public synchronized String pendingSkillSuggestion() {
+        if (paused.get()) return "";
+        try {
+            JsonObject pending = pendingSkill();
+            if (pending == null || pending.get("expires").getAsLong() <= System.currentTimeMillis())
+                return "";
+            String kind = pending.get("kind").getAsString();
+            String description = kind.equals("SORT_UNIQUE_ODDS")
+                    ? "ordenar impares sin repetir" : "ordenar pares sin repetir";
+            return "Sugerencia de habilidad, todavía NO instalada: " + description
+                    + ". Di 'propuestas de habilidades' para revisar; solo tú puedes aprobar o descartar.";
+        } catch (Exception invalid) { return ""; }
+    }
+
     /** Persistent pending metadata contains no examples, contacts, model text or secrets. */
     private JsonObject pendingSkill() throws Exception {
         String json = new FileToolStateStore(proposedSkillFile).read();
@@ -115,6 +189,9 @@ public final class AutonomousToolRuntime {
             }
             String raw = input.trim();
             if (action == 1) {
+                JsonObject existing = pendingSkill();
+                if (existing != null && existing.get("expires").getAsLong() > System.currentTimeMillis())
+                    return "Ya hay una propuesta pendiente; revísala o descártala antes de crear otra.";
                 InductiveSkillProposal.Kind kind = InductiveSkillProposal.recognize(
                         raw.substring(raw.indexOf(':') + 1).trim());
                 if (kind == null) return "Necesidad no reconocida. Por ahora: ordenar impares sin repetir, u ordenar pares sin repetir.";
