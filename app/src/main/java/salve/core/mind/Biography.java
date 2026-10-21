@@ -130,7 +130,7 @@ public final class Biography {
                 + "cuantas veces has (despertado|sonado)|cuanto tiempo hace que existes)\\b.*");
     }
 
-    static String date(long ms) {
+    public static String date(long ms) {
         Calendar c = Calendar.getInstance(TimeZone.getTimeZone("Europe/Madrid"));
         c.setTimeInMillis(ms);
         return c.get(Calendar.DAY_OF_MONTH) + " de " + MONTHS[c.get(Calendar.MONTH)] + " de " + c.get(Calendar.YEAR);

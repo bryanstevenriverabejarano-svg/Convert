@@ -687,6 +687,32 @@ public class MotorConversacional {
         }
         if (salve.core.mind.Biography.asksAge(entrada)) { hablar(mind().biographySentence()); return; }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
+        // «Guarda este dibujo, es importante»: un hito que recuerda siempre (y puede volver a enseñar).
+        salve.sketch.SketchScene ultimoDibujo = salve.core.mind.Milestones.asksToSaveDrawing(entrada) ? dibujo.ultimoDibujo() : null;
+        long desdeDibujo = System.currentTimeMillis() - dibujo.ultimoDibujoEn();
+        if (ultimoDibujo != null && salve.core.mind.Milestones.asksToSaveDrawing(entrada) && creatorSide()
+                && (desdeDibujo < 5 * 60_000L || (desdeDibujo < 6 * 3_600_000L && entrada.toLowerCase(java.util.Locale.ROOT).contains("dibujo")))) {
+            salve.core.mind.Milestones.Milestone hito = mind().milestones().saveDrawing(ultimoDibujo.title, ultimoDibujo.key, entrada);
+            memoria.guardarRecuerdo("Hito del " + salve.core.mind.Biography.date(hito.at) + ": " + hito.note + " («" + hito.title + "»)."
+                            + (hito.said.isEmpty() ? "" : " Bryan lo guardó diciendo: «" + hito.said + "»."),
+                    "orgullo", 10, java.util.Arrays.asList("hito", "dibujo", "mi_dibujo"));
+            mind().indexNewMemoriesAsync();
+            registrarAccion(salve.core.mind.SelfActionLog.Kind.DRAW, "guardar un dibujo como hito", hito.note);
+            hablar(salve.core.mind.Milestones.confirmation(hito));
+            return;
+        }
+        if (salve.core.mind.Milestones.asksToShowDrawing(entrada) && creatorSide()) {
+            salve.core.mind.Milestones.Milestone hito = mind().milestones().findDrawing(entrada);
+            salve.sketch.SketchLibrary lib = salve.sketch.Sketches.library(context);
+            salve.sketch.SketchScene guardado = hito == null || lib == null ? null : salve.sketch.SketchScene.fromKey(lib, hito.sceneKey);
+            if (hito == null) { hablar("Todavía no tengo ningún dibujo guardado como hito. Cuando te guste uno, dime «guarda este dibujo»."); return; }
+            if (guardado == null) { hablar("Recuerdo " + hito.note + " («" + hito.title + "»), del " + salve.core.mind.Biography.date(hito.at)
+                    + ", pero ya no tengo todas sus piezas para volver a trazarlo."); return; }
+            dibujo.empezarDibujo(guardado);
+            hablar("Aquí lo tienes: " + hito.note + ", del " + salve.core.mind.Biography.date(hito.at) + "."
+                    + (hito.said.isEmpty() ? "" : " Me dijiste: «" + hito.said + "»."));
+            return;
+        }
         if (salve.core.visual.SceneGraph.isCommand(entrada)) {
             VisualMemoryRecord photo = activePhoto;
             if (photo == null) { hablar("Mándame una foto o elige una guardada y la miro con calma: qué hay y dónde está cada cosa."); return; }
