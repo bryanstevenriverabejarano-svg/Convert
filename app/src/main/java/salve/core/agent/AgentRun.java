@@ -11,6 +11,8 @@ public final class AgentRun {
     public String experience = "";
     /** Audited separately: SUCCEEDED alone is only the model-reviewed agent status. */
     public String goalVerification = "UNKNOWN", verificationCriterion = "NONE", verificationEvidence = "";
+    /** All independently checked call IDs, in the exact order of the user's requested steps. */
+    public List<String> verificationEvidenceIds = new ArrayList<>();
     public boolean codeAllowed;
     public long createdAt, updatedAt, leaseUntil;
     public int modelCalls, revisions, attempts;
@@ -48,7 +50,13 @@ public final class AgentRun {
                 || !AgentExperience.valid(run.experience) || run.codeAllowed && !run.experience.isEmpty()
                 || run.goalVerification == null || run.verificationCriterion == null || run.verificationEvidence == null
                 || !java.util.Arrays.asList("UNKNOWN", "VERIFIED", "PARTIAL", "NOT_VERIFIED").contains(run.goalVerification)
-                || !java.util.Arrays.asList("NONE", "PUBLIC_READ").contains(run.verificationCriterion)
+                || !java.util.Arrays.asList("NONE", "PUBLIC_READ", "PUBLIC_READ_SET").contains(run.verificationCriterion)
+                || run.verificationEvidenceIds == null || run.verificationEvidenceIds.size() > 2
+                || !run.verificationEvidenceIds.isEmpty()
+                        && !run.verificationEvidence.equals(run.verificationEvidenceIds.get(0))
+                || (run.goalVerification.equals("VERIFIED") && run.verificationCriterion.equals("PUBLIC_READ_SET")
+                        && run.verificationEvidenceIds.size() != 2)
+                || (!run.goalVerification.equals("VERIFIED") && !run.verificationEvidenceIds.isEmpty())
                 || run.verificationEvidence.length() > 60
                 || !run.verificationEvidence.isEmpty() && !run.verificationEvidence.matches("[a-zA-Z0-9-]{1,60}")
                 || (run.goalVerification.equals("VERIFIED") != !run.verificationEvidence.isEmpty())
@@ -59,6 +67,11 @@ public final class AgentRun {
                 || run.attempts < 0 || run.attempts > 8
                 || run.modelCalls < 0 || run.modelCalls > AgentEngine.MAX_MODEL_CALLS || run.revisions < 0 || run.revisions > 3)
             throw new IllegalArgumentException("Unsupported agent journal");
+        java.util.Set<String> verifiedIds = new java.util.HashSet<>();
+        for (String id : run.verificationEvidenceIds)
+            if (id == null || !id.matches("[a-zA-Z0-9-]{1,60}") || !verifiedIds.add(id)
+                    || !run.evidence.contains(id))
+                throw new IllegalArgumentException("Invalid independent evidence list");
         for (String item : run.outline) if (item == null || item.length() > 160) throw new IllegalArgumentException("Invalid outline");
         for (String item : run.evidence) if (item == null || item.length() > 60) throw new IllegalArgumentException("Invalid evidence");
         for (String item : run.providers) if (item == null || item.length() > 150) throw new IllegalArgumentException("Invalid provider");
