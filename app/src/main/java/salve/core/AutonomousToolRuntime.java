@@ -123,14 +123,23 @@ public final class AutonomousToolRuntime {
             proposal.add("program", evaluation.program.deepCopy());
             proposal.addProperty("expires", System.currentTimeMillis() + 86_400_000L);
             if (cancelled.getAsBoolean()) return false;
-            // Record suppression BEFORE surfacing the proposal; a failure never installs skills.
+            // Atomic proposal first: failed proposal storage must never start a
+            // cooldown that hides the opportunity from the user.
+            new FileToolStateStore(proposedSkillFile).write(proposal.toString());
+            if (cancelled.getAsBoolean()) {
+                proposedSkillFile.delete(); // no installation, even if deletion fails
+                return false;
+            }
             JsonObject cooldown = new JsonObject();
             cooldown.addProperty("schema", 1);
             cooldown.addProperty("kind", kind.name());
             cooldown.addProperty("until", System.currentTimeMillis() + 7L * 24 * 60 * 60_000L);
-            new FileToolStateStore(suggestionCooldownFile).write(cooldown.toString());
-            if (cancelled.getAsBoolean()) return false;
-            new FileToolStateStore(proposedSkillFile).write(proposal.toString());
+            try {
+                new FileToolStateStore(suggestionCooldownFile).write(cooldown.toString());
+            } catch (Exception denied) {
+                proposedSkillFile.delete();
+                return false;
+            }
             return true;
         } catch (Exception failure) {
             // Never modify existing skills or grant permissions on an observer failure.
