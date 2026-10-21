@@ -25,4 +25,13 @@ public class MemoryHealthTest {
         assertTrue(waiting, waiting.contains("Esperando Wi-Fi"));
         assertTrue(MemoryHealth.describe(1, 0, MemoryHealth.Semantic.FAILED, "no distingue el español", null).contains("no está funcionando"));
     }
+
+    @Test public void tellsWhatIsHappeningNow() {
+        assertTrue(MemoryHealth.extra(true, "", "", false).contains("creando los vectores"));
+        assertTrue(MemoryHealth.extra(false, "OutOfMemoryError", "", false).contains("OutOfMemoryError"));
+        String restoring = MemoryHealth.extra(false, "", "Recuperados 45 de 330.", false);
+        assertTrue(restoring, restoring.contains("trayendo recuerdos de pCloud") && restoring.contains("45 de 330"));
+        assertTrue(MemoryHealth.extra(false, "", "Completa.", true).contains("entera"));
+        assertEquals("", MemoryHealth.extra(false, "", "", false));
+    }
 }

@@ -55,6 +55,21 @@ public final class MemoryHealth {
         return b.toString();
     }
 
+    /**
+     * Lo que está pasando ahora: si está creando vectores, el último fallo y cómo va traer los
+     * recuerdos de pCloud (tras reinstalar llegan por lotes y al principio hay pocos).
+     */
+    public static String extra(boolean indexing, String indexError, String cloudStatus, boolean cloudComplete) {
+        StringBuilder b = new StringBuilder();
+        if (indexing) b.append(" Ahora mismo estoy creando los vectores que faltan; pregúntamelo en un par de minutos.");
+        else if (indexError != null && !indexError.isEmpty()) b.append(" La última vez que creé vectores falló (").append(indexError).append(").");
+        if (cloudStatus != null && !cloudStatus.trim().isEmpty()) {
+            if (cloudComplete) b.append(" Mi copia de pCloud está entera en este móvil.");
+            else b.append(" Todavía estoy trayendo recuerdos de pCloud, así que puede que me falten: ").append(clean(cloudStatus)).append('.');
+        }
+        return b.toString();
+    }
+
     private static String clean(String s) {
         String t = s == null ? "" : s.trim();
         if (t.endsWith(".")) t = t.substring(0, t.length() - 1);

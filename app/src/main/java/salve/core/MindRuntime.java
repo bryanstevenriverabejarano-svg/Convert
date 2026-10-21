@@ -529,8 +529,13 @@ public final class MindRuntime {
      * cientos de recuerdos tardaba días en poder buscarlos todos por significado).
      */
     private void indexAll() {
-        for (int round = 0; round < 400; round++) if (indexMissing(INDEX_BATCH, () -> false) == 0) break;
+        if (!indexing.compareAndSet(false, true)) return;
+        try { for (int round = 0; round < 400; round++) if (indexMissing(INDEX_BATCH, () -> false) == 0) break; }
+        finally { indexing.set(false); }
     }
+    private final AtomicBoolean indexing = new AtomicBoolean();
+    /** Último fallo al crear vectores (para contárselo a Bryan), vacío si no hubo. */
+    private volatile String lastIndexError = "";
 
     /** «¿Cómo está tu memoria?», con datos reales. Fuera del hilo principal. */
     public String memoryHealth() {
@@ -545,8 +550,17 @@ public final class MindRuntime {
             state = salve.core.mind.MemoryHealth.Semantic.DOWNLOADING; detail = salve.work.EmbeddingDownloadWorker.describe(app);
         } else if (c == null) { warmUpEmbeddings(); state = salve.core.mind.MemoryHealth.Semantic.LOADING; detail = ""; }
         else { state = salve.core.mind.MemoryHealth.Semantic.FAILED; detail = c.describe(); }
-        if (state == salve.core.mind.MemoryHealth.Semantic.READY) background.execute(this::indexAll);
-        return salve.core.mind.MemoryHealth.describe(total, vectors.size(), state, detail, people.closest(3));
+        boolean busy = indexing.get();
+        if (state == salve.core.mind.MemoryHealth.Semantic.READY && !busy) { busy = true; background.execute(this::indexAll); }
+        // Tras reinstalar, los recuerdos vuelven de pCloud por lotes: decir cómo va, y empujarlo.
+        String cloud = "";
+        if (salve.data.sync.CloudSyncManager.isPCloudConfigured(app)) {
+            cloud = salve.data.sync.CloudSyncManager.memoryStatus(app);
+            if (!salve.data.sync.CloudSyncManager.memoryRestoreComplete(app)) salve.data.sync.CloudAutoSync.kick(app, "estado de la memoria");
+        }
+        return salve.core.mind.MemoryHealth.describe(total, vectors.size(), state, detail, people.closest(3))
+                + salve.core.mind.MemoryHealth.extra(busy, lastIndexError, cloud,
+                        salve.data.sync.CloudSyncManager.isPCloudConfigured(app) && salve.data.sync.CloudSyncManager.memoryRestoreComplete(app));
     }
 
     /** Download completion is independent of app/chat lifetimes. Recalibrate and rebuild derived vectors. */
@@ -627,6 +641,7 @@ public final class MindRuntime {
             if (vectors.isDirty()) vectors.save(vectorFile);
         } catch (Exception failure) {
             Log.w(TAG, "Indexación semántica interrumpida: " + failure.getClass().getSimpleName());
+            lastIndexError = failure.getClass().getSimpleName();
         }
         return created;
     }
