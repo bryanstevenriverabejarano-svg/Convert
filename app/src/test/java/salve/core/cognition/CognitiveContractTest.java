@@ -148,7 +148,7 @@ public class CognitiveContractTest {
             }
             return ModelResult.success(TOOL,0);
         },tools,()->false);
-        assertFalse(result.result.isSuccess());assertEquals(1,executions.get());assertTrue(result.result.getError().contains("sin éxito confirmado"));
+        assertFalse(result.result.isSuccess());assertEquals(1,executions.get());assertTrue(result.result.getError().contains("sin confirmar que saliera bien"));
     }
     @Test public void twoToolsAndOneRepairAreTheWholeBudget() {
         AtomicInteger calls=new AtomicInteger(), executions=new AtomicInteger();

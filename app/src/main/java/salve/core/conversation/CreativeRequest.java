@@ -46,7 +46,7 @@ public final class CreativeRequest {
             // La última respuesta, o la anterior si entre medias solo hubo un fallo del modelo.
             if (recentReplies != null) for (int i = 0; i < Math.min(2, recentReplies.size()); i++) {
                 if (promisedWithoutDelivering(recentReplies.get(i))) return true;
-                if (i == 0 && !normalize(recentReplies.get(0)).matches(".*\\b(no pude completar|llego vacia|no devolvio)\\b.*")) break;
+                if (i == 0 && !normalize(recentReplies.get(0)).matches(".*\\b(no pude completar|llego vacia|no devolvio|no me salio bien la respuesta|salio vacia)\\b.*")) break;
             }
             return false;
         }
