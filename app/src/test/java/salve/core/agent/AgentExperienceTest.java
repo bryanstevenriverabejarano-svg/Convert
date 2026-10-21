@@ -138,6 +138,35 @@ public class AgentExperienceTest {
                 Collections.singletonList(previous), NOW));
     }
 
+    @Test public void numericExperienceCountsOnlyProductVerifiedIndependently() {
+        String goal = "Calcula 903 * -11";
+        AgentRun previous = completed("old", goal);
+        previous.observations.clear();
+        previous.evidence.clear();
+        previous.answer = "-9933";
+        AgentRun.Observation receipt = new AgentRun.Observation("math-1",
+                "math.compute", "SUCCESS", "RESULTADO_ARITMETICO=-9933");
+        receipt.fingerprint = AgentExperience.fingerprint("math.compute", goal);
+        previous.observations.add(receipt);
+        previous.evidence.add(receipt.id);
+        AgentGoalVerifier.Result verified = AgentGoalVerifier.evaluate(previous);
+        assertEquals(AgentGoalVerifier.Verdict.VERIFIED, verified.verdict);
+        previous.goalVerification = verified.verdict.name();
+        previous.verificationCriterion = verified.criterion;
+        previous.verificationEvidence = verified.evidenceId;
+        previous.verificationEvidenceIds = verified.evidenceIds;
+        AgentRun current = run("fresh", goal);
+        String context = AgentExperience.contextFor(current,
+                Collections.singletonList(previous), NOW);
+        assertTrue(AgentExperience.valid(context));
+        assertEquals(1, JsonParser.parseString(context).getAsJsonObject()
+                .get("objetivos_verificados").getAsInt());
+        previous.answer = "-9932"; // Wrong even though a valid tool receipt exists.
+        context = AgentExperience.contextFor(current, Collections.singletonList(previous), NOW);
+        assertEquals(0, JsonParser.parseString(context).getAsJsonObject()
+                .get("objetivos_verificados").getAsInt());
+    }
+
     @Test public void verifiedOutcomeCountIsValidatedAndCannotBeForgedInContext() {
         AgentRun current = run("new", "Recuerda el origen de Salve");
         AgentRun previous = completed("old", "Consulta el origen de Salve");
