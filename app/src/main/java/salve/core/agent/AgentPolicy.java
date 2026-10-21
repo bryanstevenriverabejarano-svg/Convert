@@ -10,13 +10,16 @@ import salve.core.NetworkResourcePolicy;
 /** Authority comes from the user's persisted request, never from a model or a web page. */
 public final class AgentPolicy {
     public static final Set<String> TOOLS = java.util.Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "memory.lookup", "web.search", "web.read", "api.get", "browser.render", "code.python")));
+            "memory.lookup", "web.search", "web.read", "api.get", "browser.render", "code.python", "math.compute")));
     private static final Pattern URL = Pattern.compile("https://[^\\s<>\\[\\]{}]+", Pattern.CASE_INSENSITIVE);
     private AgentPolicy() { }
     /** Null means allowed; a denial is a recoverable observation, never executed. */
     public static String denial(AgentRun run, String tool, String input) {
         if (!TOOLS.contains(tool)) return "Herramienta no registrada; no puedo crear permisos desde un plan.";
         if (input == null || input.trim().isEmpty() || input.length() > 6000) return "Argumento fuera de presupuesto.";
+        if (tool.equals("math.compute")) return !run.codeAllowed && run.goal.equals(input)
+                && AgentArithmeticTask.parse(run.goal) != null ? null
+                : "El cálculo requiere una petición aritmética explícita y exacta.";
         if (tool.equals("memory.lookup")) return run.codeAllowed
                 ? "Los planes de código usan el objetivo explícito y fuentes públicas, no la memoria personal." : null;
         if (tool.equals("web.search")) return run.goal.equals(input) ? null
