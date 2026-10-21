@@ -48,8 +48,9 @@ public final class MindMapActivity extends Activity {
                 web.setWebViewClient(new WebViewClient() {
                     @Override public boolean shouldOverrideUrlLoading(WebView v, android.webkit.WebResourceRequest r) { return true; }
                 });
-                web.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
+                // Primero en pantalla y luego la página: cargada antes, medía la pantalla con ancho 0.
                 setContentView(web);
+                web.post(() -> web.loadDataWithBaseURL(null, html, "text/html", "utf-8", null));
             });
         }, "Salve-MapaMente").start();
     }
