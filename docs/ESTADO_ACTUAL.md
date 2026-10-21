@@ -5,15 +5,16 @@
 ## Versión de referencia
 
 - Rama: `main`. La revisión de este documento no cambia la APK, los motores, permisos ni datos de Salve.
-- PR [#199 — Registro de ejecución](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/199): **abierta, no fusionada** al revisar. La pantalla de registro y explicaciones literales vinculadas a geometría pertenecen a **esa rama**, no deben anunciarse como disponibles en `main`. Su propia guía está en `docs/execution-journal.md` de esa rama.
-- PR [#200 — Deliberación situacional](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/200): **abierta y en borrador, no fusionada** al revisar. `SituationalDecisionFrame` y las pruebas asociadas están en esa propuesta, no en `main`. La guía `docs/DELIBERACION_SITUACIONAL.md` pertenece a la rama del PR.
-- Después de fusionar una PR, revisar este estado y actualizar enlaces/estatus **en un commit nuevo**; no inferir el estado a partir de esta fotografía histórica.
+- PR [#199 — Registro de ejecución](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/199): **fusionada** al comprobar el estado actual. La guía `docs/execution-journal.md` está en `main`.
+- PR [#200 — Deliberación situacional](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/200): **fusionada**. `SituationalDecisionFrame` y `docs/DELIBERACION_SITUACIONAL.md` forman parte de `main`.
+- PR [#201 — Sincronizar documentación](https://github.com/bryanstevenriverabejarano-svg/Convert/pull/201): **fusionada**. Esta página fue creada por esa propuesta; se actualizan aquí sus referencias históricas.
+- El marco adicional de **cohesión** `CognitiveCohesionFrame` está propuesto en la rama de esta revisión y **aún no está fusionado**. Consulta [cohesión cognitiva](COHESION_COGNITIVA.md) en la rama de propuesta; no anunciarlo como función liberada hasta la fusión.
 
 ## Mapa de capacidades en `main`
 
 | Área | Base técnica en el árbol | Estado que puede afirmarse |
 | --- | --- | --- |
-| Conversación | `MotorConversacional`, `salve.core.cognition.CognitivePrompt`, `CognitiveTurn`, `ConversationSession` | Existe ruta de turno con contrato de respuesta/acción y presupuesto, con historial/contexto; la corrección de una respuesta necesita evaluar el modelo |
+| Conversación y deliberación | `MotorConversacional`, `CognitivePrompt`, `CognitiveTurn`, `SituationalDecisionFrame`, `ConversationSession` | Ruta de turno y marco de conflictos en `main`; las alternativas semánticas y la coherencia en el modelo requieren evaluación de inferencia real |
 | Modelos locales | `LocalModelPolicy.kt`, `ModelRuntimeInfo.java`, `docs/dolphin-android.md` | Escalera automática **Dolphin 3.0 Llama 3.1 8B → Dolphin 3.0 Llama 3.2 3B → Gemma 4 E2B**; Gemma 4 E4B está identificada como alternativa **opcional fuera** de esa escalera. Depende de RAM, pesos verificados y carga real; no garantizar 8B en cualquier móvil |
 | Catálogo de descargas | `app/src/main/assets/config/models.json`, `LocalModelPolicy.kt` | El JSON de assets contiene la entrada fijada de Gemma 4 E2B; no es una lista completa de todos los GGUF gestionados. No confundir catálogo parcial con motor activo |
 | Memoria | `ConversationMemoryGrounding`, `salve.core.mind`, Room | Recuperación léxica e índice semántico opcional; procedencia y límites de recuperación. Una búsqueda de recuerdo no demuestra que lo recordado sea verdadero |
@@ -40,7 +41,7 @@
 1. El `README` mezclaba la prioridad Dolphin 3B, el flujo 8B actual y una guía antigua que declaraba Qwen/MLC «predeterminado». Una instrucción de empaquetado histórico no describe el runtime actualmente escogido.
 2. `MENTE_PERSISTENTE.md` decía que la memoria por significado seguía desactivada hasta desarrollar un modelo multilingüe. H2 ya implementa los artefactos y el contrato E5; la activación depende ahora de que **se descarguen/verifiquen** los archivos y pase la calibración en el dispositivo.
 3. `ANALISIS_ARQUITECTURA.md` comienza con hallazgos de septiembre y contiene estados «antes de este cambio». No se debe usar como diagnóstico vigente en octubre.
-4. Los PR no fusionados deben mostrarse como propuestas y no como funciones liberadas.
+4. Las PR #199, #200 y #201 **ya están fusionadas**; sus textos anteriores de estado pendiente eran una foto temporal. Las PR futuras deben actualizarse antes de anunciar capacidades como disponibles.
 
 ## Regla para documentación futura
 

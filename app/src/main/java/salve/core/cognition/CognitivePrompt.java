@@ -132,6 +132,17 @@ public final class CognitivePrompt {
             int afterFrame = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
             if (afterFrame < 210) task.remove("decision_frame");
         }
+        // The already-existing self model, memory, conversation and tool receipts
+        // now share a single observable coordination checkpoint. It is never authority.
+        CognitiveCohesionFrame cohesion = CognitiveCohesionFrame.observe(
+                state, selfModel, memory, context, history, results, task.has("decision_frame"));
+        task.add("cohesion", cohesion.toJson());
+        int cohesionRemaining = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
+        // Preserve space for the current user's input and actual evidence before
+        // adding metadata, particularly on 3k-character prompts.
+        int minimumEvidence = Math.max(230, Math.min(600, (input == null ? 0 : input.length()) + 160));
+        if (cohesionRemaining < minimumEvidence) task.remove("cohesion");
+
         int remaining = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
         if (remaining < 120) throw new IllegalArgumentException("Catálogo o estado demasiado grande para el contexto");
         remaining -= put(data, "USER_INPUT", input, Math.max(80, remaining * 2 / 5));
