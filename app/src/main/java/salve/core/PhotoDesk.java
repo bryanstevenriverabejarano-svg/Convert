@@ -76,7 +76,17 @@ final class PhotoDesk {
 
     void procesarImagen(String pregunta, Bitmap foto, boolean localOnly,
                               String personName, String relationship, String position) {
+        procesarImagen(pregunta, foto, localOnly, personName, relationship, position, "", true);
+    }
+
+    /**
+     * @param objectHints lo que Bryan dice que hay en la foto (le ayuda a nombrar los objetos)
+     * @param scene false en fotos que no son de cosas ni sitios (un documento, una pantalla…)
+     */
+    void procesarImagen(String pregunta, Bitmap foto, boolean localOnly, String personName, String relationship,
+                        String position, String objectHints, boolean scene) {
         if (foto == null || foto.isRecycled()) { m.hablar("No recibí una foto válida."); return; }
+        final String hints = salve.core.visual.SceneGraph.cleanHints(objectHints);
         m.goalAutonomy.userActivity();
         String entrada = pregunta == null || pregunta.trim().isEmpty() ? "Describe esta foto." : pregunta.trim();
         try {
@@ -109,6 +119,7 @@ final class PhotoDesk {
                     m.conversationSession.addUser(visualInput);
                     CognitiveTurn.Outcome cognitive = m.runCognitiveTurn(visualInput,
                             "CONSULTA_VISUAL: describe sólo lo observable; los recuerdos no prueban lo que aparece en la foto."
+                                    + (hints.isEmpty() ? "" : " | Bryan dice que en la foto hay: " + hints + ".")
                                     + (photoSketch == null ? "" : " | " + m.photoSketchContext),
                             null, false, m.memoria.recuperarContextoConversacional(entrada), true);
                     ModelResult result = cognitive.result;
@@ -118,7 +129,7 @@ final class PhotoDesk {
                     if (result.isSuccess()) m.setActivePhoto(m.visualMemories.update(saved.withAnalysis(respuesta)));
                     m.hablarPreparado(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)), motion);
                     // Después, con calma: los objetos, dónde está cada uno y cómo se relacionan.
-                    if (result.isSuccess()) mirarEscenaLuego(saved);
+                    if (result.isSuccess() && scene) mirarEscenaLuego(saved, hints);
                 } catch (Exception failure) {
                     m.hablar("No pude completar el guardado o análisis de la foto. "
                             + "Revisa Fotos guardadas antes de volver a enviarla.");
@@ -137,10 +148,10 @@ final class PhotoDesk {
     }
 
     /** En la cola de la conversación (no compite con ella por el modelo): mira la escena tras responder. */
-    void mirarEscenaLuego(VisualMemoryRecord photo) {
+    void mirarEscenaLuego(VisualMemoryRecord photo, String hints) {
         try {
             m.conversationExecutor.execute(() -> {
-                try { if (!m.closed) mirarEscena(photo); }
+                try { if (!m.closed) mirarEscena(photo, hints); }
                 catch (Exception failure) { Log.w(MotorConversacional.TAG, "Escena no disponible: " + failure.getClass().getSimpleName()); }
             });
         } catch (java.util.concurrent.RejectedExecutionException ignored) { }
@@ -152,7 +163,9 @@ final class PhotoDesk {
      * después «¿dónde estaba la taza?». Si ya la miró, usa lo guardado. Hilo de la conversación.
      * @return la escena, o null si no pudo
      */
-    salve.core.visual.SceneGraph mirarEscena(VisualMemoryRecord photo) throws java.io.IOException {
+    salve.core.visual.SceneGraph mirarEscena(VisualMemoryRecord photo) throws java.io.IOException { return mirarEscena(photo, ""); }
+
+    salve.core.visual.SceneGraph mirarEscena(VisualMemoryRecord photo, String hints) throws java.io.IOException {
         if (photo == null) return null;
         String cached = m.visualMemories.store.readScene(photo.id);
         if (cached != null) {
@@ -161,7 +174,7 @@ final class PhotoDesk {
         }
         if (!canAnalyzePhoto(photo)) return null;
         m.estado("Miro la foto con calma: qué hay y dónde está cada cosa…");
-        ModelResult seen = m.verFoto(photo, salve.core.visual.SceneGraph.prompt());
+        ModelResult seen = m.verFoto(photo, salve.core.visual.SceneGraph.prompt(hints));
         if (seen == null || !seen.isSuccess()) return null;
         salve.core.visual.SceneGraph scene = salve.core.visual.SceneGraph.parse(seen.getText());
         if (scene == null) return null;

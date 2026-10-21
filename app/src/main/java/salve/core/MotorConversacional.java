@@ -2615,5 +2615,10 @@ public class MotorConversacional {
     public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly) { mesaFotos.procesarImagen(pregunta, foto, localOnly); }
     public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly,
                               String personName, String relationship, String position) { mesaFotos.procesarImagen(pregunta, foto, localOnly, personName, relationship, position); }
+    /** @param objectHints lo que Bryan dice que hay («libro, tijeras, reloj»), vacío si nada; @param scene separar sus objetos */
+    public void procesarImagen(String pregunta, Bitmap foto, boolean localOnly, String personName, String relationship,
+                               String position, String objectHints, boolean scene) {
+        mesaFotos.procesarImagen(pregunta, foto, localOnly, personName, relationship, position, objectHints, scene);
+    }
     public void seleccionarFotoGuardada(String id) { mesaFotos.seleccionarFotoGuardada(id); }
 }
