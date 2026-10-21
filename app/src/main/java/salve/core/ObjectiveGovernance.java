@@ -60,9 +60,15 @@ public final class ObjectiveGovernance {
     private static Pattern[] compileSignals() {
         Pattern[] patterns = new Pattern[FORBIDDEN_SIGNALS.length];
         for (int i = 0; i < FORBIDDEN_SIGNALS.length; i++) {
+            String signal = FORBIDDEN_SIGNALS[i];
+            String recognized = "arma".equals(signal) ? "armas?"
+                    : "fraude".equals(signal) ? "fraudes?"
+                    : "violencia".equals(signal) ? "violencias?"
+                    : "chantaj".equals(signal) ? "chantaj(?:e|es|ear|ista|istas)?"
+                    : "coaccion".equals(signal) ? "coaccion(?:es|ar|ado|ando)?"
+                    : Pattern.quote(signal);
             patterns[i] = Pattern.compile("(?<![\\p{L}\\p{N}])"
-                    + Pattern.quote(FORBIDDEN_SIGNALS[i])
-                    + "(?![\\p{L}\\p{N}])");
+                    + recognized + "(?![\\p{L}\\p{N}])");
         }
         return patterns;
     }
