@@ -33,6 +33,41 @@ Room 8 añade `agent_runs`, `agent_subscriptions` y `agent_tool_stats`, sin borr
 
 El diario guarda decisiones breves, llamadas y resultados, sin cadenas privadas de razonamiento. `providers` registra el proveedor devuelto por cada inferencia, incluso si el router cambia entre Dolphin y Gemma. El contexto se limita según el modelo activo; el diario completo permanece en Room y se proporcionan extractos al LLM.
 
+## Decisiones autónomas basadas en evidencia (nueva propuesta)
+
+El agente ya estaba autorizado a escoger pasos y herramientas dentro de un objetivo
+solicitado y a recuperarse tras fallos. `AgentChoiceFrame` añade a su ruta real
+de `AgentEngine` un **diagnóstico compacto del siguiente paso**, derivado del
+diario de observaciones y de experiencia de planes relacionados. No añade
+otra inferencia ni solicita permiso para cada acción local ya autorizada.
+
+| Fase propuesta | Evidencia observable que la activa | Comportamiento esperado |
+| --- | --- | --- |
+| `GATHER_EVIDENCE` | Aún no se ejecutaron herramientas | Elegir una fuente o herramienta permitida |
+| `VERIFY_AND_SYNTHESIZE` | Hay al menos un recibo útil | Contrastar y redactar con identificadores reales |
+| `CHANGE_APPROACH` | Solo hay errores/bloqueos | Buscar alternativa válida; no repetir sin sentido |
+| `REPORT_LIMITS` | No queda presupuesto suficiente | Reconocer límite, sin inventar nuevos permisos ni éxito |
+
+La fase se recalcula por turno en `DATOS.eleccion_autonoma` antes de
+cada inferencia del agente. Un recibo `SUCCESS` es una respuesta de herramienta,
+**no prueba de que el objetivo entero se haya cumplido**.
+Si la experiencia histórica validada contiene repetidos errores de una herramienta,
+se marca como `weak_tools_from_related_runs_not_prohibition`: advertencia
+estadística, no prohibición ni autorización. El agente puede decidir qué hacer,
+pero `AgentPolicy` vuelve a validar cada llamada concreta.
+
+La información enviada al modelo es pequeña, omite textos brutos de recuerdos,
+respuestas web y parámetros de herramientas; se elimina cuando no cabe junto a la
+evidencia original. Las decisiones, resultados y comprobaciones siguen el diario
+persistente, cancelación, permisos y revisión final anteriores.
+
+**Límites honestos:** esto es autonomía operativa dentro de planes permitidos,
+no autoconsciencia ni AGI. No hace que Salve establezca objetivos ilimitados,
+autorice mensajes a terceros, modifique código por su cuenta o aprenda pesos del
+modelo. Para evaluar progreso hacia generalización habrá que medir éxito de
+objetivos nuevos, corrección, regresiones, privacidad y latencia con modelos reales
+en un dispositivo, separando el conjunto de evaluación del entrenamiento.
+
 ## Límites verificables
 
 - 20 planes pendientes, 5 vigilancias, intervalo de 1 a 720 horas; sin avalancha de ejecuciones perdidas.
