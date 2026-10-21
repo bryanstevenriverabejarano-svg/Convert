@@ -21,6 +21,18 @@ public class AgentGoalVerifierTest {
         assertEquals("PUBLIC_READ", result.criterion);
         assertEquals("read-1", result.evidenceId);
     }
+    @Test public void longerUserFormulationsAreRecognizedBeforeGenericPrefixes() {
+        for (String goal : new String[]{
+                "Lee la página " + URL,
+                "Abre la página " + URL,
+                "Consulta la URL " + URL,
+                "Lee la URL " + URL
+        }) {
+            assertEquals(goal, AgentGoalVerifier.Verdict.VERIFIED,
+                    AgentGoalVerifier.evaluate(base(goal, URL, "SUCCESS")).verdict);
+        }
+    }
+
     @Test public void modelReviewedResearchIsNotIndependentlyProven() {
         AgentRun r = base("Investiga y compara los cambios en " + URL, URL, "SUCCESS");
         r.status = "SUCCEEDED";
