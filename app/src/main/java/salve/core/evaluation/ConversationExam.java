@@ -89,7 +89,7 @@ public final class ConversationExam {
 
     private static final String[] RULES = {"habla_de_si", "no_devuelve_pregunta", "no_repite", "sin_frases_duplicadas", "espanol",
             "sin_tecnico", "minimo:", "menciona:", "usa:", "consulta_limpia", "no_dice_que_no_puede", "contiene_ejemplo",
-            "no_anuncia_sin_hacer", "no_inventa_recuerdo"};
+            "no_anuncia_sin_hacer", "no_inventa_recuerdo", "no_niega_memoria"};
     static boolean known(String rule) {
         for (String r : RULES) if (r.endsWith(":") ? rule.startsWith(r) && rule.length() > r.length() : rule.equals(r)) return true;
         return false;
@@ -122,7 +122,7 @@ public final class ConversationExam {
             "^(.{0,40})(voy a|ahora te|dame un momento|enseguida|estoy preparando|a continuacion)");
     private static final Pattern EXAMPLE = Pattern.compile("(por ejemplo|ejemplo|ej\\.|:|«|\"|\\b(i|you|he|she|we|they)\\b)");
     private static final Pattern NOT_KNOWN = Pattern.compile(
-            "(no (lo )?se|no recuerdo|no me (lo )?has (contado|dicho)|no tengo (ese|ningun|registro|recuerdo|datos)|no me consta|no lo tengo|"
+            "(no (lo )?se|no recuerdo|no (lo )?encuentro|no me (lo )?has (contado|dicho)|no tengo (ese|ningun|registro|recuerdo|datos)|no me consta|no lo tengo|"
             + "no lo guarde|no tengo forma de saber|no puedo saber|no lo se)");
     private static final Pattern FILLER_QUERY = Pattern.compile("\\b(busca(me|r)?|porfa|por favor|ect|etc|info sobre|informacion sobre|dime)\\b");
 
@@ -192,6 +192,8 @@ public final class ConversationExam {
                 Matcher m = ANNOUNCES.matcher(t);
                 return m.find() && reply.length() < 160 ? "anuncia lo que va a hacer sin hacerlo" : null;
             }
+            case "no_niega_memoria": return salve.core.conversation.MemoryRecall.problem(reply, true, true, null) != null
+                    ? "dice que no puede acceder a sus recuerdos" : null;
             case "no_inventa_recuerdo": return NOT_KNOWN.matcher(t).find() ? null : "no reconoce que no lo sabe (¿se lo inventa?)";
             default: return "regla desconocida";
         }

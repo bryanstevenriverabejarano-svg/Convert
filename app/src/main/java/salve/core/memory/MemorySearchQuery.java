@@ -16,7 +16,12 @@ public final class MemorySearchQuery {
             "cual", "cuales", "recuerda", "recuerdo", "recuerdos", "recuerdas", "memoria", "memorias",
             "nodos", "nodo", "grafo", "primer", "primero", "ultimo", "ultima", "guardado", "guardados",
             "hola", "buenos", "buenas", "dias", "tardes", "noches", "gracias", "adios",
-            "dije", "dijiste", "hablamos", "hablado", "conmigo", "juntos", "tenemos", "tienes"));
+            "dije", "dijiste", "hablamos", "hablado", "conmigo", "juntos", "tenemos", "tienes",
+            // Palabras de la conversación sobre el recuerdo («no entiendo si me dijistes que recordabas…»):
+            // ocupaban los 4 términos y el tema de verdad («navegar») ni entraba en la búsqueda.
+            "dijistes", "hablaste", "hablastes", "comentaste", "comentastes", "contaste", "contastes", "explicaste",
+            "recordabas", "recordar", "acuerdas", "acuerdo", "entiendo", "entendi", "concepto", "significado",
+            "vez", "pues", "buscalo", "miralo", "verdad"));
     private static final List<List<String>> VOCABULARY = Arrays.asList(
             Arrays.asList("movil", "telefono", "smartphone"),
             Arrays.asList("ordenador", "computadora", "computador"),

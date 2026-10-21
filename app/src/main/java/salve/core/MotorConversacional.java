@@ -1179,9 +1179,19 @@ public class MotorConversacional {
 
         // Exact facts are read from their source. Quoted memories never enter the tool parser.
         String directAnswer = storyTurn ? null : deviceClock.directReply(entrada);
-        boolean recordar = directAnswer == null && !storyTurn && reasoningPlan.shouldRetrieveLongTermMemory() && creatorSide();
-        if (recordar) estado("Buscando en mis recuerdos…");
-        ConversationMemoryGrounding.Result evidence = recordar ? memoria.recuperarContextoConversacional(entrada) : null;
+        // «¿Recuerdas que hablamos de este concepto?», «pues búscalo»: el tema está en el hilo, no en la frase.
+        java.util.List<salve.core.conversation.ChatMessage> hilo = conversationSession.snapshot();
+        final boolean recallTurn = !storyTurn && salve.core.conversation.MemoryRecall.isRecallTurn(entrada, hilo);
+        final boolean memoryOpen = creatorSide();
+        boolean recordar = directAnswer == null && !storyTurn
+                && (reasoningPlan.shouldRetrieveLongTermMemory() || recallTurn) && memoryOpen;
+        String consultaMemoria = recallTurn ? salve.core.conversation.MemoryRecall.query(entrada, hilo) : entrada;
+        if (recordar) estado(recallTurn && !consultaMemoria.equals(entrada)
+                ? "Buscando «" + consultaMemoria + "» en mis recuerdos…" : "Buscando en mis recuerdos…");
+        ConversationMemoryGrounding.Result evidence = recordar ? memoria.recuperarContextoConversacional(consultaMemoria) : null;
+        if (recallTurn) responseContext += "\n" + salve.core.conversation.MemoryRecall.note(memoryOpen,
+                evidence != null && evidence.hasEvidence(), consultaMemoria.equals(entrada) ? null : consultaMemoria);
+        final Boolean memoryFound = evidence == null ? null : evidence.hasEvidence();
         estado(storyTurn ? "Imaginando la historia…" : "Pensando qué responderte…");
         if (directAnswer == null && evidence != null) directAnswer = evidence.getDirectAnswer();
         if (directAnswer != null && evidence != null && evidence.getDirectAnswer() == directAnswer
@@ -1259,14 +1269,16 @@ public class MotorConversacional {
         java.util.List<String> recientes = recentAssistantReplies(3);
         if (inference.isSuccess() && !creativeOk) {
             salve.core.conversation.ReplyReviewer.Review review = salve.core.conversation.ReplyReviewer.review(
-                    respuesta, entrada, recientes, lastReading, !storyTurn);
+                    respuesta, entrada, recientes, lastReading, !storyTurn,
+                    salve.core.conversation.MemoryRecall.problem(respuesta, recallTurn, memoryOpen, memoryFound));
             if (review.needsRewrite()) {
                 estado("Releo mi borrador: no servía así, lo reescribo…");
                 CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext + review.instruction(),
                         resumenAccion, entradaPorVoz, evidence, false);
                 if (retry.handedOff) return;
                 if (retry.result.isSuccess() && salve.core.conversation.ReplyReviewer.better(
-                        salve.core.conversation.ReplyReviewer.review(retry.result.getText(), entrada, recientes, lastReading, !storyTurn),
+                        salve.core.conversation.ReplyReviewer.review(retry.result.getText(), entrada, recientes, lastReading, !storyTurn,
+                                salve.core.conversation.MemoryRecall.problem(retry.result.getText(), recallTurn, memoryOpen, memoryFound)),
                         review))
                     respuesta = retry.result.getText();
                 String what = review.criticSummary();
@@ -1830,7 +1842,11 @@ public class MotorConversacional {
                 CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis), input));
         Map<String, CognitiveTurn.Tool> tools = toolOverride == null ? catalog : toolOverride.apply(catalog);
         List<salve.core.conversation.ChatMessage> turnHistory = historyOverride;
-        String memory = evidence == null ? "No consultada; usa memory.lookup si es pertinente."
+        // Sin la herramienta (Bryan aún no verificado) no se le puede decir «usa memory.lookup»: acababa
+        // diciendo «no puedo acceder a mis recuerdos de forma automática».
+        String memory = evidence == null ? (tools.containsKey("memory.lookup")
+                ? "No consultada aún; si te pregunta por algo de antes, usa memory.lookup: tus recuerdos los buscas tú."
+                : "Cerrada: tus recuerdos privados se abren cuando Bryan se verifica con la huella o la cara.")
                 : evidence.getStatus().name() + "\n" + evidence.getDataContext();
         // Su cuerpo y lo que ha hecho entran completos sólo cuando el tema va de ella; si no, una línea.
         boolean aboutHerself = salve.avatar.AstralBodySense.relevant(input);
