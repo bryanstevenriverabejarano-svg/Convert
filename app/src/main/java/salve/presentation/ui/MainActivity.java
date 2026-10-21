@@ -67,7 +67,6 @@ import salve.core.MemoriaEmocional;
 import salve.core.ModelConsoleOverlay;
 import salve.core.ModelCatalog;
 import salve.core.ModelStore;
-import salve.core.ModuloInvestigacion;
 import salve.core.MotorConversacional;
 import salve.core.SalveLLM;
 import salve.core.GeminiService;
@@ -155,7 +154,6 @@ public class MainActivity extends AppCompatActivity {
     private ReconocimientoFacial reconocimientoFacial;
     private MotorConversacional motorConversacional;
 
-    private ModuloInvestigacion investigacion;
     
     // ===== CEREBRO Y OÍDOS =====
     private android.speech.SpeechRecognizer speechRecognizer;

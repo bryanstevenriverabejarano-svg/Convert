@@ -78,13 +78,11 @@ public class MotorConversacional {
     volatile ModelResult lastConversationResult;
     private String cognitiveCore;
     final GeminiService gemini;
-    private final ConsciousnessState conciencia;
     private final IdentidadNucleo identidad;
     final MemoriaProcedimental cerebelo;
     private final CortexSeguridad cortexSeguridad;
 
     private HipocampoSemantico hipocampo;
-    private ModuloInvestigacion investigacion;
     private SistemaSensorial sensores;
      boolean conversationForeground;
     private ReasoningEngine motorRazonamiento;
@@ -333,12 +331,10 @@ public class MotorConversacional {
                         .getContext());
         this.intentRecognizer     = new IntentRecognizer(context);
         this.moduloInterpretacion = new ModuloInterpretacionSemantica();
-        this.conciencia = ConsciousnessState.getInstance(context);
         this.identidad = IdentidadNucleo.getInstance(context);
         this.cerebelo = new MemoriaProcedimental(context);
         this.gemini = GeminiService.getInstance(context);
 
-        this.investigacion = new ModuloInvestigacion(context);
         this.sensores = new SistemaSensorial(context);
         this.motorRazonamiento = new ReasoningEngine();
         this.gestorAjedrez = new GestorAjedrez(context);
@@ -1121,15 +1117,6 @@ public class MotorConversacional {
             return;
         }
 
-        ConsciousnessState.EstadoCognitivo estadoActual = conciencia.getEstadoCognitivo();
-        boolean estadoCritico = (estadoActual == ConsciousnessState.EstadoCognitivo.MINIMO);
-
-        if (estadoCritico && !entradaPorVoz) {
-             // Aviso ocasional
-        }
-
-        int numPalabras = entrada.trim().split("\\s+").length;
-        conciencia.registrarPalabrasConversacion(numPalabras);
 
 
         // Protocolos Oraculares Locales
