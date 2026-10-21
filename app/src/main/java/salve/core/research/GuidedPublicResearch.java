@@ -37,6 +37,7 @@ final class GuidedPublicResearch {
                 try { if (planned.isSuccess()) intent = ResearchIntent.parse(planned.getText(), question); }
                 catch (IllegalArgumentException invalid) { state.decisions.add("Plan no utilizable: se aplica un plan breve derivado de la petición."); partial = true; }
             }
+            observer.onNote("PLAN DE BÚSQUEDA APLICADO", new Gson().toJson(intent));
             state.decisions.add("Objetivo: " + intent.objective + ". Datos: " + String.join("; ", intent.goals));
             progress(intent.objective + ". Buscaré: " + String.join(", ", intent.goals));
             WikipediaResearchClient.Status last = WikipediaResearchClient.Status.EMPTY;
@@ -82,6 +83,7 @@ final class GuidedPublicResearch {
         check();
         if (page == null || !visited.add(page.url) || analyzed >= MAX_SOURCES) return;
         if (!ResearchSourceQuality.usable(page.url, page.title, page.text)) {
+            observer.onNote("FUENTE DESCARTADA", page.url + "\nPortada, pantalla de acceso o página no utilizable.");
             state.decisions.add("Descartada una portada, pantalla de acceso o página no utilizable."); partial = true; return;
         }
         analyzed++;
@@ -102,6 +104,7 @@ final class GuidedPublicResearch {
             catch (IllegalArgumentException invalid) { /* Keep later sources available. */ }
         }
         if (note == null) { analysisFailed = true; partial = true; state.decisions.add("No pude analizar un enlace con evidencia textual válida."); return; }
+        observer.onNote("NOTA VALIDADA — VALORACIÓN DEL MODELO", page.url + "\n" + note.toString());
         if (!note.get("relevant").getAsBoolean() || "different".equals(note.get("identity").getAsString())) {
             state.decisions.add("Enlace descartado por no responder al objetivo o referirse a otra persona."); return;
         }

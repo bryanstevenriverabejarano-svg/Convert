@@ -43,6 +43,8 @@ public final class PublicResearchCoordinator {
         default void onProgress(String message) { }
         default void onSearch(String query) { }
         default void onReading(String url, String title) { }
+        /** Explicit application artifacts; never a private model reasoning channel. */
+        default void onNote(String kind, String text) { }
     }
     public interface ModelProvider { ModelResult generate(Phase phase, String prompt); }
     public static final class Source {

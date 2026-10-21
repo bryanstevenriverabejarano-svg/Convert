@@ -26,6 +26,8 @@ public final class SketchJournal {
         public String source;
         /** Cómo lo hizo, en primera persona y con datos. */
         public String how;
+        /** Binds factual notes to the geometry actually displayed; old entries remain unlinked. */
+        public String drawingFingerprint;
         public String reference, referenceUrl;
         /** Lo que vio al mirar su propio dibujo (si el modelo tiene visión). */
         public String selfCheck;
