@@ -48,6 +48,31 @@ otra inferencia ni solicita permiso para cada acción local ya autorizada.
 | `CHANGE_APPROACH` | Solo hay errores/bloqueos | Buscar alternativa válida; no repetir sin sentido |
 | `REPORT_LIMITS` | No queda presupuesto suficiente | Reconocer límite, sin inventar nuevos permisos ni éxito |
 
+### Ensayo de recuperación con autorización existente
+
+Cuando el agente **ya ha observado dos errores** de la misma invocación
+`web.search` y vuelve a solicitarla, el controlador identifica un obstáculo
+repetido. Si el objetivo original contiene **una sola URL pública HTTPS**
+válida, puede elegir de forma autónoma un ensayo acotado:
+`web.read` exactamente a esa URL. **La política `AgentPolicy` se aplica
+otra vez** antes de ejecutarlo; el ensayo no abre nuevas capacidades.
+
+- Si no hay URL, hay dos posibles destinos, el destino es privado, falta
+  autorización, el código remoto estaba autorizado para el plan, o la URL
+  ya se intentó leer, **no se dispara el ensayo**.
+- Se guarda la sustitución en `pending` con identificador nuevo, se
+  ejecuta y observa como cualquier otra herramienta, y el modelo vuelve
+  a evaluar el objetivo con la nueva evidencia.
+- El diario y `AgentExperience` conservan los resultados operativos
+  para planes posteriores. No se declaran verdades aprendidas sobre
+  una persona ni habilidades generales nuevas sin verificador externo.
+- Se trata de un caso deliberadamente estrecho de iniciativa real
+  y reversible, no de navegación ilimitada ni de autoejecución de código.
+
+Las pruebas cubren bloqueo por URL privada/ambigua, reintentos,
+presupuestos, permisos y un escenario de extremo a extremo donde
+dos búsquedas fallan, la lectura autorizada funciona y se revisa la respuesta.
+
 La fase se recalcula por turno en `DATOS.eleccion_autonoma` antes de
 cada inferencia del agente. Un recibo `SUCCESS` es una respuesta de herramienta,
 **no prueba de que el objetivo entero se haya cumplido**.
