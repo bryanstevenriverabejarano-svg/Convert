@@ -71,12 +71,14 @@ public final class CloudSyncManager {
     // ── Lo que aprende fuera de los recuerdos: dibujos, su diario de dibujo y sus acciones ──
 
     /** {archivo local relativo, ruta en pCloud}; base "files" o "nobackup". */
+    static final String BIOGRAPHY = "mind/biography.json";
     static final String[][] KNOWLEDGE = {
             {"files", "sketch/learned.json", ROOT + "/sketch/learned.json"},
             {"files", "sketch/journal.json", ROOT + "/sketch/journal.json"},
             {"nobackup", "mind/actions.json", ROOT + "/mind/actions.json"},
             {"nobackup", "mind/lessons.json", ROOT + "/mind/lessons.json"},
             {"nobackup", "mind/skills.json", ROOT + "/mind/skills.json"},
+            {"nobackup", BIOGRAPHY, ROOT + "/" + BIOGRAPHY},
     };
 
     /**
@@ -91,6 +93,14 @@ public final class CloudSyncManager {
         for (String[] k : KNOWLEDGE) {
             File local = new File("files".equals(k[0]) ? ctx.getFilesDir() : ctx.getNoBackupFilesDir(), k[1]);
             try {
+                if (BIOGRAPHY.equals(k[1])) {
+                    // Su biografía no se pisa al reinstalar: primero se une con la copia de la nube y
+                    // después se sube la unión (si no, la instalación nueva borraría su historia).
+                    salve.core.MindRuntime mind = salve.core.MindRuntime.get(ctx);
+                    byte[] remote = provider.downloadBounded(k[2], 64 * 1024);
+                    if (remote != null && remote.length > 0) mind.biography().mergeFrom(new String(remote, StandardCharsets.UTF_8));
+                    mind.anchorBiographyToMemories(true);
+                }
                 if (local.isFile()) {
                     byte[] bytes = java.nio.file.Files.readAllBytes(local.toPath());
                     String hash = Integer.toHexString(java.util.Arrays.hashCode(bytes));

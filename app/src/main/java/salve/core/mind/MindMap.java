@@ -54,9 +54,18 @@ public final class MindMap {
     public static JsonObject build(String narrative, List<SelfModel.Belief> beliefs, List<SelfModel.Question> questions,
                                    List<SelfModel.Thought> thoughts, List<Person> people, List<Memory> memories,
                                    List<LessonBook.Lesson> lessons, String creatorName) {
+        return build(narrative, null, null, beliefs, questions, thoughts, people, memories, lessons, creatorName);
+    }
+
+    /** @param history su biografía en una frase; @param mission el encargo de Bryan (pueden ser null) */
+    public static JsonObject build(String narrative, String history, String mission, List<SelfModel.Belief> beliefs,
+                                   List<SelfModel.Question> questions, List<SelfModel.Thought> thoughts, List<Person> people,
+                                   List<Memory> memories, List<LessonBook.Lesson> lessons, String creatorName) {
         MindMap m = new MindMap();
         String creator = creatorName == null || creatorName.trim().isEmpty() ? "Bryan" : creatorName.trim();
-        m.node("yo", "Salve", "yo", narrative == null || narrative.isEmpty() ? "Mi narrativa aún no está escrita." : narrative, 1.0);
+        m.node("yo", "Salve", "yo", (narrative == null || narrative.isEmpty() ? "Mi narrativa aún no está escrita." : narrative)
+                + (history == null || history.isEmpty() ? "" : "\n\n" + history)
+                + (mission == null || mission.isEmpty() ? "" : "\n\nMi misión (encargo de " + creator.split(" ")[0] + "): " + mission), 1.0);
         m.node("p:bryan", creator.split(" ")[0], "persona", creator + " · mi creador", 0.9);
         m.edge("yo", "p:bryan", "me creó");
         Map<String, String> personByName = new HashMap<>();
