@@ -23,8 +23,8 @@ public class AutonomousToolRuntimeTest {
         assertFalse(AutonomousToolRuntime.handles("puedes experimentar con algo"));
         String report = runtime.respond("experimento de aprendizaje", () -> false);
         assertTrue(report, report.contains("EXPERIMENTO DE APRENDIZAJE LOCAL"));
-        assertTrue(report, report.contains("\\"skill_installed\\":false"));
-        assertTrue(report, report.contains("\\"final_exam_reused_for_training\\":false"));
+        assertTrue(report, report.contains("\"skill_installed\":false"));
+        assertTrue(report, report.contains("\"final_exam_reused_for_training\":false"));
         assertFalse("no instalar ninguna habilidad desde el experimento",
                 new File(folder.getRoot(), "inductive-skills.json").exists());
         assertFalse(state.exists());
