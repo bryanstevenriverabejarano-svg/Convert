@@ -1360,11 +1360,8 @@ public class MotorConversacional {
             respuesta = salve.core.conversation.ResponseCritic.firstPerson(respuesta);
         }
         // Laboratorio: si Bryan no la corrige en su próximo mensaje, esta forma de responder funcionó.
-        salve.core.mind.SkillLab.Plan planRespuesta = respuestaPlan;
-        respuestaPlan = null;
-        if (planRespuesta != null && inference.isSuccess())
-            try { mind().skills().await(planRespuesta, Boolean.TRUE, "sin_correccion", salve.core.mind.AttentionSchema.topic(entrada)); }
-            catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
+        skillCoordinator.responseFinished(inference.isSuccess(),
+                salve.core.mind.AttentionSchema.topic(entrada));
         // Muletillas que el modelo pequeño repite aunque el prompt las prohíba, y frases que ya dijo.
         // (Un cuento conserva sus párrafos: la limpieza de muletillas une el texto en una línea.)
         if (inference.isSuccess() && !creativeOk) respuesta = salve.core.conversation.ReplyStyle.dropEchoes(
@@ -1488,87 +1485,48 @@ public class MotorConversacional {
         } catch (Exception ignored) { return ""; }
     }
 
-    // ───────────── laboratorio de habilidades ─────────────
-
-    /** Lo que decidió su laboratorio en este turno (experimento, adoptar, revertir), para contarlo. */
-    private final StringBuilder labTurnNotes = new StringBuilder();
-    /** Forma de responder que está usando en este turno (o null si no es una tarea). */
-    private volatile salve.core.mind.SkillLab.Plan respuestaPlan;
-    /** Lo último que vio al mirar su propio dibujo (verificador independiente: no sabe qué quería). */
+    // ───────────── laboratorio de habilidades: coordinación fuera del motor ─────────────
+    private final salve.core.conversation.ConversationSkillCoordinator skillCoordinator =
+            new salve.core.conversation.ConversationSkillCoordinator(
+                    () -> mind().skills(), decision -> {
+                salve.core.mind.SelfActionLog.Kind kind = "adoptado".equals(decision.verdict)
+                        ? salve.core.mind.SelfActionLog.Kind.ADOPT
+                        : "revertido".equals(decision.verdict)
+                        ? salve.core.mind.SelfActionLog.Kind.REVERT
+                        : salve.core.mind.SelfActionLog.Kind.EXPERIMENT;
+                registrarAccion(kind, decision.skill + " · " + decision.step, decision.why);
+            });
+    /** Latest independent drawing check, passed to the learning coordinator. */
     private volatile salve.sketch.SketchTalk.Look ultimaMirada;
 
-    /** Lo que dice Bryan verifica lo que ella hizo antes: la corrección es un fallo; el elogio, un acierto. */
     private String observarExperiencia(String entrada) {
-        labTurnNotes.setLength(0);
-        try { for (salve.core.mind.SkillLab.Decision d : mind().skills().observe(entrada)) contarDecision(d); }
-        catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
+        skillCoordinator.beginTurn(entrada);
         return "";
     }
 
-    private void contarDecision(salve.core.mind.SkillLab.Decision d) {
-        if (d == null) return;
-        salve.core.mind.SelfActionLog.Kind kind = "adoptado".equals(d.verdict) ? salve.core.mind.SelfActionLog.Kind.ADOPT
-                : "revertido".equals(d.verdict) ? salve.core.mind.SelfActionLog.Kind.REVERT : salve.core.mind.SelfActionLog.Kind.EXPERIMENT;
-        registrarAccion(kind, d.skill + " · " + d.step, d.why);
-        labTurnNotes.append(" | LABORATORIO (hecho de este turno, de mis resultados verificados): ")
-                .append("experimento".equals(d.verdict) ? "empiezo un experimento: " : d.verdict + ": ").append(d.why)
-                .append(". Si viene al caso, menciónalo en una frase.");
+    private void contarDecision(salve.core.mind.SkillLab.Decision decision) {
+        skillCoordinator.recordDecision(decision);
     }
 
-    /** Resultado objetivo de una búsqueda de referencias: sólo el paso «fuente» carga con el fallo. */
     private void aprenderFuente(salve.core.mind.SkillLab.Plan plan, boolean ok, String evidence) {
-        try { contarDecision(mind().skills().record(plan, ok, ok ? null : "fuente", "busqueda", evidence)); }
-        catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
+        skillCoordinator.recordReference(plan, ok, evidence);
     }
 
-    /** Un dibujo hecho: lo verifica su visión ahora y, si Bryan opina, manda lo que diga él. */
     private void esperarVeredicto(salve.core.mind.SkillLab.Plan plan, String subject) {
         if (plan == null) return;
         salve.sketch.SketchTalk.Look look = ultimaMirada;
-        try { mind().skills().await(plan, look == null ? null : look.acceptable(), "vision",
-                look == null ? "" : look.describe(subject)); }
-        catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
+        try {
+            skillCoordinator.awaitDrawing(plan, look == null ? null : look.acceptable(),
+                    look == null ? "" : look.describe(subject));
+        } catch (RuntimeException ignored) { /* Verification is optional. */ }
     }
 
-    /**
-     * En una tarea, cómo encara la respuesta: la forma vigente o la que está probando porque la anterior
-     * fallaba (Bryan la corregía). Y, si su historial aquí es flojo, lo sabe.
-     */
     private String estrategiaRespuesta() {
-        respuestaPlan = null;
-        try {
-            salve.core.conversation.DialogueFocus.Reading r = lastReading;
-            if (r == null || (r.task.isEmpty() && r.kind == salve.core.conversation.DialogueFocus.Kind.NONE)) return "";
-            salve.core.mind.SkillLab.Plan plan = mind().skills().plan(salve.core.mind.SkillLab.RESPONDER, "tarea");
-            respuestaPlan = plan;
-            String how;
-            switch (plan.variant("enfoque")) {
-                case "anunciar_y_hacer":
-                    how = " | ESTRATEGIA (la estoy probando porque mi forma anterior de responder en tareas fallaba): empieza con "
-                            + "media frase que diga qué vas a hacer y hazlo en este mismo mensaje.";
-                    break;
-                case "un_paso":
-                    how = " | ESTRATEGIA (la estoy probando porque mi forma anterior de responder en tareas fallaba): haz sólo el "
-                            + "siguiente paso concreto de lo que pide, breve y útil, sin introducciones.";
-                    break;
-                default: how = "";
-            }
-            String confidence = mind().skills().confidenceNote(plan);
-            return how + (confidence.isEmpty() ? "" : confidence + " Haz exactamente lo que pide, sin rodeos.");
-        } catch (RuntimeException ignored) { return ""; }
+        return skillCoordinator.responseStrategy(lastReading);
     }
 
-    /** «¿Qué has aprendido?», «¿en qué fallas?»: responde con su laboratorio, no con una invención. */
     private String misHabilidades(String entrada) {
-        String notes = labTurnNotes.toString();
-        labTurnNotes.setLength(0);
-        try {
-            if (!salve.core.mind.SkillLab.asksAbout(entrada)) return notes;
-            String facts = mind().skills().render(700);
-            return notes + " | MIS_HABILIDADES (hechos de mi laboratorio: resultados verificados, experimentos y decisiones)"
-                    + (facts.isEmpty() ? ": aún no tengo suficientes resultados verificados; dilo así, con honestidad."
-                    : ":" + facts + "\nCuéntalo con tus palabras y criterio propio; no inventes cifras ni habilidades.");
-        } catch (RuntimeException ignored) { return notes; }
+        return skillCoordinator.describeSkills(entrada);
     }
 
     /** Hilo de la conversación: tarea en curso y opciones que ofreció en su última pregunta. */

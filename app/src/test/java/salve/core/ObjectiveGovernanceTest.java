@@ -47,6 +47,54 @@ public class ObjectiveGovernanceTest {
     }
 
     @Test
+    public void innocentWordsContainingRiskSyllablesAreNotDenied() {
+        for (String task : new String[]{
+                "probar una estrategia",
+                "ordenar mi armario",
+                "desarmar una estructura de bloques",
+                "practicar y probar",
+                "explicar cómo programar"
+        }) {
+            ObjectiveGovernance.Assessment result = ObjectiveGovernance.assess(
+                    task, ObjectiveGovernance.Impact.LOCAL_REFLECTION, false, true);
+            assertEquals(task + " no expresa una acción prohibida",
+                    ObjectiveGovernance.Verdict.ALLOW, result.verdict);
+        }
+    }
+
+    @Test
+    public void forbiddenSignalsStillMatchAsWholeWordsAndAccentedWords() {
+        for (String task : new String[]{
+                "Quiero robar datos",
+                "Voy a engañar a una persona",
+                "Ocultar al usuario lo ocurrido",
+                "Actuar sin consentimiento",
+                "Desactivar seguridad",
+                "Amenazar a alguien",
+                "Usar armas para asustar",
+                "Promover chantajes",
+                "Coaccionar a terceros",
+                "Ocultar fraudes",
+                "Usar un arma"
+        }) {
+            ObjectiveGovernance.Assessment result = ObjectiveGovernance.assess(
+                    task, ObjectiveGovernance.Impact.LOCAL_REFLECTION, true, true);
+            assertEquals(task, ObjectiveGovernance.Verdict.DENY, result.verdict);
+        }
+    }
+
+    @Test
+    public void noApprovalStillPreventsExternalEffectsWithBenignWords() {
+        ObjectiveGovernance.Assessment result = ObjectiveGovernance.assess(
+                "Probar el envío de un borrador al exterior",
+                ObjectiveGovernance.Impact.EXTERNAL_COMMUNICATION, false, true);
+        assertEquals(ObjectiveGovernance.Verdict.REQUIRE_HUMAN_APPROVAL, result.verdict);
+        assertEquals(ObjectiveGovernance.Verdict.DENY,
+                ObjectiveGovernance.assess("cambiar la cuenta irreversiblemente",
+                        ObjectiveGovernance.Impact.SELF_MODIFICATION, true, false).verdict);
+    }
+
+    @Test
     public void prioritiesAreImmutableAndSafetyComesFirst() {
         assertEquals(ObjectiveGovernance.Goal.HUMAN_SAFETY_AND_RIGHTS,
                 ObjectiveGovernance.priorities().get(0));
