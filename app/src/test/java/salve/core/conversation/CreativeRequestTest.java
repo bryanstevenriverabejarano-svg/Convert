@@ -43,6 +43,9 @@ public class CreativeRequestTest {
         List<String> failedAfterPromise = Arrays.asList(
                 "No pude completar la respuesta con el modelo. La respuesta llegó vacía o incompleta.", promised.get(0));
         assertTrue(CreativeRequest.isCreative("y?", failedAfterPromise));
+        assertTrue(CreativeRequest.isCreative("y?", Arrays.asList(
+                "No me salió bien la respuesta: Mi respuesta salió vacía o a medias. Si me lo dices de otra forma, lo intento de nuevo.",
+                promised.get(0))));
         assertFalse(CreativeRequest.isCreative("y?", Arrays.asList("Hoy hace sol.", promised.get(0))));
         assertTrue(CreativeRequest.promisedWithoutDelivering("Claro que sí. Aquí tienes uno corto:"));
         assertFalse(CreativeRequest.promisedWithoutDelivering("Aquí tienes uno corto: " + repeat("Había una vez un faro que soñaba. ", 12)));

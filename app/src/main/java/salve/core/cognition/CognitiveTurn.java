@@ -50,9 +50,9 @@ public final class CognitiveTurn {
         ModelResult last = null;
         for (int call = 0; call < MAX_INFERENCES; call++) {
             if (cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()) return stopped(ModelResult.Status.CANCELLED, "Turno cancelado", receipts);
-            if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Se agotó el presupuesto del turno; no se iniciaron más acciones", receipts);
+            if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Me quedé sin tiempo para pensar esta respuesta, así que paré antes de hacer nada más", receipts);
             try { last = model.generate(receipts.deepCopy(), repair, toolsClosed ? 0 : MAX_TOOLS - actions); }
-            catch (RuntimeException unavailable) { return stopped(ModelResult.Status.ERROR, "No pude preparar o completar la inferencia", receipts); }
+            catch (RuntimeException unavailable) { return stopped(ModelResult.Status.ERROR, "Mi modelo no pudo terminar de pensar esta respuesta", receipts); }
             if (cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()) return stopped(ModelResult.Status.CANCELLED, "Turno cancelado", receipts);
             if (!last.isSuccess()) return new Outcome(last, false, receipts);
             CognitiveReply reply;
@@ -62,23 +62,23 @@ public final class CognitiveTurn {
                     // Una respuesta vacía o ilegible se reintenta una vez antes de rendirse.
                     if (!repaired) { repaired = true; repair = true; continue; }
                     return stopped(ModelResult.Status.ERROR,
-                            "La respuesta llegó vacía o incompleta; no recibí texto público utilizable", receipts);
+                            "Mi respuesta salió vacía o a medias", receipts);
                 }
                 if (repaired) return stopped(ModelResult.Status.ERROR,
-                        "No pude validar la acción propuesta. No ejecuté esa acción", receipts);
+                        "No entendí bien la acción que iba a hacer, así que no la hice", receipts);
                 repaired = true; repair = true; continue;
             }
             repair = false;
             if (reply.name == null) return new Outcome(ModelResult.success(reply.message, last.getLatencyMillis())
                     .withProvider(last.getProvider()), false, receipts);
-            if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Se agotó el presupuesto antes de ejecutar la acción", receipts);
+            if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Me quedé sin tiempo antes de hacerlo, así que no lo hice", receipts);
             Tool tool = tools.get(reply.name);
-            if (tool == null) return stopped(ModelResult.Status.ERROR, "La herramienta solicitada no está disponible en este turno; no la ejecuté", receipts);
+            if (tool == null) return stopped(ModelResult.Status.ERROR, "Intenté hacer algo que ahora no tengo disponible, así que no lo hice", receipts);
             if (toolsClosed || actions >= MAX_TOOLS || used.contains(reply.name) || call == MAX_INFERENCES - 1) {
                 // Pedir otra vez lo que ya tiene (memory.lookup dos veces) no es un fallo para Bryan:
                 // se le cierran las herramientas y responde con los resultados que ya tiene.
                 if (!toolsClosed && !receipts.isEmpty() && call < MAX_INFERENCES - 1) { toolsClosed = true; continue; }
-                return stopped(ModelResult.Status.ERROR, "Detuve las solicitudes repetidas o sin presupuesto", receipts);
+                return stopped(ModelResult.Status.ERROR, "Me estaba repitiendo, así que paré", receipts);
             }
             used.add(reply.name);
             actions++;
@@ -102,18 +102,39 @@ public final class CognitiveTurn {
             }
             receipts.add(receipt);
         }
-        return stopped(ModelResult.Status.ERROR, "Se agotaron las inferencias del turno sin una respuesta válida", receipts);
+        return stopped(ModelResult.Status.ERROR, "Lo intenté varias veces y no me salió una respuesta que valga", receipts);
     }
     private static Outcome stopped(ModelResult.Status status, String message, JsonArray receipts) {
+        // Bryan lee esto: lo que llegó a hacer, en palabras, nunca nombres internos de herramientas.
         StringBuilder progress = new StringBuilder(message);
         if (!receipts.isEmpty()) {
-            progress.append(". Pasos comprobados:");
+            java.util.List<String> done = new java.util.ArrayList<>(), failed = new java.util.ArrayList<>();
             for (com.google.gson.JsonElement item : receipts) {
                 JsonObject receipt = item.getAsJsonObject();
-                progress.append(' ').append(receipt.get("name").getAsString()).append(": ")
-                        .append(receipt.get("status").getAsString().equals("completed") ? "completado" : "sin éxito confirmado").append(';');
+                String what = humanName(receipt.get("name").getAsString());
+                (receipt.get("status").getAsString().equals("completed") ? done : failed).add(what);
             }
+            if (!done.isEmpty()) progress.append(". Llegué a ").append(String.join(" y ", done));
+            if (!failed.isEmpty()) progress.append(done.isEmpty() ? ". Intenté " : "; intenté ")
+                    .append(String.join(" y ", failed)).append(", sin confirmar que saliera bien");
         }
-        return new Outcome(ModelResult.failure(status, progress.toString(), 0), false, receipts);
+        progress.append('.');
+        return new Outcome(ModelResult.failure(status, progress.toString().replace("..", "."), 0), false, receipts);
+    }
+
+    /** Nombre de herramienta → lo que hizo, dicho como persona. */
+    static String humanName(String tool) {
+        switch (tool == null ? "" : tool) {
+            case "memory.lookup": return "buscar en mis recuerdos";
+            case "web.search": return "buscar en internet";
+            case "sketch.draw": return "dibujar";
+            case "cloud.sync": return "sincronizar con pCloud";
+            case "runtime.status": return "revisar mi estado";
+            case "TAP": case "ESCRIBIR": return "preparar una acción en el móvil";
+            case "DEPLOY_WEB": return "preparar una web";
+            case "AVATAR_LIST": case "AVATAR_WEAR": case "AVATAR_CREATE": return "cambiar mi ropa";
+            case "SOLVE_CHALLENGE": return "resolver el reto";
+            default: return "usar una herramienta";
+        }
     }
 }

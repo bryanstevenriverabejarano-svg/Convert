@@ -72,7 +72,7 @@ public class MotorConversacional {
     final Context context;
     final MemoriaEmocional memoria;
     private final DiarioSecreto diario;
-    private final IntentRecognizer intentRecognizer;
+    final IntentRecognizer intentRecognizer;
     private final ModuloInterpretacionSemantica moduloInterpretacion;
     final SalveLLM llm;
     private volatile String lastConversationProvider;
@@ -710,6 +710,7 @@ public class MotorConversacional {
             hablar("Hecho: empiezo la conversación en limpio. Mis recuerdos y lo que sé de ti siguen intactos.");
             return;
         }
+        if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
         String mindResponse = mind().handleCommand(entrada);
@@ -1880,7 +1881,7 @@ public class MotorConversacional {
      * Un texto largo primero se piensa (plan interno) y después se escribe por partes: mientras
      * la voz lee una parte, el modelo ya escribe la siguiente.
      */
-    private ModelResult generarTextoCreativo(String entrada, salve.core.conversation.StoryMode.State story,
+    ModelResult generarTextoCreativo(String entrada, salve.core.conversation.StoryMode.State story,
                                              int parts, LiveWriting live) {
         String self = "";
         try { self = mind().selfModelForPrompt(1100); } catch (RuntimeException ignored) { }
@@ -2039,7 +2040,7 @@ public class MotorConversacional {
         return true;
     }
 
-    private static boolean creativeUsable(ModelResult result) {
+    static boolean creativeUsable(ModelResult result) {
         if (result == null || !result.isSuccess() || result.getText() == null) return false;
         String text = salve.core.conversation.CreativeRequest.stripPreamble(result.getText());
         return text.length() >= 60 && !salve.core.conversation.CreativeRequest.promisedWithoutDelivering(text);
@@ -2145,8 +2146,21 @@ public class MotorConversacional {
     /** Same contract for cloud/local text, voice and explicit photos. Specialized research keeps its protocol. */
     private CognitiveTurn.Outcome runCognitiveTurn(String input, String contextInfo, String action,
             boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis) {
-        Map<String, CognitiveTurn.Tool> tools = CognitivePrompt.limitTools(
+        return runCognitiveTurn(input, contextInfo, action, voice, evidence, photoAnalysis, null, null);
+    }
+
+    /**
+     * Igual que un turno normal, pero el examen puede darle su propio historial y cambiar las
+     * herramientas por otras simuladas (sin red, sin dibujar, sin tocar recuerdos).
+     */
+    CognitiveTurn.Outcome runCognitiveTurn(String input, String contextInfo, String action,
+            boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis,
+            List<salve.core.conversation.ChatMessage> historyOverride,
+            java.util.function.UnaryOperator<Map<String, CognitiveTurn.Tool>> toolOverride) {
+        Map<String, CognitiveTurn.Tool> catalog = CognitivePrompt.limitTools(
                 CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis), input));
+        Map<String, CognitiveTurn.Tool> tools = toolOverride == null ? catalog : toolOverride.apply(catalog);
+        List<salve.core.conversation.ChatMessage> turnHistory = historyOverride;
         String memory = evidence == null ? "No consultada; usa memory.lookup si es pertinente."
                 : evidence.getStatus().name() + "\n" + evidence.getDataContext();
         // Su cuerpo y lo que ha hecho entran completos sólo cuando el tema va de ella; si no, una línea.
@@ -2169,7 +2183,7 @@ public class MotorConversacional {
             // Con foto, la imagen ocupa contexto (Gemma 4: 4.096 tokens con entrada, imagen y salida).
             if (activePhoto != null && canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
             String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1700),
-                    memory, details, conversationSession.snapshot(), tools, results, repair, remaining, budget);
+                    memory, details, turnHistory != null ? turnHistory : conversationSession.snapshot(), tools, results, repair, remaining, budget);
             return generateWithConversationPhoto(prompt);
         }, tools, () -> closed || !isVoiceContextCurrent());
         // A tool receipt is observable progress, never proof of the user's whole goal.
@@ -2280,14 +2294,14 @@ public class MotorConversacional {
 
 
 
-    private String modelFailureMessage(ModelResult result) {
+    String modelFailureMessage(ModelResult result) {
         if (result.getStatus() == ModelResult.Status.UNAVAILABLE) {
             return (result.getError() == null || result.getError().isEmpty()
                     ? "No tengo un modelo de lenguaje disponible para responder." : result.getError())
                     + " Abre IA y cámara → Estado para comprobar el modelo y el respaldo.";
         }
         if (result.getStatus() == ModelResult.Status.CANCELLED) return "La consulta se ha cancelado.";
-        return "No pude completar la respuesta con el modelo. " + result.getError();
+        return "No me salió bien la respuesta: " + result.getError() + " Si me lo dices de otra forma, lo intento de nuevo.";
     }
 
     /** The caller transfers ownership; a bounded private copy is retained as visual memory. */
@@ -2899,6 +2913,9 @@ public class MotorConversacional {
     final ResearchDesk mesaInvestigacion = new ResearchDesk(this);
     /** Ejecuta las herramientas que el modelo pide en un turno. El catálogo (CognitiveToolCatalog) decide cuáles hay; aquí se reparten: dibujo al taller, web a la mesa de investigación, y memoria, nube, estado, pantalla y vestuario aquí. */
     final CognitiveToolExecutor herramientas = new CognitiveToolExecutor(this);
+
+    /** Examen fijo de conversación («hazte el examen»): mismas piezas que un turno, sin efectos. */
+    final ConversationExamRunner examen = new ConversationExamRunner(this);
 
 
 
