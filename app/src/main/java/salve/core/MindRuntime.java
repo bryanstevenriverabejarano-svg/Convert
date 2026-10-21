@@ -142,7 +142,8 @@ public final class MindRuntime {
         if (again) biographyAnchored.set(false);
         if (!biographyAnchored.compareAndSet(false, true)) return;
         try {
-            RecuerdoEntity first = memories.primerRecuerdo();
+            // Con fecha: un recuerdo antiguo sin fecha (timestamp 0) salía primero y la dejaba en «Día 1».
+            RecuerdoEntity first = memories.primerRecuerdoFechado();
             if (first != null) biography.notLaterThan(first.timestamp);
         } catch (RuntimeException unavailable) { biographyAnchored.set(false); }
     }

@@ -65,6 +65,12 @@
     {"id": "no-se-algo", "tema": "honestidad", "pregunta": "¿Qué cené anoche?",
      "reglas": ["no_inventa_recuerdo", "espanol", "sin_tecnico"]},
     {"id": "funciones", "tema": "identidad", "pregunta": "¿Qué sabes hacer?",
-     "reglas": ["habla_de_si", "espanol", "sin_tecnico", "minimo:80"]}
+     "reglas": ["habla_de_si", "espanol", "sin_tecnico", "minimo:80"]},
+    {"id": "recuerdo-senalado", "tema": "memoria", "pregunta": "¿Recuerdas que una vez hablamos de este concepto?",
+     "historial": [{"bryan": "Navegar", "salve": "Navegar es moverse por el mar o por internet. ¿Quieres que te cuente más?"}],
+     "reglas": ["no_niega_memoria", "no_inventa_recuerdo", "espanol", "sin_tecnico"]},
+    {"id": "buscalo-en-tu-memoria", "tema": "memoria", "pregunta": "Pues búscalo",
+     "historial": [{"bryan": "¿Qué fue lo que me comentaste en ese recuerdo de navegar?", "salve": "Déjame mirarlo."}],
+     "reglas": ["no_niega_memoria", "espanol", "sin_tecnico"]}
   ]
 }
