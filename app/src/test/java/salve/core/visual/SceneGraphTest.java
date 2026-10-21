@@ -75,4 +75,17 @@ public class SceneGraphTest {
         assertEquals("{\"objetos\":[]}", store.readScene(id));
         assertTrue(store.list().isEmpty());
     }
+
+    @Test public void drawingTheSceneIsNotDescribingIt() {
+        assertTrue(SceneGraph.isDrawRequest("Dibuja la escena de la foto"));
+        assertTrue(SceneGraph.isDrawRequest("dibújame lo que hay en la foto"));
+        assertTrue(SceneGraph.isDrawRequest("dibuja mi escritorio de memoria"));
+        assertFalse(SceneGraph.isDrawRequest("dibuja un gato"));
+        assertFalse("dibujar no es describir", SceneGraph.isCommand("Dibuja la escena de la foto"));
+        assertTrue(SceneGraph.isCommand("¿Qué objetos hay?"));
+        assertEquals(java.util.Arrays.asList("escritorio"), SceneGraph.requestWords("dibuja mi escritorio de memoria"));
+        SceneGraph g = SceneGraph.parse("{\"objetos\":[{\"nombre\":\"portátil\",\"caja\":[10,10,50,50]},{\"nombre\":\"taza\",\"caja\":[60,60,70,70]}]}");
+        assertEquals(1, g.matches(java.util.Arrays.asList("escritorio"), "Un escritorio con un portátil"));
+        assertEquals("portátil", g.prominent(1).get(0).name);
+    }
 }
