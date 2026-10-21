@@ -103,6 +103,13 @@ public class MainActivity extends AppCompatActivity {
             new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri != null) importarModeloLocal(uri);
             });
+    /** Un documento (PDF o texto) para que Salve lo lea: después se elige qué hacer con él. */
+    private final ActivityResultLauncher<String[]> documentPicker = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri == null) return;
+                prepararLectura(uri, getContentResolver().getType(uri));
+            });
+
     private final ActivityResultLauncher<String[]> chatPhotoPicker = registerForActivityResult(
             new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri == null) return;
@@ -1251,21 +1258,9 @@ public class MainActivity extends AppCompatActivity {
 
             Log.d("Salve/Share", "Procesando uri=" + uri + " mime=" + mime);
 
-            if (mime.startsWith("application/pdf")) {
-                leerPdfYAprender(uri);
-
-            } else if (mime.startsWith("text/")) {
-                String texto = leerTextoPlano(uri);
-                if (texto != null && !texto.trim().isEmpty()) {
-                    motorConversacional.hablar(sanitizeForSpeech("He recibido un texto. Empezaré a leerlo."));
-                    speakTextInChunks(texto);
-                    guardarAprendizaje("texto_compartido", texto);
-
-                    GrafoRecuerdos.generar(this);
-                    CloudSyncManager.uploadGrafoBundle(this);
-                } else {
-                    Toast.makeText(this, "No pude leer el texto compartido", Toast.LENGTH_LONG).show();
-                }
+            if (mime.startsWith("application/pdf") || mime.startsWith("text/")) {
+                // Antes lo leía en voz alta y lo guardaba siempre (también un examen). Ahora Bryan elige.
+                prepararLectura(uri, mime);
 
             } else if (mime.startsWith("image/")) {
                 Toast.makeText(this, "Imagen recibida (OCR próximamente)", Toast.LENGTH_SHORT).show();
@@ -1275,8 +1270,8 @@ public class MainActivity extends AppCompatActivity {
 
             } else {
                 String name = uri.toString().toLowerCase();
-                if (name.endsWith(".pdf")) {
-                    leerPdfYAprender(uri);
+                if (name.endsWith(".pdf") || name.endsWith(".txt")) {
+                    prepararLectura(uri, name.endsWith(".pdf") ? "application/pdf" : "text/plain");
                 } else {
                     Toast.makeText(this, "Tipo no soportado: " + mime, Toast.LENGTH_SHORT).show();
                 }
@@ -1287,27 +1282,61 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void leerPdfYAprender(Uri uri) {
-        try (PDDocument doc = PDDocument.load(getContentResolver().openInputStream(uri))) {
-            PDFTextStripper stripper = new PDFTextStripper();
-            String texto = stripper.getText(doc);
+    /** Saca el texto (fuera del hilo de la pantalla) y pregunta qué hacer con él. */
+    private void prepararLectura(Uri uri, String mime) {
+        String name = nombreDeArchivo(uri);
+        boolean pdf = (mime != null && mime.startsWith("application/pdf")) || name.toLowerCase(java.util.Locale.ROOT).endsWith(".pdf");
+        Toast.makeText(this, "Abriendo «" + name + "»…", Toast.LENGTH_SHORT).show();
+        inferenceChecks.execute(() -> {
+            String texto = null;
+            try {
+                if (pdf) {
+                    try (PDDocument doc = PDDocument.load(getContentResolver().openInputStream(uri))) { texto = new PDFTextStripper().getText(doc); }
+                } else texto = leerTextoPlano(uri);
+            } catch (Exception e) { Log.e("Salve/Lectura", "No se pudo abrir el documento", e); }
+            final String leido = texto;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (leido == null || leido.trim().isEmpty()) {
+                    Toast.makeText(this, pdf ? "No encontré texto en el PDF (si es escaneado, mándalo como fotos)." : "No pude leer el texto.",
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                mostrarModoLectura(name, leido);
+            });
+        });
+    }
 
-            if (texto == null || texto.trim().isEmpty()) {
-                Toast.makeText(this, "No pude extraer texto del PDF", Toast.LENGTH_LONG).show();
-                return;
-            }
+    /** ¿Qué hace Salve con lo que le das? Guardarlo o no lo decide Bryan, cada vez. */
+    private void mostrarModoLectura(String name, String texto) {
+        String[] modos = {"Es un cuento: entiéndelo, ilústralo y guárdalo en tus cuentos",
+                "Para aprender: guarda lo importante en tus recuerdos",
+                "Solo léelo y dame tu opinión (no guardes nada)"};
+        final int[] elegido = {0};
+        android.widget.CheckBox voz = new android.widget.CheckBox(this);
+        voz.setText("Léemelo también en voz alta");
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.setPadding(pad, 0, pad, 0); box.addView(voz);
+        new AlertDialog.Builder(this).setTitle("«" + name + "» (" + Math.max(1, texto.length() / 1800) + " pág. aprox.)")
+                .setSingleChoiceItems(modos, 0, (d, which) -> elegido[0] = which)
+                .setView(box)
+                .setPositiveButton("Leer", (d, which) -> {
+                    if (motorConversacional == null) return;
+                    String modo = elegido[0] == 0 ? "cuento" : elegido[0] == 1 ? "aprender" : "opinar";
+                    motorConversacional.leerDocumento(name, texto, modo);
+                    if (voz.isChecked()) speakTextInChunks(texto);
+                    if (elegido[0] != 2) guardarAprendizaje(elegido[0] == 0 ? "cuento" : "documento", texto);
+                })
+                .setNegativeButton("Cancelar", null).show();
+    }
 
-            motorConversacional.hablar(sanitizeForSpeech("He recibido un PDF. Empezaré a leerlo."));
-            speakTextInChunks(texto);
-            guardarAprendizaje("pdf_compartido", texto);
-
-            GrafoRecuerdos.generar(getApplicationContext());
-            CloudSyncManager.uploadGrafoBundle(getApplicationContext());
-
-        } catch (Exception e) {
-            Toast.makeText(this, "Error leyendo PDF: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            Log.e("Salve/PDF", "Error leyendo PDF", e);
-        }
+    private String nombreDeArchivo(Uri uri) {
+        try (android.database.Cursor c = getContentResolver().query(uri, new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (c != null && c.moveToFirst()) { String n = c.getString(0); if (n != null && !n.trim().isEmpty()) return n.trim(); }
+        } catch (Exception ignored) { }
+        String last = uri.getLastPathSegment();
+        return last == null ? "documento" : last.replaceAll(".*/", "");
     }
 
     private String leerTextoPlano(Uri uri) {
@@ -2125,9 +2154,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void mostrarAdjuntosChat() {
         new AlertDialog.Builder(this).setTitle("Adjuntar al chat")
-                .setItems(new String[]{"Foto de la galería", "Tomar foto", "Fotos guardadas", "Documentos PDF"}, (d, which) -> {
+                .setItems(new String[]{"Foto de la galería", "Tomar foto", "Fotos guardadas", "Darle un documento para leer (PDF o texto)",
+                        "Crear un PDF"}, (d, which) -> {
                     if (which == 2) { mostrarFotosGuardadas(); return; }
-                    if (which == 3) { mostrarMenuPdf(); return; }
+                    if (which == 3) { documentPicker.launch(new String[]{"application/pdf", "text/plain", "text/markdown"}); return; }
+                    if (which == 4) { mostrarMenuPdf(); return; }
                     visualQuestion = inputChat.getText().toString().trim();
                     visualLocalOnly = SalveLLM.getInstance(this).usesOwnedInference();
                     if (which == 0) chatPhotoPicker.launch(new String[]{"image/*"});
