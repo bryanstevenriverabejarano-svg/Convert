@@ -116,7 +116,10 @@ public final class RoomAgentStore implements AgentEngine.Store {
             if (!run.answer.isEmpty() && (run.status.equals("SUCCEEDED") || run.status.equals("PARTIAL"))) {
                 RecuerdoEntity memory = new RecuerdoEntity();
                 StringBuilder text = new StringBuilder("Resultado de plan solicitado: ").append(run.goal)
-                        .append("\nEstado: ").append(run.status).append("\n").append(run.answer);
+                        .append("\nEstado de ejecución/revisión: ").append(run.status)
+                        .append("\nComprobación independiente: ").append(run.goalVerification)
+                        .append(" (").append(run.verificationCriterion).append(")")
+                        .append("\n").append(run.answer);
                 for (AgentRun.Observation observation : run.observations) if (run.evidence.contains(observation.id))
                     text.append("\nFuente ").append(observation.id).append(" (").append(observation.tool).append("): ")
                             .append(String.join(" ", observation.sources));
