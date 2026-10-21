@@ -3129,7 +3129,8 @@ public class MotorConversacional {
     /** Tool availability is owned by CognitiveToolCatalog, not by model text. */
     private Map<String, CognitiveTurn.Tool> cognitiveTools(String input, boolean photoAnalysis) {
         return salve.core.cognition.CognitiveToolCatalog.build(
-                input, photoAnalysis, creatorSide(),
+                input, photoAnalysis,
+                salve.core.identity.IdentityManager.get(context).privateAccess(),
                 SalveAccessibilityService.getInstance() != null,
                 (name, args) -> executeCognitiveTool(name, args, input));
     }
@@ -3140,6 +3141,8 @@ public class MotorConversacional {
     private CognitiveTurn.Receipt executeCognitiveTool(String name, JsonObject args, String input) {
         switch (name) {
             case "memory.lookup": {
+                if (!salve.core.identity.IdentityManager.get(context).privateAccess())
+                    throw new IllegalArgumentException("Sin autorización para recuerdos privados");
                 ConversationMemoryGrounding.Result result = memoria.recuperarContextoConversacional(input);
                 return new CognitiveTurn.Receipt(result.getStatus().name() + "\n" + result.getDataContext());
             }
@@ -3192,7 +3195,8 @@ public class MotorConversacional {
                         + "); Bryan lo ve en la pantalla y en el chat." + ESTILO_DIBUJO);
             }
             case "cloud.sync": {
-                if (!creatorSide()) throw new IllegalArgumentException("Nube privada no autorizada para invitados");
+                if (!salve.core.identity.IdentityManager.get(context).privateAccess())
+                    throw new IllegalArgumentException("Nube privada requiere identidad comprobada");
                 if (!salve.data.sync.CloudSyncManager.isPCloudConfigured(context))
                     return new CognitiveTurn.Receipt("NUBE_SIN_CONECTAR: pCloud no está conectada; Bryan debe autorizarla una vez en IA y cámara → Nube pCloud.");
                 if (!salve.data.sync.CloudSyncManager.isEnabled(context)
