@@ -145,7 +145,10 @@ public final class AgentRuntime {
         if (run.terminal()) {
             text.append("Comprobación independiente: ").append(run.goalVerification)
                     .append(" (criterio ").append(run.verificationCriterion).append(").\n");
-            if (!run.verificationEvidence.isEmpty())
+            if (!run.verificationEvidenceIds.isEmpty())
+                text.append("Recibos comprobados por paso: ")
+                        .append(String.join(" → ", run.verificationEvidenceIds)).append('\n');
+            else if (!run.verificationEvidence.isEmpty())
                 text.append("Recibo vinculado: ").append(run.verificationEvidence).append('\n');
             if ("UNKNOWN".equals(run.goalVerification))
                 text.append("No hay un verificador determinista de ese objetivo; la revisión del modelo no lo demuestra.\n");
