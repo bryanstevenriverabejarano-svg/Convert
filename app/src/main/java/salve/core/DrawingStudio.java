@@ -111,6 +111,11 @@ final class DrawingStudio {
     String prepararDibujo(String entrada) {
         salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(motor.context);
         if (library == null) return "";
+        // «Dibuja la escena», «dibuja mi escritorio de memoria»: un dibujo con plano, cada cosa en su sitio.
+        if (salve.core.visual.SceneGraph.isDrawRequest(entrada)) {
+            registrarPeticionDibujo(entrada, "Dibujo con plano: escena medida de una foto + cómo es cada objeto");
+            return dibujarEscena(entrada, library);
+        }
         // «Dibújala», «dibuja la foto», «esto es una silla»: sobre la foto que ya está en el chat.
         VisualMemoryRecord photo = motor.activePhoto;
         salve.sketch.PhotoSketchRequest onPhoto = photo == null ? null : salve.sketch.PhotoSketchRequest.parse(entrada, false);
@@ -889,6 +894,69 @@ final class DrawingStudio {
     }
 
     /** Publica la escena en el escenario y deja su marca para el chat de la respuesta final. */
+    /**
+     * Combina lo que sabe: la escena medida de una foto (dónde va cada cosa y su tamaño), su
+     * repertorio y lo que ya aprendió a dibujar, y referencias buscadas para lo que no conoce (cómo es
+     * cada cosa). El resultado es un dibujo con cada objeto en su sitio.
+     */
+    String dibujarEscena(String entrada, salve.sketch.SketchLibrary library) {
+        VisualMemoryRecord photo = motor.activePhoto;
+        salve.core.visual.SceneGraph scene = null;
+        try {
+            if (photo != null) scene = motor.mesaFotos.mirarEscena(photo);
+            else {
+                // Sin foto en el chat: la escena guardada que mejor encaja con lo que pide («mi escritorio»).
+                List<String> words = salve.core.visual.SceneGraph.requestWords(entrada);
+                int best = 0, looked = 0;
+                for (VisualMemoryRecord r : motor.visualMemories.store.list()) {
+                    if (looked++ > 150) break;
+                    String json = motor.visualMemories.store.readScene(r.id);
+                    salve.core.visual.SceneGraph g = json == null ? null : salve.core.visual.SceneGraph.fromJson(json);
+                    if (g == null) continue;
+                    int score = words.isEmpty() ? 1 : g.matches(words, r.analysis);
+                    if (score > best) { best = score; scene = g; photo = r; }
+                    if (words.isEmpty()) break; // sin pistas: la más reciente
+                }
+            }
+        } catch (java.io.IOException failure) { scene = null; }
+        if (scene == null) return " | DIBUJO_ESCENA: Bryan quiere un dibujo con cada cosa en su sitio, pero "
+                + (photo == null ? "no tienes ninguna foto con su escena medida que encaje. Pídele que te mande una foto de ese sitio."
+                        : "no conseguiste separar los objetos de la foto. Díselo con sencillez.");
+        List<salve.sketch.SketchLibrary.Motif> motifs = new ArrayList<>();
+        List<int[]> boxes = new ArrayList<>();
+        List<String> learned = new ArrayList<>(), searched = new ArrayList<>(), missing = new ArrayList<>();
+        for (salve.core.visual.SceneGraph.Item item : scene.prominent(salve.sketch.SketchScene.MAX_MOTIFS)) {
+            String name = item.name.replaceAll(" \\d+$", "");
+            salve.sketch.SketchLibrary.Motif motif = library.find(name);
+            if (motif != null) learned.add(name);
+            else {
+                motor.estado("Busco cómo es «" + name + "» para ponerlo en su sitio…");
+                salve.sketch.SketchScene piece = buscarReferenciaYDibujar(name);
+                if (piece == null) piece = componerDibujo(name);
+                if (piece != null && !piece.motifs.isEmpty()) { motif = piece.motifs.get(0); searched.add(name); }
+            }
+            if (motif == null) { missing.add(name); continue; }
+            motifs.add(motif);
+            boxes.add(new int[]{(int) Math.round(item.x1), (int) Math.round(item.y1), (int) Math.round(item.x2), (int) Math.round(item.y2)});
+        }
+        salve.sketch.SketchScene drawing = salve.sketch.SketchScene.layout(motifs, boxes, null);
+        // La clave viaja en el chat (máx. 120 caracteres): si no cabe, fuera lo más pequeño.
+        while (drawing != null && drawing.key.length() > 120 && motifs.size() > 1) {
+            motifs.remove(motifs.size() - 1); boxes.remove(boxes.size() - 1);
+            drawing = salve.sketch.SketchScene.layout(motifs, boxes, null);
+        }
+        if (drawing == null) return " | DIBUJO_ESCENA: separaste los objetos (" + String.join(", ", scene.names())
+                + ") pero no conseguiste dibujar ninguno. Díselo con honestidad y pídele que te enseñe alguno.";
+        lastSketchSubject = drawing.title;
+        empezarDibujo(drawing);
+        return " | ACCION_REALIZADA: ya estás dibujando la escena (" + drawing.title + ") con cada cosa en el sitio y tamaño "
+                + "que mediste en la foto. Cómo lo hiciste: el plano sale de la escena medida"
+                + (learned.isEmpty() ? "" : "; " + String.join(", ", learned) + " ya sabías dibujarlo")
+                + (searched.isEmpty() ? "" : "; buscaste o compusiste " + String.join(", ", searched))
+                + (missing.isEmpty() ? "" : "; no pudiste dibujar " + String.join(", ", missing) + ", dilo")
+                + ". Cuéntaselo en una o dos frases, sin repetir la lista de coordenadas." + ESTILO_DIBUJO;
+    }
+
     void empezarDibujo(salve.sketch.SketchScene scene) {
         salve.sketch.Sketches.show(scene);
         motor.turnSketchTag.set(salve.sketch.SketchProtocol.tag(scene));

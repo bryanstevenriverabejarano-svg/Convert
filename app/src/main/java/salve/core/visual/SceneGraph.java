@@ -206,11 +206,53 @@ public final class SceneGraph {
 
     /** «¿Qué objetos hay?», «analiza la escena», «¿dónde está cada cosa?», «mira la foto con calma»… */
     public static boolean isCommand(String input) {
+        if (isDrawRequest(input)) return false; // «dibuja la escena de la foto» es dibujar, no describir
         String t = Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replaceAll("[¿?¡!.,;:]+", " ").replaceAll("\\s+", " ").trim().replaceFirst("^salve ", "");
         return t.matches(".*\\b(que objetos hay|que cosas hay|analiza la escena|analiza los objetos|donde esta cada cosa|"
                 + "como esta colocad[oa]|mira la foto con calma|que hay en la foto y donde|separa los objetos|"
                 + "abstrae la (foto|imagen|escena)|grafo de la escena|escena de la foto)\\b.*");
+    }
+
+    private static final java.util.regex.Pattern DRAW_SCENE = java.util.regex.Pattern.compile(
+            "\\b(?:dibuja|dibujame|dibujala|pinta|pintame|recrea|recreame)\\b.*\\b(?:escena|lo que hay|cada cosa|como esta colocad[oa]|"
+            + "de memoria|con sus objetos|tal (?:como|cual) (?:esta|es))\\b");
+
+    /**
+     * «Dibuja la escena», «dibújame lo que hay en la foto», «dibuja mi escritorio de memoria»: un
+     * dibujo con plano (cada cosa en su sitio), no calcar la foto.
+     */
+    public static boolean isDrawRequest(String input) {
+        String t = Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replaceAll("[¿?¡!.,;:]+", " ").replaceAll("\\s+", " ").trim();
+        return t.length() < 140 && DRAW_SCENE.matcher(t).find();
+    }
+
+    /** Palabras de la petición que pueden nombrar el sitio o las cosas («escritorio», «salón»), sin las de pedir. */
+    public static List<String> requestWords(String input) {
+        String t = Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replaceAll("[^a-z0-9ñ ]+", " ");
+        List<String> out = new ArrayList<>();
+        for (String w : t.split("\\s+"))
+            if (w.length() >= 4 && !w.matches("dibuja\\w*|pinta\\w*|recrea\\w*|escena|memoria|foto|imagen|esta|como|cada|cosa|"
+                    + "colocado|colocada|objetos|salve|tambien|porfa|favor|donde|tiene") && !out.contains(w)) out.add(w);
+        return out;
+    }
+
+    /** Cuánto encaja esta escena (y la descripción de su foto) con esas palabras. */
+    public int matches(List<String> words, String photoAnalysis) {
+        String hay = Normalizer.normalize((String.join(" ", names()) + " " + (photoAnalysis == null ? "" : photoAnalysis)).toLowerCase(Locale.ROOT),
+                Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+        int n = 0;
+        for (String w : words) if (hay.contains(w)) n++;
+        return n;
+    }
+
+    /** Los objetos más importantes primero (los que más ocupan), como mucho {@code max}. */
+    public List<Item> prominent(int max) {
+        List<Item> out = new ArrayList<>(items);
+        out.sort((a, b) -> Double.compare(b.area(), a.area()));
+        return out.subList(0, Math.min(max, out.size()));
     }
 
     /** Nombres de los objetos (sin el número de repetición), para etiquetar el recuerdo. */

@@ -35,9 +35,30 @@ public final class SketchScene {
 
     public boolean isSelfPortrait() { return motifs.size() == 1 && motifs.get(0).self; }
 
+    /** Un motivo colocado en su caja de una escena real: «taza 62 50 72 66» (id y caja en %, 0..99). */
+    private static final java.util.regex.Pattern PLACED =
+            java.util.regex.Pattern.compile("^([a-z0-9]{2,32}) (\\d{1,2}) (\\d{1,2}) (\\d{1,2}) (\\d{1,2})$");
+    /** Lienzo de las escenas colocadas (proporción 4:3, como una foto). */
+    public static final float LAYOUT_W = 1000, LAYOUT_H = 750;
+
     /** null si la clave no tiene ningún motivo conocido. */
     public static SketchScene fromKey(SketchLibrary library, String key) {
         if (library == null || key == null || key.length() > 120) return null;
+        if (PLACED.matcher(key.split("\\+")[0].trim()).matches()) {
+            // Una escena con plano: cada motivo en su caja (viene de una foto real).
+            List<SketchLibrary.Motif> motifs = new ArrayList<>();
+            List<int[]> boxes = new ArrayList<>();
+            for (String part : key.split("\\+")) {
+                java.util.regex.Matcher m = PLACED.matcher(part.trim());
+                if (!m.matches()) continue;
+                SketchLibrary.Motif motif = library.byId(m.group(1));
+                if (motif == null) continue;
+                motifs.add(motif);
+                boxes.add(new int[]{Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)),
+                        Integer.parseInt(m.group(4)), Integer.parseInt(m.group(5))});
+            }
+            return layout(motifs, boxes, null);
+        }
         List<SketchLibrary.Motif> motifs = new ArrayList<>();
         for (String part : key.split("\\+")) {
             SketchLibrary.Motif m = library.byId(part.trim());
@@ -95,6 +116,49 @@ public final class SketchScene {
             at += m.strokes.length;
         }
         return new SketchScene(key.toString(), title.toString(), width, height, strokes, motifs, parts);
+    }
+
+    /**
+     * Cada motivo dentro de su caja (en % del lienzo, 0..99), con su proporción, centrado y apoyado en
+     * la base de la caja; primero lo de detrás (lo que acaba más arriba en la imagen). Es el plano que
+     * sale de una foto: las referencias dicen cómo es cada cosa y la escena dónde va.
+     * @param title null para componerlo con los nombres
+     */
+    public static SketchScene layout(List<SketchLibrary.Motif> chosen, List<int[]> boxes, String title) {
+        if (chosen == null || boxes == null || chosen.isEmpty() || chosen.size() != boxes.size()) return null;
+        List<Integer> order = new ArrayList<>();
+        for (int i = 0; i < Math.min(MAX_MOTIFS, chosen.size()); i++) order.add(i);
+        order.sort((a, b) -> Integer.compare(boxes.get(a)[3], boxes.get(b)[3]));
+        List<float[]> strokes = new ArrayList<>();
+        List<SketchLibrary.Part> parts = new ArrayList<>();
+        List<SketchLibrary.Motif> motifs = new ArrayList<>();
+        StringBuilder key = new StringBuilder(), names = new StringBuilder();
+        for (int idx = 0; idx < order.size(); idx++) {
+            SketchLibrary.Motif m = chosen.get(order.get(idx));
+            int[] box = clampBox(boxes.get(order.get(idx)));
+            float bx = box[0] * LAYOUT_W / 100f, by = box[1] * LAYOUT_H / 100f;
+            float bw = Math.max(20, (box[2] - box[0]) * LAYOUT_W / 100f), bh = Math.max(20, (box[3] - box[1]) * LAYOUT_H / 100f);
+            float aspect = Math.max(.3f, Math.min(3f, m.aspect));
+            // El motivo ocupa (w × h) dentro de su cuadrado normalizado de 1000 centrado.
+            float w = aspect >= 1 ? 1000 : 1000 * aspect, h = aspect >= 1 ? 1000 / aspect : 1000;
+            float scale = Math.min(bw / w, bh / h) * 0.95f;
+            float cx = bx + bw / 2, cy = by + bh - h * scale / 2;
+            int at = strokes.size();
+            for (float[] st : m.strokes) strokes.add(place(st, 0, 0, scale, cx - 500 * scale, cy - 500 * scale));
+            parts.add(new SketchLibrary.Part(m.name, "", at, strokes.size()));
+            motifs.add(m);
+            if (idx > 0) key.append('+');
+            key.append(m.id).append(' ').append(box[0]).append(' ').append(box[1]).append(' ').append(box[2]).append(' ').append(box[3]);
+            names.append(idx == 0 ? "" : idx == order.size() - 1 ? " y " : ", ").append(m.name);
+        }
+        if (strokes.isEmpty()) return null;
+        return new SketchScene(key.toString(), title == null ? names.toString() : title, LAYOUT_W, LAYOUT_H, strokes, motifs, parts);
+    }
+
+    private static int[] clampBox(int[] b) {
+        int x1 = Math.max(0, Math.min(99, Math.min(b[0], b[2]))), x2 = Math.max(0, Math.min(99, Math.max(b[0], b[2])));
+        int y1 = Math.max(0, Math.min(99, Math.min(b[1], b[3]))), y2 = Math.max(0, Math.min(99, Math.max(b[1], b[3])));
+        return new int[]{x1, y1, Math.max(x2, x1 + 1), Math.max(y2, y1 + 1)};
     }
 
     private static void layoutRow(List<SketchLibrary.Motif> row, List<float[]> out, float top, float bottom,
