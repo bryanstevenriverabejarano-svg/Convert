@@ -129,10 +129,27 @@ public final class MindRuntime {
     public salve.core.mind.SkillLab skills() { return skills; }
     private final salve.core.mind.Biography biography;
     public salve.core.mind.Biography biography() { return biography; }
+    private final AtomicBoolean biographyAnchored = new AtomicBoolean();
+    /**
+     * Una vez por proceso y fuera del hilo principal: su primer despertar no puede ser posterior a su
+     * recuerdo más antiguo (tras reinstalar, los recuerdos vuelven de la nube antes que la fecha).
+     */
+    public void anchorBiographyToMemories() { anchorBiographyToMemories(false); }
+
+    /** @param again tras recuperar recuerdos de la nube, vuelve a mirar aunque ya lo hiciera */
+    public void anchorBiographyToMemories(boolean again) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return;
+        if (again) biographyAnchored.set(false);
+        if (!biographyAnchored.compareAndSet(false, true)) return;
+        try {
+            RecuerdoEntity first = memories.primerRecuerdo();
+            if (first != null) biography.notLaterThan(first.timestamp);
+        } catch (RuntimeException unavailable) { biographyAnchored.set(false); }
+    }
     /** Su historia en una frase: primer despertar, días, despertares y sueños. */
-    public String biographySentence() { return biography.sentence(journal.metrics().dreams); }
+    public String biographySentence() { anchorBiographyToMemories(); return biography.sentence(journal.metrics().dreams); }
     /** «Día 214 · 95 sueños · 42 creencias», para la pantalla principal. */
-    public String biographyBadge() { return biography.badge(journal.metrics().dreams, journal.beliefs().size()); }
+    public String biographyBadge() { anchorBiographyToMemories(); return biography.badge(journal.metrics().dreams, journal.beliefs().size()); }
 
     /**
      * Lo que Bryan le encargó, como principio (venía de la identidad antigua y no llegaba a ninguna

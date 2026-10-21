@@ -56,6 +56,45 @@ public final class Biography {
         save();
     }
 
+    /**
+     * Une la copia de pCloud con la local. Tras reinstalar, la local empieza «hoy»: si la remota es
+     * más antigua, manda su fecha y se suman sus despertares a los de la instalación nueva. Si es la
+     * misma historia (la remota es una subida anterior de esta), se queda con lo mayor. Idempotente.
+     * @return true si cambió algo
+     */
+    public synchronized boolean mergeFrom(String remoteJson) {
+        State r;
+        try { r = remoteJson == null ? null : GSON.fromJson(remoteJson, State.class); }
+        catch (RuntimeException damaged) { return false; }
+        if (r == null || r.firstAwakeAt <= 0) return false;
+        long beforeFirst = state.firstAwakeAt, beforeAw = state.awakenings, beforeDreams = state.legacyDreams;
+        if (state.firstAwakeAt == 0 || r.firstAwakeAt < state.firstAwakeAt) {
+            // Otra instalación, más antigua: su historia va primero y esta continúa a partir de ella.
+            state.firstAwakeAt = r.firstAwakeAt;
+            state.awakenings = r.awakenings + state.awakenings;
+        } else {
+            state.awakenings = Math.max(state.awakenings, r.awakenings);
+        }
+        state.legacyDreams = Math.max(state.legacyDreams, r.legacyDreams);
+        state.migrated = state.migrated || r.migrated;
+        boolean changed = beforeFirst != state.firstAwakeAt || beforeAw != state.awakenings || beforeDreams != state.legacyDreams;
+        if (changed) save();
+        return changed;
+    }
+
+    /**
+     * Si tiene recuerdos más antiguos que su primer despertar registrado (por ejemplo, recuperados de
+     * la nube tras reinstalar), despertó como tarde entonces.
+     */
+    public synchronized boolean notLaterThan(long earliestKnown) {
+        if (earliestKnown <= 0 || (state.firstAwakeAt != 0 && earliestKnown >= state.firstAwakeAt)) return false;
+        state.firstAwakeAt = earliestKnown;
+        save();
+        return true;
+    }
+
+    public synchronized String json() { return GSON.toJson(state); }
+
     public synchronized long firstAwakeAt() { return state.firstAwakeAt; }
     public synchronized long awakenings() { return state.awakenings; }
     public synchronized long legacyDreams() { return state.legacyDreams; }

@@ -43,4 +43,40 @@ public class BiographyTest {
         for (String q : new String[]{"¿cuánto tiempo llevas dibujando el gorila?", "¿qué edad tiene mi madre?", "hola"})
             assertFalse(q, Biography.asksAge(q));
     }
+
+    @Test public void reinstallKeepsTheOldBirthdayAndAddsTheNewAwakenings() {
+        long[] now = {BIRTH + 100 * DAY};
+        Mem oldPhone = new Mem();
+        Biography before = new Biography(oldPhone, () -> now[0]);
+        before.migrateLegacy(BIRTH, 50, 10);
+        String cloud = before.json();                       // lo que quedó en pCloud
+        now[0] = BIRTH + 120 * DAY;                         // reinstala 20 días después
+        Biography fresh = new Biography(new Mem(), () -> now[0]);
+        fresh.migrateLegacy(0, 0, 0); fresh.awaken(); fresh.awaken();
+        assertTrue(fresh.mergeFrom(cloud));
+        assertEquals(BIRTH, fresh.firstAwakeAt());
+        assertEquals(52, fresh.awakenings());
+        assertEquals(10, fresh.legacyDreams());
+        assertEquals(121, fresh.daysAlive());
+        assertFalse("unir otra vez no vuelve a sumar", fresh.mergeFrom(cloud));
+        assertEquals(52, fresh.awakenings());
+    }
+
+    @Test public void sameInstallMergeKeepsTheLargerCount() {
+        Biography b = new Biography(new Mem(), () -> BIRTH + DAY);
+        b.migrateLegacy(BIRTH, 10, 0);
+        String older = b.json();
+        b.awaken(); b.awaken();
+        b.mergeFrom(older);
+        assertEquals(12, b.awakenings());
+    }
+
+    @Test public void oldMemoriesPullTheBirthdayBack() {
+        Biography b = new Biography(new Mem(), () -> BIRTH + 300 * DAY);
+        b.migrateLegacy(0, 0, 0); b.awaken();              // reinstalada «hoy»
+        assertTrue(b.notLaterThan(BIRTH));                  // pero tiene recuerdos de hace 300 días
+        assertEquals(BIRTH, b.firstAwakeAt());
+        assertFalse(b.notLaterThan(BIRTH + DAY));           // uno más reciente no la mueve
+        assertFalse(b.mergeFrom("{roto"));
+    }
 }
