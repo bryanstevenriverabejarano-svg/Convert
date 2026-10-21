@@ -11,12 +11,14 @@ import salve.core.autonomy.AutonomousToolLab;
 import salve.core.autonomy.AutonomousToolReply;
 import salve.core.autonomy.FileToolStateStore;
 import salve.core.autonomy.InductiveSkillLab;
+import salve.core.autonomy.InductiveSkillProposal;
 
 /** Application-scoped, local-only tool laboratory. It has no Android app-control or network tools. */
 public final class AutonomousToolRuntime {
     private static volatile AutonomousToolRuntime instance;
     private final File stateFile;
     private final File inductiveFile;
+    private final File proposedSkillFile;
     private volatile InductiveSkillLab inductive;
     private final AtomicBoolean paused = new AtomicBoolean();
     private final AtomicLong cancellationEpoch = new AtomicLong();
@@ -30,6 +32,7 @@ public final class AutonomousToolRuntime {
         if (stateFile == null) throw new IllegalArgumentException("Archivo ausente.");
         this.stateFile = stateFile;
         this.inductiveFile = new File(stateFile.getParentFile(), "inductive-skills.json");
+        this.proposedSkillFile = new File(stateFile.getParentFile(), "proposed-inductive-skill.json");
     }
     public static AutonomousToolRuntime get(Context context) {
         if (instance == null) {
@@ -40,7 +43,8 @@ public final class AutonomousToolRuntime {
         return instance;
     }
     public static boolean handles(String input) {
-        return learningCommand(input) != 0 || inductiveCommand(input) != 0 || AutonomousToolCommand.parse(input) != null;
+        return learningCommand(input) != 0 || inductiveCommand(input) != 0
+                || proposalCommand(input) != 0 || AutonomousToolCommand.parse(input) != null;
     }
     /** Exact commands from the user channel, not inferred from quoted documents or memory. */
     private static int learningCommand(String input) {
@@ -62,6 +66,107 @@ public final class AutonomousToolRuntime {
         if (value.toLowerCase(java.util.Locale.ROOT).startsWith("aprende habilidad:")) return 2;
         if (value.toLowerCase(java.util.Locale.ROOT).startsWith("usa habilidad:")) return 3;
         return 0;
+    }
+
+    /** Explicit, user-channel approval; never parse proposals from LLM or retrieved pages. */
+    private static int proposalCommand(String input) {
+        if (input == null || input.length() > 180) return 0;
+        String value = input.trim().toLowerCase(java.util.Locale.ROOT);
+        if (value.equals("propuestas de habilidades")) return 4;
+        if (value.startsWith("propón habilidad:") || value.startsWith("propon habilidad:")) return 1;
+        if (value.startsWith("aprueba habilidad ")) return 2;
+        if (value.startsWith("descarta habilidad ")) return 3;
+        return 0;
+    }
+
+    /** Persistent pending metadata contains no examples, contacts, model text or secrets. */
+    private JsonObject pendingSkill() throws Exception {
+        String json = new FileToolStateStore(proposedSkillFile).read();
+        if (json == null) return null;
+        JsonObject data = AutonomousToolCommand.parseObject(json);
+        if (data.size() != 5 || !data.has("schema") || data.get("schema").getAsInt() != 1
+                || !data.has("id") || !data.get("id").getAsString()
+                        .matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+                || !data.has("kind") || !data.has("program") || !data.get("program").isJsonArray()
+                || !data.has("expires") || !data.get("expires").getAsJsonPrimitive().isNumber())
+            throw new IllegalArgumentException("Propuesta guardada inválida.");
+        InductiveSkillProposal.Kind.valueOf(data.get("kind").getAsString());
+        long expires = data.get("expires").getAsLong();
+        if (expires <= 0 || expires > System.currentTimeMillis() + 86_400_000L)
+            throw new IllegalArgumentException("Vigencia de propuesta inválida.");
+        return data;
+    }
+    private String proposalReply(String input, BooleanSupplier stopped) {
+        int action = proposalCommand(input);
+        if (action == 0) return null;
+        if (paused.get()) return "Laboratorio pausado: no creo ni promuevo habilidades.";
+        long epoch = cancellationEpoch.get();
+        BooleanSupplier cancelled = () -> paused.get() || cancellationEpoch.get() != epoch
+                || Thread.currentThread().isInterrupted()
+                || (stopped != null && stopped.getAsBoolean());
+        if (cancelled.getAsBoolean()) return "Propuesta cancelada.";
+        try {
+            if (action == 4) {
+                JsonObject pending = pendingSkill();
+                return pending == null ? "No hay propuestas pendientes."
+                        : "Pendiente: " + pending.get("kind").getAsString()
+                        + "; ID " + pending.get("id").getAsString()
+                        + ". Solo el usuario puede aprobarla o descartarla.";
+            }
+            String raw = input.trim();
+            if (action == 1) {
+                InductiveSkillProposal.Kind kind = InductiveSkillProposal.recognize(
+                        raw.substring(raw.indexOf(':') + 1).trim());
+                if (kind == null) return "Necesidad no reconocida. Por ahora: ordenar impares sin repetir, u ordenar pares sin repetir.";
+                InductiveSkillProposal.Evaluation result = InductiveSkillProposal.evaluate(skills(), kind, cancelled);
+                if (!result.promotable()) return "Propuesta rechazada: no superó la referencia independiente.";
+                if (cancelled.getAsBoolean()) return "Propuesta cancelada.";
+                JsonObject proposal = new JsonObject();
+                String id = java.util.UUID.randomUUID().toString();
+                proposal.addProperty("schema", 1);
+                proposal.addProperty("id", id);
+                proposal.addProperty("kind", kind.name());
+                proposal.add("program", result.program.deepCopy());
+                proposal.addProperty("expires", System.currentTimeMillis() + 86_400_000L);
+                new FileToolStateStore(proposedSkillFile).write(proposal.toString());
+                if (cancelled.getAsBoolean()) {
+                    proposedSkillFile.delete();
+                    return "Propuesta cancelada; no instalé ninguna habilidad.";
+                }
+                return "Propuesta NO instalada: " + result.skillName
+                        + ". Candidatos probados: " + result.candidatesChecked
+                        + "; casos nuevos: " + result.candidateSuccesses + "/" + result.total
+                        + "; referencia sin aprender: " + result.baselineSuccesses + "/" + result.total
+                        + ". Para guardarla, di exactamente: aprueba habilidad " + id
+                        + ". Para descartarla: descarta habilidad " + id + ". Caduca en 24 horas.";
+            }
+            JsonObject pending = pendingSkill();
+            if (pending == null) return "No existe ninguna propuesta pendiente.";
+            // User approval must include the full, exact proposal UUID.
+            String suppliedId = raw.substring(raw.lastIndexOf(' ') + 1);
+            if (!pending.get("id").getAsString().equals(suppliedId))
+                return "El identificador no corresponde a la propuesta pendiente; no cambié nada.";
+            if (pending.get("expires").getAsLong() < System.currentTimeMillis())
+                return "La propuesta caducó; solicita una nueva evaluación.";
+            if (action == 3) {
+                if (!proposedSkillFile.delete()) return "No pude descartar el archivo pendiente; no cambié habilidades.";
+                return "Propuesta descartada; ninguna habilidad fue instalada.";
+            }
+            InductiveSkillProposal.Kind kind = InductiveSkillProposal.Kind.valueOf(
+                    pending.get("kind").getAsString());
+            if (cancelled.getAsBoolean()) return "Aprobación cancelada.";
+            JsonObject installed = InductiveSkillProposal.promote(skills(), kind,
+                    pending.getAsJsonArray("program"), cancelled);
+            if (!proposedSkillFile.delete())
+                return "Habilidad certificada y guardada, pero no pude limpiar la propuesta pendiente. "
+                        + installed.get("name").getAsString();
+            return "Habilidad aprobada, verificada y guardada: " + installed.get("name").getAsString()
+                    + ". Puedes consultarla con habilidades aprendidas o usarla con usa habilidad:.";
+        } catch (IllegalArgumentException invalid) {
+            return "No se aceptó la propuesta: " + invalid.getMessage();
+        } catch (Exception unavailable) {
+            return "No pude completar la propuesta o su almacenamiento; no afirmo haber promovido una habilidad.";
+        }
     }
 
     private InductiveSkillLab skills() throws Exception {
@@ -91,6 +196,7 @@ public final class AutonomousToolRuntime {
         if (current != null) current.pause();
     }
     public String respond(String input, BooleanSupplier stopped) {
+        if (proposalCommand(input) != 0) return proposalReply(input, stopped);
         int inductiveAction = inductiveCommand(input);
         if (inductiveAction != 0) {
             if (paused.get()) return "Laboratorio pausado; reanúdalo para usar habilidades.";
@@ -235,7 +341,8 @@ public final class AutonomousToolRuntime {
         return "Prueba resuelve reto: {\"schema\":1,\"id\":\"consulta\",\"family\":\"dependencies\",\"input\":{\"nodes\":3,\"edges\":[[0,1],[1,2]]}}. "
                 + "También puedes pausar, reanudar o revertir una herramienta. Se admiten cuatro familias acotadas; el laboratorio no cambia el código de la aplicación. "
                 + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental. " 
-                + "Laboratorio inductivo: habilidades aprendidas; aprende habilidad: {nombre, train, holdout}; usa habilidad: {name, input}. " 
+                + "Laboratorio inductivo: habilidades aprendidas; aprende habilidad: {nombre, train, holdout}; usa habilidad: {name, input}. "
+                + "Propuestas locales: propón habilidad: ordenar impares sin repetir; aprueba habilidad ID; descarta habilidad ID. " 
                 + "Cada ejemplo de train/holdout usa las claves in y out, con listas numéricas.";
     }
 }
