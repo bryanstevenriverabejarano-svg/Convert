@@ -1,5 +1,11 @@
 # Mente persistente de Salve
 
+> **Actualización de estado (21-10-2026):** esta guía explica la arquitectura de
+> continuidad. Su diagnóstico original de `gte-small` es **histórico**. Para el
+> contrato actual de memoria semántica, descarga, pruebas y límites consulta
+> [H2: memoria multilingüe](H2_MEMORIA_MULTILINGUE.md) y
+> [estado actual del proyecto](ESTADO_ACTUAL.md).
+
 Esta capa da a Salve continuidad entre conversaciones: lo que cree, lo que se pregunta y lo que
 ha pensado mientras nadie le hablaba. Sustituye a mecanismos que simulaban actividad interna sin
 producir conocimiento. Nada de esto demuestra conciencia; son procesos medibles con procedencia.
@@ -8,7 +14,7 @@ producir conocimiento. Nada de esto demuestra conciencia; son procesos medibles 
 
 | Antes | Problema verificado | Ahora |
 |---|---|---|
-| `SYSTEM_STATE` solo con hora, RAM y acción pendiente | El modelo empezaba cada turno sin saber quién había sido Salve | Campo `SELF_MODEL` en cada turno, con presupuesto propio (≤1.400 caracteres) |
+| `SYSTEM_STATE` solo con hora, RAM y acción pendiente | El modelo empezaba cada turno sin saber quién había sido Salve | Campo `SELF_MODEL` en cada turno, con presupuesto propio (hasta 1.700 caracteres, sujeto al presupuesto del turno) |
 | Reflexión solo si Bryan escribía notas, cada 6 h y con aprobación | Sin notas no había ningún pensamiento propio | `ReflectionCycle`: piensa sobre lo vivido y sus preguntas abiertas; interno, sin aprobación, cada ≥1 h con el móvil cargando |
 | `generarReflexionesSilenciosas` | Copiaba recuerdos al azar como "reflexión" con certeza aleatoria | Eliminado |
 | `conectarRecuerdosSimilares` | Enlazaba recuerdos por la primera palabra y una emoción que siempre era «no evaluada» | Eliminado; las conexiones son creencias con fuentes |
@@ -44,24 +50,30 @@ producir conocimiento. Nada de esto demuestra conciencia; son procesos medibles 
   por palabras (FTS) y la búsqueda por significado (`MemoryVectorStore`, vectores int8). Los
   registros recuperados solo por significado se marcan como tales en el prompt.
 
-## Limitación importante: el modelo de embeddings actual no entiende español
+## Memoria semántica: modelo actual y diagnóstico histórico
 
-Medido con ONNX Runtime sobre el `gte-small-int8.onnx` incluido y la prueba de calibración:
+**Situación del código de `main` en octubre de 2026:** el contrato de H2 usa
+`multilingual-e5-small INT8` (384 dimensiones) y tokenización
+**SentencePiece 0.2.1**, con prefijos `query: ` y `passage: `. El modelo ONNX
+de 118.346.824 bytes y el tokenizador de 5.069.051 bytes se descargan fuera de
+la APK, verificando tamaño y SHA-256. La búsqueda léxica sigue disponible sin
+esos artefactos; **la semántica no se activa por el solo hecho de existir código**:
+hace falta preparar los archivos, superar calibración y disponer de RAM en el dispositivo.
 
-| Pooling | Acierto (8 paráfrasis) | Margen medio | Coseno paráfrasis | Coseno sin relación |
-|---|---|---|---|---|
-| Original (incluye PAD) | 38 % | −0,011 | 0,913 | 0,908 |
-| Corregido (solo tokens) | 38 % | −0,003 | 0,859 | 0,846 |
+La evaluación H2 en host, sobre 32 pares congelados, dio **26/32 en primera
+posición** para E5 INT8 oficial. Es un ensayo de recuperación sintética, no
+una puntuación de respuestas finales, y no certifica rendimiento en el S24 Ultra.
+La ejecución real de este ONNX/SentencePiece en Android ARM64, su memoria y
+coexistencia con el LLM requieren prueba en teléfono. Consulta
+[los resultados, errores y pasos de verificación](H2_MEMORIA_MULTILINGUE.md).
 
-gte-small se entrenó en inglés: en español todo se parece a todo. Por eso **la memoria por
-significado y la señal de sorpresa quedan desactivadas automáticamente** hasta disponer de un
-modelo multilingüe que supere la calibración. No se indexa ni se predice con un modelo que
-inyectaría ruido con forma de recuerdo. «Tu mente» muestra el estado de la calibración.
-
-Siguiente paso: incorporar un modelo multilingüe compacto (candidatos a medir con la misma
-calibración: `multilingual-e5-small`, `paraphrase-multilingual-MiniLM-L12-v2`). Ambos usan
-tokenizador SentencePiece/XLM-R, no el `WordPiece` actual, así que requieren un tokenizador nuevo
-o calcular embeddings con llama.cpp (que ya está en la app) usando un GGUF de embeddings.
+**Diagnóstico anterior (histórico, no estado actual):** el viejo `gte-small`
+obtuvo 38 % de aciertos en 8 paráfrasis españolas, tanto con el pooling original
+como después de corregirlo. Aquella limitación llevó a desactivar recuperación
+semántica con ese modelo y motivó H2. Las indicaciones anteriores de «incorporar
+un modelo multilingüe» o «escribir un tokenizador nuevo» quedaron superadas por
+el adaptador SentencePiece ya implementado; no se deben ejecutar como tareas
+pendientes.
 
 ## Órdenes
 
@@ -80,7 +92,7 @@ o calcular embeddings con llama.cpp (que ya está en la app) usando un GGUF de e
 - Predicción: una inferencia breve tras cada respuesta de texto, solo con embeddings calibrados,
   sin turno activo y sin memoria baja. Si Bryan escribe mientras se genera, su turno espera a que
   termine (el motor local atiende una petición a la vez).
-- `SELF_MODEL` ocupa hasta 1.400 caracteres del prompt.
+- `SELF_MODEL` se solicita con límite de 1.700 caracteres, pero puede recibir menos por el presupuesto total de inferencia y el historial.
 
 ## Adaptador LoRA personal (la experiencia cambia pesos)
 
