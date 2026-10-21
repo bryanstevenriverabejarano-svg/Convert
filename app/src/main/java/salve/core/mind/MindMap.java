@@ -46,7 +46,7 @@ public final class MindMap {
             + "dibujo_.*|sketch.*|research.*|web.*|tool.*|herramienta.*|accion.*|recibo.*|[a-z]+_[0-9a-f]{6,}|\\d+|"
             // Origen o formato del registro, no de qué trata: llenaban el mapa de «pcloud», «user_message»…
             + "pcloud|diario_local|user_message|voice_message|assistant_message|memory|memoria|message|mensaje|"
-            + "imagen|foto|fotos|visual.*|photo.*|importante|recuerdo|recuerdos|local|remoto|restaurado|legacy)$");
+            + "imagen|foto|fotos|foto:.*|escena|visual.*|photo.*|importante|recuerdo|recuerdos|local|remoto|restaurado|legacy)$");
     private static final Pattern SOURCE_MEMORY = Pattern.compile("^recuerdos?:(\\d+)$");
 
     private final JsonArray nodes = new JsonArray(), edges = new JsonArray();

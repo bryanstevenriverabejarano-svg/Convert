@@ -117,6 +117,8 @@ final class PhotoDesk {
                     if (!result.isSuccess() && session != null) AvatarMotionController.get().error(session, turn);
                     if (result.isSuccess()) m.setActivePhoto(m.visualMemories.update(saved.withAnalysis(respuesta)));
                     m.hablarPreparado(ResponseLimiter.limit(respuesta, VoiceResponsePolicy.maxResponseChars(false)), motion);
+                    // Después, con calma: los objetos, dónde está cada uno y cómo se relacionan.
+                    if (result.isSuccess()) mirarEscenaLuego(saved);
                 } catch (Exception failure) {
                     m.hablar("No pude completar el guardado o análisis de la foto. "
                             + "Revisa Fotos guardadas antes de volver a enviarla.");
@@ -132,6 +134,54 @@ final class PhotoDesk {
         } catch (java.util.concurrent.RejectedExecutionException e) {
             foto.recycle();
         }
+    }
+
+    /** En la cola de la conversación (no compite con ella por el modelo): mira la escena tras responder. */
+    void mirarEscenaLuego(VisualMemoryRecord photo) {
+        try {
+            m.conversationExecutor.execute(() -> {
+                try { if (!m.closed) mirarEscena(photo); }
+                catch (Exception failure) { Log.w(MotorConversacional.TAG, "Escena no disponible: " + failure.getClass().getSimpleName()); }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ignored) { }
+    }
+
+    /**
+     * Mira la foto con calma: el modelo dice qué objetos ve y su caja; las relaciones se calculan con
+     * geometría. Se guarda junto a la foto y como recuerdo (con vector) para poder preguntarle
+     * después «¿dónde estaba la taza?». Si ya la miró, usa lo guardado. Hilo de la conversación.
+     * @return la escena, o null si no pudo
+     */
+    salve.core.visual.SceneGraph mirarEscena(VisualMemoryRecord photo) throws java.io.IOException {
+        if (photo == null) return null;
+        String cached = m.visualMemories.store.readScene(photo.id);
+        if (cached != null) {
+            salve.core.visual.SceneGraph known = salve.core.visual.SceneGraph.fromJson(cached);
+            if (known != null) return known;
+        }
+        if (!canAnalyzePhoto(photo)) return null;
+        m.estado("Miro la foto con calma: qué hay y dónde está cada cosa…");
+        ModelResult seen = m.verFoto(photo, salve.core.visual.SceneGraph.prompt());
+        if (seen == null || !seen.isSuccess()) return null;
+        salve.core.visual.SceneGraph scene = salve.core.visual.SceneGraph.parse(seen.getText());
+        if (scene == null) return null;
+        m.visualMemories.store.saveScene(photo.id, scene.json().toString());
+        List<String> tags = new ArrayList<>(Arrays.asList("escena", "foto:" + photo.id));
+        for (String name : scene.names()) if (tags.size() < 10) tags.add(name);
+        m.memoria.guardarRecuerdo(scene.summary(photo.id), "neutral", 4, tags);
+        m.mind().indexNewMemoriesAsync();
+        m.registrarAccion(salve.core.mind.SelfActionLog.Kind.SEE_SCENE, "una foto",
+                scene.items.size() + " objetos y " + scene.relations.size() + " relaciones entre ellos");
+        return scene;
+    }
+
+    /** Para el modelo cuando hay una foto en el chat: lo que se midió de ella. */
+    String sceneContext(VisualMemoryRecord photo) {
+        if (photo == null) return "";
+        String json = m.visualMemories.store.readScene(photo.id);
+        salve.core.visual.SceneGraph scene = json == null ? null : salve.core.visual.SceneGraph.fromJson(json);
+        return scene == null ? "" : "ESCENA_MEDIDA (objetos de la foto; las posiciones y relaciones están calculadas, son fiables): "
+                + scene.summary(photo.id);
     }
 
     boolean canAnalyzePhoto(VisualMemoryRecord photo) {

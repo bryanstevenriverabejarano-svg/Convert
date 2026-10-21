@@ -687,6 +687,17 @@ public class MotorConversacional {
         }
         if (salve.core.mind.Biography.asksAge(entrada)) { hablar(mind().biographySentence()); return; }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
+        if (salve.core.visual.SceneGraph.isCommand(entrada)) {
+            VisualMemoryRecord photo = activePhoto;
+            if (photo == null) { hablar("Mándame una foto o elige una guardada y la miro con calma: qué hay y dónde está cada cosa."); return; }
+            try {
+                salve.core.visual.SceneGraph scene = mesaFotos.mirarEscena(photo);
+                hablar(scene != null ? scene.spoken()
+                        : mesaFotos.canAnalyzePhoto(photo) ? "Lo he intentado, pero no he conseguido separar bien los objetos de esta foto."
+                        : "Para separar los objetos de una foto necesito un modelo con visión.");
+            } catch (java.io.IOException failure) { hablar("No he podido guardar lo que vi en la foto."); }
+            return;
+        }
         if (salve.core.mind.MemoryHealth.isCommand(entrada)) {
             hablar(creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.");
             return;
@@ -1860,7 +1871,8 @@ public class MotorConversacional {
                 + "\n" + voiceProfile.styleInstruction()
                 + "\n" + salve.core.finance.FinanceConversationPolicy.contextFor(input)
                 + (asksHowSheIs(input) ? "\n" + estadoReal() : "")
-                + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(mesaFotos.canAnalyzePhoto(activePhoto)));
+                + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(mesaFotos.canAnalyzePhoto(activePhoto))
+                        + "\n" + mesaFotos.sceneContext(activePhoto));
         CognitiveTurn.Outcome outcome = CognitiveTurn.run((results, repair, remaining) -> {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
             // Con foto, la imagen ocupa contexto (Gemma 4: 4.096 tokens con entrada, imagen y salida).
@@ -2101,6 +2113,21 @@ public class MotorConversacional {
         } catch (java.io.IOException missing) {
             return ModelResult.failure(ModelResult.Status.ERROR,
                     "Conservo el registro de esa foto, pero no puedo abrir sus píxeles. Selecciona otra o quítala del chat.", 0L);
+        } finally { if (image != null) image.recycle(); }
+    }
+
+    /** Una petición propia sobre una foto concreta (sin el núcleo de conversación): local o, si se puede, nube. */
+    ModelResult verFoto(VisualMemoryRecord photo, String prompt) {
+        boolean localOnly = (llm != null && llm.usesOwnedInference()) || photo.localOnly;
+        Bitmap image = null;
+        try {
+            image = visualMemories.loadImage(photo);
+            final Bitmap pixels = image;
+            return ConversationModelRouter.generate(true, localOnly, llm != null && llm.supportsVision(),
+                    gemini.isAvailable() ? () -> gemini.generateResultSync(prompt, Collections.singletonList(pixels)) : null,
+                    () -> llm.generateImageResult(prompt, pixels));
+        } catch (java.io.IOException missing) {
+            return ModelResult.failure(ModelResult.Status.ERROR, "No puedo abrir los píxeles de esa foto.", 0L);
         } finally { if (image != null) image.recycle(); }
     }
 
