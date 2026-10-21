@@ -184,6 +184,27 @@ public class RoomAgentStoreTest {
         AgentRun done = execute(r.id, corrective, tools("SUCCESS")); assertEquals("SUCCEEDED", done.status);
         assertEquals(1, done.observations.size()); assertEquals(1, done.revisions);
     }
+    @Test public void agentReceivesControllerOwnedAutonomousChoiceAtEachStep() {
+        AgentRun job = create(); AtomicInteger steps = new AtomicInteger();
+        AgentEngine.Model selected = prompt -> {
+            JsonObject data = JsonParser.parseString(
+                    prompt.substring(prompt.indexOf("DATOS=") + 6)).getAsJsonObject();
+            if (!data.has("respuesta")) {
+                JsonObject choice = data.getAsJsonObject("eleccion_autonoma");
+                assertNotNull("El contexto normal debe incluir la elección", choice);
+                assertEquals(steps.getAndIncrement() == 0
+                                ? "GATHER_EVIDENCE" : "VERIFY_AND_SYNTHESIZE",
+                        choice.get("next").getAsString());
+                assertFalse(choice.toString().contains("origen de Salve"));
+            }
+            return model().generate(prompt);
+        };
+        AgentRun done = execute(job.id, selected, tools("SUCCESS"));
+        assertEquals("SUCCEEDED", done.status);
+        assertEquals(2, steps.get());
+        assertEquals(1, done.observations.size());
+    }
+
     @Test public void smallFallbackContextStillProducesCompleteJsonWithinBudget() {
         AgentRun r = create(); AgentRun claimed = store.claim(r.id, "old", now);
         for (int i = 0; i < 6; i++) claimed.outline.add("\"\\\n".repeat(50));
