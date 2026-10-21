@@ -88,6 +88,7 @@ public final class AgentExperience {
         try {
             JsonObject o = JsonParser.parseString(context).getAsJsonObject();
             if ((o.size() != 3 && o.size() != 4) || !integer(o.get("version"), 1, 1)
+                    || (o.size() == 4 && !o.has("objetivos_verificados"))
                     || o.has("objetivos_verificados")
                     && !integer(o.get("objetivos_verificados"), 0, 3)) return false;
             JsonArray plans = o.getAsJsonArray("planes"), tools = o.getAsJsonArray("herramientas");
