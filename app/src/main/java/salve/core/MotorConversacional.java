@@ -3085,7 +3085,7 @@ public class MotorConversacional {
                 + "\n" + voiceProfile.styleInstruction()
                 + "\n" + salve.core.finance.FinanceConversationPolicy.contextFor(input)
                 + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(canAnalyzePhoto(activePhoto)));
-        return CognitiveTurn.run((results, repair, remaining) -> {
+        CognitiveTurn.Outcome outcome = CognitiveTurn.run((results, repair, remaining) -> {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
             // Con foto, la imagen ocupa contexto (Gemma 4: 4.096 tokens con entrada, imagen y salida).
             if (activePhoto != null && canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
@@ -3093,6 +3093,12 @@ public class MotorConversacional {
                     memory, details, conversationSession.snapshot(), tools, results, repair, remaining, budget);
             return generateWithConversationPhoto(prompt);
         }, tools, () -> closed || !isVoiceContextCurrent());
+        // A tool receipt is observable progress, never proof of the user's whole goal.
+        salve.core.cognition.CognitiveToolAudit audit =
+                salve.core.cognition.CognitiveToolAudit.from(outcome);
+        if (audit.hasActions())
+            salve.core.trace.ExecutionTrace.note("RECIBOS DEL TURNO COGNITIVO", audit.toJson().toString());
+        return outcome;
     }
 
     private String cognitiveCore() {
