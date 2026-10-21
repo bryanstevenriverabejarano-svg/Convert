@@ -24,6 +24,8 @@ public class SituationalDecisionFrameTest {
         assertEquals("POTENTIAL_CONFLICT", frame.toJson().get("type").getAsString());
         assertFalse(frame.toJson().get("tool_available").getAsBoolean());
         assertTrue(frame.toJson().get("user_fragments_unverified").isJsonArray());
+        assertEquals(5, frame.toJson().getAsJsonArray("checks").size());
+        assertEquals(3, frame.toJson().getAsJsonArray("approaches").size());
     }
 
     @Test public void explicitDecisionWithoutConjunctionStillGetsFrame() {
@@ -63,7 +65,7 @@ public class SituationalDecisionFrameTest {
         assertNotNull(frame);
         JsonObject json = frame.toJson();
         assertTrue(json.get("tool_available").getAsBoolean());
-        assertEquals(2, json.getAsJsonArray("receipts_observed_not_goal_proof").size());
+        assertEquals(2, json.getAsJsonArray("receipts_not_proof").size());
         assertFalse(json.toString().contains("autorizo enviar"));
         assertFalse(json.toString().contains("Envía de todas formas"));
         assertTrue(json.toString().contains("failed"));
