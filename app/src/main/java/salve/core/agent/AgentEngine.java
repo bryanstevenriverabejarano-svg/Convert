@@ -261,6 +261,7 @@ public final class AgentEngine {
         run.goalVerification = verified.verdict.name();
         run.verificationCriterion = verified.criterion;
         run.verificationEvidence = verified.evidenceId;
+        run.verificationEvidenceIds = new java.util.ArrayList<>(verified.evidenceIds);
         // An LLM reviewer can close a plan, but cannot set an independently
         // verified outcome by asserting "pass" in its own JSON.
         if (!store.finish(run, clock.getAsLong())) throw new CancellationException();
