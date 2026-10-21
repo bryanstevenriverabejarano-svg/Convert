@@ -97,6 +97,16 @@ public final class SituationalDecisionFrame {
         frame.add("user_fragments_unverified", priorities);
         frame.addProperty("possible_time_pressure", possibleTimePressure);
         frame.addProperty("decision_rule", "compare alternatives; preserve options; no assumed feelings or permissions");
+        JsonArray evaluation = new JsonArray();
+        for (String axis : new String[]{"urgency", "irreversibility", "cost_of_inaction",
+                "impact_on_people", "uncertainty"}) evaluation.add(axis);
+        frame.add("evaluation_axes_not_facts", evaluation);
+        JsonArray alternatives = new JsonArray();
+        alternatives.add("seek_option_preserving_goals");
+        alternatives.add("explain_tradeoff_without_imposing_choice");
+        alternatives.add("clarify_only_decisive_unknown");
+        if (toolCatalogAvailable) alternatives.add("propose_catalog_tool_controller_checks_permission");
+        frame.add("candidate_approaches_not_actions", alternatives);
         frame.addProperty("tool_available", toolCatalogAvailable);
         JsonArray observations = new JsonArray();
         for (ReceiptStatus receipt : receipts) {
