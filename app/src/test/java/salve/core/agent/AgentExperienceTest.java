@@ -72,10 +72,33 @@ public class AgentExperienceTest {
         o.status = "BLOCKED"; assertTrue(AgentExperience.repeatFeedback(run, call).contains("permisos"));
         assertNull(AgentExperience.repeatFeedback(run, new AgentRun.Pending("new", call.tool, "otra consulta")));
     }
+    @Test public void verifiedOutcomeCountIsValidatedAndCannotBeForgedInContext() {
+        AgentRun current = run("new", "Recuerda el origen de Salve");
+        AgentRun previous = completed("old", "Consulta el origen de Salve");
+        previous.goalVerification = "VERIFIED";
+        previous.verificationCriterion = "PUBLIC_READ";
+        previous.verificationEvidence = "receipt";
+        String context = AgentExperience.contextFor(current,
+                Collections.singletonList(previous), NOW);
+        JsonObject data = JsonParser.parseString(context).getAsJsonObject();
+        assertEquals(0, data.get("objetivos_verificados").getAsInt());
+        data.addProperty("objetivos_verificados", 4);
+        assertFalse(AgentExperience.valid(data.toString()));
+        data.addProperty("objetivos_verificados", 0);
+        assertTrue(AgentExperience.valid(data.toString()));
+        data.remove("objetivos_verificados"); // Historical v1 documents remain readable.
+        assertTrue(AgentExperience.valid(data.toString()));
+        data.addProperty("unknown_authority", 1);
+        assertFalse(AgentExperience.valid(data.toString()));
+    }
+
     @Test public void oldJournalsRemainReadableAndCorruptNewMetadataIsRejected() {
         AgentRun run = completed("id", "goal");
-        JsonObject old = JsonParser.parseString(run.encode()).getAsJsonObject(); old.remove("experience"); old.remove("skippedRepeats");
+        JsonObject old = JsonParser.parseString(run.encode()).getAsJsonObject();
+        old.remove("experience"); old.remove("skippedRepeats");
+        old.remove("goalVerification"); old.remove("verificationCriterion"); old.remove("verificationEvidence");
         AgentRun decoded = AgentRun.decode(old.toString()); assertEquals("", decoded.experience); assertEquals(0, decoded.skippedRepeats);
+        assertEquals("UNKNOWN", decoded.goalVerification); assertEquals("NONE", decoded.verificationCriterion);
         assertNull(decoded.observations.get(0).fingerprint);
         run.experience = "{\"version\":1,\"planes\":[\"id\"],\"herramientas\":[{\"tool\":\"account.delete\",\"ok\":1,\"parcial\":0,\"error\":0,\"bloqueo\":0}]}";
         assertFalse(AgentExperience.valid(run.experience)); assertThrows(IllegalArgumentException.class, () -> AgentRun.decode(run.encode()));
