@@ -93,6 +93,18 @@ public final class AgentEngine {
         AgentRun.Pending call = run.pending;
         String repeated = AgentExperience.repeatFeedback(run, call);
         if (repeated != null) {
+            // A failed search is a discovered obstacle. If the original user
+            // supplied exactly one safe public URL, test reading it instead.
+            // Pending is journaled first; normal AgentPolicy runs on the next loop.
+            AgentExperimentOpportunity experiment =
+                    AgentExperimentOpportunity.afterRepeat(run, call);
+            if (experiment != null) {
+                run.pending = new AgentRun.Pending(UUID.randomUUID().toString(),
+                        experiment.tool, experiment.input);
+                run.feedback = experiment.reason;
+                run.skippedRepeats++;
+                checkpoint(run); return;
+            }
             run.pending = null; run.feedback = repeated; run.skippedRepeats++;
             checkpoint(run); return;
         }
