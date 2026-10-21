@@ -26,6 +26,28 @@ public final class VisualMemoryStore {
         return new File(root, id + ".jpg");
     }
 
+    /** La escena de una foto (objetos y relaciones). «.scene» y no «.json»: no cuenta como registro. */
+    public File sceneFile(String id) {
+        if (!VisualMemoryRecord.validId(id)) throw new IllegalArgumentException("Identificador de foto inválido");
+        return new File(root, id + ".scene");
+    }
+
+    public void saveScene(String id, String json) throws IOException {
+        synchronized (LOCK) {
+            if (!root.isDirectory() && !root.mkdirs()) throw new IOException("No se pudo crear el archivo visual");
+            atomicWrite(sceneFile(id), json.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    /** null si esa foto aún no tiene escena. */
+    public String readScene(String id) {
+        try {
+            File f = sceneFile(id);
+            if (!f.isFile() || f.length() > 256 * 1024) return null;
+            return new String(java.nio.file.Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
+        } catch (IOException | IllegalArgumentException unreadable) { return null; }
+    }
+
     public VisualMemoryRecord save(VisualMemoryRecord record, byte[] jpeg) throws IOException {
         synchronized (LOCK) {
             VisualMemoryRecord previous = read(record.id);
