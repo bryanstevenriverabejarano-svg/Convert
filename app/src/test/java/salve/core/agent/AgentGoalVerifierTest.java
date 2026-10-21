@@ -50,6 +50,9 @@ public class AgentGoalVerifierTest {
         r.observations.get(0).fingerprint = AgentExperience.fingerprint("web.read", URL + "/other");
         assertEquals(AgentGoalVerifier.Verdict.NOT_VERIFIED, AgentGoalVerifier.evaluate(r).verdict);
         r.observations.get(0).fingerprint = AgentExperience.fingerprint("web.read", URL);
+        r.observations.get(0).text = "   ";
+        assertEquals(AgentGoalVerifier.Verdict.NOT_VERIFIED, AgentGoalVerifier.evaluate(r).verdict);
+        r.observations.get(0).text = "Contenido externo";
         r.answer = "";
         assertEquals(AgentGoalVerifier.Verdict.NOT_VERIFIED, AgentGoalVerifier.evaluate(r).verdict);
     }
