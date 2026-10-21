@@ -221,8 +221,15 @@ public final class InductiveSkillLab {
         record.addProperty("holdout", holdout);
         return record;
     }
-    /** Learn from examples; holdout is checked exactly once without feedback to synthesis. */
+    /** Read-only audition of an unpromoted skill, without changing the registry. */
+    public synchronized JsonObject preview(JsonObject request, BooleanSupplier stopped) throws Exception {
+        return evaluate(request, stopped, false);
+    }
+    /** Promotion only after an explicit user-controlled authorization checkpoint. */
     public synchronized JsonObject learn(JsonObject request, BooleanSupplier stopped) throws Exception {
+        return evaluate(request, stopped, true);
+    }
+    private JsonObject evaluate(JsonObject request, BooleanSupplier stopped, boolean commit) throws Exception {
         if (request == null) throw new IllegalArgumentException("Petición vacía");
         requireFields(request, "name", "train", "holdout");
         String name = validateName(request.get("name").getAsString());
@@ -260,6 +267,14 @@ public final class InductiveSkillLab {
             }
         }
         if (cancel.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
+        result.addProperty("holdout_passed", true);
+        if (!commit) {
+            result.addProperty("status", "READY_FOR_APPROVAL");
+            result.addProperty("certified", false);
+            result.addProperty("training", train.size());
+            result.addProperty("holdout", holdout.size());
+            return result; // no file write and no registry change
+        }
         Map<String, JsonObject> replacement = new LinkedHashMap<>(learned);
         replacement.put(name, cleanRecord(program, train.size(), holdout.size()));
         JsonObject state = new JsonObject();
@@ -276,6 +291,10 @@ public final class InductiveSkillLab {
         result.addProperty("training", train.size());
         result.addProperty("holdout", holdout.size());
         return result;
+    }
+    /** Read-only application of an audited candidate; never installs a tool. */
+    public static JsonArray simulate(JsonElement program, JsonElement input) {
+        return toJson(execute(parseProgram(program), vector(input)));
     }
     public synchronized JsonArray apply(String name, JsonElement input) {
         JsonObject skill = learned.get(validateName(name));
