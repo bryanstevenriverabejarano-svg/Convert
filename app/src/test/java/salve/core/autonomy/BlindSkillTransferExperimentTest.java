@@ -68,7 +68,9 @@ public class BlindSkillTransferExperimentTest {
             if (n < 6) { // Training looks like mere sorting+dedup.
                 sample.add(n + 1); sample.add(20 - n); sample.add(n + 1); sample.add(17 - n);
             } else { // New development case exposes the missing abs transform.
-                sample.add(-(n + 5)); sample.add(n % 9 + 2);
+                // Sign-paired values force abs BEFORE dedup; avoids a
+                // training-only shortcut that would fail on unseen +/- pairs.
+                sample.add(-(n + 5)); sample.add(n + 5);
                 sample.add(-(n + 5)); sample.add(n % 11 + 1);
             }
             return sample;
