@@ -187,6 +187,80 @@ public class AutonomousToolRuntimeTest {
         catch (java.io.IOException error) { throw new AssertionError(error); }
     }
 
+    private static salve.core.agent.AgentRun failedPlan(String id, String goal) {
+        salve.core.agent.AgentRun run = new salve.core.agent.AgentRun();
+        run.id = id; run.goal = goal; run.status = "PARTIAL";
+        run.updatedAt = System.currentTimeMillis() - 2000;
+        run.observations.add(new salve.core.agent.AgentRun.Observation("tool-" + id,
+                "web.search", "BLOCKED", "No hay estrategia adecuada"));
+        return run;
+    }
+
+    @Test public void repeatedRealPlanFailuresCreateReadOnlySuggestionAndRequireApproval() throws Exception {
+        File file = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
+        java.util.List<salve.core.agent.AgentRun> plans = java.util.Arrays.asList(
+                failedPlan("first", "ordena impares sin repetir"),
+                failedPlan("second", "ordenar impares sin repetir"));
+        assertTrue(runtime.observeFailedPlanHistory(plans, () -> false));
+        File pending = new File(folder.getRoot(), "proposed-inductive-skill.json");
+        File installed = new File(folder.getRoot(), "inductive-skills.json");
+        File cooldown = new File(folder.getRoot(), "auto-skill-suggestion-cooldown.json");
+        assertTrue(pending.isFile());
+        assertTrue(cooldown.isFile());
+        assertFalse(installed.exists());
+        String marker = new String(Files.readAllBytes(cooldown.toPath()), StandardCharsets.UTF_8);
+        assertFalse(marker.contains("ordena"));
+        assertFalse(marker.contains("first"));
+        assertTrue(runtime.pendingSkillSuggestion().contains("NO instalada"));
+        String id = com.google.gson.JsonParser.parseString(
+                new String(Files.readAllBytes(pending.toPath()), StandardCharsets.UTF_8))
+                .getAsJsonObject().get("id").getAsString();
+        AutonomousToolRuntime rebooted = new AutonomousToolRuntime(file);
+        assertFalse(rebooted.observeFailedPlanHistory(plans, () -> false));
+        assertTrue(rebooted.pendingSkillSuggestion().contains("ordenar impares sin repetir"));
+        assertTrue(rebooted.respond("propuestas de habilidades", () -> false).contains(id));
+        assertTrue(rebooted.respond("aprueba habilidad " + id, () -> false)
+                .contains("aprobada, verificada y guardada"));
+        assertTrue(installed.isFile());
+        assertFalse(pending.exists());
+        assertFalse(new AutonomousToolRuntime(file).observeFailedPlanHistory(plans, () -> false));
+    }
+
+    @Test public void dismissedSuggestionStaysSuppressedAcrossRestartsAndPause() throws Exception {
+        File file = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
+        java.util.List<salve.core.agent.AgentRun> plans = java.util.Arrays.asList(
+                failedPlan("one", "ordena pares sin repetir"),
+                failedPlan("two", "ordenar pares sin repetir"));
+        assertTrue(runtime.observeFailedPlanHistory(plans, () -> false));
+        File pending = new File(folder.getRoot(), "proposed-inductive-skill.json");
+        String id = com.google.gson.JsonParser.parseString(
+                new String(Files.readAllBytes(pending.toPath()), StandardCharsets.UTF_8))
+                .getAsJsonObject().get("id").getAsString();
+        assertTrue(runtime.respond("descarta habilidad " + id, () -> false)
+                .contains("descartada"));
+        assertFalse(pending.exists());
+        AutonomousToolRuntime reopened = new AutonomousToolRuntime(file);
+        assertFalse(reopened.observeFailedPlanHistory(plans, () -> false));
+        assertEquals("", reopened.pendingSkillSuggestion());
+        reopened.pause();
+        assertFalse(reopened.observeFailedPlanHistory(plans, () -> false));
+        assertFalse(new File(folder.getRoot(), "inductive-skills.json").exists());
+    }
+
+    @Test public void observerRefusesSingleFailureAndStopWithoutWritingFiles() {
+        File file = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
+        java.util.List<salve.core.agent.AgentRun> plans = java.util.Arrays.asList(
+                failedPlan("one", "ordena pares sin repetir"),
+                failedPlan("two", "ordena pares sin repetir"));
+        assertFalse(runtime.observeFailedPlanHistory(plans.subList(0, 1), () -> false));
+        assertFalse(runtime.observeFailedPlanHistory(plans, () -> true));
+        assertFalse(new File(folder.getRoot(), "proposed-inductive-skill.json").exists());
+        assertFalse(new File(folder.getRoot(), "auto-skill-suggestion-cooldown.json").exists());
+    }
+
     @Test public void proceduralMemorySurvivesRestartWithoutExposingChallengeData() {
         File file = new File(folder.getRoot(), "tools.json");
         AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);

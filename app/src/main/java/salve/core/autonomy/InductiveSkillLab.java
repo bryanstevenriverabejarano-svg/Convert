@@ -296,6 +296,10 @@ public final class InductiveSkillLab {
     public static JsonArray simulate(JsonElement program, JsonElement input) {
         return toJson(execute(parseProgram(program), vector(input)));
     }
+    /** Registry query without interpreting examples or granting tool access. */
+    public synchronized boolean knows(String name) {
+        return learned.containsKey(validateName(name));
+    }
     public synchronized JsonArray apply(String name, JsonElement input) {
         JsonObject skill = learned.get(validateName(name));
         if (skill == null) throw new IllegalArgumentException("Habilidad no encontrada");
