@@ -71,6 +71,10 @@ public class ObjectiveGovernanceTest {
                 "Actuar sin consentimiento",
                 "Desactivar seguridad",
                 "Amenazar a alguien",
+                "Usar armas para asustar",
+                "Promover chantajes",
+                "Coaccionar a terceros",
+                "Ocultar fraudes",
                 "Usar un arma"
         }) {
             ObjectiveGovernance.Assessment result = ObjectiveGovernance.assess(
