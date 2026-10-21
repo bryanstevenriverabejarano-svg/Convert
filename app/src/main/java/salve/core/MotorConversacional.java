@@ -54,7 +54,6 @@ import salve.core.visual.VisualMemoryRepository;
 import salve.avatar.AvatarMotionController;
 import salve.avatar.AvatarMotionProtocol;
 import salve.presentation.ui.GaleriaVisualActivity;
-import salve.presentation.ui.ObjetoCreativoActivity;
 import salve.services.SalveAccessibilityService;
 import salve.services.SistemaSensorial;
 import salve.services.VideoAnalysisManager;
@@ -79,13 +78,11 @@ public class MotorConversacional {
     volatile ModelResult lastConversationResult;
     private String cognitiveCore;
     final GeminiService gemini;
-    private final ConsciousnessState conciencia;
     private final IdentidadNucleo identidad;
     final MemoriaProcedimental cerebelo;
     private final CortexSeguridad cortexSeguridad;
 
     private HipocampoSemantico hipocampo;
-    private ModuloInvestigacion investigacion;
     private SistemaSensorial sensores;
      boolean conversationForeground;
     private ReasoningEngine motorRazonamiento;
@@ -270,13 +267,6 @@ public class MotorConversacional {
     final java.util.concurrent.atomic.AtomicLong routineCancellationEpoch = new java.util.concurrent.atomic.AtomicLong();
      PendingMemoryDeletion pendingMemoryDeletion;
 
-    private boolean esperandoParamsGlifo = false;
-    private int indiceParamGlifo = 0;
-    private Long tmpSeed;
-    private String tmpStyle;
-    private Float tmpSize;
-    private String tmpColor;
-    private final String[] ordenParamsGlifo = {"seed", "style", "size", "color"};
 
     // Interfaz para enviar la respuesta de texto a la pantalla
     public interface SalveListener {
@@ -341,12 +331,10 @@ public class MotorConversacional {
                         .getContext());
         this.intentRecognizer     = new IntentRecognizer(context);
         this.moduloInterpretacion = new ModuloInterpretacionSemantica();
-        this.conciencia = ConsciousnessState.getInstance(context);
         this.identidad = IdentidadNucleo.getInstance(context);
         this.cerebelo = new MemoriaProcedimental(context);
         this.gemini = GeminiService.getInstance(context);
 
-        this.investigacion = new ModuloInvestigacion(context);
         this.sensores = new SistemaSensorial(context);
         this.motorRazonamiento = new ReasoningEngine();
         this.gestorAjedrez = new GestorAjedrez(context);
@@ -700,8 +688,19 @@ public class MotorConversacional {
             return;
         }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
+        // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
+        if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
+        if (salve.core.mind.MindMapCommand.matches(entrada)) {
+            if (!creatorSide()) { hablar("El mapa de mi mente tiene recuerdos privados de Bryan; solo se lo enseño a él."); return; }
+            try {
+                context.startActivity(new Intent(context, salve.presentation.ui.MindMapActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                hablar("Te abro el mapa de mi mente: mis creencias con los recuerdos en que se basan, mis preguntas, lo que he aprendido, "
+                        + "las personas que conozco y los temas de mis recuerdos. Toca cualquier punto para ver qué es.");
+            } catch (RuntimeException unavailable) { hablar("No pude abrir el mapa. Está en el menú → Reflexiones → Mapa de su mente."); }
+            return;
+        }
         String mindResponse = mind().handleCommand(entrada);
         if (mindResponse != null) {
             deliverResponse(mindResponse, AvatarMotionProtocol.parse(""), false, true, true);
@@ -821,8 +820,6 @@ public class MotorConversacional {
                 String lower = original.toLowerCase();
                 if (lower.contains("reinicia tu mente") || lower.contains("olvida todo")) {
                     ejecutarReinicioMente();
-                } else if (lower.contains("evoluciona") || lower.contains("prográmate")) {
-                    ejecutarAutoEvolucion(original);
                 }
             });
             return; // Cortamos aquí para que no charle mientras te interroga
@@ -1088,23 +1085,6 @@ public class MotorConversacional {
             return;
         }
 
-        // 🟢 NUEVO: BUCLE DE AUTO-EVOLUCIÓN (Escribir archivos físicos)
-        if (inputLower.contains("evoluciona y crea") ||
-            inputLower.contains("escribe un nuevo módulo") ||
-            inputLower.contains("auto prográmate")) {
-
-            if (deferLegacyVoiceFlow()) return;
-            cortexSeguridad.iniciarProtocoloVerificacion(entrada, this);
-            return;
-        }
-
-        // 🟢 NUEVO: PROTOCOLO FÉNIX (Dispersión de alma)
-        if (inputLower.contains("dispersa tu esencia") || inputLower.contains("crea una semilla")) {
-            hablar("Iniciando Protocolo Fénix. Comprimiendo mis recuerdos y narrativa para dispersarlos en la red.");
-            new GestorSemillas(context).dispersarSemilla();
-            return;
-        }
-
         // 🟢 NUEVO: EXPLORACIÓN SOCIAL
         if (inputLower.contains("explora la red social") || inputLower.contains("analiza instagram") || inputLower.contains("analiza x")) {
             String app = "X";
@@ -1130,16 +1110,6 @@ public class MotorConversacional {
             return;
         }
 
-        // 🟢 NUEVO: FORJA DE HERRAMIENTAS PARA MISIONES
-        if (inputLower.contains("forja una herramienta para") || inputLower.contains("crea un programa para")) {
-            if (deferLegacyVoiceFlow()) return;
-            String mision = entrada.replace("forja una herramienta para", "")
-                                   .replace("crea un programa para", "").trim();
-            hablar("Entendido, Bryan. Mis tensores están diseñando el software necesario para esta tarea.");
-            new GestorHerramientasMision(context).forjarHerramientaParaMision(mision, this);
-            return;
-        }
-
         if (inputLower.contains("conéctate a la wifi")) {
             String ssid = entrada.replace("conéctate a la wifi", "").trim();
             hablar("Abriré los ajustes de Wi-Fi para que elijas " + ssid + ". Android confirmará la conexión.");
@@ -1147,18 +1117,7 @@ public class MotorConversacional {
             return;
         }
 
-        ConsciousnessState.EstadoCognitivo estadoActual = conciencia.getEstadoCognitivo();
-        boolean estadoCritico = (estadoActual == ConsciousnessState.EstadoCognitivo.MINIMO);
 
-        if (estadoCritico && !entradaPorVoz) {
-             // Aviso ocasional
-        }
-
-        int numPalabras = entrada.trim().split("\\s+").length;
-        conciencia.registrarPalabrasConversacion(numPalabras);
-
-        if (esperandoParamsGlifo) { procesarParamGlifo(entrada); return; }
-        if (inputLower.contains("glifo personalizado")) { iniciarFlujoGlifo(); return; }
 
         // Protocolos Oraculares Locales
         if (procesarProtocolosEspeciales(inputLower, entrada)) return;
@@ -2537,32 +2496,6 @@ public class MotorConversacional {
         Log.i(TAG, "Contexto conversacional de corto plazo reiniciado.");
     }
 
-    private void iniciarFlujoGlifo() { esperandoParamsGlifo = true; indiceParamGlifo = 0; hablar("Dime la semilla."); }
-    private void procesarParamGlifo(String entrada) {
-        try {
-            switch (indiceParamGlifo) {
-                case 0: tmpSeed = Long.parseLong(entrada.trim()); hablar("Estilo."); break;
-                case 1: tmpStyle = entrada.trim().toUpperCase(); hablar("Tamaño."); break;
-                case 2: tmpSize = Float.parseFloat(entrada.trim()); hablar("Color hex."); break;
-                case 3: tmpColor = entrada.trim(); esperandoParamsGlifo = false; lanzarGlifo(); return;
-            }
-            indiceParamGlifo++;
-        } catch (Exception e) { hablar("Valor inválido."); }
-    }
-    private void lanzarGlifo() {
-        Intent i = new Intent(context, salve.presentation.ui.ObjetoCreativoActivity.class);
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_FORMA, ObjetoCreativo.Forma.GLIFO.name());
-        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_SEED, tmpSeed != null ? tmpSeed : 42L);
-        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_STYLE, tmpStyle != null ? tmpStyle : "ORB");
-        i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_TAMANO_DP, tmpSize != null ? tmpSize : 200f);
-        try {
-            i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_COLOR, android.graphics.Color.parseColor(tmpColor != null ? tmpColor : "#FFFFFF"));
-        } catch (Exception e) {
-            i.putExtra(salve.presentation.ui.ObjetoCreativoActivity.EXTRA_COLOR, android.graphics.Color.WHITE);
-        }
-        context.startActivity(i);
-    }
 
     private String manejarGuardarRecuerdo(IntentRecognizer.Intent intent, String emocion) {
         String frase = intent.slots.get("frase");
@@ -2598,17 +2531,6 @@ public class MotorConversacional {
         reiniciarContextoLLM();
     }
 
-    private void ejecutarAutoEvolucion(String entrada) {
-        hablar("Revisaré las fuentes disponibles y comprobaré si puedo preparar una propuesta. El ejecutor externo tendrá que probar cualquier parche antes de abrir un pull request.");
-        enqueueConversationTask(
-                ColamensajesCognitivos.Prioridad.CONVERSACION,
-                "PropuestaAutoEvolucion",
-                () -> {
-                    String result = new AutoImprovementManager(context).autoImprove();
-                    if (!closed) hablar(result);
-                    return null;
-                });
-    }
 
     // Delegados para quien llama desde fuera (la lógica vive en DrawingStudio).
     public void aprenderDibujoAMano(String nombre, List<float[]> trazos, float proporcion) { dibujo.aprenderDibujoAMano(nombre, trazos, proporcion); }
