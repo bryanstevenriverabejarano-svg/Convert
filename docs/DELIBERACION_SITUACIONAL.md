@@ -39,10 +39,11 @@ Salve ya usa `CognitivePrompt` + `CognitiveTurn` para decidir entre respuesta y 
 
 - `type`: `POTENTIAL_CONFLICT`, `DECISION_REQUEST` o `TIME_CONSTRAINT`.
 - `user_fragments_unverified`: fragmentos literales, acotados y atribuibles al usuario. Son prioridades **candidatas**, no hechos verificados ni preferencias inferidas.
-- `possible_time_pressure`: indicio textual, no una medición del reloj ni prueba de urgencia.
-- `decision_rule`: comparar alternativas, conservar opciones y no asumir emociones ni permisos.
+- `time_hint`: indicio textual, no una medición del reloj ni prueba de urgencia.
+- `checks`: criterios a evaluar — urgencia, irreversibilidad, coste de oportunidad, personas afectadas e incertidumbre.
+- `approaches`: alternativas procedimentales candidatas (preservar objetivos, explicar el conflicto y aclarar sólo lo decisivo); no son órdenes ejecutables.
 - `tool_available`: indicador de catálogo no vacío, **no** concesión de permiso.
-- `receipts_observed_not_goal_proof`: estados limitados de recibos del controlador, sin volver a insertar el contenido bruto de herramientas ni convertir `completed` en éxito real externo.
+- `receipts_not_proof`: estados limitados de recibos del controlador, sin volver a insertar el contenido bruto de herramientas ni convertir `completed` en éxito real externo.
 
 El marco se recalcula al recibir nuevas observaciones dentro de la inferencia normal (sin otro modelo ni inferencias adicionales) y se omite en turnos corrientes para ahorrar memoria. El presupuesto limita su tamaño; si no cabe, se omite y permanece la instrucción de deliberación en el núcleo. `CognitiveTurn` mantiene autorización, validación de herramienta, cancelación, límites y recibos.
 
