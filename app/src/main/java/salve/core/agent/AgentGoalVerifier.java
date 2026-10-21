@@ -44,6 +44,7 @@ public final class AgentGoalVerifier {
                     || !"web.read".equals(observed.tool)
                     || !expected.equals(observed.fingerprint)
                     || observed.sources == null || !observed.sources.contains(address)
+                    || observed.text == null || observed.text.trim().isEmpty()
                     || !run.evidence.contains(observed.id)) continue;
             if ("SUCCESS".equals(observed.status) && run.answer != null
                     && !run.answer.trim().isEmpty())
