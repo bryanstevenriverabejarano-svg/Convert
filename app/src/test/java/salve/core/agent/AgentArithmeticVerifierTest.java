@@ -75,6 +75,26 @@ public class AgentArithmeticVerifierTest {
         assertEquals(AgentGoalVerifier.Verdict.UNKNOWN,
                 AgentGoalVerifier.evaluate(run).verdict);
     }
+    @Test public void ninetySixUnseenDeterministicCasesRejectAllMutatedAnswers() {
+        java.util.Random unseen = new java.util.Random(0x51A1E);
+        for (int i = 0; i < 96; i++) {
+            int a = unseen.nextInt(2_000_001) - 1_000_000;
+            int b = unseen.nextInt(2_000_001) - 1_000_000;
+            char operation = i % 3 == 0 ? '+' : i % 3 == 1 ? '-' : '*';
+            String goal = "Calcula " + a + " " + operation + " " + b;
+            AgentArithmeticTask task = AgentArithmeticTask.parse(goal);
+            assertNotNull(goal, task);
+            String exact = task.referenceResult().toString();
+            AgentRun run = run(goal, exact, "RESULTADO_ARITMETICO=" + task.calculateLocally(),
+                    "SUCCESS");
+            assertEquals(goal, AgentGoalVerifier.Verdict.VERIFIED,
+                    AgentGoalVerifier.evaluate(run).verdict);
+            run.answer = task.referenceResult().add(java.math.BigInteger.ONE).toString();
+            assertEquals(goal, AgentGoalVerifier.Verdict.NOT_VERIFIED,
+                    AgentGoalVerifier.evaluate(run).verdict);
+        }
+    }
+
     @Test public void existingUrlAndMultiStepVerifiersRemainSupported() {
         AgentRun run = new AgentRun();
         run.goal = "Lee https://example.org/manual";
