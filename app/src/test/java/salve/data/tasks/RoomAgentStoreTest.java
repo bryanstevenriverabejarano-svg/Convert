@@ -88,6 +88,43 @@ public class RoomAgentStoreTest {
         }, tools("SUCCESS"));
         assertEquals("SUCCEEDED", done.status); assertEquals(1, done.observations.size());
     }
+    @Test public void directPublicReadIsIndependentlyVerifiedAndSurvivesRestart() {
+        String url = "https://example.org/manual";
+        AgentRun created = store.create("Lee " + url, false, "", now);
+        AgentEngine.Model model = prompt -> {
+            JsonObject data = JsonParser.parseString(
+                    prompt.substring(prompt.indexOf("DATOS=") + 6)).getAsJsonObject();
+            if (data.has("respuesta"))
+                return response("{\"verdict\":\"pass\",\"issue\":\"\"}");
+            if (data.getAsJsonArray("observaciones").isEmpty())
+                return response("{\"tool\":\"web.read\",\"input\":\"" + url + "\"}");
+            String id = data.getAsJsonArray("observaciones").get(0).getAsJsonObject()
+                    .get("id").getAsString();
+            return response("{\"answer\":\"He leído el documento.\",\"evidence\":[\"" + id + "\"]}");
+        };
+        AgentEngine.Tools tools = new AgentEngine.Tools() {
+            public String capabilities(AgentRun run) { return "web.read"; }
+            public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call,
+                                                java.util.function.BooleanSupplier stopped) {
+                assertEquals("web.read", call.tool);
+                assertEquals(url, call.input);
+                AgentRun.Observation o = new AgentRun.Observation(call.id, call.tool,
+                        "SUCCESS", "Página recibida");
+                o.sources.add(url);
+                return o;
+            }
+        };
+        AgentRun finished = execute(created.id, model, tools);
+        assertEquals("SUCCEEDED", finished.status);
+        assertEquals("VERIFIED", finished.goalVerification);
+        assertEquals("PUBLIC_READ", finished.verificationCriterion);
+        assertEquals(finished.evidence.get(0), finished.verificationEvidence);
+        db.close(); open();
+        AgentRun restored = store.get(created.id);
+        assertEquals("VERIFIED", restored.goalVerification);
+        assertEquals(finished.verificationEvidence, restored.verificationEvidence);
+    }
+
     @Test public void partialEvidenceCannotBecomeFullSuccessByModelVote() {
         assertEquals("PARTIAL", execute(create().id, model(), tools("PARTIAL")).status); assertEquals(1, memories());
     }
