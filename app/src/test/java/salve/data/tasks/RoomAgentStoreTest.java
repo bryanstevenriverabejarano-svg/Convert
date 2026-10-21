@@ -134,6 +134,71 @@ public class RoomAgentStoreTest {
         assertEquals(1, memories());
     }
 
+    @Test public void arithmeticOutputOracleSurvivesRoomAndCannotBeOverriddenByModelPass() {
+        String goal = "Calcula -491 * 37";
+        AgentRun created = store.create(goal, false, "", now);
+        AgentEngine.Tools math = new AgentEngine.Tools() {
+            @Override public String capabilities(AgentRun run) { return "math.compute: local"; }
+            @Override public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call,
+                    java.util.function.BooleanSupplier stop) {
+                assertEquals("math.compute", call.tool);
+                assertEquals(goal, call.input);
+                long result = AgentArithmeticTask.parse(run.goal).calculateLocally();
+                return new AgentRun.Observation(call.id, call.tool, "SUCCESS",
+                        "RESULTADO_ARITMETICO=" + result);
+            }
+        };
+        AgentEngine.Model model = prompt -> {
+            JsonObject data = JsonParser.parseString(
+                    prompt.substring(prompt.indexOf("DATOS=") + 6)).getAsJsonObject();
+            if (data.has("respuesta"))
+                return response("{\"verdict\":\"pass\",\"issue\":\"\"}");
+            com.google.gson.JsonArray observations = data.getAsJsonArray("observaciones");
+            if (observations.isEmpty())
+                return response("{\"tool\":\"math.compute\",\"input\":\"" + goal + "\"}");
+            String receipt = observations.get(0).getAsJsonObject().get("id").getAsString();
+            return response("{\"answer\":\"-18167\",\"evidence\":[\"" + receipt + "\"]}");
+        };
+        AgentRun done = execute(created.id, model, math);
+        assertEquals("SUCCEEDED", done.status);
+        assertEquals("VERIFIED", done.goalVerification);
+        assertEquals("ARITHMETIC_EXACT", done.verificationCriterion);
+        assertEquals(done.observations.get(0).id, done.verificationEvidence);
+        db.close(); open();
+        AgentRun restored = store.get(created.id);
+        assertEquals("VERIFIED", restored.goalVerification);
+        assertEquals(done.verificationEvidence, restored.verificationEvidence);
+    }
+
+    @Test public void modelPassCannotMarkWrongArithmeticAnswerSucceeded() {
+        String goal = "Calcula 125 + 87";
+        AgentRun created = store.create(goal, false, "", now);
+        AgentEngine.Model wrong = prompt -> {
+            JsonObject data = JsonParser.parseString(
+                    prompt.substring(prompt.indexOf("DATOS=") + 6)).getAsJsonObject();
+            if (data.has("respuesta"))
+                return response("{\"verdict\":\"pass\",\"issue\":\"\"}");
+            com.google.gson.JsonArray observations = data.getAsJsonArray("observaciones");
+            if (observations.isEmpty())
+                return response("{\"tool\":\"math.compute\",\"input\":\"" + goal + "\"}");
+            String receipt = observations.get(0).getAsJsonObject().get("id").getAsString();
+            return response("{\"answer\":\"211\",\"evidence\":[\"" + receipt + "\"]}");
+        };
+        AgentEngine.Tools math = new AgentEngine.Tools() {
+            @Override public String capabilities(AgentRun run) { return "math.compute"; }
+            @Override public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call,
+                    java.util.function.BooleanSupplier stop) {
+                return new AgentRun.Observation(call.id, call.tool, "SUCCESS",
+                        "RESULTADO_ARITMETICO=212");
+            }
+        };
+        AgentRun finished = execute(created.id, wrong, math);
+        assertEquals("PARTIAL", finished.status);
+        assertEquals("NOT_VERIFIED", finished.goalVerification);
+        assertTrue(finished.error.contains("aritmética independiente"));
+        assertEquals(1, finished.observations.size());
+    }
+
     @Test public void directPublicReadIsIndependentlyVerifiedAndSurvivesRestart() {
         String url = "https://example.org/manual";
         AgentRun created = store.create("Lee " + url, false, "", now);
