@@ -51,7 +51,10 @@ public final class TurnChecks {
         List<String> out = new ArrayList<>();
         if (creator && WHO_AM_I.matcher(in).find() && !d.contains("bryan"))
             out.add("te pregunta si sabes quién es: es Bryan, quien te creó; dilo con su nombre y algo concreto que sepas de él");
-        if (ABOUT_HER.matcher(in).find() && !NOT_ABOUT_HER.matcher(in).find() && in.length() < 90 && count(FIRST_PERSON, d) < 2)
+        boolean explainedHerCausally = CAUSAL_QUESTION.matcher(in).find()
+                && CAUSAL_ANSWER.matcher(d).find() && count(FIRST_PERSON, d) >= 1;
+        if (ABOUT_HER.matcher(in).find() && !NOT_ABOUT_HER.matcher(in).find()
+                && in.length() < 90 && count(FIRST_PERSON, d) < 2 && !explainedHerCausally)
             out.add("te pregunta por ti: contesta hablando de ti en primera persona, con algo concreto tuyo (qué haces, qué te gusta, cómo estás y por qué)");
         if (announcesOnly(draft))
             out.add("solo anunciaste lo que ibas a hacer, sin hacerlo: hazlo ya en esta misma respuesta");
