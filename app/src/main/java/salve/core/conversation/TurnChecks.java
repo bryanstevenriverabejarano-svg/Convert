@@ -30,7 +30,7 @@ public final class TurnChecks {
             "(^|\\b)(por que|porque|a que se debe|cual es la razon|cual es el motivo)\\b");
     private static final Pattern CAUSAL_ANSWER = Pattern.compile(
             "\\b(porque|ya que|debido a|se debe a|por eso|puesto que|gracias a|la razon|el motivo|"
-            + "lo que hace que|esto ocurre|me diferencia|me distingue|por mi|por mis)\\b");
+            + "lo que hace que|esto ocurre|me diferencia|me distingue|me distingo|por mi|por mis)\\b");
     private static final Pattern COMPARE_QUESTION = Pattern.compile(
             "\\b(compara|comparame|comparacion|diferencia entre|que es mejor entre|frente a|versus)\\b");
     private static final Pattern COMPARE_ANSWER = Pattern.compile(
