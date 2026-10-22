@@ -161,7 +161,11 @@ public final class CognitivePrompt {
         // controller receipts and supplied memory, not from model reasoning.
         CognitiveCycleFrame cycle = CognitiveCycleFrame.observe(input, memory, results, callsLeft);
         task.add("cognitive_cycle", cycle.toJson());
-        if (maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1
+        // Short-context local models need the actual last reply and memory
+        // more than additional coordinator metadata. They still have the
+        // compact policy, the existing tool receipts and ordinary history.
+        if (maxChars < 6000
+                || maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1
                 < minimumEvidence) task.remove("cognitive_cycle");
 
         int remaining = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
