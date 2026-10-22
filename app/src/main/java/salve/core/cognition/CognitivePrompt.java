@@ -157,6 +157,12 @@ public final class CognitivePrompt {
         // adding metadata, particularly on 3k-character prompts.
         int minimumEvidence = Math.max(230, Math.min(600, (input == null ? 0 : input.length()) + 160));
         if (cohesionRemaining < minimumEvidence) task.remove("cohesion");
+        // One observable checkpoint across EACH inference: evidence comes from
+        // controller receipts and supplied memory, not from model reasoning.
+        CognitiveCycleFrame cycle = CognitiveCycleFrame.observe(input, memory, results, callsLeft);
+        task.add("cognitive_cycle", cycle.toJson());
+        if (maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1
+                < minimumEvidence) task.remove("cognitive_cycle");
 
         int remaining = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
         if (remaining < 120) throw new IllegalArgumentException("Catálogo o estado demasiado grande para el contexto");
