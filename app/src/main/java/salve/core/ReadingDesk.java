@@ -37,18 +37,38 @@ final class ReadingDesk {
 
     /** Lo que Bryan le da para leer y para qué (la lectura en voz alta, si la pide, la hace la pantalla). */
     void leer(String name, String text, DocumentReading.Mode mode) {
+        leer(name, text, mode, mode == DocumentReading.Mode.STORY, mode != DocumentReading.Mode.LEARN, mode != DocumentReading.Mode.OPINION);
+    }
+
+    /**
+     * @param illustrate ilustrar lo que se pueda dibujar
+     * @param opinion dar su opinión sincera
+     * @param save guardarlo (cuento: estantería y recuerdos; si no, recuerdos)
+     */
+    void leer(String name, String text, DocumentReading.Mode mode, boolean illustrate, boolean opinion, boolean save) {
         if (text == null || text.trim().isEmpty()) { m.hablar("No he encontrado texto en ese documento. Si es escaneado, mándamelo como fotos."); return; }
         String title = cleanTitle(name);
         DocumentReading.Plan plan = DocumentReading.plan(text);
         m.hablar("Voy a leer «" + title + "» con calma" + (plan.chunks.size() > 1 ? ", en " + plan.chunks.size() + " partes" : "")
-                + ": " + (mode == DocumentReading.Mode.STORY ? "lo entenderé, lo ilustraré y lo guardaré en mis cuentos."
-                : mode == DocumentReading.Mode.LEARN ? "sacaré lo importante y lo guardaré en mis recuerdos."
-                : "lo analizaré y te daré mi opinión, sin guardarlo.") + " Puedes seguir hablando conmigo mientras.");
-        try { reader.execute(() -> leerAhora(title, text, plan, mode)); }
+                + ": " + plannedWork(mode, illustrate, opinion, save) + " Puedes seguir hablando conmigo mientras.");
+        try { reader.execute(() -> leerAhora(title, text, plan, mode, illustrate, opinion, save)); }
         catch (java.util.concurrent.RejectedExecutionException closed) { /* la app se cierra */ }
     }
 
-    private void leerAhora(String title, String text, DocumentReading.Plan plan, DocumentReading.Mode mode) {
+    /** «lo entenderé, lo ilustraré, te diré qué me parece y lo guardaré en mis cuentos.» */
+    static String plannedWork(DocumentReading.Mode mode, boolean illustrate, boolean opinion, boolean save) {
+        List<String> parts = new ArrayList<>();
+        parts.add(mode == DocumentReading.Mode.STORY ? "lo entenderé" : mode == DocumentReading.Mode.LEARN ? "sacaré lo importante" : "lo analizaré");
+        if (illustrate) parts.add("lo ilustraré");
+        if (opinion) parts.add("te diré qué me parece");
+        parts.add(save ? (mode == DocumentReading.Mode.STORY ? "lo guardaré en mis cuentos" : "lo guardaré en mis recuerdos") : "no lo guardaré");
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < parts.size(); i++) b.append(i == 0 ? "" : i == parts.size() - 1 ? " y " : ", ").append(parts.get(i));
+        return b.append('.').toString();
+    }
+
+    private void leerAhora(String title, String text, DocumentReading.Plan plan, DocumentReading.Mode mode,
+                           boolean illustrate, boolean opinion, boolean save) {
         try {
             if (m.llm == null) { m.hablar("Ahora no tengo un modelo cargado para leer. Prueba en un momento."); return; }
             List<String> notes = new ArrayList<>();
@@ -63,32 +83,36 @@ final class ReadingDesk {
                 } else notes.add("(no pude tomar notas de esta parte)");
             }
             m.estado("Pensando en lo que he leído…");
-            ModelResult fin = m.llm.generateResult(DocumentReading.finalPrompt(mode, title, notes, plan.sampled()), SalveLLM.Role.CONVERSACIONAL);
+            ModelResult fin = m.llm.generateResult(DocumentReading.finalPrompt(mode, title, notes, plan.sampled(), opinion), SalveLLM.Role.CONVERSACIONAL);
             if (!fin.isSuccess()) { m.hablar("He leído «" + title + "», pero no he conseguido terminar de analizarlo. Pídemelo otra vez en un rato."); return; }
             DocumentReading.Analysis a = DocumentReading.parse(mode, fin.getText(), title);
             String date = salve.core.mind.Biography.date(System.currentTimeMillis());
             boolean saved = false;
-            if (mode == DocumentReading.Mode.STORY) {
+            if (save && mode == DocumentReading.Mode.STORY) {
                 String file = guardarTexto(a.title, text);
                 shelf().add(a, file);
                 List<String> tags = new ArrayList<>(java.util.Arrays.asList("cuento", "lectura"));
                 for (String c : a.characterNames()) if (tags.size() < 8) tags.add(c);
                 m.memoria.guardarRecuerdo(a.memoryText(date), "alegria", 6, tags);
                 saved = true;
-            } else if (mode == DocumentReading.Mode.LEARN) {
-                m.memoria.guardarRecuerdo(a.memoryText(date), "curiosidad", 6, java.util.Arrays.asList("lectura", "documento", "aprendizaje"));
+            } else if (save) {
+                m.memoria.guardarRecuerdo(a.memoryText(date), "curiosidad", 6, java.util.Arrays.asList("lectura", "documento",
+                        mode == DocumentReading.Mode.LEARN ? "aprendizaje" : "opinion"));
                 saved = true;
             }
             if (saved) m.mind().indexNewMemoriesAsync();
             m.registrarAccion(salve.core.mind.SelfActionLog.Kind.READ, "«" + a.title + "»",
-                    mode == DocumentReading.Mode.STORY ? "lo leí, lo entendí y lo guardé en mis cuentos"
-                            : mode == DocumentReading.Mode.LEARN ? "lo leí y guardé lo que aprendí" : "lo leí y di mi opinión sin guardarlo");
-            String told = a.spoken(saved, plan.sampled());
-            // Un cuento se cuenta con dibujos: cada escena que reconoce en su repertorio lleva el suyo.
-            if (mode == DocumentReading.Mode.STORY) {
+                    "lo leí y " + plannedWork(mode, illustrate, opinion, saved).replace("lo entenderé", "lo entendí")
+                            .replace("sacaré", "saqué").replace("lo analizaré", "lo analicé").replace("lo ilustraré", "lo ilustré")
+                            .replace("te diré", "te dije").replace("lo guardaré", "lo guardé").replace("no lo guardaré", "no lo guardé"));
+            String told = a.spoken(saved, plan.sampled(), opinion, illustrate);
+            // Ilustrado: cada escena o cosa que reconoce en su repertorio lleva su dibujo.
+            if (illustrate) {
                 salve.sketch.SketchLibrary library = salve.sketch.Sketches.library(m.context);
                 if (library != null) told = salve.sketch.StoryIllustrator.annotate(told, library, false);
             }
+            // Si me lo está leyendo en voz alta, espero a que termine: hablar ahora lo cortaría.
+            for (int waited = 0; waited < 1800 && m.leyendoEnVozAlta(); waited++) Thread.sleep(1000);
             m.hablar(told);
         } catch (Exception failure) {
             Log.w(MotorConversacional.TAG, "Lectura interrumpida: " + failure.getClass().getSimpleName());
@@ -134,7 +158,8 @@ final class ReadingDesk {
 
     /** «El_dragon-final.pdf» → «El dragon final». */
     static String cleanTitle(String name) {
-        String t = name == null ? "" : name.replaceAll("(?i)\\.(pdf|txt|md)$", "").replaceAll("[_]+", " ").replaceAll("\\s+", " ").trim();
+        String t = name == null ? "" : name.replaceAll("(?i)\\.(pdf|txt|md)$", "").replaceAll("\\s*\\(\\d+\\)$", "")
+                .replaceAll("[_]+", " ").replaceAll("\\s+", " ").trim();
         return t.isEmpty() ? "el documento" : t;
     }
 }
