@@ -114,6 +114,10 @@ public final class CuriosityCycle {
             for (String sentence : text.replaceAll("\\s+", " ").split("(?<=[.!?])\\s+")) {
                 String s = sentence.trim();
                 if (s.length() < 40 || s.length() > 300 || s.contains("cookies") || s.contains("©")) continue;
+                // A page may share two words without addressing the question.
+                // Require those terms in the SAME extracted claim: never
+                // persist a random introductory sentence as the finding.
+                if (!keys.isEmpty() && !relevant(s, keys)) continue;
                 if (out.length() + s.length() > MAX_SUMMARY) break;
                 if (out.length() > 0) out.append(' ');
                 out.append(s);
