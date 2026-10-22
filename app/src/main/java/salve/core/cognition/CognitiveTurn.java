@@ -43,7 +43,8 @@ public final class CognitiveTurn {
     public static Outcome run(Model model, Map<String, Tool> available, BooleanSupplier cancelled) {
         Map<String, Tool> tools = new LinkedHashMap<>(available);
         JsonArray receipts = new JsonArray();
-        Set<String> used = new HashSet<>(); // one invocation per tool per turn; no repeated failed side effects
+        Set<String> used = new HashSet<>(); // side-effecting tools never repeat in a turn
+        Set<String> webQueries = new HashSet<>(); // only changed public searches may repeat
         boolean repaired = false, repair = false, toolsClosed = false;
         int actions = 0;
         long deadline = System.nanoTime() + 180_000_000_000L;
@@ -74,13 +75,26 @@ public final class CognitiveTurn {
             if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Me quedé sin tiempo antes de hacerlo, así que no lo hice", receipts);
             Tool tool = tools.get(reply.name);
             if (tool == null) return stopped(ModelResult.Status.ERROR, "Intenté hacer algo que ahora no tengo disponible, así que no lo hice", receipts);
-            if (toolsClosed || actions >= MAX_TOOLS || used.contains(reply.name) || call == MAX_INFERENCES - 1) {
+            // A new read-only web query can follow a first result. Never retry
+            // the same query and NEVER repeat device/cloud/write operations.
+            String publicQuery = null;
+            if ("web.search".equals(reply.name) && reply.arguments.has("query")
+                    && reply.arguments.get("query").isJsonPrimitive()
+                    && reply.arguments.get("query").getAsJsonPrimitive().isString())
+                publicQuery = reply.arguments.get("query").getAsString().trim().toLowerCase(java.util.Locale.ROOT);
+            boolean newPublicSearch = "web.search".equals(reply.name)
+                    && publicQuery != null && publicQuery.length() >= 3
+                    && !webQueries.contains(publicQuery);
+            if (toolsClosed || actions >= MAX_TOOLS
+                    || used.contains(reply.name) && !newPublicSearch
+                    || call == MAX_INFERENCES - 1) {
                 // Pedir otra vez lo que ya tiene (memory.lookup dos veces) no es un fallo para Bryan:
                 // se le cierran las herramientas y responde con los resultados que ya tiene.
                 if (!toolsClosed && !receipts.isEmpty() && call < MAX_INFERENCES - 1) { toolsClosed = true; continue; }
                 return stopped(ModelResult.Status.ERROR, "Me estaba repitiendo, así que paré", receipts);
             }
             used.add(reply.name);
+            if (publicQuery != null) webQueries.add(publicQuery);
             actions++;
             JsonObject receipt = new JsonObject();
             receipt.addProperty("name", reply.name);
