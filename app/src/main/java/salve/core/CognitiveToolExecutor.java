@@ -104,6 +104,21 @@ final class CognitiveToolExecutor {
                         + salve.data.sync.CloudSyncManager.memoryStatus(m.context)
                         + (batch.more ? " Quedan más: sigo en segundo plano." : ""));
             }
+            case salve.core.schema.Abstraction.TOOL: {
+                String concept = CognitiveReply.string(args, "concepto").trim();
+                if (concept.isEmpty() || concept.length() > 60) throw new IllegalArgumentException("Concepto vacío o demasiado largo");
+                salve.core.schema.ConceptStore.Concept c = m.mind().abstractConcept(concept, input, true);
+                if (c == null) {
+                    // Sin anclar: al menos los esquemas que delata la pregunta, con sus consecuencias genéricas.
+                    StringBuilder hint = new StringBuilder("SIN_ANCLAR: no pude descomponer «" + concept + "» ahora; lo haré al soñar.");
+                    for (salve.core.schema.ImageSchemas.Schema s : salve.core.schema.ImageSchemas.detect(input))
+                        hint.append("\n- ").append(s.label).append(": ").append(String.join("; ", s.infer(null, null)));
+                    return new CognitiveTurn.Receipt(hint.toString());
+                }
+                m.registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_LESSON, "pensar «" + concept + "» por dentro",
+                        "lo descompuse en " + c.schemas.size() + (c.schemas.size() == 1 ? " esquema" : " esquemas"));
+                return new CognitiveTurn.Receipt(salve.core.schema.ConceptStore.reasoning(c));
+            }
             case "runtime.status": {
                 ModelResult last = m.lastConversationResult;
                 return new CognitiveTurn.Receipt(m.cognitiveState() + "\n" + m.getModelStatusDescription()

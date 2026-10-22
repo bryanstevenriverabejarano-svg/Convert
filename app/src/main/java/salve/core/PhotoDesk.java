@@ -181,7 +181,10 @@ final class PhotoDesk {
         m.visualMemories.store.saveScene(photo.id, scene.json().toString());
         List<String> tags = new ArrayList<>(Arrays.asList("escena", "foto:" + photo.id));
         for (String name : scene.names()) if (tags.size() < 10) tags.add(name);
-        m.memoria.guardarRecuerdo(scene.summary(photo.id), "neutral", 4, tags);
+        // Con sus esquemas (soporte, contenedor…) y lo que se deduce de ellos: así lo abstracto que
+        // lea después («la economía se cae») se apoya en lo que ha visto.
+        String schemas = salve.core.schema.SceneSchemas.describe(scene);
+        m.memoria.guardarRecuerdo(scene.summary(photo.id) + (schemas.isEmpty() ? "" : " " + schemas), "neutral", 4, tags);
         m.mind().indexNewMemoriesAsync();
         m.registrarAccion(salve.core.mind.SelfActionLog.Kind.SEE_SCENE, "una foto",
                 scene.items.size() + " objetos y " + scene.relations.size() + " relaciones entre ellos");
@@ -194,7 +197,7 @@ final class PhotoDesk {
         String json = m.visualMemories.store.readScene(photo.id);
         salve.core.visual.SceneGraph scene = json == null ? null : salve.core.visual.SceneGraph.fromJson(json);
         return scene == null ? "" : "ESCENA_MEDIDA (objetos de la foto; las posiciones y relaciones están calculadas, son fiables): "
-                + scene.summary(photo.id);
+                + scene.summary(photo.id) + " " + salve.core.schema.SceneSchemas.describe(scene);
     }
 
     boolean canAnalyzePhoto(VisualMemoryRecord photo) {

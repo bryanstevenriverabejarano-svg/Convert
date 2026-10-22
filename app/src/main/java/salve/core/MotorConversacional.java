@@ -692,6 +692,19 @@ public class MotorConversacional {
             String cuentos = lectura.comandoCuentos(entrada);
             if (cuentos != null) { hablar(cuentos); return; }
         }
+        // «Descompón el concepto de libertad», «¿qué conceptos has abstraído?»: sus esquemas, sin rodeos.
+        String aDescomponer = salve.core.schema.Abstraction.decomposeRequest(entrada);
+        if (aDescomponer != null) {
+            estado("Pensando «" + aDescomponer + "» por dentro…");
+            salve.core.schema.ConceptStore.Concept c = mind().abstractConcept(aDescomponer, "", true);
+            hablar(c != null ? salve.core.schema.Abstraction.explain(c)
+                    : "Ahora no he conseguido descomponer «" + aDescomponer + "». Lo dejo pendiente y lo pensaré cuando sueñe.");
+            return;
+        }
+        if (salve.core.schema.Abstraction.asksForList(entrada)) {
+            hablar(salve.core.schema.Abstraction.list(mind().concepts().all(), mind().concepts().pending(10)));
+            return;
+        }
         // «Guarda este dibujo, es importante»: un hito que recuerda siempre (y puede volver a enseñar).
         salve.sketch.SketchScene ultimoDibujo = salve.core.mind.Milestones.asksToSaveDrawing(entrada) ? dibujo.ultimoDibujo() : null;
         long desdeDibujo = System.currentTimeMillis() - dibujo.ultimoDibujoEn();
@@ -723,7 +736,8 @@ public class MotorConversacional {
             if (photo == null) { hablar("Mándame una foto o elige una guardada y la miro con calma: qué hay y dónde está cada cosa."); return; }
             try {
                 salve.core.visual.SceneGraph scene = mesaFotos.mirarEscena(photo);
-                hablar(scene != null ? scene.spoken()
+                java.util.List<String> deduzco = scene == null ? java.util.Collections.emptyList() : salve.core.schema.SceneSchemas.deductions(scene);
+                hablar(scene != null ? scene.spoken() + (deduzco.isEmpty() ? "" : " Y por cómo está colocado, deduzco: " + String.join("; ", deduzco) + ".")
                         : mesaFotos.canAnalyzePhoto(photo) ? "Lo he intentado, pero no he conseguido separar bien los objetos de esta foto."
                         : "Para separar los objetos de una foto necesito un modelo con visión.");
             } catch (java.io.IOException failure) { hablar("No he podido guardar lo que vi en la foto."); }

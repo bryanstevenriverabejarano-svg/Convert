@@ -101,6 +101,8 @@ final class ReadingDesk {
                 saved = true;
             }
             if (saved) m.mind().indexNewMemoriesAsync();
+            // Lo que aprendió de un documento se ancla a sus esquemas cuando sueñe.
+            if (saved && mode == DocumentReading.Mode.LEARN) m.mind().concepts().queue(a.title);
             m.registrarAccion(salve.core.mind.SelfActionLog.Kind.READ, "«" + a.title + "»",
                     "lo leí y " + plannedWork(mode, illustrate, opinion, saved).replace("lo entenderé", "lo entendí")
                             .replace("sacaré", "saqué").replace("lo analizaré", "lo analicé").replace("lo ilustraré", "lo ilustré")

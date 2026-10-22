@@ -159,7 +159,8 @@ public final class MindMap {
             if (shownMemories.contains(mem.id)) continue;
             boolean onTopic = false;
             for (String tag : mem.tags) if (topicIds.contains(norm(tag))) { onTopic = true; break; }
-            if (!onTopic && mem.intensity < 7) continue;
+            // Las escenas de fotos entran siempre: unen lo que vio con sus esquemas.
+            if (!onTopic && mem.intensity < 7 && !mem.tags.contains("escena")) continue;
             m.memory(mem); shownMemories.add(mem.id);
         }
         for (Integer mid : shownMemories) {
@@ -206,6 +207,61 @@ public final class MindMap {
                 try { img = memoryById.get(Integer.parseInt(id.substring(2))); } catch (NumberFormatException ignored) { }
             }
             if (img != null && img.startsWith("data:image/")) n.addProperty("img", img);
+        }
+    }
+
+    /**
+     * Sus conceptos anclados y los esquemas que los unen. Un esquema es un nodo que conecta cosas de
+     * mundos distintos: «frontera» une una foto de una valla con «fronteras emocionales». Los
+     * recuerdos de escenas que ya están en el mapa se enlazan con los esquemas que se vieron en ellas.
+     */
+    public static void attachConcepts(JsonObject map, List<salve.core.schema.ConceptStore.Concept> concepts) {
+        if (map == null || !map.has("nodes")) return;
+        JsonArray nodes = map.getAsJsonArray("nodes"), edges = map.getAsJsonArray("edges");
+        Set<String> ids = new HashSet<>();
+        for (com.google.gson.JsonElement e : nodes) ids.add(e.getAsJsonObject().get("id").getAsString());
+        java.util.function.BiConsumer<salve.core.schema.ImageSchemas.Schema, String> link = (schema, from) -> {
+            String sid = "esq:" + schema.id();
+            if (ids.add(sid)) {
+                JsonObject n = new JsonObject();
+                n.addProperty("id", sid); n.addProperty("label", schema.label); n.addProperty("type", "esquema");
+                n.addProperty("detail", "Esquema: " + schema.gloss + ".\n" + String.join("\n", schema.infer(null, null)));
+                n.addProperty("w", 0.7);
+                nodes.add(n);
+            }
+            JsonObject e = new JsonObject();
+            e.addProperty("from", from); e.addProperty("to", sid); e.addProperty("kind", "se entiende como");
+            edges.add(e);
+        };
+        int added = 0;
+        if (concepts != null) for (salve.core.schema.ConceptStore.Concept c : concepts) {
+            if (added++ >= 40) break;
+            String cid = "con:" + norm(c.name).replace(' ', '_');
+            if (!ids.add(cid)) continue;
+            StringBuilder d = new StringBuilder();
+            for (salve.core.schema.SceneSchemas.Instance i : c.instances())
+                d.append(d.length() == 0 ? "" : "\n").append(i.schema.label).append(": ").append(String.join("; ", i.schema.infer(i.a, i.b)));
+            if (!c.words.isEmpty()) d.append("\nTambién: ").append(String.join(", ", c.words));
+            JsonObject n = new JsonObject();
+            n.addProperty("id", cid); n.addProperty("label", shorten(c.name, 40)); n.addProperty("type", "concepto");
+            n.addProperty("detail", d.toString()); n.addProperty("w", 0.45);
+            nodes.add(n);
+            for (salve.core.schema.SceneSchemas.Instance i : c.instances()) link.accept(i.schema, cid);
+            JsonObject mine = new JsonObject();
+            mine.addProperty("from", "yo"); mine.addProperty("to", cid); mine.addProperty("kind", "entiendo");
+            edges.add(mine);
+        }
+        // Escenas de fotos: «Esquemas: soporte (la mesa sostiene a la taza)…» en su texto.
+        List<JsonObject> scenes = new ArrayList<>();
+        for (com.google.gson.JsonElement e : nodes) {
+            JsonObject n = e.getAsJsonObject();
+            if ("recuerdo".equals(n.get("type").getAsString()) && n.has("detail") && n.get("detail").getAsString().contains("Esquemas: ")) scenes.add(n);
+        }
+        for (JsonObject n : scenes) {
+            String text = n.get("detail").getAsString();
+            String part = text.substring(text.indexOf("Esquemas: "));
+            for (salve.core.schema.ImageSchemas.Schema s : salve.core.schema.ImageSchemas.Schema.values())
+                if (part.contains(s.label + " (")) link.accept(s, n.get("id").getAsString());
         }
     }
 
@@ -267,8 +323,8 @@ public final class MindMap {
                 + "<div id=\"chips\"></div><input id=\"q\" placeholder=\"Buscar en mi mente…\"><canvas id=\"c\"></canvas>"
                 + "<div id=\"card\"><button id=\"x\" aria-label=\"Cerrar\">×</button><img id=\"ci\" alt=\"\"><b id=\"ct\"></b><small id=\"ck\"></small><div id=\"cd\"></div></div>"
                 + "<script>const D=" + json + ";\n"
-                + "const COL={yo:'#7fd8ff',persona:'#ffd27f',creencia:'#8be39a',creencia_dudosa:'#ff9a8b',pregunta:'#c9a2ff',pensamiento:'#9ab8ff',leccion:'#ffb3e0',tema:'#f2f28a',recuerdo:'#6f8aa6'};\n"
-                + "const NAME={yo:'Yo',persona:'Personas',creencia:'Creencias',creencia_dudosa:'Dudas',pregunta:'Preguntas',pensamiento:'Pensamientos',leccion:'Lecciones',tema:'Temas',recuerdo:'Recuerdos'};\n"
+                + "const COL={yo:'#7fd8ff',persona:'#ffd27f',creencia:'#8be39a',creencia_dudosa:'#ff9a8b',pregunta:'#c9a2ff',pensamiento:'#9ab8ff',leccion:'#ffb3e0',tema:'#f2f28a',recuerdo:'#6f8aa6',esquema:'#ff8f5a',concepto:'#5ae0c8'};\n"
+                + "const NAME={yo:'Yo',persona:'Personas',creencia:'Creencias',creencia_dudosa:'Dudas',pregunta:'Preguntas',pensamiento:'Pensamientos',leccion:'Lecciones',tema:'Temas',recuerdo:'Recuerdos',esquema:'Esquemas',concepto:'Conceptos'};\n"
                 + "const s=D.stats||{};const pl=(n,a,b)=>n+' '+(n===1?a:b);document.getElementById('stats').textContent=pl(s.creencias||0,'creencia','creencias')+' · '+pl(s.preguntas||0,'pregunta','preguntas')+' · '+(s.recuerdos_mostrados||0)+' de '+pl(s.recuerdos_total||0,'recuerdo','recuerdos');\n"
                 + "const N=D.nodes.map((n,i)=>Object.assign({x:Math.cos(i*2.4)*(60+i*6),y:Math.sin(i*2.4)*(60+i*6),vx:0,vy:0},n));const idx={};N.forEach(n=>idx[n.id]=n);\n"
                 + "const E=D.edges.filter(e=>idx[e.from]&&idx[e.to]);const hide=new Set();let query='';\n"
@@ -294,7 +350,7 @@ public final class MindMap {
                 + "function r(n){return 5+n.w*12+(n.id==='yo'?10:0)+(n.img&&n.type==='persona'?8:0)}\n"
                 + "for(const n of N)if(n.img){const im=new Image();im.src=n.img;n.im=im}\n"
                 // Siempre con nombre: ella, las personas y los temas; el resto al acercarse o al buscar (antes se amontonaban).
-                + "const ALWAYS={yo:1,persona:1,tema:1};\n"
+                + "const ALWAYS={yo:1,persona:1,tema:1,esquema:1,concepto:1};\n"
                 + "function draw(){cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,W,H);cx.translate(W/2+ox,H/2+oy);cx.scale(scale,scale);"
                 + "cx.lineWidth=1/scale;for(const e of E){const a=idx[e.from],b=idx[e.to];if(!vis(a)||!vis(b))continue;cx.strokeStyle=(hit(a)||hit(b))?'#ffffffaa':'#2a405899';cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke()}"
                 + "for(const n of N){if(!vis(n))continue;cx.globalAlpha=query&&!hit(n)?.25:1;cx.fillStyle=COL[n.type]||'#aaa';cx.beginPath();cx.arc(n.x,n.y,r(n),0,7);cx.fill();"
