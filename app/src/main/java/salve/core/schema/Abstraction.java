@@ -32,6 +32,25 @@ public final class Abstraction {
     private static final Pattern DECOMPOSE = Pattern.compile(
             "^(?:salve )?(?:descompon|descomponme|abstrae|abstraeme|desmonta|analiza)(?: el concepto de| la idea de| el concepto| la idea)? (.{3,50})$");
 
+    /**
+     * Cuando pide dos cosas a la vez («descompón el concepto de libertad y ¿por qué decimos que
+     * alguien está hundido?»): {concepto, el resto tal cual lo escribió}. null si no empieza
+     * pidiendo descomponer. El resto puede estar vacío.
+     */
+    public static String[] decomposeAndRest(String input) {
+        if (input == null) return null;
+        String clean = input.replaceAll("[«»\"“”]", " ").replaceAll("\\s+", " ").trim();
+        Matcher cut = Pattern.compile("(?iu)\\s*(?:[.;!?]+\\s+|,?\\s+y\\s+(?=¿|(?:por qu|qu[eé]\\s|c[oó]mo\\s|cu[aá]l|d[oó]nde|"
+                + "explica|dime|cu[eé]ntame|tambi[eé]n|luego|despu[eé]s|ahora|descomp|abstrae|desmonta)))").matcher(clean);
+        String first = clean, rest = "";
+        if (cut.find() && cut.start() > 0) { first = clean.substring(0, cut.start()); rest = clean.substring(cut.end()).trim(); }
+        String concept = decomposeRequest(first);
+        if (concept == null) return null;
+        rest = rest.replaceFirst("^[,.;:\\s]+", "").replaceFirst("[\\s.]+$", "").trim();
+        if (rest.replaceAll("[^\\p{L}]", "").length() < 3) rest = "";
+        return new String[]{concept, rest};
+    }
+
     /** «Descompón el concepto de libertad» → «libertad»; null si no es eso. */
     public static String decomposeRequest(String input) {
         Matcher m = DECOMPOSE.matcher(ImageSchemas.normalize(input));

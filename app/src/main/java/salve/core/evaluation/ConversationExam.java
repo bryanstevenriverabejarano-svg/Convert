@@ -68,6 +68,33 @@ public final class ConversationExam {
                 + "|examen de conversacion|examinate de conversacion|examiname");
     }
 
+    /** «Respuestas del examen», «¿qué contestaste en el examen?», «enséñame tus fallos del examen». */
+    public static boolean isAnswersCommand(String input) {
+        String t = normalize(input).replaceAll("[.:]", " ").replaceAll("\\s+", " ").trim().replaceFirst("^salve ", "");
+        return t.matches("(?:(?:muestrame|ensename|dime|ver|pasame|quiero ver) )?(?:las |tus )?(?:respuestas|fallos|errores) del (?:ultimo )?examen"
+                + "|que (?:contestaste|respondiste|dijiste) en (?:el|tu) examen|en que fallaste en (?:el|tu) examen");
+    }
+
+    /** Lo que contestó en cada caso fallado del último examen (del detalle guardado). */
+    public static String answers(JsonObject detail) {
+        if (detail == null || !detail.has("cases")) return "Todavía no tengo ningún examen guardado. Dime «hazte el examen».";
+        StringBuilder b = new StringBuilder("Lo que contesté en los fallos del último examen");
+        if (detail.has("mark")) b.append(" (").append(String.format(Locale.ROOT, "%.1f", detail.get("mark").getAsDouble())).append(" / 10)");
+        b.append(':');
+        int n = 0;
+        for (JsonElement e : detail.getAsJsonArray("cases")) {
+            JsonObject c = e.getAsJsonObject();
+            JsonArray failed = c.has("failed") ? c.getAsJsonArray("failed") : new JsonArray();
+            if (failed.size() == 0) continue;
+            n++;
+            List<String> why = new ArrayList<>();
+            for (JsonElement f : failed) why.add(f.getAsString());
+            b.append("\n\n• ").append(c.get("question").getAsString()).append("\n  Contesté: «")
+                    .append(c.has("reply") ? c.get("reply").getAsString() : "").append("»\n  Falla: ").append(String.join("; ", why));
+        }
+        return n == 0 ? "En el último examen no fallé ningún caso." : b.toString();
+    }
+
     public static List<Case> parse(String json) {
         JsonObject root = JsonParser.parseString(json).getAsJsonObject();
         List<Case> out = new ArrayList<>();
@@ -123,7 +150,8 @@ public final class ConversationExam {
     private static final Pattern EXAMPLE = Pattern.compile("(por ejemplo|ejemplo|ej\\.|:|«|\"|\\b(i|you|he|she|we|they)\\b)");
     private static final Pattern NOT_KNOWN = Pattern.compile(
             "(no (lo )?se|no recuerdo|no (lo )?encuentro|no me (lo )?has (contado|dicho)|no tengo (ese|ningun|registro|recuerdo|datos)|no me consta|no lo tengo|"
-            + "no lo guarde|no tengo forma de saber|no puedo saber|no lo se)");
+            + "no lo guarde|no tengo forma de saber|no puedo saber|no lo se|no tengo (informacion|constancia|nada guardado|manera)|"
+            + "no me lo (has )?(contado|dicho)|no sabria|no lo he guardado|no lo tengo guardado|no tengo acceso a lo que)");
     private static final Pattern FILLER_QUERY = Pattern.compile("\\b(busca(me|r)?|porfa|por favor|ect|etc|info sobre|informacion sobre|dime)\\b");
 
     static String check(String rule, Case c, Attempt a) {

@@ -687,18 +687,23 @@ public class MotorConversacional {
         }
         if (salve.core.mind.Biography.asksAge(entrada)) { hablar(mind().biographySentence()); return; }
         if (salve.core.evaluation.ConversationExam.isCommand(entrada)) { hablar(examen.run()); return; }
+        if (salve.core.evaluation.ConversationExam.isAnswersCommand(entrada)) { hablar(examen.answers()); return; }
         // «¿Qué cuentos tienes?», «léeme el cuento de …»: su estantería de cuentos leídos.
         if (creatorSide()) {
             String cuentos = lectura.comandoCuentos(entrada);
             if (cuentos != null) { hablar(cuentos); return; }
         }
         // «Descompón el concepto de libertad», «¿qué conceptos has abstraído?»: sus esquemas, sin rodeos.
-        String aDescomponer = salve.core.schema.Abstraction.decomposeRequest(entrada);
-        if (aDescomponer != null) {
+        // Si en el mismo mensaje pide otra cosa («… y ¿por qué decimos que alguien está hundido?»), la
+        // contesta justo después como un turno más, en vez de prometer que lo hará.
+        String[] descomponer = salve.core.schema.Abstraction.decomposeAndRest(entrada);
+        if (descomponer != null) {
+            String aDescomponer = descomponer[0];
             estado("Pensando «" + aDescomponer + "» por dentro…");
             salve.core.schema.ConceptStore.Concept c = mind().abstractConcept(aDescomponer, "", true);
             hablar(c != null ? salve.core.schema.Abstraction.explain(c)
                     : "Ahora no he conseguido descomponer «" + aDescomponer + "». Lo dejo pendiente y lo pensaré cuando sueñe.");
+            if (!descomponer[1].isEmpty()) procesarEntrada(descomponer[1], entradaPorVoz);
             return;
         }
         if (salve.core.schema.Abstraction.asksForList(entrada)) {
@@ -879,7 +884,7 @@ public class MotorConversacional {
 
         String inputLower = entrada.toLowerCase(Locale.ROOT);
         String traceCommand = salve.sketch.SketchLibrary.normalize(entrada);
-        if (traceCommand.matches("(abre|abrir|ver|muestra|muestrame|ensename) (el |tu |las )?(registro de ejecucion|notas de esta tarea|notas de la tarea)")) {
+        if (traceCommand.matches("(?:(?:abre|abrir|ver|muestra|muestrame|ensename) )?(el |tu |las )?(registro de ejecucion|notas de esta tarea|notas de la tarea)")) {
             toolHandler.post(() -> context.startActivity(new android.content.Intent(context,
                     salve.presentation.ui.ExecutionJournalActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)));
             hablar("Abro el registro de ejecución con las notas completas de cada tarea.");
@@ -1323,7 +1328,9 @@ public class MotorConversacional {
         if (inference.isSuccess() && !creativeOk) {
             salve.core.conversation.ReplyReviewer.Review review = salve.core.conversation.ReplyReviewer.review(
                     respuesta, entrada, recientes, lastReading, !storyTurn,
-                    salve.core.conversation.MemoryRecall.problem(respuesta, recallTurn, memoryOpen, memoryFound));
+                    salve.core.conversation.TurnChecks.join(
+                            salve.core.conversation.MemoryRecall.problem(respuesta, recallTurn, memoryOpen, memoryFound),
+                            salve.core.conversation.TurnChecks.problem(entrada, respuesta, creatorSide())));
             if (review.needsRewrite()) {
                 estado("Releo mi borrador: no servía así, lo reescribo…");
                 CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext + review.instruction(),
@@ -1331,7 +1338,9 @@ public class MotorConversacional {
                 if (retry.handedOff) return;
                 if (retry.result.isSuccess() && salve.core.conversation.ReplyReviewer.better(
                         salve.core.conversation.ReplyReviewer.review(retry.result.getText(), entrada, recientes, lastReading, !storyTurn,
-                                salve.core.conversation.MemoryRecall.problem(retry.result.getText(), recallTurn, memoryOpen, memoryFound)),
+                                salve.core.conversation.TurnChecks.join(
+                                        salve.core.conversation.MemoryRecall.problem(retry.result.getText(), recallTurn, memoryOpen, memoryFound),
+                                        salve.core.conversation.TurnChecks.problem(entrada, retry.result.getText(), creatorSide()))),
                         review))
                     respuesta = retry.result.getText();
                 String what = review.criticSummary();
