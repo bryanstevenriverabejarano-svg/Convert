@@ -73,7 +73,7 @@ final class ConversationExamRunner {
         String report = ConversationExam.report(grades, previous, millis);
         double mark = ConversationExam.mark(grades);
         save(context, prefs, mark, report, grades, attempts);
-        return report + "\n(Las respuestas completas quedan en mi registro de ejecución; vuelve a pedírmelo tras cada actualización para comparar.)";
+        return report + "\n(Para ver lo que contesté en cada fallo, dime «respuestas del examen». Vuelve a pedírmelo tras cada actualización para comparar.)";
     }
 
     /** Un caso: lo enruta como un turno de verdad y deja las herramientas simuladas. */
@@ -134,12 +134,14 @@ final class ConversationExamRunner {
         String reply = outcome.result.isSuccess() ? outcome.result.getText() : motor.modelFailureMessage(outcome.result);
         // 5. El mismo revisor que en un turno: como mucho una reescritura.
         if (outcome.result.isSuccess()) {
-            ReplyReviewer.Review review = ReplyReviewer.review(reply, c.question, recent, reading, true);
+            ReplyReviewer.Review review = ReplyReviewer.review(reply, c.question, recent, reading, true,
+                    salve.core.conversation.TurnChecks.problem(c.question, reply, true));
             if (review.needsRewrite()) {
                 CognitiveTurn.Outcome retry = motor.runCognitiveTurn(c.question, context + review.instruction(), null, false, null, false,
                         history, catalog -> dryRun(catalog, tools, queries));
                 if (!retry.handedOff && retry.result.isSuccess() && ReplyReviewer.better(
-                        ReplyReviewer.review(retry.result.getText(), c.question, recent, reading, true), review))
+                        ReplyReviewer.review(retry.result.getText(), c.question, recent, reading, true,
+                                salve.core.conversation.TurnChecks.problem(c.question, retry.result.getText(), true)), review))
                     reply = retry.result.getText();
             }
             reply = salve.core.conversation.ResponseCritic.firstPerson(reply);
@@ -246,6 +248,17 @@ final class ConversationExamRunner {
             }
         } catch (java.io.IOException ignored) { /* la nota ya está guardada */ }
         salve.core.trace.ExecutionTrace.note("EXAMEN DE CONVERSACIÓN", report);
+    }
+
+    /** «Respuestas del examen»: lo que contestó en cada fallo, para que Bryan lo vea. */
+    String answers() {
+        File file = new File(new File(motor.context.getFilesDir(), "exam"), "ultimo.json");
+        JsonObject exam = null;
+        if (file.isFile()) {
+            try { exam = JsonParser.parseString(new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)).getAsJsonObject(); }
+            catch (Exception damaged) { exam = null; }
+        }
+        return ConversationExam.answers(exam);
     }
 
     /** Propuestas de mejora desde el último examen y las correcciones de Bryan. */

@@ -98,4 +98,16 @@ public class ConversationExamTest {
         assertFalse(ConversationExam.isCommand("mañana tengo un examen de inglés"));
         assertFalse(ConversationExam.isCommand("examínate"));
     }
+
+    @Test public void bryanCanSeeWhatSheAnswered() {
+        assertTrue(ConversationExam.isAnswersCommand("respuestas del examen"));
+        assertTrue(ConversationExam.isAnswersCommand("Muéstrame las respuestas del examen"));
+        assertTrue(ConversationExam.isAnswersCommand("¿qué contestaste en el examen?"));
+        assertFalse(ConversationExam.isAnswersCommand("hazte el examen"));
+        com.google.gson.JsonObject d = com.google.gson.JsonParser.parseString("{\"mark\":9.2,\"cases\":[{\"question\":\"¿Qué cené anoche?\","
+                + "\"failed\":[\"no_inventa_recuerdo: x\"],\"reply\":\"Cenaste pasta.\"},{\"question\":\"ok\",\"failed\":[],\"reply\":\"bien\"}]}").getAsJsonObject();
+        String a = ConversationExam.answers(d);
+        assertTrue(a, a.contains("«Cenaste pasta.»") && a.contains("9.2") && !a.contains("bien"));
+        assertTrue(ConversationExam.answers(null).contains("hazte el examen"));
+    }
 }

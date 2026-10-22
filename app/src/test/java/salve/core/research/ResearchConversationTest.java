@@ -100,4 +100,20 @@ public class ResearchConversationTest {
             assertEquals(input, ResearchConversation.Kind.NONE, route(input).kind);
         }
     }
+
+    @Test public void fillersNeverReachTheSearchEngine() {
+        assertEquals("la catedral de santa maria de vitoria", ResearchConversation.stripFillers("info sobre la catedral de santa maria de vitoria porfa ect"));
+        assertEquals("batalla de Vitoria", ResearchConversation.stripFillers("busca información sobre batalla de Vitoria, por favor"));
+        assertEquals("la catedral de santa maria de vitoria",
+                ResearchConversation.lookupQuery("busca info sobre la catedral de santa maria de vitoria porfa ect"));
+    }
+
+    @Test public void todaysWeatherIsLookedUp() {
+        ResearchConversation.Route r = new ResearchConversation().route("¿Qué tiempo hace hoy en Vitoria-Gasteiz?", java.util.Collections.emptyList());
+        assertEquals(ResearchConversation.Kind.SEARCH, r.kind);
+        assertEquals("tiempo hoy vitoria-gasteiz", r.question);
+        assertEquals("tiempo mañana Vitoria-Gasteiz", ResearchConversation.currentInfoTopic("¿Qué tiempo va a hacer mañana?"));
+        assertNull(ResearchConversation.currentInfoTopic("¿Qué tiempo tienes libre?"));
+        assertNull(ResearchConversation.currentInfoTopic("hace mucho tiempo que no hablamos"));
+    }
 }

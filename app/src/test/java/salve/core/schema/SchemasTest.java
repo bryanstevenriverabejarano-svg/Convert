@@ -93,4 +93,17 @@ public class SchemasTest {
         assertTrue(Abstraction.asksForList("¿Qué conceptos has abstraído?"));
         assertTrue(Abstraction.toolDescription().length() < 160);
     }
+
+    @Test public void twoRequestsInOneMessage() {
+        // Lo que Bryan pegó tal cual, con las comillas.
+        String[] r = Abstraction.decomposeAndRest("descompón el concepto de libertad» y «¿por qué decimos que alguien está hundido?».");
+        assertNotNull(r);
+        assertEquals("libertad", r[0]);
+        assertEquals("¿por qué decimos que alguien está hundido?", r[1]);
+        String[] alone = Abstraction.decomposeAndRest("Descompón el concepto de libertad");
+        assertEquals("libertad", alone[0]);
+        assertEquals("", alone[1]);
+        assertEquals("amor y odio", Abstraction.decomposeAndRest("descompón amor y odio")[0]);
+        assertNull(Abstraction.decomposeAndRest("hola qué tal"));
+    }
 }

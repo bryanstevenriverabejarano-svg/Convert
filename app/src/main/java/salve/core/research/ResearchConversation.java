@@ -43,6 +43,7 @@ public final class ResearchConversation {
         boolean followUp = normalized.matches("^(?:y |por que|que significa eso|explica|amplia|resume|"
                 + "cuales son las fuentes|de donde|segun esas fuentes).*");
         String topic = requestTopic(input);
+        if (topic == null) topic = currentInfoTopic(input);
         if (topic == null) {
             adjacent = adjacent && followUp;
             return new Route(Kind.NONE, "", "");
@@ -95,9 +96,42 @@ public final class ResearchConversation {
         return limit(topic, 2048);
     }
 
+    private static final Pattern CURRENT = Pattern.compile(
+            "^(?:salve,? )?(?:sabes |me dices |dime )?(?:que|como) (?:tiempo|clima) (?:hace|va a hacer|hara|tenemos)\\b(.*)$"
+            + "|^(?:salve,? )?(?:va a llover|llueve|llovera|nieva|nevara)\\b(.*)$"
+            + "|^(?:salve,? )?(?:que|cuales son las) (?:noticias|ultimas noticias)\\b(.*)$");
+
+    /**
+     * Lo que solo se sabe mirando ahora (el tiempo de hoy, las noticias): sin buscar, el modelo lo
+     * inventaría. Es una lectura pública, como «busca…», y se hace sin preguntar.
+     */
+    public static String currentInfoTopic(String input) {
+        Matcher m = CURRENT.matcher(normalize(input));
+        if (!m.matches()) return null;
+        String t = normalize(input).replaceFirst("^salve,? ", "").replaceFirst("^(?:sabes |me dices |dime )", "");
+        if (t.matches("^(?:que|cuales son las) (?:noticias|ultimas noticias).*")) return limit(t.replaceFirst("^(?:que|cuales son las) ", ""), 200);
+        String where = (m.group(1) != null ? m.group(1) : m.group(2) != null ? m.group(2) : "").trim()
+                .replaceFirst("^(?:hoy|manana|ahora|esta semana)\\s*", "").replaceFirst("^(?:en|por)\\s+", "").trim();
+        String when = t.matches(".*\\bmanana\\b.*") ? "mañana" : t.matches(".*\\besta semana\\b.*") ? "esta semana" : "hoy";
+        where = where.replaceAll("\\b(?:hoy|manana|ahora|esta semana)\\b", "").replaceAll("\\s+", " ").trim();
+        return limit("tiempo " + when + (where.isEmpty() ? " Vitoria-Gasteiz" : " " + where), 200);
+    }
+
+    private static final Pattern FILLERS = Pattern.compile(
+            "(?iu)^(?:busca(?:r|me|lo)?|investiga|dime|quiero saber)\\s+|\\b(?:porfa(?:vor)?|por favor|plis|please|ect|etc|gracias)\\b\\.?"
+            + "|\\b(?:info|infor?macion|informaci[oó]n|datos|cosas)\\s+(?:sobre|de|acerca de)\\s+|^(?:sobre|acerca de)\\s+");
+
+    /** Lo que sobra en un buscador: «busca info sobre la catedral porfa ect» → «la catedral». */
+    public static String stripFillers(String query) {
+        if (query == null) return "";
+        String q = query.trim(), before;
+        do { before = q; q = FILLERS.matcher(q).replaceAll(" ").replaceAll("\\s+", " ").trim(); } while (!q.equals(before));
+        return q.replaceFirst("^[,.;:]+\\s*", "").replaceFirst("\\s*[,.;:]+$", "").trim();
+    }
+
     public static String lookupQuery(String question) {
         if (question.contains("://")) return limit(question, 2048);
-        String query = resolveName(salve.core.web.SearchEngine.cleanQuery(question)).replaceFirst("^(?:que (?:es|significa)|quien es|(?:el )?significado de)\\s+", "")
+        String query = resolveName(stripFillers(salve.core.web.SearchEngine.cleanQuery(question))).replaceFirst("^(?:que (?:es|significa)|quien es|(?:el )?significado de)\\s+", "")
                 .replaceFirst("^(?:el |la )?(?:nombre|palabra|termino)\\s+", "");
         return limit(query.trim(), 256);
     }

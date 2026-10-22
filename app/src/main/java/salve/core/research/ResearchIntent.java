@@ -14,7 +14,13 @@ public final class ResearchIntent {
     private ResearchIntent(String objective, String subject, boolean person, List<String> goals, List<String> queries) {
         this.objective = objective; this.subject = subject; this.person = person;
         this.goals = Collections.unmodifiableList(new ArrayList<>(goals));
-        this.queries = Collections.unmodifiableList(new ArrayList<>(queries));
+        List<String> clean = new ArrayList<>();
+        for (String q : queries) {
+            String c = q.contains("://") ? q : ResearchConversation.stripFillers(q);
+            if (c.isEmpty()) c = q;
+            if (!clean.contains(c)) clean.add(c);
+        }
+        this.queries = Collections.unmodifiableList(clean);
     }
     static String prompt(String question) {
         JsonObject input = new JsonObject(); input.addProperty("request", question);
