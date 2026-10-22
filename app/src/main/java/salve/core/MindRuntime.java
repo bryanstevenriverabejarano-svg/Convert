@@ -76,6 +76,7 @@ public final class MindRuntime {
         biography = new salve.core.mind.Biography(new MindFileStore(new File(dir, "biography.json")), System::currentTimeMillis);
         people = new salve.core.mind.PersonFamiliarity(new MindFileStore(new File(dir, "people.json")), System::currentTimeMillis);
         milestones = new salve.core.mind.Milestones(new MindFileStore(new File(dir, "milestones.json")), System::currentTimeMillis);
+        concepts = new salve.core.schema.ConceptStore(new MindFileStore(new File(dir, "concepts.json")), System::currentTimeMillis);
         try {
             // La conciencia antigua guardaba su primer arranque y sus despertares desde el principio.
             android.content.SharedPreferences legacy = app.getSharedPreferences("salve_consciousness_v2", Context.MODE_PRIVATE);
@@ -132,6 +133,26 @@ public final class MindRuntime {
     private final salve.core.mind.Biography biography;
     private final salve.core.mind.PersonFamiliarity people;
     private final salve.core.mind.Milestones milestones;
+    private final salve.core.schema.ConceptStore concepts;
+    /** Conceptos anclados a esquemas (soporte, camino, frontera…). */
+    public salve.core.schema.ConceptStore concepts() { return concepts; }
+
+    /**
+     * El concepto anclado a sus esquemas. Si no lo tiene y se permite, se lo pide a su modelo local
+     * (que solo elige del catálogo; se valida) y lo guarda; si no puede, queda pendiente para soñar.
+     * Llamar fuera del hilo principal. @return null si no pudo
+     */
+    public salve.core.schema.ConceptStore.Concept abstractConcept(String concept, String context, boolean useModel) {
+        salve.core.schema.ConceptStore.Concept known = concepts.find(concept);
+        if (known != null || !useModel) { if (known == null) concepts.queue(concept); return known; }
+        try {
+            String raw = local(SalveLLM.Role.CONVERSACIONAL).generate(salve.core.schema.ConceptStore.prompt(concept, context));
+            salve.core.schema.ConceptStore.Concept c = salve.core.schema.ConceptStore.parse(concept, raw, "conversación");
+            if (c != null) { concepts.put(c); return c; }
+        } catch (Exception unavailable) { /* queda pendiente */ }
+        concepts.queue(concept);
+        return null;
+    }
     /** Momentos que Bryan marcó como importantes (su primer dibujo de una escena…). */
     public salve.core.mind.Milestones milestones() { return milestones; }
     /** Cuánto está cada persona en su vida (para que sus recuerdos con ella pesen más). */
@@ -328,6 +349,7 @@ public final class MindRuntime {
                 journal.beliefs(), journal.questions(),
                 journal.thoughts(), people, mems, lessons.all(), graph.creator().name);
         attachPhotos(data, rows);
+        salve.core.mind.MindMap.attachConcepts(data, concepts.all());
         File dir = new File(app.getFilesDir(), "grafo_offline");
         if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("No pude crear la carpeta del mapa");
         File html = new File(dir, "mapa_mente.html");
@@ -756,7 +778,18 @@ public final class MindRuntime {
             return "Sin experiencias personales nuevas que consolidar.";
         }
         String result = new DreamCycle(journal, local(SalveLLM.Role.SINTETIZADOR)).run(episodes, stop);
-        Log.i(TAG, "Sueño: indexados=" + indexed + " podados=" + pruned);
+        // Al soñar también ancla los conceptos que quedaron pendientes (como mucho 3 por sueño).
+        int anchored = 0;
+        for (String pendingConcept : concepts.pending(3)) {
+            if (stop.getAsBoolean()) break;
+            try {
+                String raw = local(SalveLLM.Role.SINTETIZADOR).generate(salve.core.schema.ConceptStore.prompt(pendingConcept, ""));
+                salve.core.schema.ConceptStore.Concept c = salve.core.schema.ConceptStore.parse(pendingConcept, raw, "sueño");
+                if (c != null) { concepts.put(c); anchored++; } else concepts.drop(pendingConcept);
+            } catch (Exception unavailable) { break; }
+        }
+        if (anchored > 0) result = (result == null ? "" : result + " ") + "Anclé " + anchored + (anchored == 1 ? " concepto" : " conceptos") + " a sus esquemas.";
+        Log.i(TAG, "Sueño: indexados=" + indexed + " podados=" + pruned + " conceptos=" + anchored);
         return result;
     }
 

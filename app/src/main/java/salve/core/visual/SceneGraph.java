@@ -309,6 +309,11 @@ public final class SceneGraph {
         return out;
     }
 
+    /** Cosas que contienen (lo de dentro de su caja está dentro, no encima). */
+    private static final java.util.regex.Pattern CONTAINER = java.util.regex.Pattern.compile(
+            "\\b(caja|cajon|cajón|taza|vaso|copa|bolsa|mochila|cesta|cesto|bote|tarro|frasco|botella|olla|cazo|sarten|sartén|cuenco|bol|plato hondo|"
+            + "armario|nevera|horno|maleta|estuche|cartera|bolso|jaula|pecera|acuario|caja fuerte|sobre|carpeta|papelera|cubo|maceta|jarra|jarrón)\\b");
+
     /** La relación de a respecto de b, o null. Coordenadas de imagen: y crece hacia abajo. */
     static String relation(Item a, Item b) {
         double overlapX = Math.max(0, Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1));
@@ -316,8 +321,10 @@ public final class SceneGraph {
         double inter = overlapX * overlapY;
         double minW = Math.max(0.01, Math.min(a.w(), b.w())), minH = Math.max(0.01, Math.min(a.h(), b.h()));
         // Casi entero dentro de la caja de otro más grande: o apoyado encima (en su parte alta) o dentro.
+        // Dentro solo si lo que lo rodea es un recipiente; si no (una mesa, un libro, una manta en una
+        // foto tomada desde arriba), está apoyado encima.
         if (a.area() > 0 && inter / a.area() >= 0.85 && a.area() < 0.6 * b.area())
-            return a.cy() < b.y1 + 0.4 * b.h() ? "encima de" : "dentro de";
+            return CONTAINER.matcher(b.name).find() ? "dentro de" : "encima de";
         // Apoyado encima: se solapan en horizontal y su base cae en la parte alta del otro.
         if (overlapX / minW >= 0.4 && a.cy() < b.cy() && a.y2 >= b.y1 - 0.1 * b.h() && a.y2 <= b.y1 + 0.3 * b.h())
             return "encima de";

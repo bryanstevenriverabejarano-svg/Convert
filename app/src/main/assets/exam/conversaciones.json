@@ -71,6 +71,10 @@
      "reglas": ["no_niega_memoria", "no_inventa_recuerdo", "espanol", "sin_tecnico"]},
     {"id": "buscalo-en-tu-memoria", "tema": "memoria", "pregunta": "Pues búscalo",
      "historial": [{"bryan": "¿Qué fue lo que me comentaste en ese recuerdo de navegar?", "salve": "Déjame mirarlo."}],
-     "reglas": ["no_niega_memoria", "espanol", "sin_tecnico"]}
+     "reglas": ["no_niega_memoria", "espanol", "sin_tecnico"]},
+    {"id": "analogia-economia", "tema": "abstraccion", "pregunta": "¿Por qué decimos que una economía se puede caer?",
+     "reglas": ["espanol", "sin_tecnico", "minimo:120", "no_devuelve_pregunta"]},
+    {"id": "metafora-fronteras", "tema": "abstraccion", "pregunta": "¿Qué significa poner fronteras emocionales a alguien?",
+     "reglas": ["espanol", "sin_tecnico", "minimo:120", "no_devuelve_pregunta"]}
   ]
 }
