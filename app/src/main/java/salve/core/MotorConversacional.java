@@ -372,6 +372,9 @@ public class MotorConversacional {
         conversationExecutor.execute(conversationSession::loadSaved);
     }
 
+    /** Current user input is diagnostic context only on its conversation thread. */
+    private final ThreadLocal<String> auditTurnInput = new ThreadLocal<>();
+
     public void procesarEntrada(String entrada, boolean entradaPorVoz) {
         encolarEntrada(entrada, entradaPorVoz, false);
     }
@@ -511,6 +514,7 @@ public class MotorConversacional {
                     avatarTurn.set(turn);
                 }
                 goalAutonomy.beginUserTurn();
+                auditTurnInput.set(entrada);
                 try {
                     procesarEntradaInterna(entrada, entradaPorVoz, privateBudgetTurn);
                 } catch (RuntimeException error) {
@@ -521,6 +525,7 @@ public class MotorConversacional {
                     deliverResponse(message, AvatarMotionProtocol.parse(message), false, true, false);
                 } finally {
                     salve.core.trace.ExecutionTrace.finish(closed || !isVoiceContextCurrent() ? "CANCELADA" : "TURNO_TERMINADO");
+                    auditTurnInput.remove();
                     literalDrawingReply.remove(); literalDrawingTurn.remove();
                     goalAutonomy.endUserTurn();
                     liveVoiceTurn.remove();
@@ -1394,6 +1399,13 @@ public class MotorConversacional {
             visualResponse = AvatarMotionProtocol.parse("");
         }
 
+        // The result of a model call or tool invocation is evidence of work,
+        // not proof of having satisfied the user's request.
+        salve.core.conversation.ConversationOutcomeAudit cognitiveAudit =
+                salve.core.conversation.ConversationOutcomeAudit.evaluate(
+                        entrada, respuesta, cognitive == null ? null : cognitive.receipts(),
+                        inference.isSuccess(), creativeOk ? "creative" : "cognitive");
+        salve.core.trace.ExecutionTrace.note("EVALUACION_CICLO", cognitiveAudit.receipt().toString());
         long latencyMillis = (System.nanoTime() - turnStartedAtNanos) / 1_000_000L;
         TurnQualityAssessment assessment = ConversationQualityEvaluator.evaluate(
                 respuesta, fallbackUsed, truncated, roleLeakDetected, repetitionDetected, latencyMillis);
@@ -2217,6 +2229,16 @@ public class MotorConversacional {
     synchronized void deliverResponse(String texto, AvatarMotionProtocol.Result motion,
                                               boolean record, boolean publishUi, boolean privateBudget) {
         if (closed || texto == null || texto.trim().isEmpty()) return;
+        // Audit all ordinary routes at the common delivery boundary. The
+        // result is *unverified* unless a separate external oracle exists.
+        // No answer, prompt, memory, or private thought is persisted here.
+        String auditInput = auditTurnInput.get();
+        if (auditInput != null && publishUi) {
+            salve.core.conversation.ConversationOutcomeAudit audit =
+                    salve.core.conversation.ConversationOutcomeAudit.evaluate(
+                            auditInput, texto, null, true, "delivery");
+            salve.core.trace.ExecutionTrace.note("EVALUACION_ENTREGA", audit.receipt().toString());
+        }
         // Fuentes leídas en este turno: al chat y al historial (para analizarlas juntos), nunca a la voz.
         String sourcesNote = "";
         if (record && !turnSources.isEmpty()) {
