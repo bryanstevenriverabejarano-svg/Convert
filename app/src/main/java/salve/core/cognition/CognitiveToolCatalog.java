@@ -41,7 +41,8 @@ public final class CognitiveToolCatalog {
         String request = safeInput.toLowerCase(Locale.ROOT);
 
         if (verifiedCreator) add(tools, "memory.lookup",
-                "{}: recupera recuerdos de la petición actual", dispatch);
+                "{query?:string}: recupera recuerdos; query opcional sobre el mismo tema de la conversación; ninguna consulta privada va a internet",
+                dispatch, "query");
         add(tools, "web.search",
                 "{query:string}: busca en internet un dato que no sabes (sin datos privados)",
                 dispatch, "query");

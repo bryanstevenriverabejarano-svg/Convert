@@ -45,6 +45,7 @@ public final class CognitiveTurn {
         JsonArray receipts = new JsonArray();
         Set<String> used = new HashSet<>(); // side-effecting tools never repeat in a turn
         Set<String> webQueries = new HashSet<>(); // only changed public searches may repeat
+        Set<String> memoryQueries = new HashSet<>(); // read-only memory probes; controller rechecks scope
         boolean repaired = false, repair = false, toolsClosed = false;
         int actions = 0;
         long deadline = System.nanoTime() + 180_000_000_000L;
@@ -85,8 +86,16 @@ public final class CognitiveTurn {
             boolean newPublicSearch = "web.search".equals(reply.name)
                     && publicQuery != null && publicQuery.length() >= 3
                     && !webQueries.contains(publicQuery);
+            String memoryQuery = null;
+            if ("memory.lookup".equals(reply.name) && reply.arguments.has("query")
+                    && reply.arguments.get("query").isJsonPrimitive()
+                    && reply.arguments.get("query").getAsJsonPrimitive().isString())
+                memoryQuery = reply.arguments.get("query").getAsString().trim().toLowerCase(java.util.Locale.ROOT);
+            boolean newMemoryProbe = "memory.lookup".equals(reply.name)
+                    && memoryQuery != null && memoryQuery.length() >= 3
+                    && !memoryQueries.contains(memoryQuery);
             if (toolsClosed || actions >= MAX_TOOLS
-                    || used.contains(reply.name) && !newPublicSearch
+                    || used.contains(reply.name) && !(newPublicSearch || newMemoryProbe)
                     || call == MAX_INFERENCES - 1) {
                 // Pedir otra vez lo que ya tiene (memory.lookup dos veces) no es un fallo para Bryan:
                 // se le cierran las herramientas y responde con los resultados que ya tiene.
@@ -95,6 +104,7 @@ public final class CognitiveTurn {
             }
             used.add(reply.name);
             if (publicQuery != null) webQueries.add(publicQuery);
+            if (memoryQuery != null) memoryQueries.add(memoryQuery);
             actions++;
             JsonObject receipt = new JsonObject();
             receipt.addProperty("name", reply.name);

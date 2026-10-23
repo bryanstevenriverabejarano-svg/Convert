@@ -73,8 +73,12 @@ final class CognitiveToolExecutor {
             case "memory.lookup": {
                 if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
                     throw new IllegalArgumentException("Sin autorización para recuerdos privados");
-                ConversationMemoryGrounding.Result result = m.memoria.recuperarContextoConversacional(
-                        salve.core.conversation.MemoryRecall.query(input, m.conversationSession.snapshot()));
+                String requested = args.has("query") && args.get("query").isJsonPrimitive()
+                        && args.get("query").getAsJsonPrimitive().isString()
+                        ? args.get("query").getAsString() : null;
+                String scoped = salve.core.conversation.MemoryProbePolicy.scoped(
+                        input, m.conversationSession.snapshot(), requested);
+                ConversationMemoryGrounding.Result result = m.memoria.recuperarContextoConversacional(scoped);
                 return new CognitiveTurn.Receipt(result.getStatus().name() + "\n" + result.getDataContext());
             }
             case "web.search":

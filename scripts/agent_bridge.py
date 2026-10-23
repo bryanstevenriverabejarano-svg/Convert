@@ -166,10 +166,15 @@ class DockerExecutor:
         if not self.available() or tool not in ("code.python", "browser.render"):
             raise ToolError("Sandbox Docker no configurado; no se ejecuta código en el anfitrión")
         docker = shutil.which("docker")
+        # Current Chromium needs more threads/CPU at startup than the tiny
+        # Python sandbox. Both remain hard-capped, network-isolated,
+        # non-privileged and read-only; tool authorization is unchanged.
+        browser = tool == "browser.render"
         return [docker, "--host", "unix:///var/run/docker.sock", "run", "--rm", "--name", name,
                 "--pull", "never", "--network", "none", "--read-only", "--user", "65534:65534",
-                "--cap-drop", "ALL", "--security-opt", "no-new-privileges=true", "--pids-limit", "96",
-                "--cpus", "1", "--memory", "768m", "--memory-swap", "768m", "--log-driver", "none",
+                "--cap-drop", "ALL", "--security-opt", "no-new-privileges=true", "--pids-limit", "192" if browser else "96",
+                "--cpus", "2" if browser else "1", "--memory", "1024m" if browser else "768m",
+                "--memory-swap", "1024m" if browser else "768m", "--log-driver", "none",
                 "--no-healthcheck", "--tmpfs", "/tmp:rw,nosuid,nodev,size=192m,mode=1777", "-i",
                 "--entrypoint", "python", self.image, "-I", "/opt/salve/worker.py", tool]
 
@@ -204,7 +209,7 @@ class DockerExecutor:
 
         writer = threading.Thread(target=write_input, daemon=True)
         writer.start()
-        output, deadline = bytearray(), time.monotonic() + 20
+        output, deadline = bytearray(), time.monotonic() + (30 if tool == "browser.render" else 20)
         try:
             with selectors.DefaultSelector() as selector:
                 selector.register(process.stdout, selectors.EVENT_READ)

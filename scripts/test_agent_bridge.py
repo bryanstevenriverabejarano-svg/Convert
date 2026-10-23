@@ -130,6 +130,18 @@ class BridgeTest(unittest.TestCase):
                 self.assertEqual(value, command[command.index(flag) + 1])
             self.assertNotIn("--volume", command); self.assertNotIn("--privileged", command)
             self.assertIn("--read-only", command)
+            self.assertEqual("96", command[command.index("--pids-limit") + 1])
+            self.assertEqual("768m", command[command.index("--memory") + 1])
+            browser = executor.command("salve-browser", "browser.render")
+            for flag, value in (("--network", "none"), ("--user", "65534:65534"),
+                                ("--pull", "never"), ("--pids-limit", "192"),
+                                ("--cpus", "2"), ("--memory", "1024m"),
+                                ("--memory-swap", "1024m")):
+                self.assertEqual(value, browser[browser.index(flag) + 1])
+            self.assertNotIn("--volume", browser)
+            self.assertNotIn("--privileged", browser)
+            self.assertIn("--read-only", browser)
+            self.assertIn("--cap-drop", browser)
 
     def test_oversized_input_never_starts_a_container(self):
         with patch.object(bridge.shutil, "which", return_value="/usr/bin/docker"), patch.object(subprocess, "run", return_value=Mock(returncode=0, stdout=b"null")), patch.object(subprocess, "Popen") as start:

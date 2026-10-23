@@ -30,9 +30,10 @@ class LocationVersionTests(unittest.TestCase):
         first = self.status()
         self.assertIsNone(first['location']); self.assertEqual('none', first['location_version'])
         self.assertEqual({'protocol': 1, 'available': True, 'unchanged': True, 'location_version': 'none'}, self.status('none'))
-        self.store.write(location())
+        saved_location = location()
+        self.store.write(saved_location)
         changed = self.status('none')
-        self.assertEqual(location(), changed['location'])
+        self.assertEqual(saved_location, changed['location'])
         version = changed['location_version']
         same = self.status(version)
         self.assertTrue(same['unchanged']); self.assertNotIn('location', same)
