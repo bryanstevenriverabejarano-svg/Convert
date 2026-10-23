@@ -123,6 +123,10 @@ final class ResearchDesk {
                         })
                         .runConversation(question, () -> m.closed || !m.isVoiceContextCurrent());
         String answer = result.toConversationText();
+        // Research results bypass the generic model route, but never bypass
+        // the common observed-vs-verified outcome audit.
+        m.attachDeliveryEvidence(salve.core.conversation.ConversationOutcomeEvidence.research(
+                result.status, result.sources.size(), result.searches));
         for (String decision : result.decisions) salve.core.trace.ExecutionTrace.note("DECISIÓN REGISTRADA", decision);
         salve.core.trace.ExecutionTrace.note("RESULTADO DE LA INVESTIGACIÓN", result.status + "\n" + answer);
         if (!m.closed && m.isVoiceContextCurrent()) {
