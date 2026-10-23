@@ -59,6 +59,7 @@ public final class ConversationOutcomeAudit {
                 : issue != null ? Status.NEEDS_REVISION
                 : evidence != null && (evidence.state == ConversationOutcomeEvidence.State.ABSENT
                         || evidence.state == ConversationOutcomeEvidence.State.ERROR) ? Status.EVIDENCE_UNAVAILABLE
+                : failed > 0 && completed == 0 ? Status.EVIDENCE_UNAVAILABLE
                 : evidence != null || completed > 0 ? Status.EVIDENCE_OBSERVED_NOT_VERIFIED
                 : Status.RESPONSE_UNVERIFIED;
         String safeRoute = route == null || !route.matches("[a-z_]{1,24}") ? "unknown" : route;
