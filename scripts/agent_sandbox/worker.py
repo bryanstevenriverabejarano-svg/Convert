@@ -32,7 +32,7 @@ elif sys.argv[1] == "browser.render":
                                "--disable-sync", "--no-first-run", "--no-default-browser-check",
                                "--disable-breakpad", "--disable-crash-reporter",
                                "--user-data-dir=/tmp/chromium", "--virtual-time-budget=2000", "--timeout=8000",
-                               "--dump-dom", "file:///tmp/page.html"], capture_output=True, timeout=16, check=False, env=chrome_env)
+                               "--dump-dom", "file:///tmp/page.html"], capture_output=True, timeout=24, check=False, env=chrome_env)
     if rendered.returncode:
         sys.stderr.write(rendered.stderr[:2000].decode("utf-8", errors="replace"))
         raise SystemExit(1)
