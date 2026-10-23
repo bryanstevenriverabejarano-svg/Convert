@@ -22,9 +22,17 @@ elif sys.argv[1] == "browser.render":
     chrome_env = dict(os.environ, XDG_CONFIG_HOME="/tmp/chrome-config", XDG_CACHE_HOME="/tmp/chrome-cache")
     Path(chrome_env["XDG_CONFIG_HOME"]).mkdir(mode=0o700, exist_ok=True)
     Path(chrome_env["XDG_CACHE_HOME"]).mkdir(mode=0o700, exist_ok=True)
-    rendered = subprocess.run(["chromium", "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+    # Chromium startup varies between runner generations. Restrict background
+    # components rather than weakening Docker's no-network/read-only/user policy.
+    # A hard subprocess deadline still prevents indefinitely hanging renders.
+    rendered = subprocess.run(["chromium", "--headless=new", "--no-sandbox",
+                               "--disable-gpu", "--disable-software-rasterizer", "--disable-dev-shm-usage",
+                               "--disable-background-networking", "--disable-extensions",
+                               "--disable-component-update", "--disable-default-apps",
+                               "--disable-sync", "--no-first-run", "--no-default-browser-check",
+                               "--disable-breakpad", "--disable-crash-reporter",
                                "--user-data-dir=/tmp/chromium", "--virtual-time-budget=2000", "--timeout=8000",
-                               "--dump-dom", "file:///tmp/page.html"], capture_output=True, timeout=12, check=False, env=chrome_env)
+                               "--dump-dom", "file:///tmp/page.html"], capture_output=True, timeout=16, check=False, env=chrome_env)
     if rendered.returncode:
         sys.stderr.write(rendered.stderr[:2000].decode("utf-8", errors="replace"))
         raise SystemExit(1)
