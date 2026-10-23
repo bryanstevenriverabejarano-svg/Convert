@@ -56,9 +56,9 @@ public final class ConversationOutcomeAudit {
         Status status = !delivered || answer == null || answer.trim().isEmpty()
                 ? Status.FAILED
                 : handoff ? Status.PENDING_APPROVAL
-                : issue != null ? Status.NEEDS_REVISION
                 : evidence != null && (evidence.state == ConversationOutcomeEvidence.State.ABSENT
                         || evidence.state == ConversationOutcomeEvidence.State.ERROR) ? Status.EVIDENCE_UNAVAILABLE
+                : issue != null ? Status.NEEDS_REVISION
                 : failed > 0 && completed == 0 ? Status.EVIDENCE_UNAVAILABLE
                 : evidence != null || completed > 0 ? Status.EVIDENCE_OBSERVED_NOT_VERIFIED
                 : Status.RESPONSE_UNVERIFIED;
