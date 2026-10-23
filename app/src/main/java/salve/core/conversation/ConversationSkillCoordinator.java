@@ -89,14 +89,15 @@ public final class ConversationSkillCoordinator {
     }
 
     /**
-     * Consume the current plan once. A generated response receives only
-     * provisional feedback; a subsequent human correction can override it.
+     * A generated answer is NOT evidence of correctness. Keep its strategy
+     * pending, but grant no positive credit without explicit user feedback
+     * or an independent verifier. Silence and topic changes remain UNKNOWN.
      */
     public synchronized void responseFinished(boolean generated, String subject) {
         SkillLab.Plan plan = responsePlan;
         responsePlan = null;
         if (plan == null || !generated) return;
-        try { laboratory.get().await(plan, Boolean.TRUE, "sin_correccion", subject); }
+        try { laboratory.get().await(plan, null, "pendiente_verificacion", subject); }
         catch (RuntimeException unavailable) { /* No impact on sending the reply. */ }
     }
 

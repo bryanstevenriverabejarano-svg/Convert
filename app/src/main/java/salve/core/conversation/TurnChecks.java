@@ -26,6 +26,17 @@ public final class TurnChecks {
     static final Pattern FIRST_PERSON = Pattern.compile(
             "\\b(soy|me|mi|mis|yo|estoy|tengo|siento|aprendo|recuerdo|dibujo|pienso|quiero|puedo|se hacer|conmigo|he|creo|disfruto|"
             + "intento|busco|noto|leo|juego|sueno|mio|mia)\\b");
+    private static final Pattern CAUSAL_QUESTION = Pattern.compile(
+            "(^|\\b)(por que|porque|a que se debe|cual es la razon|cual es el motivo)\\b");
+    private static final Pattern CAUSAL_ANSWER = Pattern.compile(
+            "\\b(porque|ya que|debido a|se debe a|por eso|puesto que|gracias a|la razon|el motivo|"
+            + "lo que hace que|esto ocurre|me diferencia|me distingue|me distingo|por mi|por mis)\\b");
+    private static final Pattern COMPARE_QUESTION = Pattern.compile(
+            "\\b(compara|comparame|comparacion|diferencia entre|que es mejor entre|frente a|versus)\\b");
+    private static final Pattern COMPARE_ANSWER = Pattern.compile(
+            "\\b(mientras|en cambio|a diferencia|ambos|pero|distinto|diferente|comparado|"
+            + "por otro lado|en comun|por el contrario|frente a)\\b");
+
     private static final Pattern PROMISE = Pattern.compile(
             "\\b(voy a|vamos a|analizare|explicare|te explicare|te contare|contare|revisare|descompondre|desglosare|hare|preparare|buscare|"
             + "te dire|empezare|vere|examinare|comentare|abordare|dame un momento|enseguida te|a continuacion te)\\b");
@@ -40,10 +51,21 @@ public final class TurnChecks {
         List<String> out = new ArrayList<>();
         if (creator && WHO_AM_I.matcher(in).find() && !d.contains("bryan"))
             out.add("te pregunta si sabes quién es: es Bryan, quien te creó; dilo con su nombre y algo concreto que sepas de él");
-        if (ABOUT_HER.matcher(in).find() && !NOT_ABOUT_HER.matcher(in).find() && in.length() < 90 && count(FIRST_PERSON, d) < 2)
+        boolean explainedHerCausally = CAUSAL_QUESTION.matcher(in).find()
+                && CAUSAL_ANSWER.matcher(d).find() && count(FIRST_PERSON, d) >= 1;
+        if (ABOUT_HER.matcher(in).find() && !NOT_ABOUT_HER.matcher(in).find()
+                && in.length() < 90 && count(FIRST_PERSON, d) < 2 && !explainedHerCausally)
             out.add("te pregunta por ti: contesta hablando de ti en primera persona, con algo concreto tuyo (qué haces, qué te gusta, cómo estás y por qué)");
         if (announcesOnly(draft))
             out.add("solo anunciaste lo que ibas a hacer, sin hacerlo: hazlo ya en esta misma respuesta");
+        // Ask-demand alignment, not model-supplied self-evaluation. A generic
+        // greeting must not count as an explanation merely because it says "soy".
+        if (CAUSAL_QUESTION.matcher(in).find() && !CAUSAL_ANSWER.matcher(d).find()
+                && d.length() < 240)
+            out.add("preguntó POR QUÉ: explica una causa o diferencia concreta usando lo que sabes; si no hay evidencia, reconócelo");
+        if (COMPARE_QUESTION.matcher(in).find() && !COMPARE_ANSWER.matcher(d).find()
+                && d.length() < 100)
+            out.add("pidió COMPARAR: contrasta explícitamente las dos opciones y explica una diferencia comprobable");
         return out.isEmpty() ? null : String.join("; ", out);
     }
 
