@@ -19,6 +19,9 @@ public class MemoryProbePolicyTest {
                 Collections.emptyList(), "contraseña de mi banco"));
         assertThrows(IllegalArgumentException.class, () -> MemoryProbePolicy.scoped(
                 "¿Recuerdas el reloj que le regalé a mi hermano?",
+                Collections.emptyList(), "hermano contraseña cuenta bancaria"));
+        assertThrows(IllegalArgumentException.class, () -> MemoryProbePolicy.scoped(
+                "¿Recuerdas el reloj que le regalé a mi hermano?",
                 Collections.emptyList(), "https://otro-sitio.com/fuga"));
         assertThrows(IllegalArgumentException.class, () -> MemoryProbePolicy.scoped(
                 "¿Recuerdas el reloj que le regalé a mi hermano?",
