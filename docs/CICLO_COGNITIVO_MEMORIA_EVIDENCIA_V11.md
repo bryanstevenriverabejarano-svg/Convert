@@ -23,7 +23,9 @@ respuesta generada con una conclusión demostrada.
    derivadas de memoria ahora adjuntan ConversationOutcomeEvidence al
    evaluador común de entrega. Usa datos del controlador: estado de lectura,
    presencia de fuentes y cantidad de búsquedas, no frases autodeclaradas
-   por el modelo. La traza de ejecución registra únicamente metadatos.
+   por el modelo. Las entradas NUEVAS de EVALUACION_ENTREGA contienen
+   únicamente metadatos; el diario preexistente puede registrar texto de
+   investigaciones o URLs y debe conservar sus propias protecciones de acceso.
 5. ConversationOutcomeAudit puede distinguir EVIDENCE_UNAVAILABLE de
    EVIDENCE_OBSERVED_NOT_VERIFIED. **Observar una fuente o encontrar un
    recuerdo NO confirma que el mensaje final sea verdadero**.
@@ -33,7 +35,7 @@ respuesta generada con una conclusión demostrada.
 
 ## Evidencia y datos privados
 
-- No se guardan en la auditoría prompts, URLs, nombres, texto de recuerdos,
+- No se guardan en las NUEVAS entradas de auditoría prompts, URLs, nombres, texto de recuerdos,
   contenido web ni razonamiento interno.
 - Si una consulta de memoria no está vinculada al turno, el controlador la
   rechaza antes de leerla; una orden escondida en una página no amplía el
