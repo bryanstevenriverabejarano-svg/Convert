@@ -41,11 +41,13 @@ public final class MemoryProbePolicy {
         if (normalizedInput.matches(".*\\b(eres|unica|unico|identidad|tu mente|tu historia)\\b.*")) {
             allowed.add("salve"); allowed.add("ident"); allowed.add("recue");
         }
-        boolean overlap = false;
-        for (String word : terms(query)) {
-            if (allowed.contains(word)) { overlap = true; break; }
-        }
-        if (!overlap) throw new IllegalArgumentException("Consulta de memoria ajena al objetivo de este turno");
+        int overlap = 0;
+        Set<String> proposedTerms = terms(query);
+        for (String word : proposedTerms) if (allowed.contains(word)) overlap++;
+        // A term from the original turn must anchor a refinement; most new
+        // terms must not steer retrieval to an unrelated private topic.
+        if (overlap == 0 || overlap * 2 < proposedTerms.size())
+            throw new IllegalArgumentException("Consulta de memoria ajena al objetivo de este turno");
         return query;
     }
     private static Set<String> terms(String input) {
