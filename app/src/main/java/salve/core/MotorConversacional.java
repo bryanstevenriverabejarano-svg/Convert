@@ -374,6 +374,13 @@ public class MotorConversacional {
 
     /** Current user input is diagnostic context only on its conversation thread. */
     private final ThreadLocal<String> auditTurnInput = new ThreadLocal<>();
+    private final ThreadLocal<salve.core.conversation.ConversationOutcomeEvidence> deliveryEvidence =
+            new ThreadLocal<>();
+
+    /** Controller-owned evidence only, from the worker processing this turn. */
+    void attachDeliveryEvidence(salve.core.conversation.ConversationOutcomeEvidence evidence) {
+        if (evidence != null) deliveryEvidence.set(evidence);
+    }
 
     public void procesarEntrada(String entrada, boolean entradaPorVoz) {
         encolarEntrada(entrada, entradaPorVoz, false);
@@ -526,6 +533,7 @@ public class MotorConversacional {
                 } finally {
                     salve.core.trace.ExecutionTrace.finish(closed || !isVoiceContextCurrent() ? "CANCELADA" : "TURNO_TERMINADO");
                     auditTurnInput.remove();
+                    deliveryEvidence.remove();
                     literalDrawingReply.remove(); literalDrawingTurn.remove();
                     goalAutonomy.endUserTurn();
                     liveVoiceTurn.remove();
@@ -567,6 +575,7 @@ public class MotorConversacional {
 
     private void procesarEntradaInterna(String entrada, boolean entradaPorVoz, boolean privateBudgetTurn) {
         if (entrada == null || entrada.trim().isEmpty()) return;
+        deliveryEvidence.remove();
         turnSketchTag.set(null); // un dibujo de un turno anterior nunca se cuela en esta respuesta
         turnSources.clear(); // las fuentes son de la búsqueda de este turno
         turnSketchStatus = null;
@@ -1267,6 +1276,8 @@ public class MotorConversacional {
                     + "más antiguos. Ya lo estoy recuperando yo sola; pregúntamelo otra vez en un rato.";
         }
         if (directAnswer != null) {
+            if (evidence != null && evidence.getDirectAnswer() != null)
+                attachDeliveryEvidence(salve.core.conversation.ConversationOutcomeEvidence.memory(evidence));
             String answer = ResponseLimiter.limit(directAnswer, VoiceResponsePolicy.maxResponseChars(entradaPorVoz));
             TurnQualityAssessment quality = ConversationQualityEvaluator.evaluate(answer, false,
                     !answer.equals(directAnswer), false, false,
@@ -2234,9 +2245,14 @@ public class MotorConversacional {
         // No answer, prompt, memory, or private thought is persisted here.
         String auditInput = auditTurnInput.get();
         if (auditInput != null && publishUi) {
+            salve.core.conversation.ConversationOutcomeEvidence observation = deliveryEvidence.get();
+            deliveryEvidence.remove(); // never attach a prior result to a later message
+            String route = observation == null ? "delivery"
+                    : observation.kind == salve.core.conversation.ConversationOutcomeEvidence.Kind.MEMORY
+                    ? "memory" : "research";
             salve.core.conversation.ConversationOutcomeAudit audit =
                     salve.core.conversation.ConversationOutcomeAudit.evaluate(
-                            auditInput, texto, null, true, "delivery");
+                            auditInput, texto, null, true, route, observation);
             salve.core.trace.ExecutionTrace.note("EVALUACION_ENTREGA", audit.receipt().toString());
         }
         // Fuentes leídas en este turno: al chat y al historial (para analizarlas juntos), nunca a la voz.
