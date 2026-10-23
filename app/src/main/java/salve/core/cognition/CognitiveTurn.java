@@ -45,6 +45,7 @@ public final class CognitiveTurn {
         JsonArray receipts = new JsonArray();
         Set<String> used = new HashSet<>(); // side-effecting tools never repeat in a turn
         Set<String> webQueries = new HashSet<>(); // only changed public searches may repeat
+        Set<String> memoryQueries = new HashSet<>(); // read-only memory probes; controller rechecks scope
         boolean repaired = false, repair = false, toolsClosed = false;
         int actions = 0;
         long deadline = System.nanoTime() + 180_000_000_000L;
