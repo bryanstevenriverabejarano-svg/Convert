@@ -47,6 +47,16 @@ public class ConversationOutcomeEvidenceTest {
         assertEquals("memory", audit.route);
         assertFalse(audit.receipt().toString().contains("No pude consultar ahora los recuerdos"));
     }
+    @Test public void missingSourcesTakePriorityOverMissingCausalExplanation() {
+        ConversationOutcomeAudit audit = ConversationOutcomeAudit.evaluate(
+                "¿Por qué funciona la geometría de este sistema?",
+                "No encontré información suficiente para responder.",
+                new JsonArray(), true, "research",
+                ConversationOutcomeEvidence.research(PublicResearchCoordinator.Status.NO_SOURCES, 0, 2));
+        assertEquals(ConversationOutcomeAudit.Status.EVIDENCE_UNAVAILABLE, audit.status);
+        assertFalse(audit.receipt().get("answer_factually_verified").getAsBoolean());
+    }
+
     @Test public void emptyDeliveryFailsEvenWhenControllerSawSources() {
         ConversationOutcomeAudit audit = ConversationOutcomeAudit.evaluate(
                 "Busca un tema", "", new JsonArray(), true, "research",
