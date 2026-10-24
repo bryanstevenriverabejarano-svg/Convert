@@ -52,6 +52,17 @@ public final class SynergyRuntime {
                 "; curiosidad="+band(s.curiosity)+
                 "; aprendizaje="+band(s.learning)+".";
     }
+    /** Observable values, with no claim of feelings or physical life. */
+    public String status() {
+        SynergyCore.State s=state(); SynergyCore.Device d=device();
+        return "Mi sinergia computacional: energía de trabajo "+(int)(s.energy*100)+
+            "/100, curiosidad "+(int)(s.curiosity*100)+
+            "/100, incertidumbre "+(int)(s.uncertainty*100)+
+            "/100 y prioridad de aprendizaje "+(int)(s.learning*100)+
+            "/100. Batería del teléfono "+(d.battery>0?d.battery+"%":"no disponible")+
+            ". Investigación autónoma "+(SynergyCore.mayExplore(s,d,false,false)?"permitida":"limitada por estado o recursos")+
+            ". Son indicadores de ejecución, no emociones.";
+    }
     private static String band(double score) {
         return score<.33?"baja":score>.67?"alta":"media";
     }
