@@ -25,6 +25,13 @@ public final class SketchStyle {
         }
     }
 
+    /**
+     * Contornos que conserva. Antes eran 32 y se perdían detalles (cara, manos, pliegues): el ángel de
+     * prueba pasaba de 45 a 32 líneas. El calcador ya empalma los trozos cortados en los cruces, así que
+     * este tope sólo actúa en imágenes realmente cargadas.
+     */
+    public static final int MAX_STROKES = 56;
+
     /** @param maxStrokes contornos que conserva (los más largos) */
     public static Result ownVersion(List<float[]> traced, int maxStrokes) {
         List<float[]> source = new ArrayList<>();

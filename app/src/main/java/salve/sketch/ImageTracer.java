@@ -81,8 +81,8 @@ public final class ImageTracer {
         boolean[] lineArt = lineArtSkeleton(lum, width, height);
         boolean[] edges = lineArt != null ? lineArt : hysteresis(suppress(mag, dir, width, height), width, height);
         if (lineArt != null) for (int i = 0; i < mag.length; i++) if (lineArt[i]) mag[i] = Math.max(mag[i], 120f);
-        List<int[]> chains = link(edges, width, height);
         float diagonal = (float) Math.hypot(width, height);
+        List<int[]> chains = join(link(edges, width, height), joinGap(diagonal));
         List<Chain> kept = select(chains, mag, width, diagonal);
         if (subjectOnly) kept = subject(kept, width, height);
         order(kept);
@@ -193,6 +193,89 @@ public final class ImageTracer {
             }
         }
         return chains;
+    }
+
+    /** Separación máxima, en píxeles, entre extremos que se consideran la misma línea. */
+    static float joinGap(float diagonal) { return Math.max(2.5f, diagonal * .008f); }
+
+    /**
+     * El seguidor corta cada línea al llegar a un cruce (donde el ala toca el cuerpo, por ejemplo) y deja
+     * trozos sueltos con huecos de uno o dos píxeles. Aquí se vuelven a empalmar por sus extremos más
+     * cercanos, para que el dibujo tenga contornos continuos en vez de rayas partidas.
+     */
+    static List<int[]> join(List<int[]> chains, float gap) {
+        int n = chains.size();
+        if (n < 2 || n > 6000) return chains;
+        int cell = Math.max(1, (int) Math.ceil(gap));
+        java.util.Map<Long, List<Integer>> grid = new java.util.HashMap<>();
+        boolean[] loop = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            int[] c = chains.get(i);
+            loop[i] = isLoop(c);
+            if (loop[i] || c.length < 4) continue;
+            for (int end = 0; end < 2; end++) {
+                int x = c[end == 0 ? 0 : c.length - 2], y = c[end == 0 ? 1 : c.length - 1];
+                grid.computeIfAbsent(key(x / cell, y / cell), k -> new ArrayList<>()).add(2 * i + end);
+            }
+        }
+        boolean[] used = new boolean[n];
+        List<int[]> out = new ArrayList<>();
+        float gap2 = gap * gap;
+        for (int i = 0; i < n; i++) {
+            if (used[i]) continue;
+            used[i] = true;
+            int[] cur = chains.get(i);
+            if (loop[i] || cur.length < 4) { out.add(cur); continue; }
+            for (int side = 0; side < 2; side++) {
+                while (true) {
+                    int tx = cur[cur.length - 2], ty = cur[cur.length - 1];
+                    int best = -1; float bestD = Float.MAX_VALUE;
+                    for (int gy = ty / cell - 1; gy <= ty / cell + 1; gy++) for (int gx = tx / cell - 1; gx <= tx / cell + 1; gx++) {
+                        List<Integer> ends = grid.get(key(gx, gy));
+                        if (ends == null) continue;
+                        for (int e : ends) {
+                            if (used[e / 2]) continue;
+                            int[] o = chains.get(e / 2);
+                            int ox = o[e % 2 == 0 ? 0 : o.length - 2], oy = o[e % 2 == 0 ? 1 : o.length - 1];
+                            float d = (ox - tx) * (ox - tx) + (oy - ty) * (oy - ty);
+                            if (d <= gap2 && d < bestD) { bestD = d; best = e; }
+                        }
+                    }
+                    if (best < 0) break;
+                    used[best / 2] = true;
+                    int[] next = chains.get(best / 2);
+                    cur = concat(cur, best % 2 == 0 ? next : reverse(next));
+                }
+                cur = reverse(cur); // ahora alarga por el otro extremo
+            }
+            int m = cur.length / 2;
+            if (m > 8 && !isLoop(cur) && Math.abs(cur[0] - cur[2 * m - 2]) <= 1 && Math.abs(cur[1] - cur[2 * m - 1]) <= 1) {
+                cur = java.util.Arrays.copyOf(cur, cur.length + 2);
+                cur[cur.length - 2] = cur[0]; cur[cur.length - 1] = cur[1];
+            }
+            out.add(cur);
+        }
+        return out;
+    }
+
+    private static boolean isLoop(int[] c) {
+        return c.length / 2 > 8 && c[0] == c[c.length - 2] && c[1] == c[c.length - 1];
+    }
+
+    private static long key(int x, int y) { return ((long) x << 32) ^ (y & 0xffffffffL); }
+
+    private static int[] reverse(int[] c) {
+        int[] r = new int[c.length];
+        for (int i = 0, n = c.length / 2; i < n; i++) { r[2 * i] = c[2 * (n - 1 - i)]; r[2 * i + 1] = c[2 * (n - 1 - i) + 1]; }
+        return r;
+    }
+
+    private static int[] concat(int[] a, int[] b) {
+        boolean same = a[a.length - 2] == b[0] && a[a.length - 1] == b[1];
+        int skip = same ? 2 : 0;
+        int[] r = java.util.Arrays.copyOf(a, a.length + b.length - skip);
+        System.arraycopy(b, skip, r, a.length, b.length - skip);
+        return r;
     }
 
     private static int neighbours(boolean[] edge, int i, int w, int h) {
@@ -411,7 +494,9 @@ public final class ImageTracer {
         float budget = diagonal * 9f, used = 0;
         List<Chain> kept = new ArrayList<>();
         for (Chain c : all) {
-            if (kept.size() >= 70 || (used > diagonal * 2 && used + c.length > budget)) break;
+            if (kept.size() >= 70) break;
+            // Si una línea larga no cabe, sigue mirando: las cortas que caben son detalles (cara, manos).
+            if (used > diagonal * 2 && used + c.length > budget) continue;
             kept.add(c);
             used += c.length;
         }
