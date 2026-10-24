@@ -52,6 +52,11 @@ public class CuriosityWorker extends Worker {
                 salve.core.SalveLLM.getInstance(app).isLoading());
         if (lease == null) return Result.success();
         try {
+            salve.core.synergy.SynergyRuntime synergy = salve.core.synergy.SynergyRuntime.get(app);
+            synergy.record(salve.core.synergy.SynergyCore.Event.NONE);
+            if (!synergy.allowCuriosity(salve.core.MindRuntime.get(app).journal().isPaused(),
+                    salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation()))
+                return Result.success();
             if (salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation()
                     || salve.core.SalveLLM.getInstance(app).isLoading()) {
                 Log.i(TAG, "Bryan está conversando o el modelo se carga; lo dejo para luego.");
