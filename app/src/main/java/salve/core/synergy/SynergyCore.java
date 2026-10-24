@@ -2,7 +2,7 @@ package salve.core.synergy;
 
 /** Bounded computational priorities, not physical energy or feelings. */
 public final class SynergyCore {
-    public enum Event { NONE, ANSWER, FAILED, FOUND, NO_EVIDENCE, VERIFIED }
+    public enum Event { NONE, ANSWER, FAILED, FOUND, NO_EVIDENCE, VERIFIED, REJECTED }
     public static final class State {
         public double energy = .65, curiosity = .55, uncertainty = .35, learning = .50;
         public long at, events, verified;
@@ -46,6 +46,7 @@ public final class SynergyCore {
             case FOUND: s.energy-=.06; s.curiosity-=.06; s.uncertainty-=.05; break;
             case NO_EVIDENCE: s.energy-=.05; s.uncertainty+=.07; break;
             case VERIFIED: s.verified++; s.learning+=.04; s.uncertainty-=.06; break;
+            case REJECTED: s.uncertainty+=.09; s.learning+=.06; break;
             default: break;
         }
         s.energy=bounded(s.energy); s.curiosity=bounded(s.curiosity);
