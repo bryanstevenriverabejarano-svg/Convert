@@ -59,6 +59,8 @@ public final class SynergyCore {
                 && s.energy>=.30&&s.curiosity>=.25;
     }
     public static boolean mayReflect(State s, Device d, boolean paused, boolean busy) {
-        return mayExplore(s,d,paused,busy)&&d.charging&&s.energy>=.42;
+        // Reflection, maintenance and goals must NOT depend on curiosity.
+        return !paused&&!busy&&!d.save&&!d.lowRam&&!d.hot&&d.battery>=20
+                &&d.charging&&s.energy>=.42;
     }
 }
