@@ -35,7 +35,10 @@ public final class SynergyCore {
             s.uncertainty=bounded(old.uncertainty); s.learning=bounded(old.learning);
             s.events=Math.max(0,old.events); s.verified=Math.max(0,old.verified);
             long dt=old.at>0&&now>old.at?Math.min(now-old.at,86400000):0;
-            s.energy+=dt/3600000d*(charging?.03:.01);
+            double hours=dt/3600000d;
+            s.energy+=hours*(charging?.03:.01);
+            s.curiosity+=hours*.008;
+            s.uncertainty-=hours*.002;
         }
         switch(event) {
             case ANSWER: s.energy-=.02; s.uncertainty-=.02; break;
