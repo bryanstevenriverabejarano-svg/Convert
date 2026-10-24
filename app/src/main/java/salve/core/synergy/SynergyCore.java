@@ -41,7 +41,7 @@ public final class SynergyCore {
             s.uncertainty-=hours*.002;
         }
         switch(event) {
-            case ANSWER: s.energy-=.02; s.uncertainty-=.02; break;
+            case ANSWER: s.energy-=.02; break; // delivery is not proof of correctness
             case FAILED: s.energy-=.03; s.uncertainty+=.10; s.learning+=.05; break;
             case FOUND: s.energy-=.06; s.curiosity-=.06; s.uncertainty-=.05; break;
             case NO_EVIDENCE: s.energy-=.05; s.uncertainty+=.07; break;
