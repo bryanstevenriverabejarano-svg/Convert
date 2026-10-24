@@ -1474,7 +1474,15 @@ public class MotorConversacional {
             });
 
     private String observarExperiencia(String entrada) {
-        skillCoordinator.beginTurn(entrada);
+        salve.core.mind.SkillLab.Feedback verified=skillCoordinator.beginTurn(entrada);
+        // Only explicit feedback on a truly pending skill experiment updates
+        // verified learning; merely delivering a model response never does.
+        if (creatorSide() && verified!=salve.core.mind.SkillLab.Feedback.NONE) {
+            salve.core.synergy.SynergyRuntime.get(context).record(
+                    verified==salve.core.mind.SkillLab.Feedback.PRAISE
+                    ? salve.core.synergy.SynergyCore.Event.VERIFIED
+                    : salve.core.synergy.SynergyCore.Event.REJECTED);
+        }
         return "";
     }
 
