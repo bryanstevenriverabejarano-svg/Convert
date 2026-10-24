@@ -104,11 +104,12 @@ class FamilyPrivacyTests(unittest.TestCase):
             node.ComputeApplication(READ, self.backend, location_token=READ)
 
     def test_encryption_restart_tamper_and_private_permissions(self):
-        self.store.write(location())
+        original = location()
+        self.store.write(original)
         ciphertext = self.store.path.read_bytes()
         self.assertNotIn(b'Ciudad', ciphertext)
         self.assertNotIn(b'latitude', ciphertext)
-        self.assertEqual(location(), LocationStore(self.folder / 'location').read())
+        self.assertEqual(original, LocationStore(self.folder / 'location').read())
         self.store.path.write_bytes(ciphertext[:-1] + bytes([ciphertext[-1] ^ 1]))
         self.assertEqual(503, self.call('/v1/family/status', READ)[0])
         key = self.store.directory / 'location.key'; key.chmod(0o644)
