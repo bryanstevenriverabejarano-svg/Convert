@@ -18,6 +18,16 @@ public final class SynergyCore {
     private static double bounded(double x) {
         return Double.isFinite(x) ? Math.max(0, Math.min(1, x)) : .5;
     }
+    public static State clean(State old) {
+        State s = new State();
+        if (old != null) {
+            s.energy=bounded(old.energy); s.curiosity=bounded(old.curiosity);
+            s.uncertainty=bounded(old.uncertainty); s.learning=bounded(old.learning);
+            s.at=Math.max(0,old.at); s.events=Math.max(0,old.events);
+            s.verified=Math.max(0,old.verified);
+        }
+        return s;
+    }
     public static State advance(State old, Event event, boolean charging, long now) {
         State s = new State();
         if (old != null) {
