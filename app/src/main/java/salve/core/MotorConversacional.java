@@ -766,6 +766,10 @@ public class MotorConversacional {
             hablar(creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.");
             return;
         }
+        if (salve.core.synergy.SynergyRequests.isStatus(entrada)) {
+            hablar(salve.core.synergy.SynergyRuntime.get(context).status());
+            return;
+        }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
