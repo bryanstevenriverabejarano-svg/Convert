@@ -269,7 +269,8 @@ final class ConversationExamRunner {
             try { exam = JsonParser.parseString(new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)).getAsJsonObject(); }
             catch (Exception damaged) { exam = null; }
         }
-        return salve.core.evaluation.ImprovementProposals.report(exam, motor.mind().lessons().all());
+        return salve.core.evaluation.ImprovementProposals.report(exam, motor.mind().lessons().all())
+                + salve.core.synergy.SynergyEvolution.describe(exam);
     }
 
     /** Para las pruebas: ¿qué historial ve el modelo en un caso? (sin modelo ni Android). */
