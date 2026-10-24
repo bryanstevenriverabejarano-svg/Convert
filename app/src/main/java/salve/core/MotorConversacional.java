@@ -1938,6 +1938,8 @@ public class MotorConversacional {
         // Lo propio de este turno (lo que entendió, lo que hizo, sus actualizaciones, lecciones) va
         // PRIMERO: el bloque se recorta por el final si no cabe, y antes se perdía justo esto.
         String details = contextInfo
+                + (llm != null && llm.getConversationPromptBudgetChars() >= 6000
+                    ? "\n" + salve.core.synergy.SynergyRuntime.get(context).summary() : "")
                 + "\n" + VoiceResponsePolicy.promptInstruction(voice)
                 + "\n" + deviceClock.promptContext()
                 + "\n" + salve.avatar.AstralBodySense.promptContext(salve.avatar.AstralBody.get().snapshot(),
