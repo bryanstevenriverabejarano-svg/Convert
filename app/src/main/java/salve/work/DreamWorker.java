@@ -45,6 +45,11 @@ public class DreamWorker extends Worker {
                 salve.core.SalveLLM.getInstance(getApplicationContext()).isLoading());
         if (lease == null) return Result.success();
         try {
+            salve.core.synergy.SynergyRuntime synergy=salve.core.synergy.SynergyRuntime.get(getApplicationContext());
+            synergy.record(salve.core.synergy.SynergyCore.Event.NONE);
+            if (!synergy.allowReflection(salve.core.MindRuntime.get(getApplicationContext()).journal().isPaused(),
+                    salve.core.GoalAutonomyRuntime.get(getApplicationContext()).hasActiveConversation()))
+                return Result.success();
 
             String outcome = MindRuntime.get(getApplicationContext()).dream(this::isStopped);
             Log.i(TAG, "Sueño finalizado: " + (outcome == null ? "" : outcome.length() > 160 ? outcome.substring(0, 160) : outcome));
