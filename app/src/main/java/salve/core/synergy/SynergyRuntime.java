@@ -13,6 +13,7 @@ import com.google.gson.Gson;
 /** Persistent controller; no background service or privileged permissions. */
 public final class SynergyRuntime {
     private static final String PREFS = "salve_synergy_v1";
+    private static volatile SynergyRuntime instance;
     private final Context app;
     private final SharedPreferences prefs;
     private final Gson gson = new Gson();
@@ -20,12 +21,17 @@ public final class SynergyRuntime {
         this.app=app.getApplicationContext();
         this.prefs=this.app.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
     }
-    public static SynergyRuntime get(Context app) { return new SynergyRuntime(app); }
+    public static SynergyRuntime get(Context app) {
+        if (instance==null) synchronized(SynergyRuntime.class) {
+            if(instance==null) instance=new SynergyRuntime(app);
+        }
+        return instance;
+    }
     public synchronized SynergyCore.State state() {
         try {
             String data=prefs.getString("state","");
             SynergyCore.State loaded=data.isEmpty()?null:gson.fromJson(data,SynergyCore.State.class);
-            return SynergyCore.advance(loaded,SynergyCore.Event.NONE,false,0);
+            return SynergyCore.clean(loaded);
         } catch (RuntimeException broken) { return new SynergyCore.State(); }
     }
     public synchronized SynergyCore.State record(SynergyCore.Event event) {
