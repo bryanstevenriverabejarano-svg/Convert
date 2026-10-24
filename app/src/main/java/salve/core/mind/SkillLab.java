@@ -352,6 +352,15 @@ public final class SkillLab {
             "\\b(me gusta|me encanta|que bonito|que bonita|precioso|preciosa|perfecto|genial|muy bien|asi si|eso es|exacto|"
             + "me sirve|esta bien|bien hecho|chulo|chula|guay|increible|buenisimo|gracias)\\b");
 
+    /** Only explicit feedback on a still-pending experiment can count. */
+    public synchronized boolean hasPendingFeedback(String input) {
+        if (feedback(input)==Feedback.NONE) return false;
+        long now=clock.getAsLong();
+        for (Pending p:pending)
+            if (now>=p.at && now-p.at<=PENDING_MS) return true;
+        return false;
+    }
+
     /** Lo que dice Bryan sobre lo último que ella hizo. */
     public static Feedback feedback(String input) {
         if (LessonBook.isCorrection(input)) return Feedback.CORRECTION;
