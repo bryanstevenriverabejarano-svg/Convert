@@ -2631,6 +2631,9 @@ public class MotorConversacional {
                                             TurnQualityAssessment assessment, AvatarMotionProtocol.Result motion,
                                             boolean entradaPorVoz) {
         hablarPreparado(respuesta, motion);
+        salve.core.synergy.SynergyRuntime.get(context).record(assessment.passed()
+                ? salve.core.synergy.SynergyCore.Event.ANSWER
+                : salve.core.synergy.SynergyCore.Event.FAILED);
         mensajesEnSesion++;
         if (creatorSide()) mind().afterReplyToCreator();
         // Anticipa la siguiente intervención para medir sorpresa. En voz se omite: la latencia manda.
