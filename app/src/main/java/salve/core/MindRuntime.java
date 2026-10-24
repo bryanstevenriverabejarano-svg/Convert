@@ -851,6 +851,7 @@ public final class MindRuntime {
         salve.core.mind.CuriosityCycle.Finding finding = salve.core.mind.CuriosityCycle.summarize(texts, urls, question.text);
         android.content.SharedPreferences.Editor edit = prefs.edit().putStringSet("visited", limitSet(visited, 200));
         if (finding == null) {
+            salve.core.synergy.SynergyRuntime.get(app).record(salve.core.synergy.SynergyCore.Event.NO_EVIDENCE);
             // Un fallo no la descarta: la pregunta se reintenta hasta tres veces en otras salidas.
             int failures = prefs.getInt("fail_" + question.id, 0) + 1;
             edit.putInt("fail_" + question.id, failures);
@@ -866,6 +867,9 @@ public final class MindRuntime {
                 .putInt("thread_depth", followThread ? prefs.getInt("thread_depth", 0) + 1 : 0).apply();
         String host = salve.core.mind.CuriosityCycle.hostOf(finding.url);
         salve.core.mind.SelfModelJournal.Result saved = journal.apply(salve.core.mind.CuriosityCycle.patch(question, finding, followThread));
+        salve.core.synergy.SynergyRuntime.get(app).record(saved.saved
+                ? salve.core.synergy.SynergyCore.Event.FOUND
+                : salve.core.synergy.SynergyCore.Event.NO_EVIDENCE);
         // Bandeja de novedades: la última se cuenta al volver; no bloquea las siguientes exploraciones.
         prefs.edit().putString("news_question", question.text).putString("news_summary", finding.summary)
                 .putString("news_url", finding.url == null ? "" : finding.url).putLong("news_at", now).putInt("news_told", 0)
