@@ -85,8 +85,8 @@ public final class ImageReferenceSearch {
     }
 
     private static final String COMMONS = "https://commons.wikimedia.org/w/api.php";
-    private static final String UNSUITABLE = "(?i).*\\b(map|mapa|flag|bandera|coat of arms|escudo|logo|diagram|diagrama|chart|"
-            + "gr[aá]fico|locator|blank|template|plantilla|stamp|sello|text|signature|firma|qr|seal|emblem)\\b.*";
+    private static final String UNSUITABLE = "(?i).*\\b(map|mapa|flag|bandera|coat of arms|escudo|logo\\w*|logotip\\w*|wordmark|brand(?:ing)?|trademark|"
+            + "diagram|diagrama|chart|gr[aá]fico|locator|blank|template|plantilla|stamp|sello|text|signature|firma|qr|seal|emblem)\\b.*";
 
     private final Http http;
 

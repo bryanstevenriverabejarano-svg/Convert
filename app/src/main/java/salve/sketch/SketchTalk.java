@@ -64,6 +64,31 @@ public final class SketchTalk {
     private static final Pattern SEEN = Pattern.compile("(?im)^\\s*[*-]*\\s*veo\\s*[:=]\\s*(.+)$");
     private static final Pattern VERDICT = Pattern.compile("(?im)^\\s*[*-]*\\s*parece[_ ]?objetivo\\s*[:=]\\s*(.+)$");
 
+    /**
+     * Un modelo de visión pequeño tiende a contestar «sí» aunque su propia descripción lo contradiga
+     * («veo un logo con la palabra Pickit; se reconoce como cerdito»). Si lo que dice ver es texto o un
+     * logotipo y no se pidió eso, su «sí» no vale.
+     */
+    private static final Pattern NOT_A_DRAWING = Pattern.compile(
+            "\\b(logo\\w*|logotip\\w*|wordmark|marca comercial|texto|text|letras?|letter\\w*|palabras?|words?|escrit[oa]s?|tipografi\\w*|typograph\\w*)\\b");
+
+    /** En una miniatura puede haber un rótulo junto al objeto; ahí sólo cuenta si es un logotipo. */
+    private static final Pattern LOGO = Pattern.compile("\\b(logo\\w*|logotip\\w*|wordmark|marca comercial)\\b");
+
+    /** ¿Lo que dice ver de su propio dibujo contradice lo que se quería dibujar? */
+    public static boolean contradicts(String seen, String subject) { return contradicts(seen, subject, NOT_A_DRAWING); }
+
+    private static boolean contradicts(String seen, String subject, Pattern unwanted) {
+        String s = SketchLibrary.normalize(seen), wanted = SketchLibrary.normalize(subject);
+        return !s.isEmpty() && unwanted.matcher(s).find() && !unwanted.matcher(wanted).find();
+    }
+
+    /** Como {@link #parseLook(String)}, pero un «sí» que su descripción desmiente cuenta como «no». */
+    public static Look parseLook(String text, String subject) {
+        Look look = parseLook(text);
+        return look.verdict != Verdict.NO && contradicts(look.seen, subject) ? new Look(Verdict.NO, look.seen) : look;
+    }
+
     public static Look parseLook(String text) {
         if (text == null) return new Look(Verdict.UNKNOWN, "");
         Matcher s = SEEN.matcher(text);
@@ -104,6 +129,12 @@ public final class SketchTalk {
 
     private static final Pattern TARGET = Pattern.compile("(?im)^\\s*[*-]*\\s*es[_ ]?objetivo\\s*[:=]\\s*(.+)$");
     private static final Pattern TYPE = Pattern.compile("(?im)^\\s*[*-]*\\s*tipo\\s*[:=]\\s*(.+)$");
+
+    /** Como {@link #parseThumbnail(String)}, pero descarta miniaturas que dice ver como un logotipo. */
+    public static Thumbnail parseThumbnail(String text, String subject) {
+        Thumbnail t = parseThumbnail(text);
+        return t.verdict != Verdict.NO && contradicts(t.seen, subject, LOGO) ? new Thumbnail(Verdict.NO, t.seen, t.drawing) : t;
+    }
 
     public static Thumbnail parseThumbnail(String text) {
         if (text == null) return new Thumbnail(Verdict.UNKNOWN, "", false);

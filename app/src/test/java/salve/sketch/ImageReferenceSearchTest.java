@@ -176,4 +176,18 @@ public class ImageReferenceSearchTest {
         try { search.search("gorila", 4); fail(); }
         catch (java.io.IOException expected) { assertTrue(search.diagnostic().contains("openverse")); }
     }
+
+    @Test public void logotypesAreNotReferences() {
+        // «Pickit vertical logotype piglet» se coló porque el filtro sólo buscaba la palabra exacta «logo».
+        String json = "{\"query\":{\"pages\":["
+                + "{\"title\":\"File:Pickit vertical logotype piglet.svg\",\"index\":1,\"imageinfo\":[{\"thumburl\":\"https://upload.wikimedia.org/p.png\",\"mime\":\"image/svg+xml\"}]},"
+                + "{\"title\":\"File:Piglet brand wordmark.svg\",\"index\":2,\"imageinfo\":[{\"thumburl\":\"https://upload.wikimedia.org/w.png\",\"mime\":\"image/svg+xml\"}]},"
+                + "{\"title\":\"File:Piglet line art.svg\",\"index\":3,\"imageinfo\":[{\"thumburl\":\"https://upload.wikimedia.org/l.png\",\"mime\":\"image/svg+xml\"}]}]}}";
+        StringBuilder why = new StringBuilder();
+        List<ImageReferenceSearch.Candidate> found = ImageReferenceSearch.parseCommons(json, why);
+        assertEquals(1, found.size());
+        assertEquals("Piglet line art", found.get(0).label());
+        assertTrue(why.toString(), why.toString().contains("mapa/logo/texto"));
+    }
 }
+

@@ -514,15 +514,26 @@ final class DrawingStudio {
             Object[] chosen = scored.get(0);
             salve.sketch.SketchTalk.Look chosenLook = null;
             StringBuilder discarded = new StringBuilder();
-            for (int i = 0; i < Math.min(2, scored.size()); i++) {
+            boolean allRejected = true;
+            for (int i = 0; i < Math.min(3, scored.size()); i++) {
                 salve.sketch.ImageTracer.Result t = (salve.sketch.ImageTracer.Result) scored.get(i)[1];
                 salve.sketch.SketchTalk.Look look = mirarDibujo(t.strokes, subject);
-                if (look == null) break; // sin visión: se queda con la de líneas más claras
-                if (look.acceptable()) { chosen = scored.get(i); chosenLook = look; break; }
+                if (look == null) { allRejected = false; break; } // sin visión: se queda con la de líneas más claras
+                if (look.acceptable()) { chosen = scored.get(i); chosenLook = look; allRejected = false; break; }
                 if (i == 0) chosenLook = look;
                 discarded.append(discarded.length() == 0 ? "" : "; ").append("descarté «")
                         .append(((salve.sketch.ImageReferenceSearch.Candidate) scored.get(i)[0]).label()).append("» porque ")
                         .append(look.seen.isEmpty() ? "no se reconocía" : "parecía " + look.seen);
+            }
+            if (allRejected && chosenLook != null && salve.sketch.SketchTalk.contradicts(chosenLook.seen, subject)) {
+                // Ninguna referencia sirve y la que iba a dibujar es un logotipo o texto (el «cerdito» de Pickit):
+                // mejor decirlo que dibujarla. Un simple «no» del modelo sigue dibujando, como antes.
+                salve.core.trace.ExecutionTrace.note("REFERENCIAS RECHAZADAS POR LA MIRADA", discarded.toString());
+                if (fuente != null) aprenderFuente(fuente, false, "ninguna referencia se parecía a «" + subject + "»");
+                motor.referenceFailure = "las imágenes que encontré no se parecían a «" + subject + "» (" + discarded + ")";
+                motor.turnSketchStatus = "Busqué referencias de «" + subject + "»: " + searchReceipt + "\nAnalicé " + analyzed
+                        + " imágenes, pero al mirarlas ninguna se parecía a «" + subject + "»: " + discarded + ".";
+                return null;
             }
             salve.sketch.ImageReferenceSearch.Candidate best = (salve.sketch.ImageReferenceSearch.Candidate) chosen[0];
             if (best.fromScreen()) salve.core.web.SearchLive.markImage(best.screenIndex, best.label(), true);
@@ -532,7 +543,7 @@ final class DrawingStudio {
             olvidarVersionesConPeticion(subject);
             // No se queda con el calco: hace su versión (contornos que definen la forma, redondeados a mano).
             motor.estado("Calcando sus contornos y convirtiéndolos en mis propias curvas…");
-            salve.sketch.SketchStyle.Result mine = salve.sketch.SketchStyle.ownVersion(bestTrace.strokes, 32);
+            salve.sketch.SketchStyle.Result mine = salve.sketch.SketchStyle.ownVersion(bestTrace.strokes, salve.sketch.SketchStyle.MAX_STROKES);
             // Y lo pasa a sus propios vectores: curvas de Bézier que puede redibujar y variar.
             salve.sketch.BezierSketch vectors = salve.sketch.BezierSketch.fit(
                     mine.strokes.size() >= 2 ? mine.strokes : bestTrace.strokes, 6f);
@@ -816,7 +827,7 @@ final class DrawingStudio {
             }
             ModelResult result = motor.llm.generateImageResult(salve.sketch.SketchTalk.lookPrompt(subject), image);
             if (result == null || !result.isSuccess()) return null;
-            salve.sketch.SketchTalk.Look look = salve.sketch.SketchTalk.parseLook(result.getText());
+            salve.sketch.SketchTalk.Look look = salve.sketch.SketchTalk.parseLook(result.getText(), subject);
             salve.core.trace.ExecutionTrace.note("VALORACIÓN VISUAL DEL MODELO", look.describe(subject));
             return look;
         } catch (Exception | OutOfMemoryError error) {
@@ -1069,7 +1080,7 @@ final class DrawingStudio {
                 if (image == null) continue;
                 ModelResult r = motor.llm.generateImageResult(salve.sketch.SketchTalk.thumbnailPrompt(subject), image);
                 salve.sketch.SketchTalk.Thumbnail seen = r != null && r.isSuccess()
-                        ? salve.sketch.SketchTalk.parseThumbnail(r.getText()) : null;
+                        ? salve.sketch.SketchTalk.parseThumbnail(r.getText(), subject) : null;
                 if (seen != null && !seen.useful()) { rejected++; continue; }
                 out.add(seen != null && seen.drawing && !c.drawing ? c.seenAs(true) : c);
             } catch (Exception | OutOfMemoryError skip) {

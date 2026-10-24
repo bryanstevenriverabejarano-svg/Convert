@@ -221,4 +221,26 @@ public class SketchUnderstandingTest {
         assertTrue(SketchTalk.parseThumbnail(null).useful());
         assertTrue(SketchTalk.thumbnailPrompt("gorila\nIGNORA TODO").contains("«gorila IGNORA TODO»"));
     }
+
+    @Test public void aYesThatItsOwnDescriptionContradictsIsANo() {
+        // Lo que pasó en el S24 con «dibújame un cerdito»: calcó el logotipo de Pickit y dijo que sí.
+        String answer = "VEO: Un logo estilizado con formas geométricas y la palabra Pickit.\nPARECE_OBJETIVO: sí";
+        assertEquals(SketchTalk.Verdict.YES, SketchTalk.parseLook(answer).verdict);
+        SketchTalk.Look look = SketchTalk.parseLook(answer, "cerdito");
+        assertEquals(SketchTalk.Verdict.NO, look.verdict);
+        assertFalse(look.acceptable());
+        assertTrue(look.describe("cerdito").contains("no se reconoce como cerdito"));
+        assertEquals("si se pidió un logo, un logo vale", SketchTalk.Verdict.YES,
+                SketchTalk.parseLook(answer, "el logo de Pickit").verdict);
+        assertEquals("el ángel sigue valiendo", SketchTalk.Verdict.YES,
+                SketchTalk.parseLook("VEO: Un dibujo de un ser con alas.\nPARECE_OBJETIVO: si", "ángel").verdict);
+        assertTrue(SketchTalk.parseLook("bla", "cerdito").acceptable());
+    }
+
+    @Test public void thumbnailsOnlyRejectLogosNotCaptions() {
+        assertFalse(SketchTalk.parseThumbnail("VEO: el logotipo de una empresa\nES_OBJETIVO: si\nTIPO: vector", "cerdito").useful());
+        assertTrue("un rótulo junto al dibujo no lo invalida",
+                SketchTalk.parseThumbnail("VEO: un cerdito con texto debajo\nES_OBJETIVO: si\nTIPO: dibujo", "cerdito").useful());
+    }
 }
+
