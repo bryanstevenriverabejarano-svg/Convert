@@ -17,6 +17,11 @@ public final class StoryShelf {
         public long at;
         public String title, summary, moral, file;
         public List<String> characters = new ArrayList<>(), places = new ArrayList<>(), scenes = new ArrayList<>();
+        /** Lo contó ella en el chat (no es un documento leído). */
+        public boolean told;
+        /** Archivos de versiones anteriores del mismo cuento, de la más antigua a la más reciente. */
+        public List<String> earlier = new ArrayList<>();
+        public int versions() { return 1 + (earlier == null ? 0 : earlier.size()); }
     }
 
     private static final Gson GSON = new Gson();
@@ -42,6 +47,27 @@ public final class StoryShelf {
         s.at = clock.getAsLong(); s.title = a.title; s.summary = a.summary; s.moral = a.moral;
         s.file = file == null ? s.file : file;
         s.characters = new ArrayList<>(a.characters); s.places = new ArrayList<>(a.places); s.scenes = new ArrayList<>(a.scenes);
+        while (list.size() > MAX) list.remove(0);
+        save();
+        return s;
+    }
+
+    /**
+     * Guarda un cuento que contó ella. Si ya tenía uno con ese título, la versión anterior no se
+     * borra: se queda en {@code earlier} (los cuentos cambian al volver a contarlos).
+     */
+    public synchronized Story addTold(String title, String summary, String file) {
+        Story s = null;
+        for (Story x : list) if (DocumentReading.normalize(x.title).equals(DocumentReading.normalize(title))) { s = x; break; }
+        if (s == null) { s = new Story(); list.add(s); }
+        else {
+            if (s.earlier == null) s.earlier = new ArrayList<>();
+            if (s.file != null && !s.file.equals(file)) s.earlier.add(s.file);
+            list.remove(s); list.add(s);
+        }
+        s.at = clock.getAsLong(); s.title = title; s.summary = summary; s.told = true;
+        if (s.moral == null) s.moral = "";
+        s.file = file;
         while (list.size() > MAX) list.remove(0);
         save();
         return s;

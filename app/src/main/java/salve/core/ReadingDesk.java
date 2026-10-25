@@ -136,6 +136,30 @@ final class ReadingDesk {
         return "«" + s.title + "»\n\n" + (library == null ? shown : salve.sketch.StoryIllustrator.annotate(shown, library, false));
     }
 
+    /**
+     * «Guarda ese cuento en tu repertorio»: el último cuento que contó en el chat va a su
+     * estantería de verdad (con su texto entero, y sin borrar la versión anterior si ya lo tenía).
+     * @return respuesta, o null si no es eso
+     */
+    String guardarCuentoContado(String entrada, java.util.List<salve.core.conversation.ChatMessage> historial) {
+        String pedido = salve.core.reading.ToldStory.saveRequest(entrada);
+        if (pedido == null) return null;
+        String[] ultimo = salve.core.reading.ToldStory.last(historial);
+        if (ultimo == null) return "No encuentro ningún cuento que te haya contado en esta conversación. Pídeme uno y luego dime «guarda ese cuento».";
+        String title = !pedido.isEmpty() ? pedido : !ultimo[1].isEmpty() ? ultimo[1] : salve.core.reading.ToldStory.fallbackTitle(ultimo[0]);
+        String file = guardarTexto(title, ultimo[0]);
+        if (file == null) return "No he podido guardar «" + title + "»: falló al escribirlo en el móvil. No está guardado.";
+        StoryShelf.Story s = shelf().addTold(title, salve.core.reading.ToldStory.summary(ultimo[0]), file);
+        m.memoria.guardarRecuerdo("Guardé en mi estantería el cuento «" + title + "» que le conté a Bryan" + (s.versions() > 1
+                        ? " (es la versión " + s.versions() + "; las anteriores también las guardo)" : "") + ": " + s.summary,
+                "orgullo", 7, java.util.Arrays.asList("cuento", "mi_cuento"));
+        m.mind().indexNewMemoriesAsync();
+        m.registrarAccion(salve.core.mind.SelfActionLog.Kind.READ, "«" + title + "»", "guardé en mi estantería un cuento que conté");
+        return "Guardado de verdad: «" + title + "» ya está en mi estantería"
+                + (s.versions() > 1 ? " (es la versión " + s.versions() + "; la anterior también la conservo)" : "")
+                + ". Pídeme «léeme el cuento de " + title.toLowerCase(java.util.Locale.ROOT) + "» y te lo leo tal cual, con sus dibujos.";
+    }
+
     private String guardarTexto(String title, String text) {
         try {
             File dir = new File(m.context.getFilesDir(), "library");

@@ -704,6 +704,8 @@ public class MotorConversacional {
         if (salve.core.evaluation.ConversationExam.isAnswersCommand(entrada)) { hablar(examen.answers()); return; }
         // «¿Qué cuentos tienes?», «léeme el cuento de …»: su estantería de cuentos leídos.
         if (creatorSide()) {
+            String guardado = lectura.guardarCuentoContado(entrada, conversationSession.snapshot());
+            if (guardado != null) { hablar(guardado); return; }
             String cuentos = lectura.comandoCuentos(entrada);
             if (cuentos != null) { hablar(cuentos); return; }
         }

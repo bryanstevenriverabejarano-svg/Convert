@@ -283,7 +283,7 @@ public final class DocumentReading {
     public static String storyToRetell(String input) {
         String t = normalize(input);
         java.util.regex.Matcher m = java.util.regex.Pattern.compile(
-                "\\b(?:leeme|lee|cuentame|vuelve a leer|recuerdame|relee)\\b(?: otra vez| de nuevo)? (?:el|ese|aquel) cuento (?:de |del |sobre |que se llama )?(.{2,60})$")
+                "\\b(?:leeme|lee|cuentame|cuent[a-z]me|vuelve a leer|recuerdame|relee)\\b(?: otra vez| de nuevo)? (?:el|ese|aquel) cuento (?:de |del |sobre |que se llama )?(.{2,60})$")
                 .matcher(t);
         return m.find() ? m.group(1).trim() : null;
     }
