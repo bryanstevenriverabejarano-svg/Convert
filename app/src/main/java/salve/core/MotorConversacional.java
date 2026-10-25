@@ -766,6 +766,10 @@ public class MotorConversacional {
             hablar(creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.");
             return;
         }
+        if (salve.core.synergy.SynergyRequests.isStatus(entrada)) {
+            hablar(salve.core.synergy.SynergyRuntime.get(context).status());
+            return;
+        }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
@@ -1470,7 +1474,15 @@ public class MotorConversacional {
             });
 
     private String observarExperiencia(String entrada) {
-        skillCoordinator.beginTurn(entrada);
+        salve.core.mind.SkillLab.Feedback verified=skillCoordinator.beginTurn(entrada);
+        // Only explicit feedback on a truly pending skill experiment updates
+        // verified learning; merely delivering a model response never does.
+        if (creatorSide() && verified!=salve.core.mind.SkillLab.Feedback.NONE) {
+            salve.core.synergy.SynergyRuntime.get(context).record(
+                    verified==salve.core.mind.SkillLab.Feedback.PRAISE
+                    ? salve.core.synergy.SynergyCore.Event.VERIFIED
+                    : salve.core.synergy.SynergyCore.Event.REJECTED);
+        }
         return "";
     }
 
@@ -1938,6 +1950,8 @@ public class MotorConversacional {
         // Lo propio de este turno (lo que entendió, lo que hizo, sus actualizaciones, lecciones) va
         // PRIMERO: el bloque se recorta por el final si no cabe, y antes se perdía justo esto.
         String details = contextInfo
+                + (llm != null && llm.getConversationPromptBudgetChars() >= 6000
+                    ? "\n" + salve.core.synergy.SynergyRuntime.get(context).summary() : "")
                 + "\n" + VoiceResponsePolicy.promptInstruction(voice)
                 + "\n" + deviceClock.promptContext()
                 + "\n" + salve.avatar.AstralBodySense.promptContext(salve.avatar.AstralBody.get().snapshot(),
@@ -2629,6 +2643,9 @@ public class MotorConversacional {
                                             TurnQualityAssessment assessment, AvatarMotionProtocol.Result motion,
                                             boolean entradaPorVoz) {
         hablarPreparado(respuesta, motion);
+        salve.core.synergy.SynergyRuntime.get(context).record(assessment.passed()
+                ? salve.core.synergy.SynergyCore.Event.ANSWER
+                : salve.core.synergy.SynergyCore.Event.FAILED);
         mensajesEnSesion++;
         if (creatorSide()) mind().afterReplyToCreator();
         // Anticipa la siguiente intervención para medir sorpresa. En voz se omite: la latencia manda.

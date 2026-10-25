@@ -27,13 +27,18 @@ public final class ConversationSkillCoordinator {
     }
 
     /** Interpret feedback on the *previous* outcome, never as verified facts about the world. */
-    public synchronized void beginTurn(String input) {
+    public synchronized SkillLab.Feedback beginTurn(String input) {
         turnNotes.setLength(0);
         try {
-            for (SkillLab.Decision decision : laboratory.get().observe(input))
+            SkillLab lab=laboratory.get();
+            SkillLab.Feedback confirmed=lab.hasPendingFeedback(input)
+                    ? SkillLab.feedback(input) : SkillLab.Feedback.NONE;
+            for (SkillLab.Decision decision : lab.observe(input))
                 recordDecision(decision);
+            return confirmed;
         } catch (RuntimeException unavailable) {
             // Learning is optional; it must not interrupt the conversation.
+            return SkillLab.Feedback.NONE;
         }
     }
 
