@@ -276,7 +276,10 @@ public final class DocumentReading {
     public static boolean asksForStoryList(String input) {
         String t = normalize(input);
         return t.matches(".*\\b(que|cuales|cuantos) cuentos (tienes|has leido|conoces|guardas|sabes)\\b.*")
-                || t.matches("(dime |ensename |muestrame )?(tus|mis) cuentos( guardados)?") || t.matches(".*\\btu (estanteria|biblioteca) de cuentos\\b.*");
+                || t.matches("(?:salve )?(abre |abreme |dime |ensename |muestrame |ver )?(tus|mis) cuentos( guardados)?")
+                || t.matches(".*\\btu (estanteria|biblioteca) de cuentos\\b.*")
+                || t.matches("(?:salve )?(abre |abreme |ensename |muestrame |ver )?(el |tu |mi )?repertorio de cuentos( de salve)?")
+                || t.matches("(?:salve )?(abre |abreme |ensename |muestrame )(el |tu )repertorio");
     }
 
     /** «Léeme el cuento de Caperucita», «cuéntame otra vez el cuento del dragón» → «caperucita»; null si no es eso. */
@@ -324,7 +327,7 @@ public final class DocumentReading {
 
     static String safe(String s) { return s == null ? "" : s.replaceAll("[\\r\\n«»]+", " ").trim(); }
 
-    static String normalize(String s) {
+    public static String normalize(String s) {
         return Normalizer.normalize(s == null ? "" : s.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replaceAll("[¿?¡!.,;:«»\"]+", " ").replaceAll("\\s+", " ").trim();
     }

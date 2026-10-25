@@ -15,7 +15,7 @@ public final class ToldStory {
     private ToldStory() { }
 
     /** Un cuento contado más corto que esto es una frase, no un cuento. */
-    static final int MIN_CHARS = 350;
+    public static final int MIN_CHARS = 350;
 
     private static final Pattern SAVE = Pattern.compile(
             "^(?:salve )?(?:guarda|guardate|guardame|apunta|anade|anademe|mete)(?:lo)? (?:ese|este|el|tu|el ultimo|ese ultimo) "
@@ -52,6 +52,47 @@ public final class ToldStory {
             return new String[]{text, title};
         }
         return null;
+    }
+
+    private static final Pattern STORY_WORD = Pattern.compile("\\b(cuento|cuentos|relato|historia|historieta|fabula|leyenda)\\b");
+    private static final Pattern NOT_A_STORY = Pattern.compile("\\b(poema|poesia|cancion|verso|versos|chiste|adivinanza)\\b");
+
+    /**
+     * Pidió un cuento (o lo empujó: «dale, cuéntamelo» después de pedirlo). Los poemas y canciones
+     * no van al repertorio de cuentos.
+     */
+    public static boolean isStoryRequest(String input, List<ChatMessage> history) {
+        String t = DocumentReading.normalize(input == null ? "" : input);
+        if (NOT_A_STORY.matcher(t).find()) return false;
+        if (STORY_WORD.matcher(t).find()) return true;
+        if (!t.matches("(?:si |vale |venga |dale |ok |pues )*(?:cuentamelo|cuentalo|dale|sigue|continua|venga|hazlo|adelante|si)\\b.*")) return false;
+        String before = previousUser(history, input);
+        String b = DocumentReading.normalize(before);
+        return STORY_WORD.matcher(b).find() && !NOT_A_STORY.matcher(b).find();
+    }
+
+    /** El título que dio Bryan al pedir el cuento unos turnos antes («cuéntame el cuento de …»). */
+    public static String titleFromHistory(List<ChatMessage> history) {
+        if (history == null) return "";
+        for (int i = history.size() - 1, n = 0; i >= 0 && n < 4; i--) {
+            if (history.get(i).getRole() != ChatMessage.Role.USER) continue;
+            n++;
+            String t = titleFromRequest(history.get(i).getContent());
+            if (!t.isEmpty()) return t;
+        }
+        return "";
+    }
+
+    private static String previousUser(List<ChatMessage> history, String current) {
+        if (history == null) return "";
+        boolean skipped = false;
+        for (int i = history.size() - 1; i >= 0; i--) {
+            ChatMessage m = history.get(i);
+            if (m.getRole() != ChatMessage.Role.USER) continue;
+            if (!skipped && m.getContent().equals(current)) { skipped = true; continue; }
+            return m.getContent();
+        }
+        return "";
     }
 
     /** «Cuéntame el cuento de faro del susurro» → «Faro del susurro». */

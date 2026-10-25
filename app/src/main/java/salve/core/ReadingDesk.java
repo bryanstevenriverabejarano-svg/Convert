@@ -124,7 +124,7 @@ final class ReadingDesk {
 
     /** «¿Qué cuentos tienes?» y «léeme el cuento de …». @return respuesta, o null si no es eso */
     String comandoCuentos(String entrada) {
-        if (DocumentReading.asksForStoryList(entrada)) return shelf().describe();
+        if (DocumentReading.asksForStoryList(entrada)) return abrirRepertorio();
         String wanted = DocumentReading.storyToRetell(entrada);
         if (wanted == null) return null;
         StoryShelf.Story s = shelf().find(wanted);
@@ -146,18 +146,75 @@ final class ReadingDesk {
         if (pedido == null) return null;
         String[] ultimo = salve.core.reading.ToldStory.last(historial);
         if (ultimo == null) return "No encuentro ningún cuento que te haya contado en esta conversación. Pídeme uno y luego dime «guarda ese cuento».";
+        // Los cuentos que cuento ya se guardan solos: si es ese, solo cambia el nombre si me das uno.
+        StoryShelf.Story ya = guardadoIgual(ultimo[0]);
+        if (ya != null) {
+            if (!pedido.isEmpty() && !salve.core.reading.DocumentReading.normalize(pedido).equals(salve.core.reading.DocumentReading.normalize(ya.title))) {
+                String antes = ya.title;
+                shelf().rename(ya, pedido);
+                return "Ya lo tenía guardado como «" + antes + "»; ahora se llama «" + pedido + "». Está en mi repertorio de cuentos.";
+            }
+            return "Ya lo tenía guardado en mi repertorio como «" + ya.title + "». Dime «repertorio de cuentos» y lo ves con los demás.";
+        }
         String title = !pedido.isEmpty() ? pedido : !ultimo[1].isEmpty() ? ultimo[1] : salve.core.reading.ToldStory.fallbackTitle(ultimo[0]);
-        String file = guardarTexto(title, ultimo[0]);
-        if (file == null) return "No he podido guardar «" + title + "»: falló al escribirlo en el móvil. No está guardado.";
-        StoryShelf.Story s = shelf().addTold(title, salve.core.reading.ToldStory.summary(ultimo[0]), file);
-        m.memoria.guardarRecuerdo("Guardé en mi estantería el cuento «" + title + "» que le conté a Bryan" + (s.versions() > 1
+        StoryShelf.Story s = guardarContado(title, ultimo[0]);
+        if (s == null) return "No he podido guardar «" + title + "»: falló al escribirlo en el móvil. No está guardado.";
+        return "Guardado de verdad: «" + title + "» ya está en mi repertorio de cuentos"
+                + (s.versions() > 1 ? " (es la versión " + s.versions() + "; la anterior también la conservo)" : "")
+                + ". Dime «repertorio de cuentos» para verlos todos y elegir uno.";
+    }
+
+    /**
+     * Cada cuento que inventa o cuenta en el chat se guarda solo en su repertorio (Bryan lo pidió:
+     * «que vaya guardando»). Si vuelve a contar uno con el mismo título, es una versión nueva.
+     */
+    void guardarSiEsCuento(String entrada, String respuesta, java.util.List<salve.core.conversation.ChatMessage> historial) {
+        if (!m.creatorSide() || !salve.core.reading.ToldStory.isStoryRequest(entrada, historial)) return;
+        String text = salve.core.reading.ToldStory.clean(respuesta);
+        if (text.length() < salve.core.reading.ToldStory.MIN_CHARS || guardadoIgual(text) != null) return;
+        String title = salve.core.reading.ToldStory.titleFromRequest(entrada);
+        if (title.isEmpty()) title = salve.core.reading.ToldStory.titleFromHistory(historial);
+        if (title.isEmpty()) title = salve.core.reading.ToldStory.fallbackTitle(text);
+        guardarContado(title, text);
+    }
+
+    private StoryShelf.Story guardarContado(String title, String text) {
+        String file = guardarTexto(title, text);
+        if (file == null) return null;
+        StoryShelf.Story s = shelf().addTold(title, salve.core.reading.ToldStory.summary(text), file);
+        m.memoria.guardarRecuerdo("Guardé en mi repertorio el cuento «" + title + "» que le conté a Bryan" + (s.versions() > 1
                         ? " (es la versión " + s.versions() + "; las anteriores también las guardo)" : "") + ": " + s.summary,
                 "orgullo", 7, java.util.Arrays.asList("cuento", "mi_cuento"));
         m.mind().indexNewMemoriesAsync();
-        m.registrarAccion(salve.core.mind.SelfActionLog.Kind.READ, "«" + title + "»", "guardé en mi estantería un cuento que conté");
-        return "Guardado de verdad: «" + title + "» ya está en mi estantería"
-                + (s.versions() > 1 ? " (es la versión " + s.versions() + "; la anterior también la conservo)" : "")
-                + ". Pídeme «léeme el cuento de " + title.toLowerCase(java.util.Locale.ROOT) + "» y te lo leo tal cual, con sus dibujos.";
+        m.registrarAccion(salve.core.mind.SelfActionLog.Kind.READ, "«" + title + "»", "guardé en mi repertorio un cuento que conté");
+        return s;
+    }
+
+    /** El cuento guardado con este mismo texto (para no guardarlo dos veces); null si no hay. */
+    private StoryShelf.Story guardadoIgual(String text) {
+        java.util.List<StoryShelf.Story> all = shelf().all();
+        for (int i = all.size() - 1, n = 0; i >= 0 && n < 20; i--) {
+            StoryShelf.Story s = all.get(i);
+            if (!s.told) continue;
+            n++;
+            String saved = leerTexto(s.file);
+            if (saved != null && saved.trim().equals(text.trim())) return s;
+        }
+        return null;
+    }
+
+    /** «Repertorio de cuentos»: abre el panel para elegir uno. */
+    String abrirRepertorio() {
+        try {
+            m.context.startActivity(new android.content.Intent(m.context, salve.presentation.ui.StoryRepertoireActivity.class)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (RuntimeException unavailable) { return shelf().describe(); }
+        java.util.List<StoryShelf.Story> all = shelf().all();
+        if (all.isEmpty()) return "Te abro mi repertorio de cuentos, pero aún está vacío. Los cuentos que te cuente se irán guardando solos.";
+        int told = 0;
+        for (StoryShelf.Story s : all) if (s.told) told++;
+        return "Te abro mi repertorio de cuentos: " + told + (told == 1 ? " inventado por mí" : " inventados por mí") + " y "
+                + (all.size() - told) + (all.size() - told == 1 ? " leído" : " leídos") + ". Toca el que quieras y te lo cuento.";
     }
 
     private String guardarTexto(String title, String text) {

@@ -1056,6 +1056,12 @@ public class MainActivity extends AppCompatActivity {
             catch (RuntimeException unavailable) { android.util.Log.w("Salve/Agent", "Planes no disponibles; se conservan sus datos."); }
         });
         activityResumed = true;
+        // Un cuento elegido en su repertorio: lo cuenta en el chat.
+        String cuentoElegido = StoryRepertoireActivity.PICKED.getAndSet(null);
+        if (cuentoElegido != null && motorConversacional != null) {
+            stageController.showChat(false);
+            procesarMensajeUsuario("Léeme el cuento «" + cuentoElegido + "»", false);
+        }
         // Verificación del dueño (rostro/huella/PIN) solo si el sistema está libre: nunca durante
         // un turno de conversación ni mientras se carga el modelo.
         salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(this);

@@ -68,4 +68,23 @@ public class ToldStoryTest {
         assertFalse(TurnChecks.claimsSaving("Me gusta guardar los momentos bonitos."));
         assertTrue(TurnChecks.announcesOnly("Claro, con gusto te cuento el relato del faro del susurro. Es una historia que me gusta mucho."));
     }
+
+    @Test public void storiesAreSavedOnTheirOwnButNotPoems() {
+        assertTrue(ToldStory.isStoryRequest("Cuéntame un cuento de un zorro que aprende a volar", null));
+        assertFalse(ToldStory.isStoryRequest("Escríbeme un poema sobre la lluvia", null));
+        assertFalse(ToldStory.isStoryRequest("¿qué hora es?", null));
+        List<ChatMessage> h = chat("Cuentsme el cuento de faro del susurro", "Claro, con gusto te cuento el relato.", "Dale cuentame el cuento");
+        assertTrue(ToldStory.isStoryRequest("Dale cuentame el cuento", h));
+        assertTrue(ToldStory.isStoryRequest("dale", chat("Inventa una historia de piratas", "¿Larga o corta?", "dale")));
+        assertEquals("Faro del susurro", ToldStory.titleFromHistory(h));
+    }
+
+    @Test public void theRepertoireIsOpenedByName() {
+        assertTrue(DocumentReading.asksForStoryList("Repertorio de cuentos"));
+        assertTrue(DocumentReading.asksForStoryList("ábreme tu repertorio de cuentos"));
+        assertTrue(DocumentReading.asksForStoryList("abre tus cuentos"));
+        assertTrue(DocumentReading.asksForStoryList("¿Qué cuentos tienes?"));
+        assertFalse(DocumentReading.asksForStoryList("el repertorio de trazos"));
+        assertEquals("el faro del susurro", DocumentReading.storyToRetell("Léeme el cuento «El faro del susurro»"));
+    }
 }

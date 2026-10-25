@@ -13,6 +13,9 @@ import salve.core.mind.SelfModelJournal;
  * texto entero, para volver a leerlo cuando Bryan se lo pida.
  */
 public final class StoryShelf {
+    /** Archivo dentro de noBackupFilesDir/mind. */
+    public static final String FILE = "stories.json";
+
     public static final class Story {
         public long at;
         public String title, summary, moral, file;
@@ -71,6 +74,14 @@ public final class StoryShelf {
         while (list.size() > MAX) list.remove(0);
         save();
         return s;
+    }
+
+    /** Cambia el título de un cuento (si Bryan le pone nombre a uno que ya estaba guardado). */
+    public synchronized boolean rename(Story story, String title) {
+        if (story == null || title == null || title.trim().isEmpty() || !list.contains(story)) return false;
+        story.title = title.trim();
+        save();
+        return true;
     }
 
     public synchronized List<Story> all() { return Collections.unmodifiableList(new ArrayList<>(list)); }

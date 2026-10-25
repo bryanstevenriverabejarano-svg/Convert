@@ -1435,6 +1435,15 @@ public class MotorConversacional {
                     salve.core.mind.AttentionSchema.topic(entrada), "ilustré el relato con " + drawings
                             + (drawings == 1 ? " dibujo" : " dibujos") + ": uno tras cada parte que nombraba algo dibujable");
         }
+        // Los cuentos que inventa van a su repertorio solos (en segundo plano: no retrasa la respuesta).
+        if (inference.isSuccess() && creativeOk) {
+            String cuento = respuesta;
+            java.util.List<salve.core.conversation.ChatMessage> hiloCuento = conversationSession.snapshot();
+            conversationExecutor.execute(() -> {
+                try { lectura.guardarSiEsCuento(entrada, cuento, hiloCuento); }
+                catch (RuntimeException failed) { android.util.Log.w(TAG, "No pude guardar el cuento en el repertorio", failed); }
+            });
+        }
         boolean spoken = creativeOk && live.finishSpeech();
         if (spoken) spokenWhileWriting.set(true);
         try { responderYRegistrarCalidad(entrada, respuesta, assessment, visualResponse, entradaPorVoz); }
