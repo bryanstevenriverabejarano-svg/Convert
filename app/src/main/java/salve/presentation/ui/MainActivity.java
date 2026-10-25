@@ -1678,7 +1678,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español", "Nodos de cómputo", "Salventes (génesis)", "Continuidad (Guardián)", "Mi casa (Home Assistant)", "Registro de ejecución"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español", "Nodos de cómputo", "Salventes (génesis)", "Continuidad (Guardián)", "Mi casa (Home Assistant)", "Registro de ejecución", "PRs de Salve (GitHub)"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaModeloPrincipal(); break;
                         case 1:
@@ -1715,6 +1715,7 @@ public class MainActivity extends AppCompatActivity {
                         case 19: startActivity(new Intent(this, ContinuityActivity.class)); break;
                         case 20: startActivity(new Intent(this, HomeActivity.class)); break;
                         case 21: startActivity(new Intent(this, ExecutionJournalActivity.class)); break;
+                        case 22: editarTokenGitHub(); break;
                         default: break;
                     }
                 })
@@ -1791,6 +1792,49 @@ public class MainActivity extends AppCompatActivity {
                                 } catch (RuntimeException missing) { Toast.makeText(this, "No pude abrir la búsqueda", Toast.LENGTH_LONG).show(); }
                             }).setNegativeButton("Cancelar", null).show();
                 }).setNegativeButton("Cerrar", null).show();
+    }
+
+    /**
+     * Token para que Salve abra issues con sus propuestas de código. Se pide solo el permiso de issues:
+     * las pruebas, el PR y la fusión automática los hace GitHub Actions.
+     */
+    private void editarTokenGitHub() {
+        boolean saved = salve.core.selfpr.SelfPrTokenStore.has(this);
+        android.widget.LinearLayout form = new android.widget.LinearLayout(this);
+        form.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density); form.setPadding(pad, pad / 2, pad, 0);
+        android.widget.TextView help = new android.widget.TextView(this);
+        help.setText("Con esto Salve puede proponer cambios en su propio código. Dile «abre un PR».\n\n"
+                + "1. En GitHub: Settings → Developer settings → Fine-grained tokens → Generate new token.\n"
+                + "2. Repository access: Only select repositories → Convert.\n"
+                + "3. Permissions: Issues → Read and write. NINGÚN otro permiso.\n"
+                + "4. Pega aquí el token (github_pat_…).\n\n"
+                + "Salve abre una issue con su parche. GitHub Actions lo prueba, abre el PR y, si pasa la compilación "
+                + "completa, lo fusiona. Para revisarlos tú antes, crea en GitHub la variable SALVE_AUTOMERGE=false. "
+                + "El token se guarda cifrado y no se envía al modelo."
+                + (saved ? "\n\nYa hay un token guardado. Pega otro para sustituirlo." : ""));
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setSingleLine(true); input.setHint("github_pat_…");
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setImportantForAutofill(android.view.View.IMPORTANT_FOR_AUTOFILL_NO);
+        form.addView(help); form.addView(input);
+        AlertDialog editor = new AlertDialog.Builder(this).setTitle("PRs de Salve (GitHub)").setView(form)
+                .setPositiveButton("Guardar", null).setNegativeButton("Cerrar", null).create();
+        editor.setOnShowListener(v -> editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
+            try {
+                salve.core.selfpr.SelfPrTokenStore.save(this, input.getText().toString());
+                input.setText("");
+                Toast.makeText(this, "Token guardado. Dile a Salve «abre un PR».", Toast.LENGTH_LONG).show();
+                editor.dismiss();
+            } catch (RuntimeException invalid) { input.setError(invalid.getMessage()); }
+        }));
+        editor.show();
+        if (saved) {
+            android.widget.Button remove = new android.widget.Button(this);
+            remove.setText("Quitar token guardado"); remove.setAllCaps(false);
+            remove.setOnClickListener(v -> { salve.core.selfpr.SelfPrTokenStore.remove(this); editor.dismiss(); });
+            form.addView(remove);
+        }
     }
 
     /** La clave de Brave Search API es del dueño: se pega aquí, se cifra y nunca se muestra entera. */

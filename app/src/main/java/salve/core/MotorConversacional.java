@@ -770,6 +770,9 @@ public class MotorConversacional {
             hablar(salve.core.synergy.SynergyRuntime.get(context).status());
             return;
         }
+        // «Abre un PR»: escribe su propio parche y lo manda a GitHub; las pruebas y la fusión son de Bryan.
+        if (SelfPrDesk.isCommand(entrada)) { hablar(selfPr.run()); return; }
+        if (SelfPrDesk.isStatusCommand(entrada)) { hablar(selfPr.status()); return; }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
@@ -2392,6 +2395,7 @@ public class MotorConversacional {
 
     /** Examen fijo de conversación («hazte el examen»): mismas piezas que un turno, sin efectos. */
     final ConversationExamRunner examen = new ConversationExamRunner(this);
+    final SelfPrDesk selfPr = new SelfPrDesk(this);
     /** Lo que sabe de sí misma y sus funciones (estado de cada una, ofertas para abrirlas, sus actualizaciones) y las órdenes de casa con confirmación. */
     final SelfFeaturesDesk mesaFunciones = new SelfFeaturesDesk(this);
     /** Quién le habla: verificación con el teléfono, puntos críticos antes de lo privado, presentaciones de otras personas y datos personales que Bryan le cuenta. */

@@ -1,0 +1,218 @@
+name: Salve abre sus PRs
+
+# Salve envía desde el teléfono una issue «[Salve] …» con su parche. Este flujo lo prueba, abre el PR
+# y, si la compilación completa de Android pasa sobre ese mismo commit, Salve lo fusiona sola.
+# Bryan puede apagar la fusión automática con la variable de repositorio SALVE_AUTOMERGE=false
+# (Settings → Secrets and variables → Actions → Variables): entonces los PR quedan esperando su revisión.
+#
+# Seguridad:
+# - Solo actúa con issues abiertas por el dueño del repositorio (el token del teléfono es suyo y solo
+#   tiene permiso de issues). Cualquier otra issue se ignora.
+# - «probar» ejecuta el código propuesto, así que no tiene permisos de escritura ni secretos.
+# - «publicar» tiene permiso de escritura y NO ejecuta código propuesto: solo git apply, commit, push,
+#   espera a android.yml y fusiona exactamente el commit probado (cambios ≤ 60 líneas, sin llamadas peligrosas).
+# - El cuerpo de la issue nunca se interpola en el shell: llega por variable de entorno.
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+concurrency:
+  group: salve-self-pr-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  probar:
+    name: Probar la propuesta de Salve
+    if: >-
+      github.event.issue.user.login == github.repository_owner &&
+      startsWith(github.event.issue.title, '[Salve] ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      base: ${{ steps.base.outputs.sha }}
+      status: ${{ steps.result.outputs.status }}
+      tree: ${{ steps.prepare.outputs.tree }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+          submodules: recursive
+
+      - id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Extract, validate and apply the proposal (no proposed code runs here)
+        id: prepare
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: python3 scripts/self_pr_ci.py prepare --repo . --out "$RUNNER_TEMP/salve-pr"
+
+      - name: Set up Java 21
+        if: steps.prepare.outputs.status == 'ready'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-read-only: true
+          cache-dependency-path: |
+            build.gradle
+            settings.gradle
+            gradle.properties
+            gradle/gradle-daemon-jvm.properties
+            gradle/wrapper/gradle-wrapper.properties
+            app/build.gradle
+            mlc4j/build.gradle
+
+      - name: Prepare Android SDK
+        if: steps.prepare.outputs.status == 'ready'
+        timeout-minutes: 10
+        run: bash scripts/setup-android-sdk.sh
+
+      - name: Run every JVM test on the patched tree
+        id: tests
+        if: steps.prepare.outputs.status == 'ready'
+        timeout-minutes: 30
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p build
+          bash ./gradlew --no-daemon --console=plain --max-workers=2 \
+            --init-script scripts/android-arm64.init.gradle :app:testDebugUnitTest 2>&1 | tee build/gradle.log
+
+      - name: Summarise the result
+        id: result
+        if: always()
+        env:
+          PREPARED: ${{ steps.prepare.outputs.status }}
+          TESTS: ${{ steps.tests.outcome }}
+        run: |
+          out="$RUNNER_TEMP/salve-pr"
+          mkdir -p "$out"
+          if [ "$PREPARED" != "ready" ]; then
+            echo "status=rejected" >> "$GITHUB_OUTPUT"
+          elif [ "$TESTS" = "success" ]; then
+            echo "status=passed" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=failed" >> "$GITHUB_OUTPUT"
+            { grep -E "^e: |error:|FAILED|expected:<|\.(java|kt):[0-9]+" build/gradle.log | grep -v "^\s*at " | head -25; } > "$out/reason.txt" || true
+            [ -s "$out/reason.txt" ] || echo "Las pruebas o la compilación fallaron (ver el registro del flujo)." > "$out/reason.txt"
+          fi
+
+      - name: Keep the proposal and the verdict for the publishing job
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: salve-pr-${{ github.event.issue.number }}
+          path: ${{ runner.temp }}/salve-pr/
+          if-no-files-found: warn
+          retention-days: 14
+
+  publicar:
+    name: Abrir el PR o explicar por qué no
+    needs: probar
+    if: always() && needs.probar.result != 'skipped'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the exact tested revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.probar.outputs.base }}
+
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: salve-pr-${{ github.event.issue.number }}
+          path: ${{ runner.temp }}/salve-pr
+
+      - name: Publish the branch and open the PR
+        id: publish
+        if: needs.probar.outputs.status == 'passed'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ needs.probar.outputs.base }}
+          TREE: ${{ needs.probar.outputs.tree }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: >-
+          python3 scripts/self_pr_ci.py publish --repo . --proposal "$RUNNER_TEMP/salve-pr/proposal.json"
+          --base "$BASE" --tree "$TREE" --issue "$ISSUE" --out "$RUNNER_TEMP/salve-pr"
+
+      - name: Salve merges on her own once the full Android build is green
+        id: merge
+        if: steps.publish.outputs.published == 'true' && vars.SALVE_AUTOMERGE != 'false'
+        timeout-minutes: 65
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ steps.publish.outputs.number }}
+          BRANCH: ${{ steps.publish.outputs.branch }}
+          SHA: ${{ steps.publish.outputs.sha }}
+        run: >-
+          python3 scripts/self_pr_ci.py merge --number "$NUMBER" --branch "$BRANCH" --sha "$SHA"
+          --out "$RUNNER_TEMP/salve-pr"
+
+      - name: Run the full Android checks for Bryan's review
+        if: steps.publish.outputs.published == 'true' && vars.SALVE_AUTOMERGE == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.publish.outputs.branch }}
+        run: gh workflow run android.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH" || echo "::warning::No se pudo lanzar android.yml"
+
+      - name: Tell Salve and Bryan what happened
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          STATUS: ${{ needs.probar.outputs.status }}
+          PUBLISHED: ${{ steps.publish.outputs.published }}
+          MERGED: ${{ steps.merge.outputs.merged }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          out="$RUNNER_TEMP/salve-pr"
+          reason="$(head -c 1500 "$out/reason.txt" 2>/dev/null || true)"
+          [ -n "$reason" ] || reason="Error interno del flujo; mira el registro."
+          detail="$(printf '%s' "$reason" | head -n1 | tr -d '\r' | cut -c1-200)"
+          pr="$(cat "$out/pr_url.txt" 2>/dev/null || true)"
+          if [ "$MERGED" = "true" ]; then
+            result=merged
+            text="🟣 Pasó las pruebas y la compilación completa de Android: Salve lo ha fusionado en main ($pr). Se está generando el APK nuevo; si algo va mal, basta con revertir el commit."
+          elif [ "$STATUS" = "passed" ] && [ "$PUBLISHED" = "true" ] && [ "$MERGED" = "false" ]; then
+            result=passed
+            text="✅ PR abierto ($pr), pero no lo fusioné: $reason"
+          elif [ "$STATUS" = "passed" ] && [ "$PUBLISHED" = "true" ]; then
+            result=passed
+            text="✅ Tu propuesta pasó todas las pruebas JVM. PR abierto: $pr — la fusión automática está apagada, Bryan decide."
+          elif [ "$STATUS" = "passed" ]; then
+            result=passed
+            text="✅ Pasó las pruebas, pero no pude abrir el PR: $reason"
+          elif [ "$STATUS" = "failed" ]; then
+            result=failed
+            text="❌ El parche se aplicó, pero no pasó la compilación o las pruebas:"$'\n\n```\n'"$reason"$'\n```'
+          else
+            result=rejected
+            text="⚠️ Rechazada antes de probar: $reason"
+          fi
+          body="$text"$'\n\n'"Registro: $RUN_URL"$'\n\n'"<!-- salve-self-pr-result: $result -->"$'\n'"<!-- salve-self-pr-pr: $pr -->"$'\n'"<!-- salve-self-pr-detail: $detail -->"
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE/comments" -f body="$body" > /dev/null
+          if [ "$result" != "passed" ] && [ "$result" != "merged" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/$ISSUE" -f state=closed -f state_reason=not_planned > /dev/null
+          else
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/$ISSUE" -f state=closed -f state_reason=completed > /dev/null
+          fi
