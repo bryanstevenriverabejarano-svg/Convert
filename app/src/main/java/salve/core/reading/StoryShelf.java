@@ -13,10 +13,18 @@ import salve.core.mind.SelfModelJournal;
  * texto entero, para volver a leerlo cuando Bryan se lo pida.
  */
 public final class StoryShelf {
+    /** Archivo dentro de noBackupFilesDir/mind. */
+    public static final String FILE = "stories.json";
+
     public static final class Story {
         public long at;
         public String title, summary, moral, file;
         public List<String> characters = new ArrayList<>(), places = new ArrayList<>(), scenes = new ArrayList<>();
+        /** Lo contó ella en el chat (no es un documento leído). */
+        public boolean told;
+        /** Archivos de versiones anteriores del mismo cuento, de la más antigua a la más reciente. */
+        public List<String> earlier = new ArrayList<>();
+        public int versions() { return 1 + (earlier == null ? 0 : earlier.size()); }
     }
 
     private static final Gson GSON = new Gson();
@@ -45,6 +53,35 @@ public final class StoryShelf {
         while (list.size() > MAX) list.remove(0);
         save();
         return s;
+    }
+
+    /**
+     * Guarda un cuento que contó ella. Si ya tenía uno con ese título, la versión anterior no se
+     * borra: se queda en {@code earlier} (los cuentos cambian al volver a contarlos).
+     */
+    public synchronized Story addTold(String title, String summary, String file) {
+        Story s = null;
+        for (Story x : list) if (DocumentReading.normalize(x.title).equals(DocumentReading.normalize(title))) { s = x; break; }
+        if (s == null) { s = new Story(); list.add(s); }
+        else {
+            if (s.earlier == null) s.earlier = new ArrayList<>();
+            if (s.file != null && !s.file.equals(file)) s.earlier.add(s.file);
+            list.remove(s); list.add(s);
+        }
+        s.at = clock.getAsLong(); s.title = title; s.summary = summary; s.told = true;
+        if (s.moral == null) s.moral = "";
+        s.file = file;
+        while (list.size() > MAX) list.remove(0);
+        save();
+        return s;
+    }
+
+    /** Cambia el título de un cuento (si Bryan le pone nombre a uno que ya estaba guardado). */
+    public synchronized boolean rename(Story story, String title) {
+        if (story == null || title == null || title.trim().isEmpty() || !list.contains(story)) return false;
+        story.title = title.trim();
+        save();
+        return true;
     }
 
     public synchronized List<Story> all() { return Collections.unmodifiableList(new ArrayList<>(list)); }

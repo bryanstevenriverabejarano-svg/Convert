@@ -704,6 +704,8 @@ public class MotorConversacional {
         if (salve.core.evaluation.ConversationExam.isAnswersCommand(entrada)) { hablar(examen.answers()); return; }
         // «¿Qué cuentos tienes?», «léeme el cuento de …»: su estantería de cuentos leídos.
         if (creatorSide()) {
+            String guardado = lectura.guardarCuentoContado(entrada, conversationSession.snapshot());
+            if (guardado != null) { hablar(guardado); return; }
             String cuentos = lectura.comandoCuentos(entrada);
             if (cuentos != null) { hablar(cuentos); return; }
         }
@@ -1432,6 +1434,15 @@ public class MotorConversacional {
             if (drawings > 0) registrarAccion(salve.core.mind.SelfActionLog.Kind.STORY,
                     salve.core.mind.AttentionSchema.topic(entrada), "ilustré el relato con " + drawings
                             + (drawings == 1 ? " dibujo" : " dibujos") + ": uno tras cada parte que nombraba algo dibujable");
+        }
+        // Los cuentos que inventa van a su repertorio solos (en segundo plano: no retrasa la respuesta).
+        if (inference.isSuccess() && creativeOk) {
+            String cuento = respuesta;
+            java.util.List<salve.core.conversation.ChatMessage> hiloCuento = conversationSession.snapshot();
+            conversationExecutor.execute(() -> {
+                try { lectura.guardarSiEsCuento(entrada, cuento, hiloCuento); }
+                catch (RuntimeException failed) { android.util.Log.w(TAG, "No pude guardar el cuento en el repertorio", failed); }
+            });
         }
         boolean spoken = creativeOk && live.finishSpeech();
         if (spoken) spokenWhileWriting.set(true);

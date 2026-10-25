@@ -38,7 +38,7 @@ public final class TurnChecks {
             + "por otro lado|en comun|por el contrario|frente a)\\b");
 
     private static final Pattern PROMISE = Pattern.compile(
-            "\\b(voy a|vamos a|analizare|explicare|te explicare|te contare|contare|revisare|descompondre|desglosare|hare|preparare|buscare|"
+            "\\b(voy a|vamos a|te cuento (?:el|la|un|una|ese|esa)|te leo (?:el|la|ese|esa)|analizare|explicare|te explicare|te contare|contare|revisare|descompondre|desglosare|hare|preparare|buscare|"
             + "te dire|empezare|vere|examinare|comentare|abordare|dame un momento|enseguida te|a continuacion te)\\b");
 
     /**
@@ -56,6 +56,9 @@ public final class TurnChecks {
         if (ABOUT_HER.matcher(in).find() && !NOT_ABOUT_HER.matcher(in).find()
                 && in.length() < 90 && count(FIRST_PERSON, d) < 2 && !explainedHerCausally)
             out.add("te pregunta por ti: contesta hablando de ti en primera persona, con algo concreto tuyo (qué haces, qué te gusta, cómo estás y por qué)");
+        if (claimsSaving(draft))
+            out.add("dijiste que lo guardaste, pero en esta respuesta no has guardado nada: no lo afirmes; si Bryan quiere guardar un cuento, "
+                    + "dile que te diga «guarda ese cuento»");
         if (announcesOnly(draft))
             out.add("solo anunciaste lo que ibas a hacer, sin hacerlo: hazlo ya en esta misma respuesta");
         // Ask-demand alignment, not model-supplied self-evaluation. A generic
@@ -67,6 +70,18 @@ public final class TurnChecks {
                 && d.length() < 100)
             out.add("pidió COMPARAR: contrasta explícitamente las dos opciones y explica una diferencia comprobable");
         return out.isEmpty() ? null : String.join("; ", out);
+    }
+
+    private static final Pattern CLAIMS_SAVE = Pattern.compile(
+            "\\b(he guardado|lo he guardado|la he guardado|ya lo guarde|ya la guarde|lo guarde|la guarde|queda guardad[oa]|ya esta guardad[oa]|"
+            + "guardado en mi (repertorio|estanteria|memoria|biblioteca)|lo he anadido a mi|lo he apuntado)\\b");
+
+    /**
+     * Dice que ha guardado algo. Los guardados de verdad (cuentos, hitos, recuerdos pedidos) los
+     * contesta el propio programa, nunca el modelo: si lo dice el modelo, se lo ha inventado.
+     */
+    public static boolean claimsSaving(String draft) {
+        return draft != null && CLAIMS_SAVE.matcher(normalize(draft)).find();
     }
 
     /** «Analizaré cada uno por separado para ofrecerte una perspectiva clara.» y nada más. */

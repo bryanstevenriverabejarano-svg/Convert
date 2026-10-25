@@ -134,6 +134,52 @@ public final class CloudSyncManager {
                 }
             } catch (Exception skip) { /* uno que falle no frena los demás */ }
         }
+        moved += syncLibrary(ctx, provider, prefs);
+        return moved;
+    }
+
+    /**
+     * El texto entero de sus cuentos (inventados y leídos) va en files/library: el índice
+     * (mind/stories.json) ya se sincroniza, y sin esto, al reinstalar sabría los títulos pero no
+     * podría contarlos. Sube los que no estén subidos y baja los que falten, con los nombres que
+     * dice el índice (y sus versiones anteriores).
+     */
+    static int syncLibrary(Context ctx, PCloudProvider provider, android.content.SharedPreferences prefs) {
+        File index = new File(ctx.getNoBackupFilesDir(), "mind/stories.json");
+        if (!index.isFile()) return 0;
+        java.util.Set<String> names = new java.util.LinkedHashSet<>();
+        try {
+            com.google.gson.JsonArray list = com.google.gson.JsonParser.parseString(
+                    new String(java.nio.file.Files.readAllBytes(index.toPath()), StandardCharsets.UTF_8)).getAsJsonArray();
+            for (com.google.gson.JsonElement e : list) {
+                com.google.gson.JsonObject o = e.getAsJsonObject();
+                if (o.has("file") && o.get("file").isJsonPrimitive()) names.add(o.get("file").getAsString());
+                if (o.has("earlier") && o.get("earlier").isJsonArray())
+                    for (com.google.gson.JsonElement f : o.getAsJsonArray("earlier")) if (f.isJsonPrimitive()) names.add(f.getAsString());
+            }
+        } catch (Exception unreadable) { return 0; }
+        File dir = new File(ctx.getFilesDir(), "library");
+        int moved = 0;
+        for (String name : names) {
+            if (!name.matches("[a-z0-9-]{1,60}\\.txt")) continue; // solo nombres que pone ella: nada de rutas
+            File local = new File(dir, name);
+            String remote = ROOT + "/library/" + name;
+            try {
+                if (local.isFile()) {
+                    if (prefs.getBoolean("up:" + remote, false)) continue;
+                    if (provider.uploadFile(remote, local)) { prefs.edit().putBoolean("up:" + remote, true).apply(); moved++; }
+                } else {
+                    byte[] bytes = provider.downloadBounded(remote, 4 * 1024 * 1024);
+                    if (bytes == null || bytes.length == 0) continue;
+                    if (!dir.isDirectory() && !dir.mkdirs()) continue;
+                    File tmp = new File(dir, name + ".tmp");
+                    java.nio.file.Files.write(tmp.toPath(), bytes);
+                    java.nio.file.Files.move(tmp.toPath(), local.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    prefs.edit().putBoolean("up:" + remote, true).apply();
+                    moved++;
+                }
+            } catch (Exception skip) { /* el siguiente */ }
+        }
         return moved;
     }
 
