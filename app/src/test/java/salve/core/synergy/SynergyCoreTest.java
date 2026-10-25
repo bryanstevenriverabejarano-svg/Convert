@@ -8,7 +8,7 @@ public class SynergyCoreTest {
         SynergyCore.State initial=new SynergyCore.State();
         SynergyCore.State failed=SynergyCore.advance(initial,SynergyCore.Event.FAILED,false,100);
         assertTrue(failed.uncertainty>initial.uncertainty);
-        assertTrue(failed.energy<initial.energy);
+        assertEquals("un fallo en el chat no gasta el presupuesto nocturno",initial.energy,failed.energy,1e-9);
         assertEquals(0,failed.verified);
         SynergyCore.State checked=SynergyCore.advance(failed,SynergyCore.Event.VERIFIED,true,101);
         assertEquals(1,checked.verified);
