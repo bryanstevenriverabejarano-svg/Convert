@@ -41,8 +41,10 @@ public final class SynergyCore {
             s.uncertainty-=hours*.002;
         }
         switch(event) {
-            case ANSWER: s.energy-=.02; break; // delivery is not proof of correctness
-            case FAILED: s.energy-=.03; s.uncertainty+=.10; s.learning+=.05; break;
+            // Chat turns do not spend the background budget. Before, ~20 replies a day left
+            // energy below the reflection threshold every night, so Think/Dream never ran again.
+            case ANSWER: break; // delivery is not proof of correctness
+            case FAILED: s.uncertainty+=.10; s.learning+=.05; break;
             case FOUND: s.energy-=.06; s.curiosity-=.06; s.uncertainty-=.05; break;
             case NO_EVIDENCE: s.energy-=.05; s.uncertainty+=.07; break;
             case VERIFIED: s.verified++; s.learning+=.04; s.uncertainty-=.06; break;
@@ -59,8 +61,9 @@ public final class SynergyCore {
                 && s.energy>=.30&&s.curiosity>=.25;
     }
     public static boolean mayReflect(State s, Device d, boolean paused, boolean busy) {
-        // Reflection, maintenance and goals must NOT depend on curiosity.
-        return !paused&&!busy&&!d.save&&!d.lowRam&&!d.hot&&d.battery>=20
-                &&d.charging&&s.energy>=.42;
+        // Reflection, maintenance and goals depend only on the real phone state (charging, heat,
+        // RAM, battery saver), never on the abstract budget or curiosity: those are invented
+        // numbers and must not be able to switch off nightly learning.
+        return !paused&&!busy&&!d.save&&!d.lowRam&&!d.hot&&d.battery>=20&&d.charging;
     }
 }

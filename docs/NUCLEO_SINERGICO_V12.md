@@ -8,7 +8,7 @@ El núcleo no es energía física ni consciencia. Es un **estado computacional p
 
 ## Efectos funcionales
 
-- `MotorConversacional` registra el coste de una conversación y las revisiones de calidad y proporciona una línea de estado al modelo cuando el presupuesto de prompt supera 6000 caracteres. Los contextos comprimidos preservan historial y memoria.
+- `MotorConversacional` registra las respuestas y las revisiones de calidad (sin gastar el presupuesto de trabajo en segundo plano; ver «Corrección 25-10-2026») y proporciona una línea de estado al modelo cuando el presupuesto de prompt supera 6000 caracteres. Los contextos comprimidos preservan historial y memoria.
 - `CuriosityWorker` puede investigar cuando hay batería y recursos, sin conversación activa ni pausa. `MindRuntime.exploreCuriosity` distingue un hallazgo realmente guardado de una búsqueda sin evidencia.
 - `ThinkWorker` y `DreamWorker` no ejecutan trabajos costosos con memoria escasa, sobrecalentamiento, ahorro de batería ni presupuesto bajo; mantienen sus controles de usuario y WorkManager.
 - `SynergyRequests` permite preguntar «estado de tu sinergia» o «tu energía cognitiva» para inspeccionar indicadores y estado del teléfono.
@@ -28,3 +28,11 @@ El regulador es heurístico, no aprendizaje de parámetros del modelo ni prueba 
 ## Próximo experimento
 
 Comparar v11 y v12 en un protocolo A/B controlado con las mismas preguntas y condiciones de batería, y medir las activaciones de curiosidad/autoexamen. Sólo cuando la ganancia esté demostrada debe ampliarse el repertorio de estrategias adaptables.
+
+## Corrección 25-10-2026: hablar no apaga el aprendizaje nocturno
+
+En la primera versión cada respuesta restaba 0,02 de energía y `mayReflect` exigía energía ≥ 0,42. Simulado con uso diario (≥ 20 mensajes), la energía llegaba a 0 cada día y 8 h de carga la dejaban en 0,40: **`ThinkWorker` y `DreamWorker` no volvían a ejecutarse nunca**. Ahora:
+
+- Las respuestas del chat (entregadas o suspendidas) no gastan el presupuesto; solo la investigación en segundo plano lo consume.
+- `mayReflect` depende únicamente del estado real del teléfono: cargando, sin calor grave, sin poca RAM, sin ahorro de batería y batería ≥ 20 %.
+- `SynergyWeekTest` simula una semana con 60 mensajes diarios y exige reflexión y curiosidad cada noche.
