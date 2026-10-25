@@ -23,7 +23,7 @@ public class ImprovementProposalsTest {
         assertTrue(r, r.contains("«¿Qué intereses tienes?» → «¿Y a ti qué te interesa?»"));
         assertTrue(r, r.contains("Último examen: 6.4 / 10"));
         assertTrue(r, r.contains("Idea:"));
-        assertTrue(r, r.contains("pásale esto a Claude"));
+        assertTrue(r, r.contains("abre un PR"));
     }
 
     @Test public void withoutAnExamItAsksForOne() {

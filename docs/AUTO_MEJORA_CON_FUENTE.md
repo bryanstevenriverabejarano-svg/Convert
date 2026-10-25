@@ -58,6 +58,8 @@ Una propuesta que incluye sólo un campo de identidad o valores inválidos se
 rechaza. La revisión queda registrada como procedencia declarada; la prueba
 mecánica de coincidencia utiliza la huella del archivo completo.
 
+> Ruta actual desde el teléfono, sin PC ni ADB: [Salve abre sus propios PR](SALVE_ABRE_SUS_PRS.md).
+
 ## Qué sigue faltando para un ciclo autónomo operativo
 
 Se mantiene el [ejecutor externo con sandbox](../scripts/sandbox/README.md):

@@ -47,6 +47,33 @@ public final class ImprovementProposals {
         PROBLEMS.put("contiene_ejemplo", new String[]{"Explica sin ejemplos", "pedir un ejemplo en las respuestas de enseñar"});
     }
 
+    /** {problema, idea de arreglo} de una regla del examen, o null si no la conoce. */
+    public static String[] problem(String issueId) {
+        String[] p = PROBLEMS.get(issueId);
+        return p == null ? null : p.clone();
+    }
+
+    /** Ejemplos reales de un fallo en el último examen: «pregunta» → «respuesta» (motivo). */
+    public static List<String> examples(JsonObject exam, String issueId, int max) {
+        List<String> out = new ArrayList<>();
+        if (exam == null || !exam.has("cases") || !exam.get("cases").isJsonArray()) return out;
+        for (JsonElement e : exam.getAsJsonArray("cases")) {
+            if (!e.isJsonObject() || out.size() >= max) continue;
+            JsonObject c = e.getAsJsonObject();
+            if (!c.has("failed") || !c.get("failed").isJsonArray()) continue;
+            for (JsonElement f : c.getAsJsonArray("failed")) {
+                if (!f.isJsonPrimitive()) continue;
+                String failed = f.getAsString();
+                if (!failed.split(":", 2)[0].trim().equals(issueId)) continue;
+                String why = failed.contains(": ") ? failed.substring(failed.indexOf(": ") + 2) : "";
+                out.add("«" + shorten(str(c, "question"), 120) + "» → «" + shorten(str(c, "reply"), 160) + "»"
+                        + (why.isEmpty() ? "" : " (" + why + ")"));
+                break;
+            }
+        }
+        return out;
+    }
+
     /**
      * @param exam último examen guardado ({cases:[{question, failed[], reply}]}) o null si no hay
      * @param lessons lecciones de sus correcciones (las de Bryan primero)
@@ -101,7 +128,8 @@ public final class ImprovementProposals {
                         .append(shorten(l.expected, 120)).append(l.times > 1 ? " (" + l.times + " veces)" : "");
             }
         }
-        out.append("\n\nNo me reescribo el código yo sola: pásale esto a Claude y lo arreglamos en el proyecto. Luego repite el examen para comprobarlo.");
+        out.append("\n\nPuedo escribir yo misma un parche: dime «abre un PR». GitHub lo probará y solo tú decides si se fusiona. "
+                + "Luego repite el examen para comprobarlo.");
         return out.toString();
     }
 
