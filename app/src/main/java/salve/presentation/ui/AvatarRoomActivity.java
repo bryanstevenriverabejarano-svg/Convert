@@ -95,6 +95,10 @@ public final class AvatarRoomActivity extends Activity {
                 "Más suave", () -> movementFeedback(MotionPreferenceProfile.Feedback.TOO_STRONG));
         row(root, "Así está bien", () -> movementFeedback(MotionPreferenceProfile.Feedback.COMFORTABLE),
                 "Restablecer", () -> movementFeedback(MotionPreferenceProfile.Feedback.RESET));
+        root.addView(label("Evolución de Salve", 19, Color.WHITE));
+        root.addView(label("Cada cuerpo que ha tenido Salve se conserva aquí como registro. Elige cuál quieres ver; la ropa y los gestos no cambian.", 14, 0xFFB3C5D1));
+        bodyRows = new LinearLayout(this); bodyRows.setOrientation(LinearLayout.VERTICAL); root.addView(bodyRows);
+        updateBodies();
         root.addView(label("Vestuario", 19, Color.WHITE));
         root.addView(label("Crea diseños con las prendas ilustradas disponibles, colores y patrones. Salve conserva su rostro y guarda cada diseño en el armario.", 14, 0xFFB3C5D1));
         button(root, "Diseñar una prenda", this::createDesign);
@@ -160,6 +164,24 @@ public final class AvatarRoomActivity extends Activity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); spinner.setAdapter(adapter); form.addView(spinner);
         return spinner;
     }
+    private LinearLayout bodyRows;
+
+    /** «Evolución de Salve»: la versión actual primero y las anteriores como registro. */
+    private void updateBodies() {
+        if (bodyRows == null) return;
+        bodyRows.removeAllViews();
+        String active = salve.avatar.AvatarBodyVersions.selected(this);
+        for (salve.avatar.AvatarBodyVersions.Version version : salve.avatar.AvatarBodyVersions.all()) {
+            boolean on = version.id.equals(active);
+            bodyRows.addView(makeButton((on ? "✓ " : "") + version.name + " · " + version.approved, () -> {
+                salve.avatar.AvatarBodyVersions.select(this, version.id);
+                updateBodies();
+                toast(version.name + " (" + version.approved + ")");
+            }));
+            bodyRows.addView(label(version.note, 13, on ? 0xFF9FE6F0 : 0xFF8FA6B5));
+        }
+    }
+
     private void updateWardrobe() {
         if (wardrobeRows == null) return;
         wardrobeRows.removeAllViews();

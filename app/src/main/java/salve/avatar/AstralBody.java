@@ -24,6 +24,11 @@ public final class AstralBody {
         public final float hairWave;
         /** Intensidad de los circuitos 0..1 y anillo de energía 0..1 (negativo: sin anillo). */
         public final float glow, glowRing;
+        /**
+         * Luz que recorre las líneas: fase 0..1 del frente que sale del corazón hacia manos y pies,
+         * e intensidad 0..1 (tranquila en reposo, viva al pensar, hablar o dibujar).
+         */
+        public final float flow, flowStrength;
         /** Grados de inclinación de cabeza y de balanceo del cuerpo; desplazamientos de cabeza en px. */
         public final float headTilt, headShiftX, headShiftY, sway;
         public final boolean drawing, speaking, thinking, listening, moving;
@@ -38,6 +43,7 @@ public final class AstralBody {
         Snapshot(AstralBody b) {
             pose = b.pose; stageX = b.stageX; seenAtMillis = b.lastMillis; lastBlinkMillis = b.lastBlinkMillis;
             blink = b.blink; hairSwing = b.hairAngle; hairWave = b.wavePhase; glow = b.glow; glowRing = b.ring;
+            flow = b.flow; flowStrength = b.flowStrength;
             headTilt = b.headTilt; headShiftX = b.headX; headShiftY = b.headY; sway = b.sway;
             drawing = b.drawingSubject != null; drawingSubject = b.drawingSubject;
             speaking = b.speaking; thinking = b.thinking; listening = b.listening; moving = b.moving;
@@ -56,6 +62,7 @@ public final class AstralBody {
     private long blinkCount;
     private float hairAngle, hairVelocity, wavePhase, pendingFlick;
     private float glow = .25f, ring = -1, ringAge, pulseBoost;
+    private float flow, flowStrength = .75f;
     private float headTilt, headX, headY, sway, lastBodyX = Float.NaN, bodyVelocity;
     private boolean speaking, thinking, listening, moving;
     private String drawingSubject;
@@ -180,6 +187,16 @@ public final class AstralBody {
         pulseBoost = Math.max(0, pulseBoost - dt * .9f);
         target = Math.min(1f, target + pulseBoost * .5f);
         glow += (target - glow) * (1f - (float) Math.exp(-dt * 6f));
+        // La luz recorre las líneas sin parar: lenta en reposo y más rápida e intensa cuando trabaja.
+        float speed = .26f, strength = .75f;
+        if (listening) { speed = .38f; strength = .85f; }
+        if (thinking) { speed = .6f; strength = 1f; }
+        if (speaking) { speed = .42f + (motion == null ? 0 : motion.mouthOpen) * .35f; strength = .9f; }
+        if (drawingSubject != null) { speed = .75f; strength = 1f; }
+        speed += pulseBoost * .6f;
+        strength = Math.min(1f, strength + pulseBoost * .4f);
+        flow = (flow + dt * speed) % 1f;
+        flowStrength += (strength - flowStrength) * (1f - (float) Math.exp(-dt * 4f));
         boolean waves = thinking || drawingSubject != null || pulseBoost > 0;
         if (waves) {
             ringAge += dt;
