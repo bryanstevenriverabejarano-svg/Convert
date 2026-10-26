@@ -60,7 +60,7 @@ final class RealisticSpriteRenderer {
                     if (!manifest.has("base")) throw new java.io.IOException("Sprite base ausente en " + folder);
                     for (java.util.Iterator<String> names = manifest.keys(); names.hasNext(); ) {
                         String name = names.next();
-                        if (!name.matches("base|views|walk|dance|poses")) continue;
+                        if (!name.matches("base|views|walk|walk_inbetween|dance|poses")) continue;
                         JSONObject spec = manifest.getJSONObject(name);
                         Bitmap bitmap;
                         try (InputStream file = context.getAssets().open("avatar/" + folder + "/" + name + ".png")) {
@@ -234,6 +234,15 @@ final class RealisticSpriteRenderer {
                 selected = new RealisticSpriteAnimation.Frame("views", view, false, 1);
         }
         Sheet sheet = sheets.get(selected.sheet);
+        // Older body versions have only eight walking frames: reuse the preceding original.
+        if (sheet == null && "walk_inbetween".equals(selected.sheet)) {
+            Sheet legacy = sheets.get("walk");
+            if (legacy != null && selected.index < legacy.frames.length) {
+                selected = new RealisticSpriteAnimation.Frame("walk", selected.index,
+                        selected.mirror, selected.heightScale);
+                sheet = legacy;
+            }
+        }
         if (sheet == null) {
             // Esta versión no tiene esa hoja (pasos, baile, posturas): su cuerpo vivo lo hace todo.
             Astral living = assets.astral;
@@ -249,7 +258,7 @@ final class RealisticSpriteRenderer {
         Rect source = sheet.frames[selected.index];
         float drawnHeight = height * selected.heightScale;
         // All walk frames use one scale even where the measured source regions differ in width.
-        if ("walk".equals(selected.sheet)) drawnHeight *= .94f;
+        if ("walk".equals(selected.sheet) || "walk_inbetween".equals(selected.sheet)) drawnHeight *= .94f;
         drawnHeight *= source.height() / sheet.referenceHeights[selected.index];
         float width = drawnHeight * source.width() / source.height();
         // The source atlas regions are measured, not assumed to be equal-sized cells.
