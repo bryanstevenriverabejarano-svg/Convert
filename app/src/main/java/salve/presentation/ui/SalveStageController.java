@@ -397,8 +397,7 @@ final class SalveStageController {
         else if (mode == PresenceMode.SPEAKING) desc = R.string.salve_presence_speaking;
         presenceAvatar.setContentDescription(activity.getString(desc));
         presenceHalo.setAlpha(mode == null ? 0.30f : 0.75f);
-        if (visible && mode != null && android.provider.Settings.Global.getFloat(
-                activity.getContentResolver(), "animator_duration_scale", 1f) > 0f) {
+        if (visible && mode != null && ValueAnimator.areAnimatorsEnabled()) {
             presencePulse = ObjectAnimator.ofFloat(presenceHalo, View.ALPHA, 0.28f, 0.95f);
             presencePulse.setDuration(1100);
             presencePulse.setRepeatCount(ValueAnimator.INFINITE);
