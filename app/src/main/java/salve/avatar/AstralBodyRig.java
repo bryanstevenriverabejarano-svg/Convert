@@ -17,6 +17,8 @@ public final class AstralBodyRig {
     public final float hairTop, hairSpan;
     /** Distancia del corazón al punto más lejano de la ilustración: hasta ahí llega la luz que recorre las líneas. */
     public final float reach;
+    /** Recuadro de la boca (px de base.png) y nº de bocas dibujadas; 0 si esta versión no tiene. */
+    public final int mouthLeft, mouthTop, mouthRight, mouthBottom, mouthFrames;
     private final float[] hair, head, rest;
 
     private AstralBodyRig(JsonObject spec) {
@@ -33,6 +35,14 @@ public final class AstralBodyRig {
         hairTop = spec.has("hairTop") ? spec.get("hairTop").getAsFloat() : 300f;
         hairSpan = spec.has("hairSpan") ? spec.get("hairSpan").getAsFloat() : 700f;
         if (!(hairSpan > 0)) throw new IllegalArgumentException("Caída del pelo inválida");
+        if (spec.has("mouthBox") && spec.has("mouthFrames")) {
+            JsonArray mouth = spec.getAsJsonArray("mouthBox");
+            mouthLeft = mouth.get(0).getAsInt(); mouthTop = mouth.get(1).getAsInt();
+            mouthRight = mouth.get(2).getAsInt(); mouthBottom = mouth.get(3).getAsInt();
+            mouthFrames = spec.getAsJsonArray("mouthFrames").size();
+            if (mouthRight <= mouthLeft || mouthBottom <= mouthTop || mouthFrames < 1)
+                throw new IllegalArgumentException("Boca inválida");
+        } else { mouthLeft = mouthTop = mouthRight = mouthBottom = mouthFrames = 0; }
         JsonObject mesh = spec.getAsJsonObject("mesh");
         cols = mesh.get("cols").getAsInt(); rows = mesh.get("rows").getAsInt();
         int count = (cols + 1) * (rows + 1);

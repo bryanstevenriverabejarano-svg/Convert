@@ -18,6 +18,10 @@ for body in BODIES:
   rig = json.loads((ASSETS / 'astral.json').read_text())
   with Image.open(ASSETS / 'base.png') as base_image:
     assert rig['size'] == list(base_image.size), (body, 'astral rig does not match base.png')
+  if 'mouthBox' in rig:
+    x0, y0, x1, y1 = rig['mouthBox']
+    with Image.open(ASSETS / 'astral_mouth.png') as mouth:
+      assert mouth.mode == 'RGBA' and mouth.size == (x1 - x0, (y1 - y0) * len(rig['mouthFrames'])), (body, 'mouth frames')
   for name, spec in manifest['sheets'].items():
       path = ASSETS / (name + '.png')
       assert hashlib.sha256(path.read_bytes()).hexdigest() == spec['sha256'], name
