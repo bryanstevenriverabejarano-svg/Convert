@@ -17,6 +17,24 @@
         <item name="android:paddingStart">20dp</item>
         <item name="android:paddingEnd">20dp</item>
     </style>
+    <style name="SalveChatChip" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">42dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">#DAF8FF</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:background">@drawable/salve_chat_chip_background</item>
+        <item name="android:layout_marginEnd">7dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+    </style>
+    <string name="salve_chat_expand">Ampliar conversación a pantalla completa</string>
+    <string name="salve_chat_shrink">Volver al chat compacto</string>
+    <string name="salve_chat_minimize">Minimizar conversación y volver a Salve</string>
+    <string name="salve_chat_drag_hint">Desliza para cambiar el tamaño del chat</string>
+    <string name="salve_chat_full_hint">Chat a pantalla completa · desliza hacia abajo para reducir</string>
+    <string name="salve_chip_capabilities">¿Qué puedes hacer?</string>
+    <string name="salve_chip_bed">Muéstrame tu cama</string>
+    <string name="salve_chip_help">Ayúdame con algo</string>
     <string name="salve_stage_subtitle">Aquí contigo</string>
     <string name="salve_stage_hint">Doble toque para conversar
 Mantén pulsado para ver las opciones</string>
