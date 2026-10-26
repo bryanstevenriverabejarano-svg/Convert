@@ -236,6 +236,27 @@ final class RealisticSpriteRenderer {
     }
 
     /**
+     * Su ilustración tumbada (poses, fotograma 3) sobre la cama, en unidades locales de la cama
+     * (colchón de x −104..104, superficie ≈ y −30). Se refleja para que la cabeza quede en la almohada.
+     * Devuelve false si esta versión no tiene esa ilustración (entonces se usa la de pie girada).
+     */
+    boolean drawLying(Canvas canvas) {
+        Map<String, Sheet> sheets = assets().sheets;
+        Sheet poses = sheets == null ? null : sheets.get("poses");
+        if (poses == null || poses.frames.length < 4) return false;
+        Rect source = poses.frames[3];
+        if (source.width() <= source.height()) return false; // no es una figura tumbada
+        float width = 186f, height = width * source.height() / source.width();
+        float bottom = -30f + height * .18f; // el cuerpo apoya en el colchón; el pelo cae por detrás
+        canvas.save();
+        canvas.scale(-1, 1); // cabeza hacia la almohada (a la izquierda de la cama)
+        destination.set(-width / 2, bottom - height, width / 2, bottom);
+        canvas.drawBitmap(poses.bitmap, source, destination, paint);
+        canvas.restore();
+        return true;
+    }
+
+    /**
      * Posturas de una versión sin hojas propias: de pie (andar, gestos, escuchar), con balanceo al bailar
      * y tumbada con los ojos cerrados al dormir. El origen es el suelo, centrado (como las demás hojas).
      */

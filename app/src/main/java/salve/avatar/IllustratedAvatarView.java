@@ -157,11 +157,19 @@ class IllustratedAvatarView extends View {
             canvas.translate(layout.bedCenterX, layout.bedFloor(getHeight(), sleeping));
             canvas.scale(layout.bedScale, layout.bedScale);
             bed.draw(canvas, 0, 0, false);
-            if (sleeping) {
+            boolean lying = sleeping && RealisticSpriteRenderer.supports(wardrobe.selected()) && realistic.drawLying(canvas);
+            if (lying) {
+                // Su propia ilustración durmiendo, encima de las sábanas (sin tapar con el edredón).
+                poses.select(null);
+                text(canvas, "z", -18, -118 - (float) Math.sin(phase) * 3, 15, 0xFFA8DADD);
+                text(canvas, "z", -4, -136, 11, 0xFFA8DADD);
+            } else if (sleeping) {
                 canvas.save(); canvas.translate(90, -41); canvas.rotate(-90);
                 drawPortrait(canvas, expression, 171, 0, true);
                 canvas.restore();
                 bed.draw(canvas, 0, 0, true);
+            }
+            if (sleeping && !lying) {
                 text(canvas, "z", 48, -72 - (float) Math.sin(phase) * 3, 15, 0xFFA8DADD);
                 text(canvas, "z", 61, -90, 11, 0xFFA8DADD);
             }
