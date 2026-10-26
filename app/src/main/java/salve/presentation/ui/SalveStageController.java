@@ -1,6 +1,8 @@
 package salve.presentation.ui;
 
 import android.content.Context;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
@@ -45,6 +47,13 @@ final class SalveStageController {
     private boolean keyboardWanted;
     private boolean chatFullScreen;
     private final ImageButton expandChat;
+    private final View presenceBadge, presenceHalo;
+    private final ImageView presenceAvatar;
+    enum PresenceMode { THINKING, RESPONDING, LISTENING, SPEAKING }
+    private PresenceMode voicePresence;
+    private PresenceMode renderedPresence;
+    private boolean presenceWasVisible;
+    private ObjectAnimator presencePulse;
     private final OnBackPressedCallback back = new OnBackPressedCallback(false) {
         @Override public void handleOnBackPressed() { closePanels(); }
     };
@@ -61,6 +70,9 @@ final class SalveStageController {
         caption = activity.findViewById(R.id.salveCaption);
         scroll = activity.findViewById(R.id.chatScroll);
         expandChat = activity.findViewById(R.id.btnExpandChat);
+        presenceBadge = activity.findViewById(R.id.chatPresenceBadge);
+        presenceHalo = activity.findViewById(R.id.chatPresenceHalo);
+        presenceAvatar = activity.findViewById(R.id.chatPresenceAvatar);
         chatBehavior = configure(chat, "chat");
         optionsBehavior = configure(options, "options");
         activity.getOnBackPressedDispatcher().addCallback(activity, back);
@@ -68,7 +80,11 @@ final class SalveStageController {
         Runnable sketchesChanged = () -> { if (!activity.isFinishing()) renderMessages(); };
         Sketches.addListener(sketchesChanged);
         activity.getLifecycle().addObserver(new androidx.lifecycle.DefaultLifecycleObserver() {
-            @Override public void onDestroy(androidx.lifecycle.LifecycleOwner owner) { Sketches.removeListener(sketchesChanged); }
+            @Override public void onDestroy(androidx.lifecycle.LifecycleOwner owner) {
+                Sketches.removeListener(sketchesChanged);
+                thinkingHandler.removeCallbacks(thinkingTimeout);
+                if (presencePulse != null) { presencePulse.cancel(); presencePulse = null; }
+            }
         });
         AvatarView avatar = activity.findViewById(R.id.imagenSalve);
         avatar.setImmersiveMode(true);
@@ -80,8 +96,6 @@ final class SalveStageController {
         activity.findViewById(R.id.btnCloseChat).setOnClickListener(v -> closePanels());
         expandChat.setOnClickListener(v -> setChatExpanded(!chatFullScreen));
         activity.findViewById(R.id.chatDragHandle).setOnClickListener(v -> cycleChatHeight());
-        // El clip de la caja de texto abre lo mismo que la tarjeta «Documentos».
-        activity.findViewById(R.id.btnAttachInline).setOnClickListener(v -> activity.findViewById(R.id.btnAdjuntar).performClick());
         // El halo se centra a la altura del pecho de Salve, sea cual sea la pantalla.
         View halo = activity.findViewById(R.id.salveHalo);
         activity.findViewById(R.id.avatarFrame).addOnLayoutChangeListener((frame, l, t, r, b, ol, ot, or, ob) ->
@@ -101,6 +115,7 @@ final class SalveStageController {
                     times.add(restoredTimes != null && i < restoredTimes.length ? restoredTimes[i] : 0L);
                 }
                 restoring = true; trimMessages(); renderMessages(); restoring = false;
+                updateChatExtras();
             }
             CharSequence last = saved.getCharSequence("stage_caption");
             if (last != null) caption.setText(last);
@@ -139,7 +154,9 @@ final class SalveStageController {
         activity.findViewById(R.id.chatActions).setVisibility(
                 !compact && !keyboardVisible && availableHeightDp >= 360 ? View.VISIBLE : View.GONE);
         activity.findViewById(R.id.chatSuggestions).setVisibility(
-                !compact && !keyboardVisible && availableHeightDp >= 450 ? View.VISIBLE : View.GONE);
+                !compact && !keyboardVisible && availableHeightDp >= 450
+                        && SalveChatPresentationPolicy.showSuggestions(messages.size(), draft != null)
+                        ? View.VISIBLE : View.GONE);
         activity.findViewById(R.id.chatResizeHint).setVisibility(
                 !compact && !keyboardVisible && availableHeightDp >= 450 ? View.VISIBLE : View.GONE);
     }
@@ -220,6 +237,7 @@ final class SalveStageController {
                         chatFullScreen = state == BottomSheetBehavior.STATE_EXPANDED;
                         updateExpandButton();
                         updateChatExtras();
+                        updatePresence();
                         if (chatFullScreen && keyboardWanted) focusComposer();
                     }
                 }
@@ -290,6 +308,7 @@ final class SalveStageController {
         hint.setCompoundDrawablesRelativeWithIntrinsicBounds(
                 chatFullScreen ? R.drawable.ic_salve_chevron_down : R.drawable.ic_salve_chevron_up, 0, 0, 0);
         updateScrim();
+        updatePresence();
     }
 
     /** Cursor en la caja de texto y teclado abierto (sólo con el chat a la vista). */
@@ -339,6 +358,7 @@ final class SalveStageController {
         chat.setImportantForAccessibility("chat".equals(active) ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         options.setImportantForAccessibility("options".equals(active) ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         updateChatExtras();
+        updatePresence();
     }
 
     /**
@@ -347,6 +367,44 @@ final class SalveStageController {
      */
     private void updateScrim() {
         scrim.setAlpha("chat".equals(active) && !chatFullScreen ? 0f : 1f);
+    }
+
+    /**
+     * La tarjeta fija solo aparece cuando el panel cubre el escenario.
+     * El pulso se vincula a estados observables del motor y del micrófono, nunca a una emoción inventada.
+     */
+    void setVoicePresence(PresenceMode mode) {
+        voicePresence = mode;
+        updatePresence();
+    }
+
+    private void updatePresence() {
+        if (presenceBadge == null) return;
+        boolean visible = "chat".equals(active) && chatFullScreen;
+        presenceBadge.setVisibility(visible ? View.VISIBLE : View.GONE);
+        PresenceMode mode = voicePresence != null ? voicePresence
+                : draft != null ? PresenceMode.RESPONDING
+                : activity.findViewById(R.id.thinkingRow).getVisibility() == View.VISIBLE
+                ? PresenceMode.THINKING : null;
+        if (mode == renderedPresence && visible == presenceWasVisible) return;
+        renderedPresence = mode;
+        presenceWasVisible = visible;
+        if (presencePulse != null) { presencePulse.cancel(); presencePulse = null; }
+        int desc = R.string.salve_presence_idle;
+        if (mode == PresenceMode.THINKING) desc = R.string.salve_presence_thinking;
+        else if (mode == PresenceMode.RESPONDING) desc = R.string.salve_presence_responding;
+        else if (mode == PresenceMode.LISTENING) desc = R.string.salve_presence_listening;
+        else if (mode == PresenceMode.SPEAKING) desc = R.string.salve_presence_speaking;
+        presenceAvatar.setContentDescription(activity.getString(desc));
+        presenceHalo.setAlpha(mode == null ? 0.30f : 0.75f);
+        if (visible && mode != null && android.provider.Settings.Global.getFloat(
+                activity.getContentResolver(), "animator_duration_scale", 1f) > 0f) {
+            presencePulse = ObjectAnimator.ofFloat(presenceHalo, View.ALPHA, 0.28f, 0.95f);
+            presencePulse.setDuration(1100);
+            presencePulse.setRepeatCount(ValueAnimator.INFINITE);
+            presencePulse.setRepeatMode(ValueAnimator.REVERSE);
+            presencePulse.start();
+        }
     }
 
     /** Borrador de Salve mientras escribe; no se guarda en el historial ni sobrevive a una recreación. */
@@ -367,6 +425,8 @@ final class SalveStageController {
             if (row != null && row.getVisibility() == View.VISIBLE) showThinking("Escribiendo…");
         }
         draft = next == null ? null : next.length() > 12000 ? next.substring(0, 12000) + "…" : next;
+        updateChatExtras();
+        updatePresence();
         renderMessages();
         if (draft != null) {
             String plain = plain(draft);
@@ -390,6 +450,7 @@ final class SalveStageController {
         if (row.getVisibility() != View.VISIBLE) { row.setVisibility(View.VISIBLE); scrollToEnd(); }
         thinkingHandler.removeCallbacks(thinkingTimeout);
         thinkingHandler.postDelayed(thinkingTimeout, 2 * 60 * 1000L); // sin novedades en 2 min, se quita
+        updatePresence();
     }
 
     /** Actualiza lo que hace, sólo si ya está pensando en algo que pidió Bryan. */
@@ -402,6 +463,7 @@ final class SalveStageController {
         thinkingHandler.removeCallbacks(thinkingTimeout);
         View row = activity.findViewById(R.id.thinkingRow);
         if (row != null) row.setVisibility(View.GONE);
+        updatePresence();
     }
 
     void appendMessage(boolean fromSalve, String text) {
@@ -428,7 +490,10 @@ final class SalveStageController {
         messages.add((fromSalve ? "Salve" : "Tú") + "\n" + visible);
         serials.add(serial);
         times.add(System.currentTimeMillis());
-        trimMessages(); renderMessages();
+        trimMessages();
+        updateChatExtras();
+        updatePresence();
+        renderMessages();
         if (fromSalve && keyboardWanted && "chat".equals(active)) composer.postDelayed(this::focusComposer, 120);
         if (fromSalve) {
             String plain = plain(text);
