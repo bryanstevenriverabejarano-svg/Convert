@@ -60,7 +60,7 @@ final class RealisticSpriteRenderer {
                     if (!manifest.has("base")) throw new java.io.IOException("Sprite base ausente en " + folder);
                     for (java.util.Iterator<String> names = manifest.keys(); names.hasNext(); ) {
                         String name = names.next();
-                        if (!name.matches("base|views|walk|walk_inbetween|dance|poses")) continue;
+                        if (!name.matches("base|views|turn|walk|walk_inbetween|dance|poses")) continue;
                         JSONObject spec = manifest.getJSONObject(name);
                         Bitmap bitmap;
                         try (InputStream file = context.getAssets().open("avatar/" + folder + "/" + name + ".png")) {
@@ -230,8 +230,14 @@ final class RealisticSpriteRenderer {
                     && !motion.speaking && !motion.listening && !motion.thinking;
             float spin = motion.gesture == AvatarMotion.Gesture.SPIN ? motion.gestureProgress : -1;
             int view = upright ? turn.view(state.isFacingRight(), pose == AvatarState.Pose.WALKING, idle, spin, time) : -1;
-            if (view >= 0 && view < sheets.get("views").frames.length)
-                selected = new RealisticSpriteAnimation.Frame("views", view, false, 1);
+            Sheet turnSheet = sheets.get("turn");
+            if (view >= 8 && turnSheet != null && view - 8 < turnSheet.frames.length)
+                selected = new RealisticSpriteAnimation.Frame("turn", view - 8, false, 1);
+            else if (view >= 0) {
+                int base = AvatarTurn.fallback(view);
+                if (base < sheets.get("views").frames.length)
+                    selected = new RealisticSpriteAnimation.Frame("views", base, false, 1);
+            }
         }
         Sheet sheet = sheets.get(selected.sheet);
         // Older body versions have only eight walking frames: reuse the preceding original.
