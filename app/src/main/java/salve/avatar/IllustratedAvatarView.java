@@ -152,12 +152,16 @@ class IllustratedAvatarView extends View {
         AvatarStageLayout layout = AvatarStageLayout.fit(getWidth(), getHeight(), state.getX());
         if (layout.height <= 0) return;
         boolean sleeping = state.getPose() == AvatarState.Pose.SLEEPING;
+        boolean realisticBody = RealisticSpriteRenderer.supports(wardrobe.selected());
+        // Recién despierta sigue un momento en la cama abriendo los ojos antes de levantarse.
+        boolean waking = !sleeping && realisticBody && state.hasBed() && realistic.wakingInBed();
         if (state.hasBed()) {
             canvas.save();
-            canvas.translate(layout.bedCenterX, layout.bedFloor(getHeight(), sleeping));
+            canvas.translate(layout.bedCenterX, layout.bedFloor(getHeight(), sleeping || waking));
             canvas.scale(layout.bedScale, layout.bedScale);
             bed.draw(canvas, 0, 0, false);
-            boolean lying = sleeping && RealisticSpriteRenderer.supports(wardrobe.selected()) && realistic.drawLying(canvas);
+            boolean lying = sleeping && realisticBody && realistic.drawLying(canvas);
+            if (waking && !realistic.drawWaking(canvas)) waking = false;
             if (lying) {
                 // Su propia ilustración durmiendo, encima de las sábanas (sin tapar con el edredón).
                 poses.select(null);
@@ -175,7 +179,7 @@ class IllustratedAvatarView extends View {
             }
             canvas.restore();
         }
-        if (!sleeping) {
+        if (!sleeping && !waking) {
             // A quiet contact shadow replaces the permanent room furniture.
             float radius = layout.height * .14f;
             oval(canvas, layout.centerX - radius, layout.floor - 6,
