@@ -1,0 +1,98 @@
+name: Publicar APK de Salve
+
+# Cada vez que main cambia, compila Salve y deja los APK en la release fija «salve-ultima».
+# Enlaces que no cambian nunca y se descargan sin iniciar sesión ni descomprimir:
+#   https://github.com/<dueño>/<repo>/releases/download/salve-ultima/salve-preview-arm64.apk
+#   https://github.com/<dueño>/<repo>/releases/download/salve-ultima/salve-debug-arm64.apk
+# Releases no gasta la cuota de artefactos de Actions. Este flujo solo compila (no ejecuta código de la
+# app) y es el único con permiso de escritura para crear la release; las pruebas siguen en android.yml.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: salve-release
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    name: Compilar y publicar los APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Set up Java 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-read-only: true
+          cache-dependency-path: |
+            build.gradle
+            settings.gradle
+            gradle.properties
+            gradle/gradle-daemon-jvm.properties
+            gradle/wrapper/gradle-wrapper.properties
+            app/build.gradle
+            mlc4j/build.gradle
+
+      - name: Prepare Android SDK
+        timeout-minutes: 10
+        run: bash scripts/setup-android-sdk.sh
+
+      - name: Use Salve's fixed signing key (updates keep her data)
+        env:
+          SALVE_DEBUG_KEYSTORE_B64: ${{ secrets.SALVE_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$SALVE_DEBUG_KEYSTORE_B64" ]; then
+            printf '%s' "$SALVE_DEBUG_KEYSTORE_B64" | tr -d ' \n\r' | base64 -d > "$RUNNER_TEMP/salve-debug.keystore"
+            echo "SALVE_DEBUG_KEYSTORE=$RUNNER_TEMP/salve-debug.keystore" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Sin SALVE_DEBUG_KEYSTORE_B64 el APK usa una firma aleatoria."
+          fi
+
+      - name: Build the ARM64 APKs
+        timeout-minutes: 35
+        run: >-
+          bash ./gradlew --no-daemon --console=plain --max-workers=2
+          --init-script scripts/android-arm64.init.gradle
+          :app:assemblePreview :app:assembleDebug
+
+      - name: Publish them in the «salve-ultima» release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/preview/app-preview.apk dist/salve-preview-arm64.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/salve-debug-arm64.apk
+          ( cd dist && sha256sum *.apk > SHA256SUMS.txt )
+          short="${GITHUB_SHA::7}"
+          notes="Salve compilada desde main (${short}) el $(date -u '+%Y-%m-%d %H:%M') UTC.
+
+          - **salve-preview-arm64.apk**: la versión para instalar (app «Salve (prueba)»).
+          - **salve-debug-arm64.apk**: la misma con registros de depuración (app «Salve»).
+
+          Se instala directamente: no hace falta iniciar sesión ni descomprimir.
+          Las pruebas de esta revisión están en «Android tests and APK»."
+          # La release se rehace en cada versión para que su etiqueta apunte siempre al último main.
+          gh release delete salve-ultima --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes 2>/dev/null || true
+          gh release create salve-ultima dist/salve-preview-arm64.apk dist/salve-debug-arm64.apk dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
+            --title "Salve · última versión (${short})" --notes "$notes"
+          echo "Publicada: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/salve-ultima"
