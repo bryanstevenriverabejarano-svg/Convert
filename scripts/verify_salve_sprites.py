@@ -20,8 +20,13 @@ for body in BODIES:
     assert rig['size'] == list(base_image.size), (body, 'astral rig does not match base.png')
   if 'mouthBox' in rig:
     x0, y0, x1, y1 = rig['mouthBox']
-    with Image.open(ASSETS / 'astral_mouth.png') as mouth:
-      assert mouth.mode == 'RGBA' and mouth.size == (x1 - x0, (y1 - y0) * len(rig['mouthFrames'])), (body, 'mouth frames')
+    # Tres bocas (H1-H3) viven en astral_mouth_h123.png; las versiones de dos, en astral_mouth.png.
+    mouth_file = 'astral_mouth_h123.png' if len(rig['mouthFrames']) == 3 else 'astral_mouth.png'
+    with Image.open(ASSETS / mouth_file) as mouth:
+      # PNG RGBA o con paleta y transparencia: Android los decodifica con alfa igual.
+      alpha = mouth.convert('RGBA').getchannel('A').getextrema()
+      assert mouth.size == (x1 - x0, (y1 - y0) * len(rig['mouthFrames'])), (body, 'mouth frames')
+      assert alpha[0] < 255, (body, 'mouth frames without transparency')
   for name, spec in manifest['sheets'].items():
       path = ASSETS / (name + '.png')
       assert hashlib.sha256(path.read_bytes()).hexdigest() == spec['sha256'], name

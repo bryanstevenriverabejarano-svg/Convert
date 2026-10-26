@@ -148,8 +148,9 @@ jobs:
                   manifest_path = "avatar/" + body + "/manifest.json"
                   sheets = json.loads(Path("app/src/main/assets/" + manifest_path).read_text())["sheets"]
                   extras = ["astral", "astral_eyes", "astral_glow"]
-                  if Path("app/src/main/assets/avatar/" + body + "/astral_mouth.png").exists():
-                      extras.append("astral_mouth")
+                  for mouth in ("astral_mouth", "astral_mouth_h123"):
+                      if Path("app/src/main/assets/avatar/" + body + "/" + mouth + ".png").exists():
+                          extras.append(mouth)
                   for name in list(sheets) + extras:
                       asset = "avatar/" + body + "/" + name + (".json" if name == "astral" else ".png")
                       assert apk.read("assets/" + asset) == Path("app/src/main/assets/" + asset).read_bytes(), asset
