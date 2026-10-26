@@ -164,8 +164,11 @@ jobs:
           python3 scripts/check_android_native_alignment.py app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk --report build/native-alignment-${{ matrix.variant }}.json
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk
 
+      # Los artefactos son de corta vida y no deben tumbar la CI si se llena la cuota de almacenamiento:
+      # el APK para instalar se publica en Releases (salve-release.yml), que no gasta esta cuota.
       - name: Upload test reports
         if: ${{ always() }}
+        continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: android-${{ matrix.variant }}-test-reports-${{ github.sha }}
@@ -178,9 +181,10 @@ jobs:
             build/native-alignment-${{ matrix.variant }}.json
             app/schemas/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
       - name: Upload tested ${{ matrix.variant }} APK
+        continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: salve-${{ matrix.variant }}-arm64-${{ github.sha }}
@@ -191,7 +195,7 @@ jobs:
             app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk.badging.txt
           if-no-files-found: error
           compression-level: 0
-          retention-days: 14
+          retention-days: 3
 
   agent-sandbox:
     name: Agent tools in real isolated containers
