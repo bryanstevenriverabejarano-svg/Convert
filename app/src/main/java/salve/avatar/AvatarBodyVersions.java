@@ -24,7 +24,7 @@ public final class AvatarBodyVersions {
     public static final String V1 = "realistic_v1";
     private static final List<Version> ALL = Collections.unmodifiableList(Arrays.asList(
             new Version(CURRENT, "Salve actual", "26 oct 2026",
-                    "Traje blanco con líneas cian que recorren su cuerpo desde el núcleo del cuello."),
+                    "Traje blanco con colas y líneas cian que recorren su cuerpo desde el núcleo del cuello; 32 ilustraciones propias para girarse, andar, bailar y sus posturas."),
             new Version(V1, "Salve v1", "12 oct 2026",
                     "Su primer cuerpo realista: traje blanco y circuitos azules, con pasos, baile y posturas propios.")));
 

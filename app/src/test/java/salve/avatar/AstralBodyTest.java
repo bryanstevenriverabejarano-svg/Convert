@@ -131,20 +131,22 @@ public class AstralBodyTest {
 
     @Test public void theNewBaseMovesHairAndHeadButNotItsLimbs() throws Exception {
         AstralBodyRig rig = rig(AvatarBodyVersions.CURRENT);
-        assertEquals(1141, rig.width);
-        assertEquals(1700, rig.height);
-        assertEquals(240f, rig.hairTop, 1e-6f);
+        assertEquals(1024, rig.width);
+        assertEquals(1536, rig.height);
+        assertEquals(230f, rig.hairTop, 1e-6f);
         assertEquals(720f, rig.hairSpan, 1e-6f);
         int row = Math.round(800f / rig.height * rig.rows);
         // Melena exterior a los dos lados: ondea.
-        assertTrue(rig.hairWeight(Math.round(110f / rig.width * rig.cols), row) > .6f);
-        assertTrue(rig.hairWeight(Math.round(1030f / rig.width * rig.cols), row) > .6f);
+        assertTrue(rig.hairWeight(Math.round(90f / rig.width * rig.cols), row) > .6f);
+        assertTrue(rig.hairWeight(Math.round(935f / rig.width * rig.cols), row) > .6f);
+        // Las colas blancas del traje también ondean.
+        assertTrue(rig.hairWeight(Math.round(230f / rig.width * rig.cols), Math.round(1100f / rig.height * rig.rows)) > .5f);
         // Codo, muñeca y rodilla: fijos.
-        assertEquals(0f, rig.hairWeight(Math.round(418f / rig.width * rig.cols), Math.round(590f / rig.height * rig.rows)), .05f);
-        assertEquals(0f, rig.hairWeight(Math.round(825f / rig.width * rig.cols), Math.round(795f / rig.height * rig.rows)), .05f);
-        assertEquals(0f, rig.hairWeight(Math.round(535f / rig.width * rig.cols), Math.round(1250f / rig.height * rig.rows)), 1e-6f);
+        assertEquals(0f, rig.hairWeight(Math.round(345f / rig.width * rig.cols), Math.round(560f / rig.height * rig.rows)), .05f);
+        assertEquals(0f, rig.hairWeight(Math.round(745f / rig.width * rig.cols), Math.round(700f / rig.height * rig.rows)), .05f);
+        assertEquals(0f, rig.hairWeight(Math.round(470f / rig.width * rig.cols), Math.round(1100f / rig.height * rig.rows)), 1e-6f);
         // Ojos y auriculares, en la cabeza.
-        assertEquals(1f, rig.headWeight(Math.round(575f / rig.width * rig.cols), Math.round(164f / rig.height * rig.rows)), 1e-6f);
+        assertEquals(1f, rig.headWeight(Math.round(510f / rig.width * rig.cols), Math.round(145f / rig.height * rig.rows)), 1e-6f);
         assertTrue("la luz llega hasta los pies", rig.reach > rig.feetY - rig.heartY);
         float[] rest = rig.deform(null, null);
         AstralBody body = new AstralBody(new Random(9));
@@ -152,8 +154,8 @@ public class AstralBodyTest {
         body.advance(0, idle(), .5f, AvatarState.Pose.IDLE);
         for (int i = 1; i < 12; i++) body.advance(i * 16L, idle(), .5f, AvatarState.Pose.IDLE);
         float[] moved = rig.deform(body.snapshot(), null);
-        int hair = row * (rig.cols + 1) + Math.round(110f / rig.width * rig.cols);
-        int knee = Math.round(1250f / rig.height * rig.rows) * (rig.cols + 1) + Math.round(535f / rig.width * rig.cols);
+        int hair = row * (rig.cols + 1) + Math.round(90f / rig.width * rig.cols);
+        int knee = Math.round(1100f / rig.height * rig.rows) * (rig.cols + 1) + Math.round(470f / rig.width * rig.cols);
         assertNotEquals(rest[2 * hair], moved[2 * hair], .5f);
         assertEquals(rest[2 * knee], moved[2 * knee], 1e-4f);
     }

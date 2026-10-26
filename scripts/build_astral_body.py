@@ -7,7 +7,7 @@ Salidas (todas derivadas del PNG aprobado, que no se modifica):
   astral.json      - recuadro de ojos, pivotes, inicio del pelo y pesos de malla (pelo y cabeza)
 
 Cuerpos (avatar/<cuerpo>/):
-  realistic     - Salve actual (base aprobada el 26-10-2026)
+  realistic     - Salve actual (32 ilustraciones aprobadas el 26-10-2026; base = la 01)
   realistic_v1  - Salve v1 (referencia aprobada el 12-10-2026), conservada en Vestuario
 
 Uso: python3 scripts/build_astral_body.py [realistic|realistic_v1]   (requiere numpy y opencv-python)
@@ -40,23 +40,26 @@ BODIES = {
             ((427, 120), (427, 300), 92), ((427, 250), (427, 340), 60),
         ]),
     "realistic": dict(
-        eye_box=(500, 140, 660, 186),
+        eye_box=(450, 125, 585, 170),
         eyes=[
-            dict(c=(533, 164), ax=(25, 12), outer=(510, 160), inner=(557, 166)),
-            dict(c=(621, 164), ax=(25, 12), outer=(645, 160), inner=(599, 166)),
+            dict(c=(482, 145), ax=(20, 10), outer=(462, 139), inner=(500, 148)),
+            dict(c=(551, 152), ax=(20, 10), outer=(571, 148), inner=(534, 150)),
         ],
         # El núcleo luminoso del cuello es el corazón: de ahí sale la luz que recorre las líneas.
-        neck=(575, 255), heart=(575, 300), feet=(575, 1695),
-        mesh=(38, 56), hair_top=240, hair_span=720, hang=(240, 760), head=(200, 270),
-        # Azul intenso de los paneles y cian de las líneas finas; el pelo lavanda (tono ~115,
-        # saturacion < 50) queda fuera.
+        neck=(510, 225), heart=(510, 262), feet=(510, 1530),
+        mesh=(34, 52), hair_top=230, hair_span=720, hang=(230, 740), head=(180, 245),
+        # Ojos cerrados dibujados (recorte alineado de la ilustración 32 aprobada): sustituyen al
+        # párpado sintético en el fotograma «cerrado»; el entrecerrado sigue siendo sintético.
+        closed_eyes="astral_sources/realistic_closed_eyes.png",
+        # Azul intenso de los paneles y cian de las líneas finas; el pelo lavanda queda fuera.
         glow=[(88, 128, 110, 150), (80, 104, 40, 170)], glow_blur=1.6,
+        # Las colas blancas del traje quedan fuera de las cápsulas: ondean con el pelo.
         capsules=[
-            ((480, 325), (418, 590), 44), ((418, 590), (330, 795), 38), ((330, 795), (275, 930), 55),
-            ((670, 325), (732, 590), 44), ((732, 590), (825, 795), 38), ((825, 795), (880, 930), 55),
-            ((575, 320), (575, 560), 102), ((575, 560), (575, 690), 88), ((575, 700), (575, 810), 132),
-            ((527, 820), (540, 1695), 64), ((625, 820), (612, 1695), 64),
-            ((575, 40), (575, 200), 138), ((575, 200), (575, 290), 62),
+            ((400, 340), (345, 560), 44), ((345, 560), (275, 700), 38), ((275, 700), (230, 795), 55),
+            ((620, 340), (675, 560), 44), ((675, 560), (745, 700), 38), ((745, 700), (790, 795), 55),
+            ((510, 330), (510, 560), 110), ((510, 560), (510, 650), 95), ((510, 660), (510, 760), 140),
+            ((465, 780), (475, 1530), 70), ((555, 780), (545, 1530), 70),
+            ((510, 30), (510, 190), 122), ((510, 190), (510, 270), 56),
         ]),
 }
 BODY = None
@@ -135,6 +138,16 @@ def eye_frames(base):
             else:
                 draw_lid(big, e, 4.0, 3.5, 2.4)
         frames.append(cv2.resize(big, (rgba.shape[1], rgba.shape[0]), interpolation=cv2.INTER_AREA))
+    if BODY.get("closed_eyes"):
+        art = cv2.imread(os.path.join(os.path.dirname(os.path.abspath(__file__)), BODY["closed_eyes"]), cv2.IMREAD_UNCHANGED)
+        if art is None or art.shape[:2] != crop.shape[:2]:
+            sys.exit("recorte de ojos cerrados ausente o de otro tamaño")
+        m = np.zeros(mask.shape, np.uint8)
+        for e in EYES:
+            cv2.ellipse(m, (e["c"][0] - x0, e["c"][1] - y0), (e["ax"][0] + 6, e["ax"][1] + 5), 0, 0, 360, 255, -1)
+        f = cv2.GaussianBlur(m.astype(np.float32) / 255, (0, 0), 3.0)[:, :, None]
+        rgb = (art[:, :, :3] * f + bgr * (1 - f)).astype(np.uint8)
+        frames[1] = np.dstack([rgb, np.maximum(alpha, (f[:, :, 0] * 255).astype(np.uint8))])
     return np.vstack(frames)
 
 def glow_mask(base):

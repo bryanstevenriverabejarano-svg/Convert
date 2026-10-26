@@ -1,22 +1,282 @@
 {
-  "version": 2,
-  "identity": "Salve — base aprobada 2026-10-26 (la v1 del 2026-10-12 se conserva en avatar/realistic_v1)",
-  "rendering": "Native Canvas 2D; cuerpo vivo por malla (pelo, cabeza, párpados, respiración y luz por las líneas). Sin hojas de pasos: andar, bailar y posturas usan el mismo cuerpo vivo.",
+  "version": 3,
+  "identity": "Salve — 32 ilustraciones aprobadas el 2026-10-26 (la v1 del 2026-10-12 se conserva en avatar/realistic_v1)",
+  "rendering": "Native Canvas 2D; generated RGBA sprites, no 3D mesh. base.png es además el cuerpo vivo (capa astral).",
   "sheets": {
     "base": {
-      "width": 1141,
-      "height": 1700,
-      "sha256": "cdea20e78621927abc15ad9bd5153bd766117d30ee6e0dd78f7b4f252332cff7",
+      "width": 1024,
+      "height": 1536,
+      "sha256": "c0e38ee86c687c80a9f6c2a6b153641db7ccb7dff5f8922c0a3a59c284bceb14",
       "frames": [
         [
           0,
           0,
-          1141,
-          1700
+          1024,
+          1536
         ]
       ],
       "frameHeights": [
-        1700
+        1536
+      ]
+    },
+    "views": {
+      "width": 1792,
+      "height": 1344,
+      "sha256": "7d14e918b8704bcd9fe5d4d0636d7acd60e18beb180186bee10153548ff882ce",
+      "frames": [
+        [
+          0,
+          0,
+          448,
+          672
+        ],
+        [
+          448,
+          0,
+          896,
+          672
+        ],
+        [
+          896,
+          0,
+          1344,
+          672
+        ],
+        [
+          1344,
+          0,
+          1792,
+          672
+        ],
+        [
+          0,
+          672,
+          448,
+          1344
+        ],
+        [
+          448,
+          672,
+          896,
+          1344
+        ],
+        [
+          896,
+          672,
+          1344,
+          1344
+        ],
+        [
+          1344,
+          672,
+          1792,
+          1344
+        ]
+      ],
+      "frameHeights": [
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672
+      ]
+    },
+    "walk": {
+      "width": 1792,
+      "height": 1344,
+      "sha256": "bd4e02a6de63d295d5c2ccbe32cb641455a11bd541cc27ba39f0e45523b3befc",
+      "frames": [
+        [
+          0,
+          0,
+          448,
+          672
+        ],
+        [
+          448,
+          0,
+          896,
+          672
+        ],
+        [
+          896,
+          0,
+          1344,
+          672
+        ],
+        [
+          1344,
+          0,
+          1792,
+          672
+        ],
+        [
+          0,
+          672,
+          448,
+          1344
+        ],
+        [
+          448,
+          672,
+          896,
+          1344
+        ],
+        [
+          896,
+          672,
+          1344,
+          1344
+        ],
+        [
+          1344,
+          672,
+          1792,
+          1344
+        ]
+      ],
+      "frameHeights": [
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672
+      ]
+    },
+    "dance": {
+      "width": 1792,
+      "height": 1344,
+      "sha256": "e1826804df820be325b664f8a2b4428d88cc30b26fb0af355f4b09c6919391db",
+      "frames": [
+        [
+          0,
+          0,
+          448,
+          672
+        ],
+        [
+          448,
+          0,
+          896,
+          672
+        ],
+        [
+          896,
+          0,
+          1344,
+          672
+        ],
+        [
+          1344,
+          0,
+          1792,
+          672
+        ],
+        [
+          0,
+          672,
+          448,
+          1344
+        ],
+        [
+          448,
+          672,
+          896,
+          1344
+        ],
+        [
+          896,
+          672,
+          1344,
+          1344
+        ],
+        [
+          1344,
+          672,
+          1792,
+          1344
+        ]
+      ],
+      "frameHeights": [
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672
+      ]
+    },
+    "poses": {
+      "width": 2016,
+      "height": 1344,
+      "sha256": "905ee801becb56042d28dd026d5aa5926923310c6a0d3826ba66bfd4fd4216a4",
+      "frames": [
+        [
+          0,
+          0,
+          448,
+          672
+        ],
+        [
+          448,
+          0,
+          896,
+          672
+        ],
+        [
+          896,
+          0,
+          1344,
+          672
+        ],
+        [
+          1344,
+          224,
+          2016,
+          672
+        ],
+        [
+          0,
+          672,
+          448,
+          1344
+        ],
+        [
+          448,
+          672,
+          896,
+          1344
+        ],
+        [
+          896,
+          672,
+          1344,
+          1344
+        ],
+        [
+          1344,
+          672,
+          1792,
+          1344
+        ]
+      ],
+      "frameHeights": [
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672
       ]
     }
   }
