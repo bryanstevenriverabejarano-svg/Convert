@@ -129,6 +129,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         if (dismissed) return;
         apply(loop.stop(VoiceConversationLoop.StopReason.LIFECYCLE));
         dismissed = true;
+        stage.setVoicePresence(null);
         releaseResources();
         controls.setVisibility(View.GONE);
         activity.findViewById(R.id.salveGestureHint).setVisibility(View.VISIBLE);
@@ -358,6 +359,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         interrupt.setEnabled(loop.state() != VoiceConversationLoop.State.LISTENING);
         switch (loop.state()) {
             case LISTENING:
+                stage.setVoicePresence(SalveStageController.PresenceMode.LISTENING);
                 switch (metrics.captureStage()) {
                     case STARTING: status.setText("Preparando el micrófono…"); break;
                     case FINALIZING:
@@ -365,13 +367,19 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                     default: status.setText("Te escucho…"); break;
                 }
                 break;
-            case THINKING: status.setText("Preparando respuesta…"); break;
-            case SPEAKING: status.setText("Salve está hablando…"); break;
+            case THINKING:
+                stage.setVoicePresence(SalveStageController.PresenceMode.THINKING);
+                status.setText("Preparando respuesta…"); break;
+            case SPEAKING:
+                stage.setVoicePresence(SalveStageController.PresenceMode.SPEAKING);
+                status.setText("Salve está hablando…"); break;
             case COOLDOWN:
+                stage.setVoicePresence(null);
                 status.setText(recognitionErrorText == null ? "Enseguida te escucho…"
                         : recognitionErrorText + " Volveré a intentarlo…");
                 break;
             case STOPPED:
+                stage.setVoicePresence(null);
                 boolean recognitionFailure = loop.stopReason() == VoiceConversationLoop.StopReason.RECOGNIZER_ERROR
                         || loop.stopReason() == VoiceConversationLoop.StopReason.RECOGNIZER_UNAVAILABLE;
                 status.setText(recognitionFailure && recognitionErrorText != null

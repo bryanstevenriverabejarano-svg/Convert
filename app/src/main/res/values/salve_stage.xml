@@ -52,7 +52,7 @@
         <item name="iconGravity">textStart</item>
         <item name="elevation">6dp</item>
     </style>
-    <!-- Tarjetas «Conversar por voz» y «Documentos»: icono en círculo, título y subtítulo. -->
+    <!-- Tarjeta única para conversación de voz; el clip ya gestiona archivos y fotos. -->
     <style name="SalveActionCard">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
@@ -108,6 +108,13 @@ Prueba «cama» para mostrarla o «guarda la cama» para despejar la pantalla.</
     <string name="salve_chat_hint">Escribe a Salve…</string>
     <string name="salve_attach">Documentos</string>
     <string name="salve_voice">Conversar por voz</string>
+    <string name="salve_voice_action">Hablar con Salve</string>
+    <string name="salve_voice_full_subtitle">Conversación por voz en tiempo real</string>
+    <string name="salve_presence_idle">Salve está aquí</string>
+    <string name="salve_presence_thinking">Salve está pensando</string>
+    <string name="salve_presence_responding">Salve está respondiendo</string>
+    <string name="salve_presence_listening">Salve te está escuchando</string>
+    <string name="salve_presence_speaking">Salve está hablando</string>
     <string name="salve_voice_subtitle">Habla con Salve</string>
     <string name="salve_attach_subtitle">Sube y analiza archivos</string>
     <string name="salve_send">Enviar</string>

@@ -74,6 +74,19 @@
                 android:importantForAccessibility="no" />
         </FrameLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <!-- En pantalla completa conserva el rostro de Salve, enlazado a los estados reales del motor. -->
+            <FrameLayout android:id="@+id/chatPresenceBadge" android:layout_width="46dp"
+                android:layout_height="46dp" android:layout_marginEnd="6dp" android:visibility="gone"
+                android:importantForAccessibility="no">
+                <View android:id="@+id/chatPresenceHalo" android:layout_width="46dp"
+                    android:layout_height="46dp" android:layout_gravity="center"
+                    android:background="@drawable/salve_presence_halo" android:alpha="0.35"
+                    android:importantForAccessibility="no" />
+                <ImageView android:id="@+id/chatPresenceAvatar" android:layout_width="40dp"
+                    android:layout_height="40dp" android:layout_gravity="center"
+                    android:src="@drawable/salve_chat_avatar"
+                    android:contentDescription="@string/salve_presence_idle" />
+            </FrameLayout>
             <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
                 android:text="@string/salve_chat_title" android:textStyle="bold" android:textSize="26sp" android:textColor="#F2F8FA" android:paddingStart="8dp" />
             <ImageButton android:id="@+id/btnExpandChat" android:layout_width="50dp" android:layout_height="50dp"
@@ -87,7 +100,7 @@
         </LinearLayout>
         <TextView android:id="@+id/chatModelStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:text="Modelo: preparando" android:textColor="#A9BCC8" android:textSize="13sp" android:paddingHorizontal="8dp"
-            android:paddingBottom="8dp" android:maxLines="2" android:ellipsize="end" />
+            android:paddingBottom="8dp" android:maxLines="1" android:ellipsize="end" />
         <androidx.core.widget.NestedScrollView android:id="@+id/chatScroll" android:layout_width="match_parent"
             android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
@@ -128,7 +141,8 @@
         <!-- Sugerencias opcionales: rellenan el borrador, nunca envían sin confirmación. -->
         <HorizontalScrollView android:id="@+id/chatSuggestions" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:fillViewport="false"
-            android:scrollbars="none" android:paddingTop="4dp" android:paddingBottom="6dp">
+            android:scrollbars="none" android:requiresFadingEdge="horizontal"
+            android:fadingEdgeLength="20dp" android:paddingTop="4dp" android:paddingBottom="6dp">
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <com.google.android.material.button.MaterialButton android:id="@+id/chipCapabilities" style="@style/SalveChatChip"
@@ -162,34 +176,27 @@
                 style="@style/SalveSendButton" android:layout_width="58dp" android:layout_height="58dp"
                 android:layout_marginStart="10dp" android:contentDescription="@string/salve_send" />
         </LinearLayout>
-        <LinearLayout android:id="@+id/chatActions" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:paddingTop="12dp">
-            <LinearLayout android:id="@+id/btnHablar" style="@style/SalveActionCard" android:layout_marginEnd="6dp"
-                android:contentDescription="@string/salve_voice">
-                <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/salve_icon_circle"
-                    android:importantForAccessibility="no">
-                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="center"
-                        android:src="@drawable/ic_salve_mic" app:tint="#7FE3D2" android:importantForAccessibility="no" />
+        <!-- Una sola acción de voz; los documentos y las fotos permanecen en el clip del compositor. -->
+        <LinearLayout android:id="@+id/chatActions" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:paddingTop="12dp">
+            <LinearLayout android:id="@+id/btnHablar" style="@style/SalveActionCard"
+                android:contentDescription="@string/salve_voice_action">
+                <FrameLayout android:layout_width="48dp" android:layout_height="48dp"
+                    android:background="@drawable/salve_icon_circle" android:importantForAccessibility="no">
+                    <ImageView android:layout_width="26dp" android:layout_height="26dp"
+                        android:layout_gravity="center" android:src="@drawable/ic_salve_mic"
+                        app:tint="#7FE3D2" android:importantForAccessibility="no" />
                 </FrameLayout>
-                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="4dp"
-                    android:src="@drawable/ic_salve_waveform" app:tint="#7FE3D2" android:importantForAccessibility="no" />
-                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp" android:orientation="vertical" android:importantForAccessibility="no">
-                    <TextView style="@style/SalveActionCardTitle" android:text="@string/salve_voice" />
-                    <TextView style="@style/SalveActionCardSubtitle" android:text="@string/salve_voice_subtitle" />
-                </LinearLayout>
-            </LinearLayout>
-            <LinearLayout android:id="@+id/btnAdjuntar" style="@style/SalveActionCard" android:layout_marginStart="6dp"
-                android:contentDescription="@string/salve_attach">
-                <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/salve_icon_circle"
-                    android:importantForAccessibility="no">
-                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="center"
-                        android:src="@drawable/ic_salve_document" app:tint="#7FE3D2" android:importantForAccessibility="no" />
-                </FrameLayout>
-                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp" android:orientation="vertical" android:importantForAccessibility="no">
-                    <TextView style="@style/SalveActionCardTitle" android:text="@string/salve_attach" />
-                    <TextView style="@style/SalveActionCardSubtitle" android:text="@string/salve_attach_subtitle" />
+                <ImageView android:layout_width="18dp" android:layout_height="18dp"
+                    android:layout_marginStart="14dp" android:src="@drawable/ic_salve_waveform"
+                    app:tint="#7FE3D2" android:importantForAccessibility="no" />
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:layout_marginStart="16dp"
+                    android:orientation="vertical" android:importantForAccessibility="no">
+                    <TextView style="@style/SalveActionCardTitle"
+                        android:text="@string/salve_voice_action" />
+                    <TextView style="@style/SalveActionCardSubtitle"
+                        android:text="@string/salve_voice_full_subtitle" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
