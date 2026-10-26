@@ -842,6 +842,18 @@ public class MainActivity extends AppCompatActivity {
         salve.sketch.Sketches.preload(this); // repertorio de trazos listo antes del primer dibujo
         stageController = new SalveStageController(this, savedInstanceState);
 
+        // Accesos rápidos: preparar el texto, nunca enviar por sorpresa.
+        int[] chatChips = {R.id.chipCapabilities, R.id.chipBed, R.id.chipHelp};
+        int[] chipPrompts = {R.string.salve_chip_capabilities, R.string.salve_chip_bed, R.string.salve_chip_help};
+        for (int i = 0; i < chatChips.length; i++) {
+            final int prompt = chipPrompts[i];
+            findViewById(chatChips[i]).setOnClickListener(v -> {
+                inputChat.setText(getString(prompt));
+                inputChat.setSelection(inputChat.length());
+                stageController.showChat(true);
+            });
+        }
+
 
         updateAudioPermissionState();
 
