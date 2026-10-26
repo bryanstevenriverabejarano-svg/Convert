@@ -218,7 +218,6 @@ final class SalveStageController {
 
     void showChat(boolean keyboard) {
         boolean alreadyOpen = "chat".equals(active);
-        keyboardWanted = keyboard;
         if (!alreadyOpen) {
             closePanels();
             active = "chat";
@@ -230,6 +229,7 @@ final class SalveStageController {
         } else if (keyboard) {
             chatBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
         }
+        keyboardWanted = keyboard;
         updateChrome();
         scrollToEnd();
         if (keyboard) {
