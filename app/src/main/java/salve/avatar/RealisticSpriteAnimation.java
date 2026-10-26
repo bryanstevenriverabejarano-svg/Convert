@@ -25,12 +25,20 @@ public final class RealisticSpriteAnimation {
                 float fps = state.getPose() == AvatarState.Pose.DANCE_POP ? 6 : 4;
                 return new Frame("dance", cycle(time * fps / 8, 8), false, 1);
             case SEATED: return new Frame("poses", 0, false, .72f);
-            case KNEELING: return new Frame("poses", 1, false, .67f);
+            case KNEELING: {
+                // De rodillas ya: bosteza, se estira o guiña sin arrodillarse otra vez; escucha con la mano en la mejilla.
+                Frame kneeling = SleepWakeAnimation.gesture(motion.gesture, motion.gestureProgress, true);
+                if (kneeling != null) return kneeling;
+                if (motion.listening || motion.thinking) return SleepWakeAnimation.frame("wake", 5);
+                return new Frame("poses", 1, false, .67f);
+            }
             case CROUCHED: return new Frame("poses", 2, false, .62f);
             default: break;
         }
         if (motion.gesture == AvatarMotion.Gesture.REST) return new Frame("poses", 7, false, 1);
         if (motion.gesture == AvatarMotion.Gesture.WAVE) return waveFrame(motion.gestureProgress);
+        if (SleepWakeAnimation.handles(motion.gesture))
+            return SleepWakeAnimation.gesture(motion.gesture, motion.gestureProgress, false);
         if (motion.gesture == AvatarMotion.Gesture.EXPLAIN) return new Frame("poses", 5, false, 1);
         if (motion.listening || motion.thinking) return new Frame("poses", 6, false, 1);
         return new Frame("base", 0, false, 1);

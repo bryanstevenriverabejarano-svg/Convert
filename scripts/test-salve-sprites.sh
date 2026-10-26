@@ -9,5 +9,6 @@ javac -encoding UTF-8 -d "$OUT" \
   "$SOURCE/AvatarMotionProtocol.java" "$SOURCE/MotionPreferenceProfile.java" \
   "$SOURCE/AvatarBodyCue.java" "$SOURCE/AvatarLocomotion.java" \
   "$SOURCE/AvatarStageLayout.java" "$SOURCE/RealisticSpriteAnimation.java" \
+  "$SOURCE/SleepWakeAnimation.java" \
   "$ROOT/tools/avatar-realistic/SpriteChecks.java"
 java -cp "$OUT" salve.avatar.SpriteChecks

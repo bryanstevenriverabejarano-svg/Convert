@@ -60,7 +60,7 @@ final class RealisticSpriteRenderer {
                     if (!manifest.has("base")) throw new java.io.IOException("Sprite base ausente en " + folder);
                     for (java.util.Iterator<String> names = manifest.keys(); names.hasNext(); ) {
                         String name = names.next();
-                        if (!name.matches("base|views|turn|walk|walk_inbetween|wave|bend|dance|poses")) continue;
+                        if (!name.matches("base|views|turn|walk|walk_inbetween|wave|bend|dance|poses|sleep|wake")) continue;
                         JSONObject spec = manifest.getJSONObject(name);
                         Bitmap bitmap;
                         try (InputStream file = context.getAssets().open("avatar/" + folder + "/" + name + ".png")) {
@@ -141,6 +141,9 @@ final class RealisticSpriteRenderer {
     private final Context context;
     private final AvatarTurn turn = new AvatarTurn();
     private final PoseTransition transition = new PoseTransition();
+    /** Desde cuándo duerme y cuándo se despertó (uptime en ms; −1 si no). */
+    private long sleepSince = -1, wakeAt = -1;
+    private final Paint fadePaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint eyePaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint mouthPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     /** Apertura de la boca (0..1) y reloj del fotograma: los pone draw() antes de dibujar el cuerpo vivo. */
@@ -223,12 +226,20 @@ final class RealisticSpriteRenderer {
         mouthOpen = motion == null ? 0 : motion.mouthOpen;
         talkClock = time;
         RealisticSpriteAnimation.Frame selected = RealisticSpriteAnimation.select(state, motion, gaitPhase, time, sleeping);
+        if (sleeping && sleepSince < 0) { sleepSince = android.os.SystemClock.uptimeMillis(); wakeAt = -1; }
+        // Recién despierta: se frota el ojo, se estira, bosteza, guiña y se levanta (si nadie le pide otra cosa).
+        RealisticSpriteAnimation.Frame waking = sleeping ? null : wakingFrame(state, motion, sheets);
+        if (waking != null) selected = waking;
+        // Bostezar, estirarse o guiñar ya incluyen arrodillarse y levantarse: sin giros ni otra transición.
+        boolean scripted = waking != null || (SleepWakeAnimation.handles(motion.gesture)
+                && (state.getPose() == AvatarState.Pose.IDLE || state.getPose() == AvatarState.Pose.KNEELING));
         // Al sentarse, agacharse o arrodillarse (y al levantarse) pasa por sus posturas intermedias.
         RealisticSpriteAnimation.Frame between = sleeping ? null : transition.frame(state.getPose(), time);
+        if (scripted) between = null;
         if (between != null && sheets.containsKey("bend") && between.index < sheets.get("bend").frames.length)
             selected = between;
         // Vistas giradas: dar la vuelta, mirar hacia donde va o mirar a un lado de vez en cuando.
-        if (!sleeping && selected != between && sheets.containsKey("views")) {
+        if (!sleeping && !scripted && selected != between && sheets.containsKey("views")) {
             AvatarState.Pose pose = state.getPose();
             boolean upright = pose == AvatarState.Pose.IDLE || pose == AvatarState.Pose.WALKING;
             boolean idle = pose == AvatarState.Pose.IDLE && motion.gesture == AvatarMotion.Gesture.NONE
@@ -250,6 +261,12 @@ final class RealisticSpriteRenderer {
             // Versión sin saludo animado: la mano arriba de siempre (poses 4).
             selected = new RealisticSpriteAnimation.Frame("poses", 4, false, 1);
             sheet = sheets.get("poses");
+        }
+        if (sheet == null && ("wake".equals(selected.sheet) || "sleep".equals(selected.sheet))) {
+            // Versión sin despertar ilustrado: de rodillas de siempre (poses 1) o, de pie, su base.
+            boolean kneel = state.getPose() == AvatarState.Pose.KNEELING;
+            selected = new RealisticSpriteAnimation.Frame(kneel ? "poses" : "base", kneel ? 1 : 0, false, kneel ? .67f : 1);
+            sheet = sheets.get(selected.sheet);
         }
         if (sheet == null && "walk_inbetween".equals(selected.sheet)) {
             Sheet legacy = sheets.get("walk");
@@ -293,24 +310,86 @@ final class RealisticSpriteRenderer {
     }
 
     /**
-     * Su ilustración tumbada (poses, fotograma 3) sobre la cama, en unidades locales de la cama
-     * (colchón de x −104..104, superficie ≈ y −30). Se refleja para que la cabeza quede en la almohada.
-     * Devuelve false si esta versión no tiene esa ilustración (entonces se usa la de pie girada).
+     * Salve dormida sobre la cama: con la hoja «sleep» cambia de postura en sueños y respira; sin ella, su
+     * ilustración tumbada (poses, fotograma 3) reflejada. Devuelve false si esta versión no tiene ninguna
+     * (entonces se usa la de pie girada).
      */
     boolean drawLying(Canvas canvas) {
         Map<String, Sheet> sheets = assets().sheets;
+        Sheet sleep = sheets == null ? null : sheets.get("sleep");
+        long now = android.os.SystemClock.uptimeMillis();
+        if (sleepSince < 0) sleepSince = now;
+        wakeAt = -1;
+        if (sleep != null && sleep.frames.length >= 4) {
+            // Se da la vuelta en sueños: de lado, acurrucada y hecha un ovillo, con un fundido suave.
+            float slept = (now - sleepSince) / 1000f;
+            SleepWakeAnimation.Lying lying = SleepWakeAnimation.lying(slept);
+            float breath = 1 + .008f * (float) Math.sin(slept * 1.4f);
+            drawInBed(canvas, sleep, lying.from, 1 - lying.mix, breath, false);
+            if (lying.mix > 0) drawInBed(canvas, sleep, lying.to, lying.mix, breath, false);
+            return true;
+        }
         Sheet poses = sheets == null ? null : sheets.get("poses");
         if (poses == null || poses.frames.length < 4) return false;
-        Rect source = poses.frames[3];
-        if (source.width() <= source.height()) return false; // no es una figura tumbada
-        float width = 186f, height = width * source.height() / source.width();
-        float bottom = -30f + height * .18f; // el cuerpo apoya en el colchón; el pelo cae por detrás
-        canvas.save();
-        canvas.scale(-1, 1); // cabeza hacia la almohada (a la izquierda de la cama)
-        destination.set(-width / 2, bottom - height, width / 2, bottom);
-        canvas.drawBitmap(poses.bitmap, source, destination, paint);
-        canvas.restore();
+        if (poses.frames[3].width() <= poses.frames[3].height()) return false; // no es una figura tumbada
+        drawInBed(canvas, poses, 3, 1, 1, true); // cabeza a la derecha en el original: se refleja
         return true;
+    }
+
+    /**
+     * Llamar en cada fotograma estando despierta, antes de dibujarla de pie: detecta que acaba de despertarse
+     * y dice si todavía está en la cama abriendo los ojos (entonces se dibuja con {@link #drawWaking}).
+     */
+    boolean wakingInBed() {
+        long now = android.os.SystemClock.uptimeMillis();
+        if (sleepSince >= 0) { sleepSince = -1; wakeAt = now; }
+        Map<String, Sheet> sheets = assets().sheets;
+        if (wakeAt < 0 || sheets == null || !sheets.containsKey("sleep") || !sheets.containsKey("wake")) return false;
+        return SleepWakeAnimation.inBed((now - wakeAt) / 1000f);
+    }
+
+    /** Abre los ojos en la cama (hoja «sleep», fotograma 3), en las mismas unidades que {@link #drawLying}. */
+    boolean drawWaking(Canvas canvas) {
+        Map<String, Sheet> sheets = assets().sheets;
+        Sheet sleep = sheets == null ? null : sheets.get("sleep");
+        if (sleep == null || sleep.frames.length < 4 || wakeAt < 0) return false;
+        float elapsed = (android.os.SystemClock.uptimeMillis() - wakeAt) / 1000f;
+        // Medio segundo de fundido desde la última postura dormida.
+        float mix = Math.max(0, Math.min(1, elapsed / .5f));
+        if (mix < 1) drawInBed(canvas, sleep, 0, 1 - mix, 1, false);
+        drawInBed(canvas, sleep, 3, mix, 1, false);
+        return true;
+    }
+
+    /** Despertar ya fuera de la cama, o null si no toca (o si se le ha pedido otra cosa). */
+    private RealisticSpriteAnimation.Frame wakingFrame(AvatarState state, AvatarMotion.Snapshot motion, Map<String, Sheet> sheets) {
+        if (sleepSince >= 0) { sleepSince = -1; wakeAt = android.os.SystemClock.uptimeMillis(); }
+        if (wakeAt < 0) return null;
+        if (!sheets.containsKey("wake") || state.getPose() != AvatarState.Pose.IDLE
+                || (motion != null && motion.gesture != AvatarMotion.Gesture.NONE)) { wakeAt = -1; return null; }
+        float elapsed = (android.os.SystemClock.uptimeMillis() - wakeAt) / 1000f;
+        RealisticSpriteAnimation.Frame frame = SleepWakeAnimation.wake(elapsed);
+        if (frame == null) { wakeAt = -1; return null; }
+        // Sin la cama a la vista (vista compacta), el primer paso se salta: ya se está frotando el ojo.
+        return "sleep".equals(frame.sheet) ? SleepWakeAnimation.frame("wake", 0) : frame;
+    }
+
+    /**
+     * Una ilustración tumbada sobre la cama, en unidades locales de la cama (colchón de x −104..104,
+     * superficie ≈ y −30). El cuerpo apoya en el colchón y el pelo cae por detrás.
+     */
+    private void drawInBed(Canvas canvas, Sheet sheet, int index, float alpha, float breath, boolean mirror) {
+        if (alpha <= 0) return;
+        Rect source = sheet.frames[index];
+        float width = 186f, height = width * source.height() / source.width();
+        float bottom = -30f + height * .18f;
+        canvas.save();
+        if (mirror) canvas.scale(-1, 1); // cabeza hacia la almohada (a la izquierda de la cama)
+        canvas.scale(1, breath, 0, bottom); // respira despacio mientras duerme
+        destination.set(-width / 2, bottom - height, width / 2, bottom);
+        fadePaint.setAlpha(Math.round(255 * Math.min(1, alpha)));
+        canvas.drawBitmap(sheet.bitmap, source, destination, fadePaint);
+        canvas.restore();
     }
 
     /**

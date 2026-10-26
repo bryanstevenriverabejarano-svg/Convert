@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 public final class AvatarMotionProtocol {
     private static final Pattern RESERVED = Pattern.compile("(?i)\\[{1,2}\\s*salve[_\\s-]*motion\\b");
     private static final Pattern DIRECTIVE = Pattern.compile(
-            "\\[\\[salve_motion:(NONE|WAVE|NOD|SHAKE|EXPLAIN|THINK|CELEBRATE|LAUGH|CRY|STARTLE|REST|SPIN):"
+            "\\[\\[salve_motion:(NONE|WAVE|NOD|SHAKE|EXPLAIN|THINK|CELEBRATE|LAUGH|CRY|STARTLE|REST|SPIN|YAWN|STRETCH|WINK):"
             + "(NEUTRAL|WARM|CURIOUS|CONCERNED|SAD|ANGRY|SURPRISED|SHY)"
             + "(?::(KEEP|STAND|WALK|SIT|KNEEL|CROUCH|DANCE_POP|DANCE_URBAN))?\\]\\]");
     private AvatarMotionProtocol() { }
@@ -45,6 +45,9 @@ public final class AvatarMotionProtocol {
                 + "Mostrar determinación: [[salve_motion:NONE:ANGRY]]\n"
                 + "Mostrar asombro: [[salve_motion:STARTLE:SURPRISED]]\n"
                 + "Mostrar timidez: [[salve_motion:NONE:SHY]]\n"
+                + "Bostezar de sueño: [[salve_motion:YAWN:NEUTRAL]]\n"
+                + "Estirarse: [[salve_motion:STRETCH:NEUTRAL]]\n"
+                + "Guiñar un ojo con complicidad: [[salve_motion:WINK:WARM]]\n"
                 + "Caminar mientras hablas: [[salve_motion:EXPLAIN:NEUTRAL:WALK]]\n"
                 + "Sentarse: [[salve_motion:NONE:NEUTRAL:SIT]]\n"
                 + "Arrodillarse: [[salve_motion:NONE:NEUTRAL:KNEEL]]\n"
@@ -117,6 +120,12 @@ public final class AvatarMotionProtocol {
                 return directive("¡Vamos!", AvatarMotion.Gesture.CELEBRATE, AvatarMotion.Expression.WARM);
             case "cierra los ojos": case "medita": case "relajate": case "descansa un momento":
                 return directive("Cierro los ojos un momento.", AvatarMotion.Gesture.REST, AvatarMotion.Expression.NEUTRAL);
+            case "bosteza": case "tienes sueno": case "que sueno":
+                return directive("Uaaah… perdona.", AvatarMotion.Gesture.YAWN, AvatarMotion.Expression.NEUTRAL);
+            case "estirate": case "desperezate":
+                return directive("Mmm, qué bien sienta.", AvatarMotion.Gesture.STRETCH, AvatarMotion.Expression.WARM);
+            case "guiname un ojo": case "guina un ojo": case "guinale un ojo": case "guinate un ojo":
+                return directive("Aquí estoy.", AvatarMotion.Gesture.WINK, AvatarMotion.Expression.WARM);
             case "date la vuelta": case "da una vuelta": case "gira": case "girate": case "dame una vuelta":
                 return directive("Así me veo por todos lados.", AvatarMotion.Gesture.SPIN, AvatarMotion.Expression.WARM);
             case "mirame":

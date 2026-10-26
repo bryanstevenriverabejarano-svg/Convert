@@ -36,7 +36,9 @@ for body in BODIES:
           assert image.size == (spec['width'], spec['height']), name
           alpha = image.getchannel('A')
           histogram = alpha.histogram()
-          assert histogram[0] > image.width * image.height * .30, (name, 'background is not transparent')
+          # Las ilustraciones de rodillas (wake) llenan su celda con el pelo: 25 % de fondo transparente basta
+          # para distinguir un sprite recortado de una imagen con fondo.
+          assert histogram[0] > image.width * image.height * .25, (name, 'background is not transparent')
           assert sum(histogram[240:]) > image.width * image.height * .10, (name, 'missing opaque character')
           for index, (left, top, right, bottom) in enumerate(spec['frames']):
               assert 0 <= left < right <= image.width and 0 <= top < bottom <= image.height

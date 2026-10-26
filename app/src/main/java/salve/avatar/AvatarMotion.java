@@ -2,8 +2,12 @@ package salve.avatar;
 
 /** Transient, deterministic visual state. Call from one thread; no Android, storage, audio or model. */
 public final class AvatarMotion {
-    /** REST: cierra los ojos y descansa un momento; SPIN: da una vuelta completa sobre sí misma. */
-    public enum Gesture { NONE, WAVE, NOD, SHAKE, EXPLAIN, THINK, CELEBRATE, LAUGH, CRY, STARTLE, REST, SPIN }
+    /**
+     * REST: cierra los ojos y descansa un momento; SPIN: da una vuelta completa sobre sí misma;
+     * YAWN: bosteza; STRETCH: se estira; WINK: guiña un ojo y tiende la mano (de rodillas).
+     */
+    public enum Gesture { NONE, WAVE, NOD, SHAKE, EXPLAIN, THINK, CELEBRATE, LAUGH, CRY, STARTLE, REST, SPIN,
+        YAWN, STRETCH, WINK }
     public enum Expression { NEUTRAL, WARM, CURIOUS, CONCERNED, SAD, ANGRY, SURPRISED, SHY }
 
     /** Angles in degrees; arms name screen sides. Positive is clockwise, negative counterclockwise.
@@ -192,6 +196,7 @@ public final class AvatarMotion {
             case THINK: return 3.5f; case CELEBRATE: return 2.5f;
             case LAUGH: return 3f; case CRY: return 4f; case STARTLE: return 1.2f;
             case REST: return 5f; case SPIN: return 2.4f;
+            case YAWN: return 3.2f; case STRETCH: return 3f; case WINK: return 2.6f;
             default: return 0;
         }
     }
