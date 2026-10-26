@@ -147,7 +147,9 @@ public class MainActivity extends AppCompatActivity {
 
     // ===== VISTAS UI =====
     private EditText inputChat;
-    private Button btnEnviarMensaje, btnHablar, btnEscuchar, btnAdjuntar, btnReflexiones;
+    private Button btnEnviarMensaje, btnEscuchar, btnReflexiones;
+    // Tarjetas del chat (icono, título y subtítulo): son contenedores pulsables, no botones de texto.
+    private android.view.View btnHablar, btnAdjuntar;
     private salve.avatar.AvatarView imagenSalve;
     private LinearLayout panelReflexion;
     private TextView tituloReflexion, textoReflexion;

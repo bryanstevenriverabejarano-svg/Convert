@@ -15,12 +15,16 @@
                     android:maxLines="2" android:ellipsize="end"
                     android:text="Modelo: preparando" android:textSize="12sp" android:textColor="#ADC5C6" />
             </LinearLayout>
-            <Button android:id="@+id/btnStageOptions" style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="56dp" android:layout_height="56dp" android:minWidth="48dp"
-                android:text="···" android:textSize="24sp" android:textColor="#EAF4F2" android:padding="0dp"
+            <ImageButton android:id="@+id/btnStageOptions" android:layout_width="52dp" android:layout_height="52dp"
+                android:src="@drawable/ic_salve_more" app:tint="#EAF4F2" android:scaleType="center"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/salve_options" />
         </LinearLayout>
-        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <FrameLayout android:id="@+id/avatarFrame" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <!-- Halo azul detrás de Salve; el controlador lo centra en su pecho según el tamaño de pantalla. -->
+            <View android:id="@+id/salveHalo" android:layout_width="340dp" android:layout_height="340dp"
+                android:layout_gravity="center_horizontal" android:background="@drawable/salve_stage_halo"
+                android:importantForAccessibility="no" />
             <salve.avatar.AvatarView android:id="@+id/imagenSalve" android:layout_width="match_parent"
                 android:layout_height="match_parent" android:contentDescription="@string/salve" />
             <!-- Espacio astral: lo que Salve dibuja aparece delante de ella; no recibe toques. -->
@@ -65,25 +69,25 @@
         <FrameLayout android:id="@+id/chatDragHandle" android:layout_width="match_parent"
             android:layout_height="30dp" android:contentDescription="@string/salve_chat_drag_hint"
             android:clickable="true" android:focusable="true">
-            <View android:layout_width="38dp" android:layout_height="4dp" android:layout_gravity="top|center_horizontal"
-                android:layout_marginTop="9dp" android:background="#7A9BAB"
+            <View android:layout_width="48dp" android:layout_height="5dp" android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="8dp" android:background="@drawable/salve_drag_handle"
                 android:importantForAccessibility="no" />
         </FrameLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
             <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-                android:text="@string/salve_chat_title" android:textStyle="bold" android:textSize="23sp" android:textColor="#EAF4F2" android:paddingStart="8dp" />
-            <Button android:id="@+id/btnExpandChat" style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="52dp" android:layout_height="52dp" android:minWidth="48dp"
-                android:text="⛶" android:textSize="24sp" android:textColor="#ACDDD3"
-                android:padding="0dp" android:contentDescription="@string/salve_chat_expand" />
-            <Button android:id="@+id/btnCloseChat" style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="56dp" android:layout_height="56dp" android:minWidth="48dp"
-                android:text="⌄" android:textSize="28sp" android:textColor="#D4E7E7" android:padding="0dp"
+                android:text="@string/salve_chat_title" android:textStyle="bold" android:textSize="26sp" android:textColor="#F2F8FA" android:paddingStart="8dp" />
+            <ImageButton android:id="@+id/btnExpandChat" android:layout_width="50dp" android:layout_height="50dp"
+                android:src="@drawable/ic_salve_expand" app:tint="#DCEAF0" android:scaleType="center"
+                android:background="@drawable/salve_circle_button" android:layout_marginEnd="12dp"
+                android:contentDescription="@string/salve_chat_expand" />
+            <ImageButton android:id="@+id/btnCloseChat" android:layout_width="50dp" android:layout_height="50dp"
+                android:src="@drawable/ic_salve_chevron_down" app:tint="#DCEAF0" android:scaleType="center"
+                android:background="@drawable/salve_circle_button" android:layout_marginEnd="4dp"
                 android:contentDescription="@string/salve_chat_minimize" />
         </LinearLayout>
         <TextView android:id="@+id/chatModelStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Modelo: preparando" android:textColor="#ADC5C6" android:textSize="12sp" android:paddingHorizontal="8dp"
-            android:maxLines="2" android:ellipsize="end" />
+            android:text="Modelo: preparando" android:textColor="#A9BCC8" android:textSize="13sp" android:paddingHorizontal="8dp"
+            android:paddingBottom="8dp" android:maxLines="2" android:ellipsize="end" />
         <androidx.core.widget.NestedScrollView android:id="@+id/chatScroll" android:layout_width="match_parent"
             android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
@@ -127,37 +131,73 @@
             android:scrollbars="none" android:paddingTop="4dp" android:paddingBottom="6dp">
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:orientation="horizontal">
-                <Button android:id="@+id/chipCapabilities" style="@style/SalveChatChip"
+                <com.google.android.material.button.MaterialButton android:id="@+id/chipCapabilities" style="@style/SalveChatChip"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:text="@string/salve_chip_capabilities" />
-                <Button android:id="@+id/chipBed" style="@style/SalveChatChip"
+                <com.google.android.material.button.MaterialButton android:id="@+id/chipBed" style="@style/SalveChatChip"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:text="@string/salve_chip_bed" />
-                <Button android:id="@+id/chipHelp" style="@style/SalveChatChip"
+                <com.google.android.material.button.MaterialButton android:id="@+id/chipHelp" style="@style/SalveChatChip"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:text="@string/salve_chip_help" />
             </LinearLayout>
         </HorizontalScrollView>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
-            <EditText android:id="@+id/inputChat" android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:minHeight="52dp" android:maxLines="3"
-                android:hint="@string/salve_chat_hint" android:textColor="#F3F7F7" android:textColorHint="#A9BFC3"
-                android:background="@drawable/salve_input_background" android:padding="14dp"
-                android:inputType="textCapSentences|textMultiLine" android:imeOptions="actionSend|flagNoExtractUi" android:importantForAutofill="no" />
-            <Button android:id="@+id/btnEnviarMensaje" style="@style/Widget.Material3.Button"
-                android:layout_width="wrap_content" android:layout_height="56dp" android:layout_marginStart="8dp"
-                android:minWidth="64dp" android:paddingHorizontal="12dp" android:text="@string/salve_send" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical"
+            android:paddingTop="4dp">
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:minHeight="58dp" android:gravity="center_vertical" android:orientation="horizontal"
+                android:background="@drawable/salve_input_background" android:paddingStart="6dp" android:paddingEnd="6dp">
+                <ImageButton android:id="@+id/btnAttachInline" android:layout_width="44dp" android:layout_height="44dp"
+                    android:src="@drawable/ic_salve_attach" app:tint="#C9DCE4" android:scaleType="center"
+                    android:background="@drawable/salve_attach_background" android:rotation="45"
+                    android:contentDescription="Adjuntar documento o foto" />
+                <EditText android:id="@+id/inputChat" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:minHeight="52dp" android:maxLines="3"
+                    android:hint="@string/salve_chat_hint" android:textColor="#F3F7F7" android:textColorHint="#A9BFC3"
+                    android:textSize="17sp" android:background="@android:color/transparent"
+                    android:paddingStart="12dp" android:paddingEnd="8dp" android:paddingTop="12dp" android:paddingBottom="12dp"
+                    android:inputType="textCapSentences|textMultiLine" android:imeOptions="actionSend|flagNoExtractUi" android:importantForAutofill="no" />
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnEnviarMensaje"
+                style="@style/SalveSendButton" android:layout_width="58dp" android:layout_height="58dp"
+                android:layout_marginStart="10dp" android:contentDescription="@string/salve_send" />
         </LinearLayout>
-        <LinearLayout android:id="@+id/chatActions" android:layout_width="match_parent" android:layout_height="wrap_content">
-            <Button android:id="@+id/btnHablar" style="@style/SalveStageAction" android:layout_width="0dp"
-                android:layout_weight="1" android:layout_height="wrap_content" android:paddingHorizontal="8dp" android:text="@string/salve_voice" />
-            <Button android:id="@+id/btnAdjuntar" style="@style/SalveStageAction" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:paddingHorizontal="8dp" android:text="@string/salve_attach" />
+        <LinearLayout android:id="@+id/chatActions" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingTop="12dp">
+            <LinearLayout android:id="@+id/btnHablar" style="@style/SalveActionCard" android:layout_marginEnd="6dp"
+                android:contentDescription="@string/salve_voice">
+                <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/salve_icon_circle"
+                    android:importantForAccessibility="no">
+                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="center"
+                        android:src="@drawable/ic_salve_mic" app:tint="#7FE3D2" android:importantForAccessibility="no" />
+                </FrameLayout>
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_salve_waveform" app:tint="#7FE3D2" android:importantForAccessibility="no" />
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp" android:orientation="vertical" android:importantForAccessibility="no">
+                    <TextView style="@style/SalveActionCardTitle" android:text="@string/salve_voice" />
+                    <TextView style="@style/SalveActionCardSubtitle" android:text="@string/salve_voice_subtitle" />
+                </LinearLayout>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/btnAdjuntar" style="@style/SalveActionCard" android:layout_marginStart="6dp"
+                android:contentDescription="@string/salve_attach">
+                <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/salve_icon_circle"
+                    android:importantForAccessibility="no">
+                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="center"
+                        android:src="@drawable/ic_salve_document" app:tint="#7FE3D2" android:importantForAccessibility="no" />
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp" android:orientation="vertical" android:importantForAccessibility="no">
+                    <TextView style="@style/SalveActionCardTitle" android:text="@string/salve_attach" />
+                    <TextView style="@style/SalveActionCardSubtitle" android:text="@string/salve_attach_subtitle" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
         <TextView android:id="@+id/chatResizeHint" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="@string/salve_chat_drag_hint"
-            android:textSize="11sp" android:textColor="#9BB4C5" android:gravity="center"
-            android:paddingTop="6dp" android:paddingBottom="3dp"
+            android:textSize="13sp" android:textColor="#9BB4C5" android:gravity="center"
+            android:paddingTop="12dp" android:paddingBottom="4dp"
+            android:drawableStart="@drawable/ic_salve_chevron_up" android:drawableTint="#9BB4C5" android:drawablePadding="6dp"
             android:importantForAccessibility="no" />
     </LinearLayout>
 

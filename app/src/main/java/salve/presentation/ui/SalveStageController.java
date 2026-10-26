@@ -5,13 +5,15 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.activity.OnBackPressedCallback;
@@ -37,10 +39,12 @@ final class SalveStageController {
     private final NestedScrollView scroll;
     private final BottomSheetBehavior<View> chatBehavior, optionsBehavior;
     private final ArrayList<String> messages = new ArrayList<>();
+    /** Hora de cada mensaje (0 = desconocida, p. ej. restaurado de una versión anterior). */
+    private final ArrayList<Long> times = new ArrayList<>();
     private String active = "";
     private boolean keyboardWanted;
     private boolean chatFullScreen;
-    private final Button expandChat;
+    private final ImageButton expandChat;
     private final OnBackPressedCallback back = new OnBackPressedCallback(false) {
         @Override public void handleOnBackPressed() { closePanels(); }
     };
@@ -76,6 +80,12 @@ final class SalveStageController {
         activity.findViewById(R.id.btnCloseChat).setOnClickListener(v -> closePanels());
         expandChat.setOnClickListener(v -> setChatExpanded(!chatFullScreen));
         activity.findViewById(R.id.chatDragHandle).setOnClickListener(v -> cycleChatHeight());
+        // El clip de la caja de texto abre lo mismo que la tarjeta «Documentos».
+        activity.findViewById(R.id.btnAttachInline).setOnClickListener(v -> activity.findViewById(R.id.btnAdjuntar).performClick());
+        // El halo se centra a la altura del pecho de Salve, sea cual sea la pantalla.
+        View halo = activity.findViewById(R.id.salveHalo);
+        activity.findViewById(R.id.avatarFrame).addOnLayoutChangeListener((frame, l, t, r, b, ol, ot, or, ob) ->
+                halo.setTranslationY(Math.max(0, (b - t) * 0.30f - halo.getHeight() / 2f)));
         activity.findViewById(R.id.btnCloseOptions).setOnClickListener(v -> closePanels());
         activity.findViewById(R.id.btnMenuChat).setOnClickListener(v -> showChat(true));
         activity.findViewById(R.id.btnMenuVoice).setOnClickListener(v -> {
@@ -84,8 +94,12 @@ final class SalveStageController {
         scrim.setOnClickListener(v -> closePanels());
         if (saved != null) {
             ArrayList<String> restored = saved.getStringArrayList("stage_messages");
+            long[] restoredTimes = saved.getLongArray("stage_times");
             if (restored != null) {
-                for (String m : restored) { messages.add(m); serials.add(++serialCounter); }
+                for (int i = 0; i < restored.size(); i++) {
+                    messages.add(restored.get(i)); serials.add(++serialCounter);
+                    times.add(restoredTimes != null && i < restoredTimes.length ? restoredTimes[i] : 0L);
+                }
                 restoring = true; trimMessages(); renderMessages(); restoring = false;
             }
             CharSequence last = saved.getCharSequence("stage_caption");
@@ -268,11 +282,14 @@ final class SalveStageController {
     }
 
     private void updateExpandButton() {
-        expandChat.setText(chatFullScreen ? "↙" : "⛶");
+        expandChat.setImageResource(chatFullScreen ? R.drawable.ic_salve_shrink : R.drawable.ic_salve_expand);
         expandChat.setContentDescription(activity.getString(chatFullScreen
                 ? R.string.salve_chat_shrink : R.string.salve_chat_expand));
         TextView hint = activity.findViewById(R.id.chatResizeHint);
         hint.setText(chatFullScreen ? R.string.salve_chat_full_hint : R.string.salve_chat_drag_hint);
+        hint.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                chatFullScreen ? R.drawable.ic_salve_chevron_down : R.drawable.ic_salve_chevron_up, 0, 0, 0);
+        updateScrim();
     }
 
     /** Cursor en la caja de texto y teclado abierto (sólo con el chat a la vista). */
@@ -317,10 +334,19 @@ final class SalveStageController {
         boolean open = !active.isEmpty();
         back.setEnabled(open);
         scrim.setVisibility(open ? View.VISIBLE : View.GONE);
+        updateScrim();
         stage.setImportantForAccessibility(open ? View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS : View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
         chat.setImportantForAccessibility("chat".equals(active) ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         options.setImportantForAccessibility("options".equals(active) ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         updateChatExtras();
+    }
+
+    /**
+     * Con el chat a media pantalla Salve se ve entera y luminosa por encima (como en el diseño): la
+     * cortina sigue recogiendo el toque para cerrar, pero no oscurece. En las demás hojas sí oscurece.
+     */
+    private void updateScrim() {
+        scrim.setAlpha("chat".equals(active) && !chatFullScreen ? 0f : 1f);
     }
 
     /** Borrador de Salve mientras escribe; no se guarda en el historial ni sobrevive a una recreación. */
@@ -401,6 +427,7 @@ final class SalveStageController {
         }
         messages.add((fromSalve ? "Salve" : "Tú") + "\n" + visible);
         serials.add(serial);
+        times.add(System.currentTimeMillis());
         trimMessages(); renderMessages();
         if (fromSalve && keyboardWanted && "chat".equals(active)) composer.postDelayed(this::focusComposer, 120);
         if (fromSalve) {
@@ -423,6 +450,7 @@ final class SalveStageController {
         for (String message : messages) chars += message.length();
         while (messages.size() > 40 || chars > 48000) {
             chars -= messages.remove(0).length();
+            if (!times.isEmpty()) times.remove(0);
             long gone = serials.remove(0);
             reveal.remove(gone);
             String prefix = gone + ":";
@@ -447,7 +475,13 @@ final class SalveStageController {
         if (messages.isEmpty() && draft == null) {
             styleBubble(transcript, true);
             transcript.setText(R.string.salve_chat_empty);
-            if (thread.getChildCount() > 1) thread.removeViews(1, thread.getChildCount() - 1);
+            MessageRow welcome = rowFor(transcript, true);
+            welcome.show(true, null);
+            if (thread.getChildCount() != 1 || thread.getChildAt(0) != welcome.root) {
+                thread.removeAllViews();
+                if (welcome.root.getParent() instanceof ViewGroup) ((ViewGroup) welcome.root.getParent()).removeView(welcome.root);
+                thread.addView(welcome.root);
+            }
             return;
         }
         java.util.List<View> desired = new ArrayList<>();
@@ -460,9 +494,10 @@ final class SalveStageController {
             int heading = message.indexOf('\n');
             String head = heading > 0 ? message.substring(0, heading) : message;
             boolean fromSalve = head.startsWith("Salve");
+            // Quién habla lo dicen el lado, el color y la cara de Salve; la burbuja lleva solo el mensaje.
             SpannableStringBuilder text = new SpannableStringBuilder();
-            text.append(head).append('\n');
-            text.setSpan(new StyleSpan(Typeface.BOLD), 0, head.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            firstOfMessage = true;
+            lastRowOfMessage = null;
             String body = heading > 0 ? message.substring(heading + 1) : "";
             long serial = isDraft ? -1 : serials.get(m);
             Integer limit = isDraft ? null : reveal.get(serial);
@@ -480,6 +515,7 @@ final class SalveStageController {
                 ordinal++;
                 if (scene == null) continue;
                 flushText(text, desired, textIndex, fromSalve);
+                lastRowOfMessage = null; // tras un dibujo, la hora ya no va en el bloque anterior
                 SketchView view = sketchViews.get(id);
                 if (view == null) {
                     view = new SketchView(activity);
@@ -490,6 +526,11 @@ final class SalveStageController {
                 desired.add(view);
             }
             flushText(text, desired, textIndex, fromSalve);
+            // La hora va bajo el último bloque de texto del mensaje (como en cualquier app de mensajería).
+            if (lastRowOfMessage != null) {
+                long when = isDraft ? 0L : m < times.size() ? times.get(m) : 0L;
+                lastRowOfMessage.show(lastRowOfMessage.avatarShown, when > 0 ? timeLabel(when, fromSalve) : null);
+            }
         }
         // Reutiliza vistas y dibujos existentes para no reiniciar animaciones.
         int same = 0;
@@ -512,12 +553,13 @@ final class SalveStageController {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.gravity = fromSalve ? Gravity.START : Gravity.END;
-        params.setMargins(dp(5), dp(6), dp(5), dp(6));
+        params.setMargins(dp(2), dp(6), dp(2), dp(4));
         block.setLayoutParams(params);
-        block.setMaxWidth(Math.max(dp(200), activity.getResources().getDisplayMetrics().widthPixels - dp(72)));
+        block.setMaxWidth(Math.max(dp(200), activity.getResources().getDisplayMetrics().widthPixels - dp(fromSalve ? 120 : 96)));
         block.setBackgroundResource(fromSalve ? R.drawable.salve_chat_bubble_salve : R.drawable.salve_chat_bubble_user);
-        block.setTextColor(fromSalve ? 0xFFE5F1F6 : 0xFFFFFFFF);
-        block.setPadding(dp(14), dp(12), dp(14), dp(12));
+        block.setTextColor(fromSalve ? 0xFFE8F2F6 : 0xFFFFFFFF);
+        block.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 17);
+        block.setPadding(dp(18), dp(14), dp(18), dp(14));
         block.setTextIsSelectable(true);
     }
 
@@ -536,9 +578,86 @@ final class SalveStageController {
         index[0]++;
         CharSequence value = new SpannableStringBuilder(text);
         if (!value.toString().equals(block.getText().toString())) block.setText(value);
-        desired.add(block);
+        MessageRow row = rowFor(block, fromSalve);
+        row.show(fromSalve && firstOfMessage, null);
+        firstOfMessage = false;
+        lastRowOfMessage = row;
+        desired.add(row.root);
         text.clear();
         text.clearSpans();
+    }
+
+    // ───────── filas de mensaje: cara de Salve, burbuja y hora ─────────
+    private boolean firstOfMessage;
+    private MessageRow lastRowOfMessage;
+    private final java.util.Map<TextView, MessageRow> rows = new java.util.IdentityHashMap<>();
+
+    /** Una fila del chat: [cara de Salve] [burbuja + hora] a la izquierda, o [burbuja + hora ✓✓] a la derecha. */
+    private final class MessageRow {
+        final LinearLayout root, column;
+        final ImageView avatar;
+        final TextView time;
+        boolean fromSalve, avatarShown;
+
+        MessageRow(TextView bubble) {
+            root = new LinearLayout(activity);
+            root.setOrientation(LinearLayout.HORIZONTAL);
+            root.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            avatar = new ImageView(activity);
+            avatar.setImageResource(R.drawable.salve_chat_avatar);
+            avatar.setContentDescription("Salve");
+            LinearLayout.LayoutParams face = new LinearLayout.LayoutParams(dp(42), dp(42));
+            face.setMargins(0, dp(8), dp(8), 0);
+            avatar.setLayoutParams(face);
+            column = new LinearLayout(activity);
+            column.setOrientation(LinearLayout.VERTICAL);
+            column.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            time = new TextView(activity);
+            time.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+            time.setTextColor(0xFF8FA6B5);
+            time.setVisibility(View.GONE);
+            if (bubble.getParent() instanceof ViewGroup) ((ViewGroup) bubble.getParent()).removeView(bubble);
+            column.addView(bubble);
+            column.addView(time);
+            root.addView(avatar);
+            root.addView(column);
+        }
+
+        void bind(boolean salve) {
+            fromSalve = salve;
+            avatar.setVisibility(salve ? View.INVISIBLE : View.GONE);
+            column.setGravity(salve ? Gravity.START : Gravity.END);
+            root.setPadding(salve ? 0 : dp(48), 0, salve ? dp(24) : 0, 0);
+            LinearLayout.LayoutParams t = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            t.gravity = salve ? Gravity.START : Gravity.END;
+            t.setMargins(salve ? dp(14) : 0, 0, salve ? 0 : dp(10), dp(6));
+            time.setLayoutParams(t);
+        }
+
+        /** @param face cara de Salve visible (primer bloque de su mensaje); @param stamp hora, o null para ocultarla. */
+        void show(boolean face, CharSequence stamp) {
+            avatarShown = face;
+            if (fromSalve) avatar.setVisibility(face ? View.VISIBLE : View.INVISIBLE);
+            if (stamp == null) time.setVisibility(View.GONE);
+            else { time.setText(stamp); time.setVisibility(View.VISIBLE); }
+        }
+    }
+
+    private MessageRow rowFor(TextView bubble, boolean fromSalve) {
+        MessageRow row = rows.get(bubble);
+        if (row == null) { row = new MessageRow(bubble); rows.put(bubble, row); row.bind(fromSalve); }
+        else if (row.fromSalve != fromSalve) row.bind(fromSalve);
+        return row;
+    }
+
+    /** «4:03 p. m.» según el formato del teléfono; los mensajes de Bryan llevan ✓✓ como enviados. */
+    private CharSequence timeLabel(long when, boolean fromSalve) {
+        String clock = android.text.format.DateFormat.getTimeFormat(activity).format(new java.util.Date(when));
+        if (fromSalve) return clock;
+        SpannableStringBuilder label = new SpannableStringBuilder(clock).append("  ✓✓");
+        label.setSpan(new ForegroundColorSpan(0xFF6ED6FF), clock.length() + 2, label.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        label.setSpan(new StyleSpan(Typeface.BOLD), clock.length() + 2, label.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return label;
     }
 
     private int sketchVersion = -1;
@@ -595,6 +714,9 @@ final class SalveStageController {
 
     void save(Bundle state) {
         state.putStringArrayList("stage_messages", new ArrayList<>(messages));
+        long[] stamps = new long[times.size()];
+        for (int i = 0; i < stamps.length; i++) stamps[i] = times.get(i);
+        state.putLongArray("stage_times", stamps);
         state.putCharSequence("stage_caption", caption.getText());
         state.putString("stage_panel", active);
         state.putBoolean("stage_chat_expanded", chatFullScreen);
