@@ -60,7 +60,7 @@ final class RealisticSpriteRenderer {
                     if (!manifest.has("base")) throw new java.io.IOException("Sprite base ausente en " + folder);
                     for (java.util.Iterator<String> names = manifest.keys(); names.hasNext(); ) {
                         String name = names.next();
-                        if (!name.matches("base|views|turn|walk|walk_inbetween|wave|dance|poses")) continue;
+                        if (!name.matches("base|views|turn|walk|walk_inbetween|wave|bend|dance|poses")) continue;
                         JSONObject spec = manifest.getJSONObject(name);
                         Bitmap bitmap;
                         try (InputStream file = context.getAssets().open("avatar/" + folder + "/" + name + ".png")) {
@@ -140,6 +140,7 @@ final class RealisticSpriteRenderer {
 
     private final Context context;
     private final AvatarTurn turn = new AvatarTurn();
+    private final PoseTransition transition = new PoseTransition();
     private final Paint eyePaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint mouthPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     /** Apertura de la boca (0..1) y reloj del fotograma: los pone draw() antes de dibujar el cuerpo vivo. */
@@ -222,8 +223,12 @@ final class RealisticSpriteRenderer {
         mouthOpen = motion == null ? 0 : motion.mouthOpen;
         talkClock = time;
         RealisticSpriteAnimation.Frame selected = RealisticSpriteAnimation.select(state, motion, gaitPhase, time, sleeping);
+        // Al sentarse, agacharse o arrodillarse (y al levantarse) pasa por sus posturas intermedias.
+        RealisticSpriteAnimation.Frame between = sleeping ? null : transition.frame(state.getPose(), time);
+        if (between != null && sheets.containsKey("bend") && between.index < sheets.get("bend").frames.length)
+            selected = between;
         // Vistas giradas: dar la vuelta, mirar hacia donde va o mirar a un lado de vez en cuando.
-        if (!sleeping && sheets.containsKey("views")) {
+        if (!sleeping && selected != between && sheets.containsKey("views")) {
             AvatarState.Pose pose = state.getPose();
             boolean upright = pose == AvatarState.Pose.IDLE || pose == AvatarState.Pose.WALKING;
             boolean idle = pose == AvatarState.Pose.IDLE && motion.gesture == AvatarMotion.Gesture.NONE
