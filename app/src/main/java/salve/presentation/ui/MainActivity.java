@@ -149,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText inputChat;
     private Button btnEnviarMensaje, btnEscuchar, btnReflexiones;
     // Tarjetas del chat (icono, título y subtítulo): son contenedores pulsables, no botones de texto.
-    private android.view.View btnHablar, btnAdjuntar;
+    private android.view.View btnHablar;
     private salve.avatar.AvatarView imagenSalve;
     private LinearLayout panelReflexion;
     private TextView tituloReflexion, textoReflexion;
@@ -189,7 +189,12 @@ public class MainActivity extends AppCompatActivity {
             TextView stageStatus = findViewById(R.id.activeModelStatus);
             TextView chatStatus = findViewById(R.id.chatModelStatus);
             if (stageStatus != null) stageStatus.setText(status);
-            if (chatStatus != null) chatStatus.setText(status);
+            if (chatStatus != null) {
+                boolean ready = status.contains(" · activo");
+                chatStatus.setText((ready ? "● " : "○ ") + status);
+                chatStatus.setContentDescription(status);
+                chatStatus.setTextColor(ready ? 0xFFACDDD3 : 0xFFA9BCC8);
+            }
             conectarPCloudSola(status);
             modelStatusHandler.postDelayed(this, 2000);
         }
@@ -839,7 +844,6 @@ public class MainActivity extends AppCompatActivity {
         btnSiguienteReflexion = findViewById(R.id.btnSiguienteReflexion);
         btnResponderReflexion = findViewById(R.id.btnResponderReflexion);
         btnMostrarReflexion   = findViewById(R.id.btnMostrarReflexion);
-        btnAdjuntar = findViewById(R.id.btnAdjuntar);
         btnReflexiones = findViewById(R.id.btnReflexiones);
         salve.sketch.Sketches.preload(this); // repertorio de trazos listo antes del primer dibujo
         stageController = new SalveStageController(this, savedInstanceState);
@@ -1024,10 +1028,8 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
-        // Botón Adjuntar (si existe en el layout)
-        if (btnAdjuntar != null) {
-            btnAdjuntar.setOnClickListener(v -> mostrarAdjuntosChat());
-        }
+        // El clip es el único acceso a adjuntos: fotos, cámara y documentos.
+        findViewById(R.id.btnAttachInline).setOnClickListener(v -> mostrarAdjuntosChat());
 
         // ==== PERMISOS Y SERVICIOS ====
         // Camera/microphone permissions are requested when the user invokes them.
