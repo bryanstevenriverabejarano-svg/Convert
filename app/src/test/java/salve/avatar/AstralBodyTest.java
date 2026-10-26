@@ -148,7 +148,7 @@ public class AstralBodyTest {
         // Ojos y auriculares, en la cabeza.
         assertEquals(1f, rig.headWeight(Math.round(510f / rig.width * rig.cols), Math.round(145f / rig.height * rig.rows)), 1e-6f);
         assertTrue("la luz llega hasta los pies", rig.reach > rig.feetY - rig.heartY);
-        assertEquals("bocas «a» y «o» para hablar", 2, rig.mouthFrames);
+        assertEquals("bocas H1 entreabierta, H2 «a» y H3 «o» para hablar", 3, rig.mouthFrames);
         assertTrue("la boca está bajo los ojos", (rig.mouthTop + rig.mouthBottom) / 2 > rig.eyeBottom);
         assertEquals("y en la cabeza", 1f, rig.headWeight(Math.round((rig.mouthLeft + rig.mouthRight) / 2f / rig.width * rig.cols),
                 Math.round(rig.mouthTop / (float) rig.height * rig.rows)), 1e-6f);

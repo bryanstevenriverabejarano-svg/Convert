@@ -60,7 +60,7 @@ final class RealisticSpriteRenderer {
                     if (!manifest.has("base")) throw new java.io.IOException("Sprite base ausente en " + folder);
                     for (java.util.Iterator<String> names = manifest.keys(); names.hasNext(); ) {
                         String name = names.next();
-                        if (!name.matches("base|views|turn|walk|walk_inbetween|dance|poses")) continue;
+                        if (!name.matches("base|views|turn|walk|walk_inbetween|wave|dance|poses")) continue;
                         JSONObject spec = manifest.getJSONObject(name);
                         Bitmap bitmap;
                         try (InputStream file = context.getAssets().open("avatar/" + folder + "/" + name + ".png")) {
@@ -241,6 +241,11 @@ final class RealisticSpriteRenderer {
         }
         Sheet sheet = sheets.get(selected.sheet);
         // Older body versions have only eight walking frames: reuse the preceding original.
+        if (sheet == null && "wave".equals(selected.sheet)) {
+            // Versión sin saludo animado: la mano arriba de siempre (poses 4).
+            selected = new RealisticSpriteAnimation.Frame("poses", 4, false, 1);
+            sheet = sheets.get("poses");
+        }
         if (sheet == null && "walk_inbetween".equals(selected.sheet)) {
             Sheet legacy = sheets.get("walk");
             if (legacy != null && selected.index < legacy.frames.length) {
