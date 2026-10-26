@@ -6,10 +6,13 @@ import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.StyleSpan;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,6 +38,9 @@ final class SalveStageController {
     private final BottomSheetBehavior<View> chatBehavior, optionsBehavior;
     private final ArrayList<String> messages = new ArrayList<>();
     private String active = "";
+    private boolean keyboardWanted;
+    private boolean chatFullScreen;
+    private final Button expandChat;
     private final OnBackPressedCallback back = new OnBackPressedCallback(false) {
         @Override public void handleOnBackPressed() { closePanels(); }
     };
@@ -50,6 +56,7 @@ final class SalveStageController {
         transcript = activity.findViewById(R.id.chatTranscript);
         caption = activity.findViewById(R.id.salveCaption);
         scroll = activity.findViewById(R.id.chatScroll);
+        expandChat = activity.findViewById(R.id.btnExpandChat);
         chatBehavior = configure(chat, "chat");
         optionsBehavior = configure(options, "options");
         activity.getOnBackPressedDispatcher().addCallback(activity, back);
@@ -67,6 +74,8 @@ final class SalveStageController {
         caption.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         activity.findViewById(R.id.btnStageOptions).setOnClickListener(v -> showOptions());
         activity.findViewById(R.id.btnCloseChat).setOnClickListener(v -> closePanels());
+        expandChat.setOnClickListener(v -> setChatExpanded(!chatFullScreen));
+        activity.findViewById(R.id.chatDragHandle).setOnClickListener(v -> cycleChatHeight());
         activity.findViewById(R.id.btnCloseOptions).setOnClickListener(v -> closePanels());
         activity.findViewById(R.id.btnMenuChat).setOnClickListener(v -> showChat(true));
         activity.findViewById(R.id.btnMenuVoice).setOnClickListener(v -> {
@@ -84,7 +93,10 @@ final class SalveStageController {
             String restorePanel = saved.getString("stage_panel", "");
             // Let the hierarchy finish restoring before positioning a sheet.
             stage.post(() -> {
-                if ("chat".equals(restorePanel)) showChat(false);
+                if ("chat".equals(restorePanel)) {
+                    showChat(false);
+                    if (saved.getBoolean("stage_chat_expanded", false)) setChatExpanded(true);
+                }
                 else if ("options".equals(restorePanel)) showOptions();
             });
         }
@@ -95,15 +107,28 @@ final class SalveStageController {
             float heightDp = (usable - keyboardInset) / density;
             // BottomSheetBehavior adds its own top offset. Use height, never a top margin,
             // otherwise a relayout can push the composer below the window.
-            fitSheetHeight(chat, usable - (heightDp < 480 ? 0 : Math.round(56 * density)));
+            fitSheetHeight(chat, usable);
             fitSheetHeight(options, usable - (heightDp < 480 ? 0 : Math.round(96 * density)));
-            activity.findViewById(R.id.chatActions).setVisibility(heightDp < 360 || keyboardVisible ? View.GONE : View.VISIBLE);
+            chatBehavior.setPeekHeight(Math.min(dp(290), Math.max(dp(220), Math.round(usable * 0.32f))));
+            availableHeightDp = heightDp;
+            updateChatExtras();
         });
         updateChrome();
     }
 
     private int topInset, keyboardInset;
     private boolean keyboardVisible;
+    private float availableHeightDp = 700;
+    
+    private void updateChatExtras() {
+        boolean compact = "chat".equals(active) && chatBehavior.getState() == BottomSheetBehavior.STATE_COLLAPSED;
+        activity.findViewById(R.id.chatActions).setVisibility(
+                !compact && !keyboardVisible && availableHeightDp >= 360 ? View.VISIBLE : View.GONE);
+        activity.findViewById(R.id.chatSuggestions).setVisibility(
+                !compact && !keyboardVisible && availableHeightDp >= 450 ? View.VISIBLE : View.GONE);
+        activity.findViewById(R.id.chatResizeHint).setVisibility(
+                !compact && !keyboardVisible && availableHeightDp >= 450 ? View.VISIBLE : View.GONE);
+    }
 
     /**
      * El teclado nunca tapa lo que escribes: la app dibuja de borde a borde y mide ella misma las
@@ -126,7 +151,13 @@ final class SalveStageController {
             boolean wasVisible = keyboardVisible;
             keyboardVisible = insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) && ime.bottom > bars.bottom;
             topInset = bars.top;
+            chatBehavior.setExpandedOffset(bars.top);
             keyboardInset = keyboardVisible ? ime.bottom - bars.bottom : 0;
+            // Con el teclado presente, la caja de texto nunca queda por debajo de media pantalla.
+            if (keyboardVisible && "chat".equals(active)
+                    && chatBehavior.getState() != BottomSheetBehavior.STATE_EXPANDED) {
+                chatBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
             int bottom = Math.max(bars.bottom, ime.bottom);
             stage.setPadding(bars.left, bars.top, bars.right, bars.bottom);
             chat.setPadding(base + bars.left, base, base + bars.right, base + bottom);
@@ -134,7 +165,7 @@ final class SalveStageController {
             if (reflections != null) reflections.setPadding(reflections.getPaddingLeft(), reflections.getPaddingTop(),
                     reflections.getPaddingRight(), Math.round(20 * density) + bottom);
             if (overlay != null) overlay.setPadding(bars.left, bars.top, bars.right, bottom);
-            activity.findViewById(R.id.chatActions).setVisibility(keyboardVisible ? View.GONE : View.VISIBLE);
+            updateChatExtras();
             // Al abrir el teclado, el último mensaje sigue a la vista justo encima de lo que escribes.
             if (keyboardVisible && !wasVisible) scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
             v.requestLayout();
@@ -152,6 +183,15 @@ final class SalveStageController {
     private BottomSheetBehavior<View> configure(View sheet, String name) {
         sheet.setSaveEnabled(false);
         BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(sheet);
+        if ("chat".equals(name)) {
+            behavior.setFitToContents(false);
+            behavior.setHalfExpandedRatio(0.58f);
+            behavior.setExpandedOffset(topInset);
+            behavior.setDraggable(true);
+            behavior.setPeekHeight(dp(250));
+        }
+        behavior.setHideable(true);
+        behavior.setSkipCollapsed(!"chat".equals(name));
         behavior.setState(BottomSheetBehavior.STATE_HIDDEN);
         behavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override public void onStateChanged(View view, int state) {
@@ -159,7 +199,16 @@ final class SalveStageController {
                     active = ""; hideKeyboard(); updateChrome();
                 }
                 // El teclado sólo se puede abrir cuando el panel ya terminó de subir.
-                if (state == BottomSheetBehavior.STATE_EXPANDED && "chat".equals(name) && keyboardWanted) focusComposer();
+                if ("chat".equals(name)) {
+                    if (state == BottomSheetBehavior.STATE_EXPANDED
+                            || state == BottomSheetBehavior.STATE_HALF_EXPANDED
+                            || state == BottomSheetBehavior.STATE_COLLAPSED) {
+                        chatFullScreen = state == BottomSheetBehavior.STATE_EXPANDED;
+                        updateExpandButton();
+                        updateChatExtras();
+                        if (chatFullScreen && keyboardWanted) focusComposer();
+                    }
+                }
             }
             @Override public void onSlide(View view, float offset) { }
         });
@@ -180,20 +229,51 @@ final class SalveStageController {
     }
 
     void showChat(boolean keyboard) {
-        closePanels(); active = "chat";
-        chatBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+        boolean alreadyOpen = "chat".equals(active);
+        if (!alreadyOpen) {
+            closePanels();
+            active = "chat";
+            // El chat se abre dejando ver a Salve. Si el usuario quiere escribir,
+            // se expande solo: el teclado jamás tapa el compositor.
+            chatBehavior.setState(keyboard
+                    ? BottomSheetBehavior.STATE_EXPANDED
+                    : BottomSheetBehavior.STATE_HALF_EXPANDED);
+        } else if (keyboard) {
+            chatBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+        }
+        keyboardWanted = keyboard;
         updateChrome();
         scrollToEnd();
-        keyboardWanted = keyboard;
         if (keyboard) {
-            // Si el panel ya estaba abierto no habrá cambio de estado: se enfoca ya (y otra vez por si acaso).
             composer.post(this::focusComposer);
             composer.postDelayed(this::focusComposer, 350);
         }
     }
 
-    /** Bryan abrió el chat para escribir: tras cada respuesta de Salve, el cursor vuelve a la caja. */
-    private boolean keyboardWanted;
+    private void cycleChatHeight() {
+        if (chatBehavior.getState() == BottomSheetBehavior.STATE_COLLAPSED) {
+            setChatExpanded(false);
+        } else {
+            setChatExpanded(!chatFullScreen);
+        }
+    }
+
+    private void setChatExpanded(boolean expanded) {
+        if (!"chat".equals(active)) return;
+        keyboardWanted = false;
+        if (!expanded) hideKeyboard();
+        chatBehavior.setState(expanded
+                ? BottomSheetBehavior.STATE_EXPANDED
+                : BottomSheetBehavior.STATE_HALF_EXPANDED);
+    }
+
+    private void updateExpandButton() {
+        expandChat.setText(chatFullScreen ? "↙" : "⛶");
+        expandChat.setContentDescription(activity.getString(chatFullScreen
+                ? R.string.salve_chat_shrink : R.string.salve_chat_expand));
+        TextView hint = activity.findViewById(R.id.chatResizeHint);
+        hint.setText(chatFullScreen ? R.string.salve_chat_full_hint : R.string.salve_chat_drag_hint);
+    }
 
     /** Cursor en la caja de texto y teclado abierto (sólo con el chat a la vista). */
     void focusComposer() {
@@ -223,6 +303,7 @@ final class SalveStageController {
         chatBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
         optionsBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
         reflections.setVisibility(View.GONE);
+        keyboardWanted = false;
         hideKeyboard(); updateChrome();
     }
 
@@ -239,6 +320,7 @@ final class SalveStageController {
         stage.setImportantForAccessibility(open ? View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS : View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
         chat.setImportantForAccessibility("chat".equals(active) ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         options.setImportantForAccessibility("options".equals(active) ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        updateChatExtras();
     }
 
     /** Borrador de Salve mientras escribe; no se guarda en el historial ni sobrevive a una recreación. */
@@ -363,12 +445,12 @@ final class SalveStageController {
         ViewGroup thread = activity.findViewById(R.id.chatThread);
         if (textBlocks.isEmpty()) textBlocks.add(transcript);
         if (messages.isEmpty() && draft == null) {
+            styleBubble(transcript, true);
             transcript.setText(R.string.salve_chat_empty);
             if (thread.getChildCount() > 1) thread.removeViews(1, thread.getChildCount() - 1);
             return;
         }
         java.util.List<View> desired = new ArrayList<>();
-        SpannableStringBuilder text = new SpannableStringBuilder();
         int[] textIndex = {0};
         java.util.List<String> shown = new ArrayList<>(messages);
         if (draft != null) shown.add("Salve · escribiendo\n" + draft + " ▍");
@@ -376,11 +458,11 @@ final class SalveStageController {
             boolean isDraft = m == messages.size();
             String message = shown.get(m);
             int heading = message.indexOf('\n');
-            if (text.length() > 0) text.append("\n\n");
-            int start = text.length();
             String head = heading > 0 ? message.substring(0, heading) : message;
+            boolean fromSalve = head.startsWith("Salve");
+            SpannableStringBuilder text = new SpannableStringBuilder();
             text.append(head).append('\n');
-            text.setSpan(new StyleSpan(Typeface.BOLD), start, start + head.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            text.setSpan(new StyleSpan(Typeface.BOLD), 0, head.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             String body = heading > 0 ? message.substring(heading + 1) : "";
             long serial = isDraft ? -1 : serials.get(m);
             Integer limit = isDraft ? null : reveal.get(serial);
@@ -389,12 +471,15 @@ final class SalveStageController {
             for (int i = 0; i < segments.size(); i++) {
                 if (limit != null && i >= limit) break;
                 String[] seg = segments.get(i);
-                if ("text".equals(seg[0])) { text.append(seg[1].replaceAll("^\\n+|\\n+$", "")); continue; }
+                if ("text".equals(seg[0])) {
+                    text.append(seg[1].replaceAll("^\\n+|\\n+$", ""));
+                    continue;
+                }
                 SketchScene scene = scene(seg[1]);
                 String id = isDraft ? "draft:" + seg[1] : serial + ":" + ordinal;
                 ordinal++;
                 if (scene == null) continue;
-                flushText(text, desired, textIndex);
+                flushText(text, desired, textIndex, fromSalve);
                 SketchView view = sketchViews.get(id);
                 if (view == null) {
                     view = new SketchView(activity);
@@ -404,11 +489,12 @@ final class SalveStageController {
                 } else view.bind(scene, false, finished -> onSketchFinished(id));
                 desired.add(view);
             }
+            flushText(text, desired, textIndex, fromSalve);
         }
-        flushText(text, desired, textIndex);
-        // Reutiliza las vistas que no cambian: un dibujo a medias no se reinicia al llegar más texto.
+        // Reutiliza vistas y dibujos existentes para no reiniciar animaciones.
         int same = 0;
-        while (same < desired.size() && same < thread.getChildCount() && thread.getChildAt(same) == desired.get(same)) same++;
+        while (same < desired.size() && same < thread.getChildCount()
+                && thread.getChildAt(same) == desired.get(same)) same++;
         if (thread.getChildCount() > same) thread.removeViews(same, thread.getChildCount() - same);
         for (int i = same; i < desired.size(); i++) {
             View v = desired.get(i);
@@ -417,19 +503,36 @@ final class SalveStageController {
         }
     }
 
-    private void flushText(SpannableStringBuilder text, java.util.List<View> desired, int[] index) {
+    private int dp(float n) { return Math.round(n * activity.getResources().getDisplayMetrics().density); }
+
+    private void styleBubble(TextView block, boolean fromSalve) {
+        // Evita recrear el fondo/medidas en cada token del texto progresivo.
+        if (Boolean.valueOf(fromSalve).equals(block.getTag())) return;
+        block.setTag(Boolean.valueOf(fromSalve));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.gravity = fromSalve ? Gravity.START : Gravity.END;
+        params.setMargins(dp(5), dp(6), dp(5), dp(6));
+        block.setLayoutParams(params);
+        block.setMaxWidth(Math.max(dp(200), activity.getResources().getDisplayMetrics().widthPixels - dp(72)));
+        block.setBackgroundResource(fromSalve ? R.drawable.salve_chat_bubble_salve : R.drawable.salve_chat_bubble_user);
+        block.setTextColor(fromSalve ? 0xFFE5F1F6 : 0xFFFFFFFF);
+        block.setPadding(dp(14), dp(12), dp(14), dp(12));
+        block.setTextIsSelectable(true);
+    }
+
+    private void flushText(SpannableStringBuilder text, java.util.List<View> desired,
+                           int[] index, boolean fromSalve) {
         if (text.length() == 0) return;
         TextView block;
         if (index[0] < textBlocks.size()) block = textBlocks.get(index[0]);
         else {
             block = new TextView(activity);
-            block.setTextColor(transcript.getCurrentTextColor());
             block.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, transcript.getTextSize());
             block.setLineSpacing(transcript.getLineSpacingExtra(), transcript.getLineSpacingMultiplier());
-            block.setPadding(transcript.getPaddingLeft(), transcript.getPaddingTop(), transcript.getPaddingRight(), transcript.getPaddingBottom());
-            block.setTextIsSelectable(true);
             textBlocks.add(block);
         }
+        styleBubble(block, fromSalve);
         index[0]++;
         CharSequence value = new SpannableStringBuilder(text);
         if (!value.toString().equals(block.getText().toString())) block.setText(value);
@@ -494,5 +597,6 @@ final class SalveStageController {
         state.putStringArrayList("stage_messages", new ArrayList<>(messages));
         state.putCharSequence("stage_caption", caption.getText());
         state.putString("stage_panel", active);
+        state.putBoolean("stage_chat_expanded", chatFullScreen);
     }
 }

@@ -59,16 +59,27 @@
         android:orientation="vertical" android:padding="16dp"
         android:background="@drawable/salve_sheet_background" android:elevation="8dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
-        app:behavior_hideable="true" app:behavior_skipCollapsed="true" app:behavior_peekHeight="0dp">
-        <View android:layout_width="36dp" android:layout_height="4dp" android:layout_gravity="center_horizontal"
-            android:background="#6C8793" android:importantForAccessibility="no" />
+        app:behavior_hideable="true" app:behavior_skipCollapsed="false" app:behavior_peekHeight="250dp"
+        app:behavior_fitToContents="false">
+        <!-- Zona de agarre: el gesto vertical permite pasar de media pantalla a pantalla completa. -->
+        <FrameLayout android:id="@+id/chatDragHandle" android:layout_width="match_parent"
+            android:layout_height="30dp" android:contentDescription="@string/salve_chat_drag_hint"
+            android:clickable="true" android:focusable="true">
+            <View android:layout_width="38dp" android:layout_height="4dp" android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="9dp" android:background="#7A9BAB"
+                android:importantForAccessibility="no" />
+        </FrameLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
             <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-                android:text="@string/salve_chat_title" android:textSize="22sp" android:textColor="#EAF4F2" android:paddingStart="8dp" />
+                android:text="@string/salve_chat_title" android:textStyle="bold" android:textSize="23sp" android:textColor="#EAF4F2" android:paddingStart="8dp" />
+            <Button android:id="@+id/btnExpandChat" style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="52dp" android:layout_height="52dp" android:minWidth="48dp"
+                android:text="⛶" android:textSize="24sp" android:textColor="#ACDDD3"
+                android:padding="0dp" android:contentDescription="@string/salve_chat_expand" />
             <Button android:id="@+id/btnCloseChat" style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="56dp" android:layout_height="56dp" android:minWidth="48dp"
-                android:text="×" android:textSize="26sp" android:textColor="#D4E7E7" android:padding="0dp"
-                android:contentDescription="@string/salve_close_chat" />
+                android:text="⌄" android:textSize="28sp" android:textColor="#D4E7E7" android:padding="0dp"
+                android:contentDescription="@string/salve_chat_minimize" />
         </LinearLayout>
         <TextView android:id="@+id/chatModelStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:text="Modelo: preparando" android:textColor="#ADC5C6" android:textSize="12sp" android:paddingHorizontal="8dp"
@@ -84,7 +95,8 @@
                 android:layout_height="wrap_content" android:orientation="vertical">
             <TextView android:id="@+id/chatTranscript" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="@string/salve_chat_empty" android:textColor="#DDE9EA" android:textSize="16sp"
-                android:lineSpacingExtra="6dp" android:padding="12dp" android:textIsSelectable="true" />
+                android:lineSpacingExtra="5dp" android:layout_margin="6dp" android:background="@drawable/salve_chat_bubble_salve"
+                android:padding="14dp" android:textIsSelectable="true" />
             </LinearLayout>
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
@@ -109,6 +121,23 @@
                 android:layout_height="wrap_content" android:layout_marginStart="8dp" android:text="Pensando…"
                 android:textColor="#7FDFFF" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
         </LinearLayout>
+        <!-- Sugerencias opcionales: rellenan el borrador, nunca envían sin confirmación. -->
+        <HorizontalScrollView android:id="@+id/chatSuggestions" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:fillViewport="false"
+            android:scrollbars="none" android:paddingTop="4dp" android:paddingBottom="6dp">
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button android:id="@+id/chipCapabilities" style="@style/SalveChatChip"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/salve_chip_capabilities" />
+                <Button android:id="@+id/chipBed" style="@style/SalveChatChip"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/salve_chip_bed" />
+                <Button android:id="@+id/chipHelp" style="@style/SalveChatChip"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/salve_chip_help" />
+            </LinearLayout>
+        </HorizontalScrollView>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
             <EditText android:id="@+id/inputChat" android:layout_width="0dp" android:layout_weight="1"
                 android:layout_height="wrap_content" android:minHeight="52dp" android:maxLines="3"
@@ -125,6 +154,11 @@
             <Button android:id="@+id/btnAdjuntar" style="@style/SalveStageAction" android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:paddingHorizontal="8dp" android:text="@string/salve_attach" />
         </LinearLayout>
+        <TextView android:id="@+id/chatResizeHint" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="@string/salve_chat_drag_hint"
+            android:textSize="11sp" android:textColor="#9BB4C5" android:gravity="center"
+            android:paddingTop="6dp" android:paddingBottom="3dp"
+            android:importantForAccessibility="no" />
     </LinearLayout>
 
     <LinearLayout android:id="@+id/optionsSheet" android:layout_width="match_parent" android:layout_height="match_parent"
