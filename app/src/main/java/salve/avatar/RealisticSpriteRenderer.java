@@ -118,7 +118,7 @@ final class RealisticSpriteRenderer {
             if (eyes == null || glow == null) return null;
             Bitmap mouth = null;
             if (rig.mouthFrames > 0) {
-                try { mouth = decode(context, "avatar/" + folder + "/astral_mouth.png"); }
+                try { mouth = decode(context, "avatar/" + folder + (rig.mouthFrames == 3 ? "/astral_mouth_h123.png" : "/astral_mouth.png")); }
                 catch (java.io.IOException missing) { mouth = null; }
                 int frameHeight = rig.mouthBottom - rig.mouthTop;
                 if (mouth != null && (mouth.getWidth() != rig.mouthRight - rig.mouthLeft
@@ -388,8 +388,7 @@ final class RealisticSpriteRenderer {
         if (living.mouth == null || asleep || !talking) return;
         float open = Math.max(0, Math.min(1, mouthOpen / .45f));
         if (open < .05f) return;
-        int syllable = (int) Math.floor(talkClock * 6.5f);
-        int frame = rig.mouthFrames > 1 && Math.floorMod(syllable, 4) == 3 ? 1 : 0;
+        int frame = RealisticSpriteAnimation.mouthFrame(open, talkClock, rig.mouthFrames);
         int h = rig.mouthBottom - rig.mouthTop;
         eyeSource.set(0, frame * h, rig.mouthRight - rig.mouthLeft, (frame + 1) * h);
         eyeDestination.set(rig.mouthLeft, rig.mouthTop, rig.mouthRight, rig.mouthBottom);

@@ -53,6 +53,11 @@ public final class SpriteChecks {
                 check(layout.centerX - .38f * layout.height >= 0 && layout.centerX + .38f * layout.height <= viewport[0], "Clipped sprite at edge");
             }
         }
+        check(RealisticSpriteAnimation.mouthFrame(.25f, 0f, 3) == 0, "H1 low-amplitude");
+        check(RealisticSpriteAnimation.mouthFrame(.9f, 0f, 3) == 1, "H2 open vowel");
+        check(RealisticSpriteAnimation.mouthFrame(.9f, 4f / 6.5f, 3) == 2, "H3 rounded vowel");
+        check(RealisticSpriteAnimation.mouthFrame(.9f, 3f / 6.5f, 2) == 1, "Legacy two-frame mouth");
+        check(RealisticSpriteAnimation.mouthFrame(Float.NaN, Float.NaN, 3) == 0, "Nonfinite speech");
         System.out.println("PASS: 16 gait frames, loop closure, directions, both dance tempos, speech/body priority, held poses, close, invalid clocks, stationary gait and narrow stages");
     }
 }
