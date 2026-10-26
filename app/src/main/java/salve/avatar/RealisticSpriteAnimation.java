@@ -25,6 +25,7 @@ public final class RealisticSpriteAnimation {
             case CROUCHED: return new Frame("poses", 2, false, .62f);
             default: break;
         }
+        if (motion.gesture == AvatarMotion.Gesture.REST) return new Frame("poses", 7, false, 1);
         if (motion.gesture == AvatarMotion.Gesture.WAVE) return new Frame("poses", 4, false, 1);
         if (motion.gesture == AvatarMotion.Gesture.EXPLAIN) return new Frame("poses", 5, false, 1);
         if (motion.listening || motion.thinking) return new Frame("poses", 6, false, 1);

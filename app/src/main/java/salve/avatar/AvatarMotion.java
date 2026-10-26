@@ -2,7 +2,8 @@ package salve.avatar;
 
 /** Transient, deterministic visual state. Call from one thread; no Android, storage, audio or model. */
 public final class AvatarMotion {
-    public enum Gesture { NONE, WAVE, NOD, SHAKE, EXPLAIN, THINK, CELEBRATE, LAUGH, CRY, STARTLE }
+    /** REST: cierra los ojos y descansa un momento; SPIN: da una vuelta completa sobre sí misma. */
+    public enum Gesture { NONE, WAVE, NOD, SHAKE, EXPLAIN, THINK, CELEBRATE, LAUGH, CRY, STARTLE, REST, SPIN }
     public enum Expression { NEUTRAL, WARM, CURIOUS, CONCERNED, SAD, ANGRY, SURPRISED, SHY }
 
     /** Angles in degrees; arms name screen sides. Positive is clockwise, negative counterclockwise.
@@ -15,7 +16,11 @@ public final class AvatarMotion {
         public final boolean listening, thinking, speaking;
         public final float blink, gazeX, gazeY, headTilt, headYaw, headPitch, bodyTilt;
         public final float leftArm, rightArm, leftKnee, rightKnee, mouthOpen, breath;
+        /** Avance del gesto actual, 0 al empezar y 1 al terminar (0 sin gesto). */
+        public final float gestureProgress;
         private Snapshot(AvatarMotion m) {
+            float length = duration(m.gesture);
+            gestureProgress = length > 0 ? bounded(m.gestureAge / length, 0, 1) : 0;
             gesture = m.gesture; expression = m.expression;
             bodyCue = m.bodyCue; bodyCueSerial = m.bodyCueSerial;
             listening = m.listening; thinking = m.thinking; speaking = m.speaking;
@@ -140,6 +145,7 @@ public final class AvatarMotion {
                 targetRight = -8; break;
             case CRY: targetPitch = 6; targetTilt = -3; targetRight = -7; break;
             case STARTLE: targetPitch = -7; targetLeft = 12; targetRight = -12; break;
+            case REST: targetPitch = 3; targetTilt = 2; break;
             default: break;
         }
         float blend = 1f - (float)Math.exp(-dt * 13f);
@@ -185,6 +191,7 @@ public final class AvatarMotion {
             case WAVE: return 2.3f; case NOD: case SHAKE: return 1.5f; case EXPLAIN: return 3f;
             case THINK: return 3.5f; case CELEBRATE: return 2.5f;
             case LAUGH: return 3f; case CRY: return 4f; case STARTLE: return 1.2f;
+            case REST: return 5f; case SPIN: return 2.4f;
             default: return 0;
         }
     }

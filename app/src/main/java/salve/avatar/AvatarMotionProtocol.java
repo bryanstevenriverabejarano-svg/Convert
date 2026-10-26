@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 public final class AvatarMotionProtocol {
     private static final Pattern RESERVED = Pattern.compile("(?i)\\[{1,2}\\s*salve[_\\s-]*motion\\b");
     private static final Pattern DIRECTIVE = Pattern.compile(
-            "\\[\\[salve_motion:(NONE|WAVE|NOD|SHAKE|EXPLAIN|THINK|CELEBRATE|LAUGH|CRY|STARTLE):"
+            "\\[\\[salve_motion:(NONE|WAVE|NOD|SHAKE|EXPLAIN|THINK|CELEBRATE|LAUGH|CRY|STARTLE|REST|SPIN):"
             + "(NEUTRAL|WARM|CURIOUS|CONCERNED|SAD|ANGRY|SURPRISED|SHY)"
             + "(?::(KEEP|STAND|WALK|SIT|KNEEL|CROUCH|DANCE_POP|DANCE_URBAN))?\\]\\]");
     private AvatarMotionProtocol() { }
@@ -115,6 +115,10 @@ public final class AvatarMotionProtocol {
                 return directive("Así acompaño una explicación.", AvatarMotion.Gesture.EXPLAIN, AvatarMotion.Expression.NEUTRAL);
             case "celebra":
                 return directive("¡Vamos!", AvatarMotion.Gesture.CELEBRATE, AvatarMotion.Expression.WARM);
+            case "cierra los ojos": case "medita": case "relajate": case "descansa un momento":
+                return directive("Cierro los ojos un momento.", AvatarMotion.Gesture.REST, AvatarMotion.Expression.NEUTRAL);
+            case "date la vuelta": case "da una vuelta": case "gira": case "girate": case "dame una vuelta":
+                return directive("Así me veo por todos lados.", AvatarMotion.Gesture.SPIN, AvatarMotion.Expression.WARM);
             case "mirame":
                 return directive("Aquí estoy.", AvatarMotion.Gesture.NONE, AvatarMotion.Expression.CURIOUS);
             case "rie": case "riete": case "sonrie":
