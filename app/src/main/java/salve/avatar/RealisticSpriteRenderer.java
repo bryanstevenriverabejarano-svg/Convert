@@ -98,7 +98,11 @@ final class RealisticSpriteRenderer {
     private static final class Astral {
         final AstralBodyRig rig;
         final Bitmap eyes, glow;
-        Astral(AstralBodyRig rig, Bitmap eyes, Bitmap glow) { this.rig = rig; this.eyes = eyes; this.glow = glow; }
+        /** Bocas dibujadas para hablar (null si esta versión no tiene). */
+        final Bitmap mouth;
+        Astral(AstralBodyRig rig, Bitmap eyes, Bitmap glow, Bitmap mouth) {
+            this.rig = rig; this.eyes = eyes; this.glow = glow; this.mouth = mouth;
+        }
     }
 
     private static Astral loadAstral(Context context, String folder, Sheet base) {
@@ -112,7 +116,15 @@ final class RealisticSpriteRenderer {
             Bitmap eyes = decode(context, "avatar/" + folder + "/astral_eyes.png");
             Bitmap glow = decode(context, "avatar/" + folder + "/astral_glow.png");
             if (eyes == null || glow == null) return null;
-            return new Astral(rig, eyes, glow);
+            Bitmap mouth = null;
+            if (rig.mouthFrames > 0) {
+                try { mouth = decode(context, "avatar/" + folder + "/astral_mouth.png"); }
+                catch (java.io.IOException missing) { mouth = null; }
+                int frameHeight = rig.mouthBottom - rig.mouthTop;
+                if (mouth != null && (mouth.getWidth() != rig.mouthRight - rig.mouthLeft
+                        || mouth.getHeight() != frameHeight * rig.mouthFrames)) mouth = null;
+            }
+            return new Astral(rig, eyes, glow, mouth);
         } catch (Exception | OutOfMemoryError error) {
             Log.w("SalveSprites", "Cuerpo astral sin capa viva; se dibuja la ilustración fija", error);
             return null;
@@ -129,6 +141,10 @@ final class RealisticSpriteRenderer {
     private final Context context;
     private final AvatarTurn turn = new AvatarTurn();
     private final Paint eyePaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final Paint mouthPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    /** Apertura de la boca (0..1) y reloj del fotograma: los pone draw() antes de dibujar el cuerpo vivo. */
+    private float mouthOpen, talkClock;
+    private boolean talking;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final RectF destination = new RectF();
     private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
@@ -202,6 +218,9 @@ final class RealisticSpriteRenderer {
         Assets assets = assets();
         Map<String, Sheet> sheets = assets.sheets;
         if (sheets == null) return false;
+        talking = motion != null && motion.speaking;
+        mouthOpen = motion == null ? 0 : motion.mouthOpen;
+        talkClock = time;
         RealisticSpriteAnimation.Frame selected = RealisticSpriteAnimation.select(state, motion, gaitPhase, time, sleeping);
         // Vistas giradas: dar la vuelta, mirar hacia donde va o mirar a un lado de vez en cuando.
         if (!sleeping && sheets.containsKey("views")) {
@@ -326,6 +345,7 @@ final class RealisticSpriteRenderer {
             canvas.drawBitmap(living.eyes, eyeSource, eyeDestination, eyePaint);
             canvas.restore();
         }
+        drawMouth(canvas, living, body, eyesClosed);
         float glow = Math.max(0, Math.min(1, body.glow));
         if (glow > .02f) {
             glowPaint.setColorFilter(CIRCUIT);
@@ -347,6 +367,28 @@ final class RealisticSpriteRenderer {
                 canvas.restore();
             }
         }
+        canvas.restore();
+    }
+
+    /**
+     * Al hablar, la boca dibujada se funde sobre la base según la apertura de la voz: casi siempre la
+     * «a» entreabierta y, una de cada cuatro sílabas, la «o» redondeada. Sigue a la cabeza como los ojos.
+     */
+    private void drawMouth(Canvas canvas, Astral living, AstralBody.Snapshot body, boolean asleep) {
+        AstralBodyRig rig = living.rig;
+        if (living.mouth == null || asleep || !talking) return;
+        float open = Math.max(0, Math.min(1, mouthOpen / .45f));
+        if (open < .05f) return;
+        int syllable = (int) Math.floor(talkClock * 6.5f);
+        int frame = rig.mouthFrames > 1 && Math.floorMod(syllable, 4) == 3 ? 1 : 0;
+        int h = rig.mouthBottom - rig.mouthTop;
+        eyeSource.set(0, frame * h, rig.mouthRight - rig.mouthLeft, (frame + 1) * h);
+        eyeDestination.set(rig.mouthLeft, rig.mouthTop, rig.mouthRight, rig.mouthBottom);
+        mouthPaint.setAlpha(Math.round(255 * open * open * (3 - 2 * open)));
+        canvas.save();
+        canvas.translate(body.headShiftX, body.headShiftY);
+        canvas.rotate(body.headTilt, rig.neckX, rig.neckY);
+        canvas.drawBitmap(living.mouth, eyeSource, eyeDestination, mouthPaint);
         canvas.restore();
     }
 

@@ -51,6 +51,9 @@ BODIES = {
         # Ojos cerrados dibujados (recorte alineado de la ilustración 32 aprobada): sustituyen al
         # párpado sintético en el fotograma «cerrado»; el entrecerrado sigue siendo sintético.
         closed_eyes="astral_sources/realistic_closed_eyes.png",
+        # Bocas para hablar (la misma 01 cambiando solo la boca): entreabierta «a» y redondeada «o».
+        mouth_box=(472, 168, 552, 226),
+        mouths=["astral_sources/realistic_mouth_a.png", "astral_sources/realistic_mouth_o.png"],
         # Azul intenso de los paneles y cian de las líneas finas; el pelo lavanda queda fuera.
         glow=[(88, 128, 110, 150), (80, 104, 40, 170)], glow_blur=1.6,
         # Las colas blancas del traje quedan fuera de las cápsulas: ondean con el pelo.
@@ -150,6 +153,22 @@ def eye_frames(base):
         frames[1] = np.dstack([rgb, np.maximum(alpha, (f[:, :, 0] * 255).astype(np.uint8))])
     return np.vstack(frames)
 
+def mouth_frames(base):
+    """Bocas dibujadas apiladas, con borde fundido para que encajen sobre la base sin costura."""
+    x0, y0, x1, y1 = BODY["mouth_box"]
+    h, w = y1 - y0, x1 - x0
+    m = np.zeros((h, w), np.float32)
+    cv2.ellipse(m, (w // 2, h // 2), (w // 2 - 4, h // 2 - 4), 0, 0, 360, 1.0, -1)
+    m = cv2.GaussianBlur(m, (0, 0), 3.5)
+    frames = []
+    here = os.path.dirname(os.path.abspath(__file__))
+    for path in BODY["mouths"]:
+        art = cv2.imread(os.path.join(here, path), cv2.IMREAD_UNCHANGED)
+        if art is None or art.shape[:2] != (h, w):
+            sys.exit("boca ausente o de otro tamaño: " + path)
+        frames.append(np.dstack([art[:, :, :3], (m * 255).astype(np.uint8)]))
+    return np.vstack(frames)
+
 def glow_mask(base):
     hsv = cv2.cvtColor(base[:, :, :3], cv2.COLOR_BGR2HSV).astype(np.int32)
     h, s, v, a = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2], base[:, :, 3]
@@ -191,6 +210,8 @@ def main():
     cv2.imwrite(os.path.join(assets, "astral_eyes.png"), eye_frames(base))
     glow, _ = glow_mask(base)
     cv2.imwrite(os.path.join(assets, "astral_glow.png"), glow)
+    if BODY.get("mouths"):
+        cv2.imwrite(os.path.join(assets, "astral_mouth.png"), mouth_frames(base))
     hair, head = mesh_weights(w, h)
     cols, rows = BODY["mesh"]
     spec = {
@@ -201,6 +222,7 @@ def main():
         "eyeFrames": ["half", "closed"],
         "neck": list(BODY["neck"]), "heart": list(BODY["heart"]), "feet": list(BODY["feet"]),
         "hairTop": BODY["hair_top"], "hairSpan": BODY["hair_span"],
+        **({"mouthBox": list(BODY["mouth_box"]), "mouthFrames": ["a", "o"]} if BODY.get("mouths") else {}),
         "mesh": {"cols": cols, "rows": rows,
                  "hair": hair.flatten().tolist(), "head": head.flatten().tolist()},
     }

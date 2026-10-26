@@ -147,7 +147,10 @@ jobs:
               for body in ("realistic", "realistic_v1"):  # Salve actual y su primer cuerpo (Vestuario)
                   manifest_path = "avatar/" + body + "/manifest.json"
                   sheets = json.loads(Path("app/src/main/assets/" + manifest_path).read_text())["sheets"]
-                  for name in list(sheets) + ["astral", "astral_eyes", "astral_glow"]:
+                  extras = ["astral", "astral_eyes", "astral_glow"]
+                  if Path("app/src/main/assets/avatar/" + body + "/astral_mouth.png").exists():
+                      extras.append("astral_mouth")
+                  for name in list(sheets) + extras:
                       asset = "avatar/" + body + "/" + name + (".json" if name == "astral" else ".png")
                       assert apk.read("assets/" + asset) == Path("app/src/main/assets/" + asset).read_bytes(), asset
                   assert apk.read("assets/" + manifest_path) == Path("app/src/main/assets/" + manifest_path).read_bytes()
