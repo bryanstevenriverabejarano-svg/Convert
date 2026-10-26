@@ -35,6 +35,16 @@ public final class RealisticSpriteAnimation {
         if (motion.listening || motion.thinking) return new Frame("poses", 6, false, 1);
         return new Frame("base", 0, false, 1);
     }
+
+    /** H1 small opening, H2 wide 'a', H3 rounded 'o'; preserves older two-frame packs. */
+    public static int mouthFrame(float open, float time, int availableFrames) {
+        if (availableFrames <= 1) return 0;
+        int syllable = Float.isFinite(time) ? (int) Math.floor(time * 6.5f) : 0;
+        if (availableFrames == 2) return Math.floorMod(syllable, 4) == 3 ? 1 : 0;
+        float amplitude = Float.isFinite(open) ? Math.max(0, Math.min(1, open)) : 0;
+        if (amplitude >= .25f && Math.floorMod(syllable, 5) == 4) return 2;
+        return amplitude >= .56f ? 1 : 0;
+    }
     private static int cycle(float turns, int frames) {
         if (!Float.isFinite(turns)) return 0;
         return Math.min(frames - 1, (int)((turns - Math.floor(turns)) * frames));
