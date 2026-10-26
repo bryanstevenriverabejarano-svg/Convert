@@ -127,6 +127,8 @@ final class RealisticSpriteRenderer {
     }
 
     private final Context context;
+    private final AvatarTurn turn = new AvatarTurn();
+    private final Paint eyePaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final RectF destination = new RectF();
     private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
@@ -201,6 +203,17 @@ final class RealisticSpriteRenderer {
         Map<String, Sheet> sheets = assets.sheets;
         if (sheets == null) return false;
         RealisticSpriteAnimation.Frame selected = RealisticSpriteAnimation.select(state, motion, gaitPhase, time, sleeping);
+        // Vistas giradas: dar la vuelta, mirar hacia donde va o mirar a un lado de vez en cuando.
+        if (!sleeping && sheets.containsKey("views")) {
+            AvatarState.Pose pose = state.getPose();
+            boolean upright = pose == AvatarState.Pose.IDLE || pose == AvatarState.Pose.WALKING;
+            boolean idle = pose == AvatarState.Pose.IDLE && motion.gesture == AvatarMotion.Gesture.NONE
+                    && !motion.speaking && !motion.listening && !motion.thinking;
+            float spin = motion.gesture == AvatarMotion.Gesture.SPIN ? motion.gestureProgress : -1;
+            int view = upright ? turn.view(state.isFacingRight(), pose == AvatarState.Pose.WALKING, idle, spin, time) : -1;
+            if (view >= 0 && view < sheets.get("views").frames.length)
+                selected = new RealisticSpriteAnimation.Frame("views", view, false, 1);
+        }
         Sheet sheet = sheets.get(selected.sheet);
         if (sheet == null) {
             // Esta versión no tiene esa hoja (pasos, baile, posturas): su cuerpo vivo lo hace todo.
@@ -231,6 +244,27 @@ final class RealisticSpriteRenderer {
         if (body != null && living != null && "base".equals(selected.sheet) && !selected.mirror)
             drawLiving(canvas, sheet.bitmap, living, body, drawnHeight / source.height(), false);
         else canvas.drawBitmap(sheet.bitmap, source, destination, paint);
+        canvas.restore();
+        return true;
+    }
+
+    /**
+     * Su ilustración tumbada (poses, fotograma 3) sobre la cama, en unidades locales de la cama
+     * (colchón de x −104..104, superficie ≈ y −30). Se refleja para que la cabeza quede en la almohada.
+     * Devuelve false si esta versión no tiene esa ilustración (entonces se usa la de pie girada).
+     */
+    boolean drawLying(Canvas canvas) {
+        Map<String, Sheet> sheets = assets().sheets;
+        Sheet poses = sheets == null ? null : sheets.get("poses");
+        if (poses == null || poses.frames.length < 4) return false;
+        Rect source = poses.frames[3];
+        if (source.width() <= source.height()) return false; // no es una figura tumbada
+        float width = 186f, height = width * source.height() / source.width();
+        float bottom = -30f + height * .18f; // el cuerpo apoya en el colchón; el pelo cae por detrás
+        canvas.save();
+        canvas.scale(-1, 1); // cabeza hacia la almohada (a la izquierda de la cama)
+        destination.set(-width / 2, bottom - height, width / 2, bottom);
+        canvas.drawBitmap(poses.bitmap, source, destination, paint);
         canvas.restore();
         return true;
     }
@@ -278,15 +312,18 @@ final class RealisticSpriteRenderer {
         vertices = rig.deform(body, vertices);
         canvas.drawBitmapMesh(base, rig.cols, rig.rows, vertices, 0, null, 0, paint);
         float blink = eyesClosed ? 1f : body.blink;
-        if (blink > .3f) {
-            int frame = blink >= .8f ? 1 : 0;
+        if (blink > .02f) {
+            // Fundido continuo a los ojos cerrados dibujados: sin saltos entre «abierto», «medio» y «cerrado».
+            float t = Math.min(1f, blink / .85f);
+            eyePaint.setAlpha(Math.round(255 * t * t * (3 - 2 * t)));
+            int frame = 1;
             int h = rig.eyeBottom - rig.eyeTop;
             eyeSource.set(0, frame * h, rig.eyeRight - rig.eyeLeft, (frame + 1) * h);
             eyeDestination.set(rig.eyeLeft, rig.eyeTop, rig.eyeRight, rig.eyeBottom);
             canvas.save();
             canvas.translate(body.headShiftX, body.headShiftY);
             canvas.rotate(body.headTilt, rig.neckX, rig.neckY);
-            canvas.drawBitmap(living.eyes, eyeSource, eyeDestination, paint);
+            canvas.drawBitmap(living.eyes, eyeSource, eyeDestination, eyePaint);
             canvas.restore();
         }
         float glow = Math.max(0, Math.min(1, body.glow));
