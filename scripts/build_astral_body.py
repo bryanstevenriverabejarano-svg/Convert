@@ -1,38 +1,69 @@
 #!/usr/bin/env python3
-"""Genera la capa viva del cuerpo astral de Salve a partir de realistic/base.png.
+"""Genera la capa viva del cuerpo astral de Salve a partir de <cuerpo>/base.png.
 
 Salidas (todas derivadas del PNG aprobado, que no se modifica):
   astral_eyes.png  - parpados entrecerrado / cerrado para el recuadro de los ojos
   astral_glow.png  - mascara de los circuitos cian (media resolucion) para el pulso de luz
-  astral.json      - recuadro de ojos, pivotes y pesos de malla (pelo y cabeza)
+  astral.json      - recuadro de ojos, pivotes, inicio del pelo y pesos de malla (pelo y cabeza)
 
-Uso: python3 scripts/build_astral_body.py   (requiere numpy y opencv-python)
+Cuerpos (avatar/<cuerpo>/):
+  realistic     - Salve actual (32 ilustraciones aprobadas el 26-10-2026; base = la 01)
+  realistic_v1  - Salve v1 (referencia aprobada el 12-10-2026), conservada en Vestuario
+
+Uso: python3 scripts/build_astral_body.py [realistic|realistic_v1]   (requiere numpy y opencv-python)
 """
 import json, math, os, sys
 import numpy as np
 import cv2
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-ASSETS = os.path.join(ROOT, "app", "src", "main", "assets", "avatar", "realistic")
-BASE = os.path.join(ASSETS, "base.png")
+AVATAR = os.path.join(ROOT, "app", "src", "main", "assets", "avatar")
 
-EYE_BOX = (345, 145, 500, 195)          # x0, y0, x1, y1 en base.png
-EYES = [  # centro, semiejes de la mascara, extremos externo / interno del parpado
-    dict(c=(379, 171), ax=(27, 14), outer=(356, 168), inner=(402, 168)),
-    dict(c=(465, 171), ax=(27, 14), outer=(488, 168), inner=(443, 168)),
-]
-NECK = (427, 322)
-HEART = (427, 520)
-FEET = (427, 1840)
-MESH_COLS, MESH_ROWS = 28, 60
-# Capsulas del cuerpo que NO deben ondear (brazos, manos, torso, piernas, cabeza).
-CAPSULES = [
-    ((313, 330), (240, 600), 40), ((240, 600), (153, 787), 34), ((153, 787), (122, 900), 52),
-    ((540, 330), (613, 600), 40), ((613, 600), (693, 787), 34), ((693, 787), (727, 900), 52),
-    ((427, 360), (427, 500), 112), ((427, 560), (427, 620), 82), ((427, 690), (427, 790), 135),
-    ((365, 800), (372, 1840), 78), ((490, 800), (482, 1840), 78),
-    ((427, 120), (427, 300), 92), ((427, 250), (427, 340), 60),
-]
+# Coordenadas medidas a mano sobre cada base.png (píxeles de la ilustración).
+BODIES = {
+    "realistic_v1": dict(
+        eye_box=(345, 145, 500, 195),
+        eyes=[  # centro, semiejes de la mascara, extremos externo / interno del parpado
+            dict(c=(379, 171), ax=(27, 14), outer=(356, 168), inner=(402, 168)),
+            dict(c=(465, 171), ax=(27, 14), outer=(488, 168), inner=(443, 168)),
+        ],
+        neck=(427, 322), heart=(427, 520), feet=(427, 1840),
+        mesh=(28, 60), hair_top=300, hair_span=700, hang=(300, 820), head=(262, 338),
+        # Circuitos: (tono min, tono max, saturacion min, brillo min) en HSV de OpenCV; desenfoque.
+        glow=[(90, 125, 110, 150)], glow_blur=2.5,
+        # Capsulas del cuerpo que NO deben ondear (brazos, manos, torso, piernas, cabeza).
+        capsules=[
+            ((313, 330), (240, 600), 40), ((240, 600), (153, 787), 34), ((153, 787), (122, 900), 52),
+            ((540, 330), (613, 600), 40), ((613, 600), (693, 787), 34), ((693, 787), (727, 900), 52),
+            ((427, 360), (427, 500), 112), ((427, 560), (427, 620), 82), ((427, 690), (427, 790), 135),
+            ((365, 800), (372, 1840), 78), ((490, 800), (482, 1840), 78),
+            ((427, 120), (427, 300), 92), ((427, 250), (427, 340), 60),
+        ]),
+    "realistic": dict(
+        eye_box=(450, 125, 585, 170),
+        eyes=[
+            dict(c=(482, 145), ax=(20, 10), outer=(462, 139), inner=(500, 148)),
+            dict(c=(551, 152), ax=(20, 10), outer=(571, 148), inner=(534, 150)),
+        ],
+        # El núcleo luminoso del cuello es el corazón: de ahí sale la luz que recorre las líneas.
+        neck=(510, 225), heart=(510, 262), feet=(510, 1530),
+        mesh=(34, 52), hair_top=230, hair_span=720, hang=(230, 740), head=(180, 245),
+        # Ojos cerrados dibujados (recorte alineado de la ilustración 32 aprobada): sustituyen al
+        # párpado sintético en el fotograma «cerrado»; el entrecerrado sigue siendo sintético.
+        closed_eyes="astral_sources/realistic_closed_eyes.png",
+        # Azul intenso de los paneles y cian de las líneas finas; el pelo lavanda queda fuera.
+        glow=[(88, 128, 110, 150), (80, 104, 40, 170)], glow_blur=1.6,
+        # Las colas blancas del traje quedan fuera de las cápsulas: ondean con el pelo.
+        capsules=[
+            ((400, 340), (345, 560), 44), ((345, 560), (275, 700), 38), ((275, 700), (230, 795), 55),
+            ((620, 340), (675, 560), 44), ((675, 560), (745, 700), 38), ((745, 700), (790, 795), 55),
+            ((510, 330), (510, 560), 110), ((510, 560), (510, 650), 95), ((510, 660), (510, 760), 140),
+            ((465, 780), (475, 1530), 70), ((555, 780), (545, 1530), 70),
+            ((510, 30), (510, 190), 122), ((510, 190), (510, 270), 56),
+        ]),
+}
+BODY = None
+
 
 def smoothstep(a, b, x):
     t = np.clip((x - a) / (b - a), 0.0, 1.0)
@@ -40,7 +71,7 @@ def smoothstep(a, b, x):
 
 def capsule_distance(px, py):
     best = np.full(np.shape(px), 1e9, dtype=np.float64)
-    for (ax, ay), (bx, by), r in CAPSULES:
+    for (ax, ay), (bx, by), r in BODY["capsules"]:
         dx, dy = bx - ax, by - ay
         t = np.clip(((px - ax) * dx + (py - ay) * dy) / max(1e-9, dx * dx + dy * dy), 0, 1)
         d = np.hypot(px - (ax + t * dx), py - (ay + t * dy)) - r
@@ -60,7 +91,7 @@ def lid_curve(eye, sag, y_shift):
 def draw_lid(img, eye, sag, y_shift, thick):
     pts = lid_curve(eye, sag, y_shift)
     scale = 4  # dibujo con antialias por supermuestreo
-    x0, y0 = EYE_BOX[0], EYE_BOX[1]
+    x0, y0 = BODY["eye_box"][0], BODY["eye_box"][1]
     for i in range(len(pts) - 1):
         t = i / (len(pts) - 1)
         w = thick * (1.25 - 0.55 * t)  # mas grueso hacia el angulo externo
@@ -76,7 +107,8 @@ def draw_lid(img, eye, sag, y_shift, thick):
         cv2.line(img, p, q, (38, 24, 30, 255), int(1.6 * scale), cv2.LINE_AA)
 
 def eye_frames(base):
-    x0, y0, x1, y1 = EYE_BOX
+    EYES = BODY["eyes"]
+    x0, y0, x1, y1 = BODY["eye_box"]
     crop = base[y0:y1, x0:x1].copy()
     bgr, alpha = crop[:, :, :3].copy(), crop[:, :, 3]
     mask = np.zeros(bgr.shape[:2], np.uint8)
@@ -106,15 +138,28 @@ def eye_frames(base):
             else:
                 draw_lid(big, e, 4.0, 3.5, 2.4)
         frames.append(cv2.resize(big, (rgba.shape[1], rgba.shape[0]), interpolation=cv2.INTER_AREA))
+    if BODY.get("closed_eyes"):
+        art = cv2.imread(os.path.join(os.path.dirname(os.path.abspath(__file__)), BODY["closed_eyes"]), cv2.IMREAD_UNCHANGED)
+        if art is None or art.shape[:2] != crop.shape[:2]:
+            sys.exit("recorte de ojos cerrados ausente o de otro tamaño")
+        m = np.zeros(mask.shape, np.uint8)
+        for e in EYES:
+            cv2.ellipse(m, (e["c"][0] - x0, e["c"][1] - y0), (e["ax"][0] + 6, e["ax"][1] + 5), 0, 0, 360, 255, -1)
+        f = cv2.GaussianBlur(m.astype(np.float32) / 255, (0, 0), 3.0)[:, :, None]
+        rgb = (art[:, :, :3] * f + bgr * (1 - f)).astype(np.uint8)
+        frames[1] = np.dstack([rgb, np.maximum(alpha, (f[:, :, 0] * 255).astype(np.uint8))])
     return np.vstack(frames)
 
 def glow_mask(base):
     hsv = cv2.cvtColor(base[:, :, :3], cv2.COLOR_BGR2HSV).astype(np.int32)
     h, s, v, a = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2], base[:, :, 3]
-    m = ((h > 90) & (h < 125) & (s > 110) & (v > 150) & (a > 200)).astype(np.float32)
-    x0, y0, x1, y1 = EYE_BOX
+    m = np.zeros(h.shape, bool)
+    for lo, hi, smin, vmin in BODY["glow"]:
+        m |= (h > lo) & (h < hi) & (s > smin) & (v > vmin) & (a > 200)
+    m = m.astype(np.float32)
+    x0, y0, x1, y1 = BODY["eye_box"]
     m[y0:y1, x0:x1] = 0  # los iris no son circuitos
-    m = np.clip(cv2.GaussianBlur(m, (0, 0), 2.5) * 1.6, 0, 1)
+    m = np.clip(cv2.GaussianBlur(m, (0, 0), BODY["glow_blur"]) * 1.6, 0, 1)
     half = cv2.resize(m, (base.shape[1] // 2, base.shape[0] // 2), interpolation=cv2.INTER_AREA)
     out = np.zeros((half.shape[0], half.shape[1], 4), np.uint8)
     out[:, :, :3] = 255
@@ -122,37 +167,46 @@ def glow_mask(base):
     return out, m
 
 def mesh_weights(w, h):
-    xs = np.linspace(0, w, MESH_COLS + 1)
-    ys = np.linspace(0, h, MESH_ROWS + 1)
+    cols, rows = BODY["mesh"]
+    xs = np.linspace(0, w, cols + 1)
+    ys = np.linspace(0, h, rows + 1)
     X, Y = np.meshgrid(xs, ys)
     outside = smoothstep(0, 48, capsule_distance(X, Y))
-    hanging = smoothstep(300, 820, Y)
+    hanging = smoothstep(*BODY["hang"], Y)
     hair = outside * hanging
-    head = 1 - smoothstep(262, 338, Y)
+    head = 1 - smoothstep(*BODY["head"], Y)
     return np.round(hair, 3), np.round(head, 3)
 
 def main():
-    base = cv2.imread(BASE, cv2.IMREAD_UNCHANGED)
+    global BODY
+    name = sys.argv[1] if len(sys.argv) > 1 else "realistic"
+    if name not in BODIES:
+        sys.exit("cuerpo desconocido: " + name)
+    BODY = BODIES[name]
+    assets = os.path.join(AVATAR, name)
+    base = cv2.imread(os.path.join(assets, "base.png"), cv2.IMREAD_UNCHANGED)
     if base is None or base.shape[2] != 4:
         sys.exit("base.png ausente o sin alfa")
     h, w = base.shape[:2]
-    cv2.imwrite(os.path.join(ASSETS, "astral_eyes.png"), eye_frames(base))
+    cv2.imwrite(os.path.join(assets, "astral_eyes.png"), eye_frames(base))
     glow, _ = glow_mask(base)
-    cv2.imwrite(os.path.join(ASSETS, "astral_glow.png"), glow)
+    cv2.imwrite(os.path.join(assets, "astral_glow.png"), glow)
     hair, head = mesh_weights(w, h)
+    cols, rows = BODY["mesh"]
     spec = {
         "version": 1,
         "source": "base.png",
         "size": [w, h],
-        "eyeBox": list(EYE_BOX),
+        "eyeBox": list(BODY["eye_box"]),
         "eyeFrames": ["half", "closed"],
-        "neck": list(NECK), "heart": list(HEART), "feet": list(FEET),
-        "mesh": {"cols": MESH_COLS, "rows": MESH_ROWS,
+        "neck": list(BODY["neck"]), "heart": list(BODY["heart"]), "feet": list(BODY["feet"]),
+        "hairTop": BODY["hair_top"], "hairSpan": BODY["hair_span"],
+        "mesh": {"cols": cols, "rows": rows,
                  "hair": hair.flatten().tolist(), "head": head.flatten().tolist()},
     }
-    with open(os.path.join(ASSETS, "astral.json"), "w") as f:
+    with open(os.path.join(assets, "astral.json"), "w") as f:
         json.dump(spec, f, separators=(",", ":"))
-    print("ok", w, h, "hair>0:", int((hair > 0.05).sum()), "vertices:", hair.size)
+    print("ok", name, w, h, "hair>0:", int((hair > 0.05).sum()), "vertices:", hair.size)
 
 if __name__ == "__main__":
     main()

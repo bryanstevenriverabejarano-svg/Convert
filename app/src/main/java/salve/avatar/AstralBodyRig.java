@@ -13,6 +13,10 @@ public final class AstralBodyRig {
     public final int width, height, cols, rows;
     public final int eyeLeft, eyeTop, eyeRight, eyeBottom;
     public final float neckX, neckY, heartX, heartY, feetX, feetY;
+    /** Altura donde empieza a colgar el pelo y largo de la caída (px de base.png). */
+    public final float hairTop, hairSpan;
+    /** Distancia del corazón al punto más lejano de la ilustración: hasta ahí llega la luz que recorre las líneas. */
+    public final float reach;
     private final float[] hair, head, rest;
 
     private AstralBodyRig(JsonObject spec) {
@@ -25,6 +29,10 @@ public final class AstralBodyRig {
         neckX = neck.get(0).getAsFloat(); neckY = neck.get(1).getAsFloat();
         heartX = heart.get(0).getAsFloat(); heartY = heart.get(1).getAsFloat();
         feetX = feet.get(0).getAsFloat(); feetY = feet.get(1).getAsFloat();
+        // La v1 no los traía: sus valores eran fijos en el código.
+        hairTop = spec.has("hairTop") ? spec.get("hairTop").getAsFloat() : 300f;
+        hairSpan = spec.has("hairSpan") ? spec.get("hairSpan").getAsFloat() : 700f;
+        if (!(hairSpan > 0)) throw new IllegalArgumentException("Caída del pelo inválida");
         JsonObject mesh = spec.getAsJsonObject("mesh");
         cols = mesh.get("cols").getAsInt(); rows = mesh.get("rows").getAsInt();
         int count = (cols + 1) * (rows + 1);
@@ -38,6 +46,10 @@ public final class AstralBodyRig {
         }
         if (width <= 0 || height <= 0 || cols < 2 || rows < 2 || eyeRight <= eyeLeft || eyeBottom <= eyeTop)
             throw new IllegalArgumentException("Rig astral inválido");
+        float far = 0;
+        for (float[] corner : new float[][]{{0, 0}, {width, 0}, {0, height}, {width, height}})
+            far = Math.max(far, (float) Math.hypot(corner[0] - heartX, corner[1] - heartY));
+        reach = far;
     }
 
     public static AstralBodyRig parse(String json) {
@@ -62,7 +74,7 @@ public final class AstralBodyRig {
             float dx = (rx - x) * h, dy = (ry - y) * h;
             float w = hair[i];
             if (w > 0) {
-                float hang = Math.max(0, (y - 300f) / 700f);
+                float hang = Math.max(0, (y - hairTop) / hairSpan);
                 hang = hang * (float) Math.sqrt(hang);
                 float side = x < neckX ? 0f : 1.7f;
                 dx += w * (swing * hang + 2.6f * hang * (float) Math.sin(wave + y * .011f + side));
