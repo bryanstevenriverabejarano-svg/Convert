@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "identity": "Salve — 32 ilustraciones aprobadas el 2026-10-26 (la v1 del 2026-10-12 se conserva en avatar/realistic_v1)",
+  "version": 4,
+  "identity": "Salve — 32 ilustraciones aprobadas y 8 transiciones A1–A8 para marcha de 16 fotogramas (2026-10-26)",
   "rendering": "Native Canvas 2D; generated RGBA sprites, no 3D mesh. base.png es además el cuerpo vivo (capa astral).",
   "sheets": {
     "base": {
@@ -241,6 +241,71 @@
           1344,
           224,
           2016,
+          672
+        ],
+        [
+          0,
+          672,
+          448,
+          1344
+        ],
+        [
+          448,
+          672,
+          896,
+          1344
+        ],
+        [
+          896,
+          672,
+          1344,
+          1344
+        ],
+        [
+          1344,
+          672,
+          1792,
+          1344
+        ]
+      ],
+      "frameHeights": [
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672,
+        672
+      ]
+    },
+    "walk_inbetween": {
+      "width": 1792,
+      "height": 1344,
+      "sha256": "584219fd9a4bc60d63c2c707c2bc023de6fbc14725f3845b00467ead8501bd7b",
+      "frames": [
+        [
+          0,
+          0,
+          448,
+          672
+        ],
+        [
+          448,
+          0,
+          896,
+          672
+        ],
+        [
+          896,
+          0,
+          1344,
+          672
+        ],
+        [
+          1344,
+          0,
+          1792,
           672
         ],
         [

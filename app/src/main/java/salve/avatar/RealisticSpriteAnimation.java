@@ -15,8 +15,12 @@ public final class RealisticSpriteAnimation {
                                float gaitPhase, float time, boolean sleeping) {
         if (sleeping) return new Frame("poses", 7, false, 1);
         switch (state.getPose()) {
-            case WALKING:
-                return new Frame("walk", cycle(gaitPhase / (float)(2 * Math.PI), 8), !state.isFacingRight(), 1);
+            case WALKING: {
+                // Preserve gait speed: each original step gets one new midpoint frame.
+                int step = cycle(gaitPhase / (float)(2 * Math.PI), 16);
+                return new Frame((step & 1) == 0 ? "walk" : "walk_inbetween", step / 2,
+                        !state.isFacingRight(), 1);
+            }
             case DANCE_POP: case DANCE_URBAN:
                 float fps = state.getPose() == AvatarState.Pose.DANCE_POP ? 6 : 4;
                 return new Frame("dance", cycle(time * fps / 8, 8), false, 1);
