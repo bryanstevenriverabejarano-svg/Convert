@@ -128,7 +128,7 @@ dependencies {
     implementation 'androidx.fragment:fragment-ktx:1.8.9'
     // Verificación del dueño del teléfono (rostro, huella o PIN) para la identidad de Salve.
     implementation 'androidx.biometric:biometric:1.1.0'
-    implementation 'com.google.code.gson:gson:2.13.2'
+    implementation 'com.google.code.gson:gson:2.14.0' // la misma que trae LiteRT-LM 0.18
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'com.squareup.okhttp3:okhttp:5.3.2'
 
