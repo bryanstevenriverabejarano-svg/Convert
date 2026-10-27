@@ -1308,6 +1308,12 @@ public class MotorConversacional {
         if (recallTurn) responseContext += "\n" + salve.core.conversation.MemoryRecall.note(memoryOpen,
                 evidence != null && evidence.hasEvidence(), consultaMemoria.equals(entrada) ? null : consultaMemoria);
         final Boolean memoryFound = evidence == null ? null : evidence.hasEvidence();
+        // Charla corta sin memoria ni verificación: prompt ligero para que empiece a hablar antes.
+        turnPromptBudgetInput = entrada;
+        turnPromptBudget = salve.core.conversation.PromptBudgetPolicy.forTurn(
+                llm == null ? 10500 : llm.getConversationPromptBudgetChars(),
+                recordar, reasoningPlan.isVerificationRequired(), recallTurn,
+                activePhoto != null, storyTurn, entrada == null ? 0 : entrada.length());
         estado(storyTurn ? "Imaginando la historia…" : "Pensando qué responderte…");
         if (directAnswer == null && evidence != null) directAnswer = evidence.getDirectAnswer();
         if (directAnswer != null && evidence != null && evidence.getDirectAnswer() == directAnswer
@@ -2021,6 +2027,8 @@ public class MotorConversacional {
                         + "\n" + mesaFotos.sceneContext(activePhoto));
         CognitiveTurn.Outcome outcome = CognitiveTurn.run((results, repair, remaining) -> {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
+            // Solo para el mensaje de Bryan de este turno (no para fotos ni exámenes que reutilizan el turno cognitivo).
+            if (turnPromptBudget > 0 && input != null && input.equals(turnPromptBudgetInput)) budget = Math.min(budget, turnPromptBudget);
             // Con foto, la imagen ocupa contexto (Gemma 4: 4.096 tokens con entrada, imagen y salida).
             if (activePhoto != null && mesaFotos.canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
             String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1700),
@@ -2064,6 +2072,10 @@ public class MotorConversacional {
         if (lastConversationResult != null && !lastConversationResult.isSuccess()) b.append("; mi última respuesta falló");
         return b.append('.').toString();
     }
+
+    /** Presupuesto de prompt elegido para el turno de conversación en curso (0 = el normal). */
+    private volatile int turnPromptBudget;
+    private volatile String turnPromptBudgetInput;
 
     private String cognitiveCore() {
         if (cognitiveCore != null) return cognitiveCore;
