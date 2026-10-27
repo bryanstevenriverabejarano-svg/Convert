@@ -133,7 +133,7 @@ public class AstralBodyTest {
         AstralBodyRig rig = rig(AvatarBodyVersions.CURRENT);
         assertEquals(1024, rig.width);
         assertEquals(1536, rig.height);
-        assertEquals(230f, rig.hairTop, 1e-6f);
+        assertEquals(235f, rig.hairTop, 1e-6f);
         assertEquals(720f, rig.hairSpan, 1e-6f);
         int row = Math.round(800f / rig.height * rig.rows);
         // Melena exterior a los dos lados: ondea.
@@ -200,11 +200,17 @@ public class AstralBodyTest {
         assertTrue(busy.snapshot().flowStrength > calmStrength);
     }
 
-    @Test public void theFirstBodyStaysInTheWardrobe() {
+    @Test public void theFirstBodyStaysInTheWardrobe() throws Exception {
         assertEquals(AvatarBodyVersions.CURRENT, AvatarBodyVersions.all().get(0).id);
         AvatarBodyVersions.Version v1 = AvatarBodyVersions.find(AvatarBodyVersions.V1);
         assertNotNull(v1);
         assertEquals("12 oct 2026", v1.approved);
         assertNull(AvatarBodyVersions.find("../core"));
+        // Escote abierto y la base del 26 de octubre: opciones del Vestuario con su propia cara y bocas.
+        assertEquals(AvatarBodyVersions.OPEN, AvatarBodyVersions.all().get(1).id);
+        assertNotNull(AvatarBodyVersions.find(AvatarBodyVersions.OCT26));
+        assertEquals(3, rig(AvatarBodyVersions.OPEN).mouthFrames);
+        assertEquals(3, rig(AvatarBodyVersions.OCT26).mouthFrames);
+        assertEquals(rig(AvatarBodyVersions.CURRENT).eyeTop, rig(AvatarBodyVersions.OPEN).eyeTop);
     }
 }

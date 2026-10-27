@@ -7,12 +7,14 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 # avatar/realistic = Salve actual; avatar/realistic_v1 = su primer cuerpo, conservado en el Vestuario.
-BODIES = ('realistic', 'realistic_v1')
+BODIES = ('realistic', 'realistic_abierto', 'realistic_2610', 'realistic_v1')
 total = 0
 for body in BODIES:
   ASSETS = ROOT / 'app/src/main/assets/avatar' / body
   manifest = json.loads((ASSETS / 'manifest.json').read_text())
   assert 'base' in manifest['sheets'], (body, 'missing base sheet')
+  if 'extends' in manifest:  # variante: el resto de hojas son las de su cuerpo principal
+    assert manifest['extends'] in BODIES and manifest['extends'] != body, (body, 'extends')
   for extra in ('astral.json', 'astral_eyes.png', 'astral_glow.png'):
     assert (ASSETS / extra).is_file(), (body, extra)
   rig = json.loads((ASSETS / 'astral.json').read_text())

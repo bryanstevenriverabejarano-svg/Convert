@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "identity": "Salve de pie con el escote abierto (27-10-2026), opción del Vestuario",
+  "extends": "realistic",
+  "rendering": "Native Canvas 2D. Solo base.png y su capa astral son propios; el resto de hojas se toman de avatar/realistic.",
+  "sheets": {
+    "base": {
+      "width": 1024,
+      "height": 1536,
+      "sha256": "70f7f171f4aaaaa31034d4cd8e7a22d39ab61a8a845943ed38194e9654fdc566",
+      "frames": [
+        [
+          0,
+          0,
+          1024,
+          1536
+        ]
+      ],
+      "frameHeights": [
+        1536
+      ]
+    }
+  }
+}

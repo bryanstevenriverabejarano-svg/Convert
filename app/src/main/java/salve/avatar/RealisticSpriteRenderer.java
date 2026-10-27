@@ -52,40 +52,16 @@ final class RealisticSpriteRenderer {
             ExecutorService worker = Executors.newSingleThreadExecutor();
             worker.execute(() -> {
                 Map<String, Sheet> ready = new HashMap<>();
-                try (InputStream input = context.getAssets().open("avatar/" + folder + "/manifest.json")) {
-                    java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
-                    byte[] buffer = new byte[4096]; int count;
-                    while ((count = input.read(buffer)) != -1) bytes.write(buffer, 0, count);
-                    JSONObject manifest = new JSONObject(bytes.toString("UTF-8")).getJSONObject("sheets");
+                try {
+                    JSONObject root = readJson(context, "avatar/" + folder + "/manifest.json");
+                    JSONObject manifest = root.getJSONObject("sheets");
                     if (!manifest.has("base")) throw new java.io.IOException("Sprite base ausente en " + folder);
-                    for (java.util.Iterator<String> names = manifest.keys(); names.hasNext(); ) {
-                        String name = names.next();
-                        if (!name.matches("base|views|turn|walk|walk_inbetween|wave|bend|dance|poses|sleep|wake")) continue;
-                        JSONObject spec = manifest.getJSONObject(name);
-                        Bitmap bitmap;
-                        try (InputStream file = context.getAssets().open("avatar/" + folder + "/" + name + ".png")) {
-                            BitmapFactory.Options options = new BitmapFactory.Options(); options.inScaled = false;
-                            bitmap = BitmapFactory.decodeStream(file, null, options);
-                        }
-                        if (bitmap == null) throw new java.io.IOException("Missing sprite " + name);
-                        // Add immediately so any validation failure also releases this bitmap.
-                        JSONArray regions = spec.getJSONArray("frames");
-                        Rect[] frames = new Rect[regions.length()];
-                        float[] referenceHeights = new float[regions.length()];
-                        ready.put(name, new Sheet(bitmap, frames, referenceHeights));
-                        if (bitmap.getWidth() != spec.getInt("width") || bitmap.getHeight() != spec.getInt("height")
-                                || !bitmap.hasAlpha()) throw new java.io.IOException("Invalid sprite " + name);
-                        for (int i = 0; i < frames.length; i++) {
-                            JSONArray r = regions.getJSONArray(i);
-                            frames[i] = new Rect(r.getInt(0), r.getInt(1), r.getInt(2), r.getInt(3));
-                            referenceHeights[i] = (float)spec.getJSONArray("frameHeights").getDouble(i);
-                            if (!Float.isFinite(referenceHeights[i]) || referenceHeights[i] <= 0)
-                                throw new java.io.IOException("Invalid sprite scale " + name);
-                            if (frames[i].isEmpty() || frames[i].left < 0 || frames[i].top < 0
-                                    || frames[i].right > bitmap.getWidth() || frames[i].bottom > bitmap.getHeight())
-                                throw new java.io.IOException("Invalid sprite region " + name);
-                        }
-                    }
+                    loadSheets(context, folder, manifest, ready);
+                    // Una variante (otro pecho, otra base) toma el resto de hojas de su cuerpo principal.
+                    String parent = root.optString("extends", "");
+                    if (parent.matches("[a-z0-9_]{1,40}") && !parent.equals(folder))
+                        loadSheets(context, parent, readJson(context, "avatar/" + parent + "/manifest.json")
+                                .getJSONObject("sheets"), ready);
                     Astral living = loadAstral(context, folder, ready.get("base"));
                     main.post(() -> { sheets = ready; astral = living; notifyChanged(); });
                 } catch (Exception | OutOfMemoryError error) {
@@ -95,6 +71,48 @@ final class RealisticSpriteRenderer {
             });
         }
     }
+    private static JSONObject readJson(Context context, String path) throws Exception {
+        try (InputStream input = context.getAssets().open(path)) {
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            byte[] buffer = new byte[4096]; int count;
+            while ((count = input.read(buffer)) != -1) bytes.write(buffer, 0, count);
+            return new JSONObject(bytes.toString("UTF-8"));
+        }
+    }
+
+    /** Carga las hojas del manifiesto de {@code folder} que aún no estén en {@code ready}. */
+    private static void loadSheets(Context context, String folder, JSONObject manifest, Map<String, Sheet> ready) throws Exception {
+        for (java.util.Iterator<String> names = manifest.keys(); names.hasNext(); ) {
+            String name = names.next();
+            if (!name.matches("base|views|turn|walk|walk_inbetween|wave|bend|dance|poses|sleep|wake")) continue;
+            if (ready.containsKey(name)) continue;
+            JSONObject spec = manifest.getJSONObject(name);
+            Bitmap bitmap;
+            try (InputStream file = context.getAssets().open("avatar/" + folder + "/" + name + ".png")) {
+                BitmapFactory.Options options = new BitmapFactory.Options(); options.inScaled = false;
+                bitmap = BitmapFactory.decodeStream(file, null, options);
+            }
+            if (bitmap == null) throw new java.io.IOException("Missing sprite " + name);
+            // Add immediately so any validation failure also releases this bitmap.
+            JSONArray regions = spec.getJSONArray("frames");
+            Rect[] frames = new Rect[regions.length()];
+            float[] referenceHeights = new float[regions.length()];
+            ready.put(name, new Sheet(bitmap, frames, referenceHeights));
+            if (bitmap.getWidth() != spec.getInt("width") || bitmap.getHeight() != spec.getInt("height")
+                    || !bitmap.hasAlpha()) throw new java.io.IOException("Invalid sprite " + name);
+            for (int i = 0; i < frames.length; i++) {
+                JSONArray r = regions.getJSONArray(i);
+                frames[i] = new Rect(r.getInt(0), r.getInt(1), r.getInt(2), r.getInt(3));
+                referenceHeights[i] = (float)spec.getJSONArray("frameHeights").getDouble(i);
+                if (!Float.isFinite(referenceHeights[i]) || referenceHeights[i] <= 0)
+                    throw new java.io.IOException("Invalid sprite scale " + name);
+                if (frames[i].isEmpty() || frames[i].left < 0 || frames[i].top < 0
+                        || frames[i].right > bitmap.getWidth() || frames[i].bottom > bitmap.getHeight())
+                    throw new java.io.IOException("Invalid sprite region " + name);
+            }
+        }
+    }
+
     private static final class Astral {
         final AstralBodyRig rig;
         final Bitmap eyes, glow;
@@ -251,7 +269,9 @@ final class RealisticSpriteRenderer {
                 selected = new RealisticSpriteAnimation.Frame("turn", view - 8, false, 1);
             else if (view >= 0) {
                 int base = AvatarTurn.fallback(view);
-                if (base < sheets.get("views").frames.length)
+                // De frente es su propia base (viva), no la vista 0: cada versión conserva su pecho y su cara.
+                if (base == 0) selected = new RealisticSpriteAnimation.Frame("base", 0, false, 1);
+                else if (base < sheets.get("views").frames.length)
                     selected = new RealisticSpriteAnimation.Frame("views", base, false, 1);
             }
         }
