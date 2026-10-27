@@ -76,7 +76,9 @@ final class SelfFeaturesDesk {
     String conocimientoPropio(String entrada) {
         try {
             salve.core.mind.SelfFeatures.Feature feature = salve.core.mind.SelfFeatures.detect(entrada);
-            if (feature == null || salve.core.devicecontrol.AppActionCommand.parse(entrada) != null) return "";
+            salve.core.devicecontrol.AppActionCommand action = salve.core.devicecontrol.AppActionCommand.parse(entrada);
+            // «abre …» solo cuenta como acción si hay una app instalada con ese nombre; si no, es charla sobre Salve.
+            if (feature == null || (action != null && action.type != salve.core.devicecontrol.AppActionCommand.Type.OPEN_APP)) return "";
             boolean creator = motor.creatorSide();
             salve.core.identity.IdentityManager identity = salve.core.identity.IdentityManager.get(motor.context);
             String offer = creator ? salve.core.mind.SelfFeatures.offer(feature, identity.biometricAvailable()) : null;

@@ -4,6 +4,8 @@ import android.app.SearchManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.ContactsContract;
@@ -13,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import salve.core.devicecontrol.AppActionCommand;
+import salve.core.devicecontrol.AppNameMatcher;
 
 /** Acciones visibles en otras apps del propio móvil. No envían nada ni llaman sin confirmación. */
 public final class PhoneActions {
@@ -42,6 +45,38 @@ public final class PhoneActions {
         return new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
                 .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
                 .putExtra(SearchManager.QUERY, query);
+    }
+
+    /** App instalada que el usuario puede abrir desde el lanzador. */
+    public static final class InstalledApp {
+        public final String label, packageName;
+        InstalledApp(String label, String packageName) { this.label = label; this.packageName = packageName; }
+    }
+
+    /** La app del lanzador cuyo nombre encaja claramente con lo dicho; null si no hay ninguna o hay empate. */
+    public static InstalledApp findApp(Context context, String spokenName) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            Intent launcher = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+            Map<String, String> byPackage = new LinkedHashMap<>();
+            for (ResolveInfo info : pm.queryIntentActivities(launcher, 0)) {
+                if (info.activityInfo == null || !info.activityInfo.exported || !info.activityInfo.enabled) continue;
+                String pkg = info.activityInfo.packageName;
+                if (context.getPackageName().equals(pkg) || byPackage.containsKey(pkg)) continue;
+                byPackage.put(pkg, info.loadLabel(pm).toString());
+            }
+            List<String> packages = new ArrayList<>(byPackage.keySet());
+            List<String> labels = new ArrayList<>(byPackage.values());
+            int index = AppNameMatcher.bestMatch(spokenName, labels, packages);
+            return index < 0 ? null : new InstalledApp(labels.get(index), packages.get(index));
+        } catch (RuntimeException unavailable) { return null; }
+    }
+
+    /** Abre la app (como pulsar su icono). Abrir se deshace solo: no hace falta confirmación. */
+    public static boolean openApp(Context context, InstalledApp app) {
+        if (app == null) return false;
+        Intent launch = context.getPackageManager().getLaunchIntentForPackage(app.packageName);
+        return launch != null && start(context, launch);
     }
 
     private static boolean start(Context context, Intent intent) {

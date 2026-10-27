@@ -32,7 +32,8 @@ public final class SelfFeatures {
     private static final Pattern WEB_SEARCH = Pattern.compile(
             "\\b(?:brave|buscadores?|como buscas|busquedas? (?:web|en internet)|buscar en internet|captchas?)\\b");
     private static final Pattern PHONE_ACTIONS = Pattern.compile(
-            "\\b(?:(?:puedes|sabes|podrias) (?:llamar|hacer llamadas|poner musica|llevarme|navegar|abrir (?:google )?maps|usar spotify)"
+            "\\b(?:(?:puedes|sabes|podrias) (?:llamar|hacer llamadas|poner musica|llevarme|navegar|abrir (?:google )?maps|usar spotify"
+                    + "|abrir (?:apps|aplicaciones|otras apps)|escribir (?:un )?whatsapp|mandar (?:un )?whatsapp)"
                     + "|llamadas|spotify|google maps|modo coche)\\b");
     private static final Pattern PRIVACY_CHECK = Pattern.compile(
             "\\b(?:verificacion|verificarme|huella|como sabes (?:que soy yo|quien soy)|mi privacidad|tu privacidad|datos privados)\\b");
@@ -84,8 +85,10 @@ public final class SelfFeatures {
                         + "con la API oficial de Brave Search, que no tiene CAPTCHA. Si un buscador pide CAPTCHA, ofrezco abrir "
                         + "la búsqueda en su navegador; no me salto esas comprobaciones.";
             case PHONE_ACTIONS:
-                return "Puedo abrir una ruta en Google Maps («llévame a…»), poner música en Spotify («pon música de…») y llamar "
-                        + "a un contacto («llama a…»); antes de llamar siempre pido confirmar el nombre y el número en pantalla.";
+                return "Puedo abrir una ruta en Google Maps («llévame a…»), poner música en Spotify («pon música de…»), abrir "
+                        + "cualquier app instalada («abre la cámara», «abre WhatsApp»), llamar a un contacto («llama a…») y preparar "
+                        + "un WhatsApp a un contacto o número («escribe un whatsapp a mamá: …»). Antes de llamar pido confirmar el "
+                        + "nombre y el número en pantalla, y los WhatsApp quedan como borrador: el envío lo pulsas tú.";
             case PRIVACY_CHECK:
                 return "Antes de contar algo privado de Bryan (quién es, su familia, recuerdos, dinero) pido la verificación del "
                         + "propio teléfono: huella, rostro o PIN. Con un familiar o un invitado comparto solo lo que le corresponde.";

@@ -49,6 +49,8 @@ public final class DeviceControlActivity extends Activity {
     private static final int REQUEST_CONTACTS = 82;
     private static final int REQUEST_CALL = 83;
     private String pendingCallName;
+    /** Borrador de WhatsApp esperando el permiso de contactos: nombre y texto. */
+    private String pendingDraftName, pendingDraftMessage;
     private PhoneActions.Contact pendingCall;
     private LinearLayout content;
     private LinearLayout localServices;
@@ -68,6 +70,8 @@ public final class DeviceControlActivity extends Activity {
     public static final String EXTRA_MESSAGE = "whatsapp_message";
     /** Nombre o número que el usuario pidió llamar; siempre se confirma en pantalla. */
     public static final String EXTRA_CALL = "call_target";
+    /** Contacto nombrado para un borrador de WhatsApp; se elige y se revisa en pantalla. */
+    public static final String EXTRA_WHATSAPP_CONTACT = "whatsapp_contact";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -159,11 +163,15 @@ public final class DeviceControlActivity extends Activity {
             waitingOverlay = state.getBoolean("waiting_overlay");
             pendingSearch = state.getString("pending_search", "");
             pendingCallName = state.getString("pending_call_name");
+            pendingDraftName = state.getString("pending_draft_name");
+            pendingDraftMessage = state.getString("pending_draft_message");
         } else if (getIntent().getBooleanExtra(EXTRA_PANEL, false)) {
             openWorkspace(getIntent().getStringExtra(MobileWorkspaceService.QUERY));
         } else if (getIntent().hasExtra(EXTRA_PHONE)) {
             try { chooseWhatsApp(WhatsAppDraft.create(getIntent().getStringExtra(EXTRA_PHONE), getIntent().getStringExtra(EXTRA_MESSAGE))); }
             catch (IllegalArgumentException invalid) { appStatus.setText(invalid.getMessage()); }
+        } else if (getIntent().hasExtra(EXTRA_WHATSAPP_CONTACT)) {
+            startDraftToContact(getIntent().getStringExtra(EXTRA_WHATSAPP_CONTACT), getIntent().getStringExtra(EXTRA_MESSAGE));
         } else if (getIntent().hasExtra(EXTRA_CALL)) {
             startCall(getIntent().getStringExtra(EXTRA_CALL));
         }
@@ -172,6 +180,7 @@ public final class DeviceControlActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
         state.putBoolean("waiting_overlay", waitingOverlay); state.putString("pending_search", pendingSearch); state.putString("pending_call_name", pendingCallName);
+        state.putString("pending_draft_name", pendingDraftName); state.putString("pending_draft_message", pendingDraftMessage);
     }
 
     private void openWorkspace(String search) {
@@ -315,6 +324,13 @@ public final class DeviceControlActivity extends Activity {
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+        if (requestCode == REQUEST_CONTACTS && pendingDraftName != null) {
+            String name = pendingDraftName, body = pendingDraftMessage;
+            pendingDraftName = null; pendingDraftMessage = null;
+            if (granted) resolveDraftContact(name, body);
+            else appStatus.setText("Sin acceso a los contactos no puedo buscar a «" + name + "». Dime el número: «escribe un whatsapp a +34…: texto».");
+            return;
+        }
         if (requestCode == REQUEST_CONTACTS) {
             String name = pendingCallName; pendingCallName = null;
             if (name == null) return;
@@ -331,6 +347,53 @@ public final class DeviceControlActivity extends Activity {
         if (requestCode != REQUEST_BLUETOOTH) return;
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) showPairedDevices();
         else bluetoothStatus.setText("Permiso Bluetooth denegado. Puedes conceder Dispositivos cercanos desde los ajustes de Salve.");
+    }
+
+    /** Borrador pedido por voz a un contacto: buscar → (elegir) → revisar → abrir en WhatsApp. Nunca envía. */
+    private void startDraftToContact(String name, String body) {
+        if (name == null || name.trim().isEmpty() || body == null || body.trim().isEmpty()) return;
+        if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            pendingDraftName = name.trim(); pendingDraftMessage = body;
+            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
+            return;
+        }
+        resolveDraftContact(name.trim(), body);
+    }
+
+    private void resolveDraftContact(String name, String body) {
+        List<PhoneActions.Contact> found = PhoneActions.findContacts(this, name);
+        if (found.isEmpty()) { appStatus.setText("No encuentro a «" + name + "» en tus contactos."); return; }
+        if (found.size() == 1) { draftFor(found.get(0), body); return; }
+        String[] choices = new String[found.size()];
+        for (int i = 0; i < choices.length; i++) choices[i] = found.get(i).describe();
+        new AlertDialog.Builder(this).setTitle("¿A quién le escribo?")
+                .setItems(choices, (d, which) -> draftFor(found.get(which), body))
+                .setNegativeButton("Cancelar", null).show();
+    }
+
+    private void draftFor(PhoneActions.Contact contact, String body) {
+        String international = WhatsAppDraft.internationalOrNull(contact.number);
+        if (international == null) international = toE164(contact.number);
+        if (international == null) {
+            appStatus.setText("El número de " + contact.name + " no tiene prefijo de país. Añádelo en Contactos (+34…) o díctame el número.");
+            return;
+        }
+        try { chooseWhatsApp(WhatsAppDraft.create(international, body)); }
+        catch (IllegalArgumentException invalid) { appStatus.setText(invalid.getMessage()); }
+    }
+
+    /** Número local de la agenda → +código del país de la SIM (o de la red, o del idioma del móvil). */
+    private String toE164(String number) {
+        String iso = "";
+        try {
+            android.telephony.TelephonyManager telephony = (android.telephony.TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+            if (telephony != null) iso = telephony.getSimCountryIso();
+            if ((iso == null || iso.isEmpty()) && telephony != null) iso = telephony.getNetworkCountryIso();
+        } catch (RuntimeException unavailable) { iso = ""; }
+        if (iso == null || iso.isEmpty()) iso = java.util.Locale.getDefault().getCountry();
+        if (iso == null || iso.isEmpty()) return null;
+        String e164 = android.telephony.PhoneNumberUtils.formatNumberToE164(number, iso.toUpperCase(java.util.Locale.ROOT));
+        return WhatsAppDraft.internationalOrNull(e164);
     }
 
     /** Llamada pedida por el usuario: contacto → (elegir) → confirmar → llamar. */
