@@ -41,4 +41,8 @@ public class GenerationSpeedTest {
         assertTrue(GenerationSpeed.summary(), GenerationSpeed.summary().endsWith("2400 tokens por mensaje"));
         GenerationSpeed.clear();
     }
+    @Test public void compactFormForTheChatHeader() {
+        assertEquals("1ª palabra 1,2 s · 5 pal/s", GenerationSpeed.measure(0, 1200, 3200, "uno dos tres cuatro cinco seis siete ocho nueve diez", "x").compact());
+        assertEquals("1ª palabra 0,5 s", GenerationSpeed.measure(0, 500, 520, "Sí.", "x").compact());
+    }
 }
