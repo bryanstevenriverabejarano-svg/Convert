@@ -1224,7 +1224,8 @@ public class MotorConversacional {
                 intent.type == IntentType.BUSCAR_WEB
         );
         String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
-                + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext() + sketchContext;
+                + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext()
+                + salve.core.reasoning.MathGrounding.promptBlock(entrada) + sketchContext;
         // Si quien habla se presenta como otra persona, cambia el estado y no se pisa el perfil de Bryan.
         // En una historia, «soy el explorador Aric» es su personaje: no cambia quién habla ni su perfil.
         boolean otherSpeaker = !storyTurn && mesaIdentidad.registrarIdentidadDeclarada(entrada);
@@ -1355,7 +1356,8 @@ public class MotorConversacional {
                     respuesta, entrada, recientes, lastReading, !storyTurn,
                     salve.core.conversation.TurnChecks.join(
                             salve.core.conversation.MemoryRecall.problem(respuesta, recallTurn, memoryOpen, memoryFound),
-                            salve.core.conversation.TurnChecks.problem(entrada, respuesta, creatorSide())));
+                            salve.core.conversation.TurnChecks.join(salve.core.conversation.TurnChecks.problem(entrada, respuesta, creatorSide()),
+                                    salve.core.reasoning.MathGrounding.problem(entrada, respuesta))));
             if (review.needsRewrite()) {
                 estado("Releo mi borrador: no servía así, lo reescribo…");
                 CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext + review.instruction(),
@@ -1365,7 +1367,8 @@ public class MotorConversacional {
                         salve.core.conversation.ReplyReviewer.review(retry.result.getText(), entrada, recientes, lastReading, !storyTurn,
                                 salve.core.conversation.TurnChecks.join(
                                         salve.core.conversation.MemoryRecall.problem(retry.result.getText(), recallTurn, memoryOpen, memoryFound),
-                                        salve.core.conversation.TurnChecks.problem(entrada, retry.result.getText(), creatorSide()))),
+                                        salve.core.conversation.TurnChecks.join(salve.core.conversation.TurnChecks.problem(entrada, retry.result.getText(), creatorSide()),
+                                                salve.core.reasoning.MathGrounding.problem(entrada, retry.result.getText())))),
                         review))
                     respuesta = retry.result.getText();
                 String what = review.criticSummary();
@@ -1384,6 +1387,9 @@ public class MotorConversacional {
         // (Un cuento conserva sus párrafos: la limpieza de muletillas une el texto en una línea.)
         if (inference.isSuccess() && !creativeOk) respuesta = salve.core.conversation.ReplyStyle.dropEchoes(
                 salve.core.conversation.ReplyStyle.clean(respuesta, recientes), recientes);
+        // Las cuentas no se dejan al modelo: si tras revisar sigue sin el número exacto, se añade.
+        if (inference.isSuccess() && !creativeOk && !storyTurn)
+            respuesta = salve.core.reasoning.MathGrounding.ensureResult(entrada, respuesta);
         if (inference.isSuccess() && storyTurn) {
             // Sin eco del mensaje de Bryan al empezar la escena (hasta dos frases de eco/relleno).
             respuesta = salve.core.conversation.StoryMode.stripEcho(salve.core.conversation.StoryMode.stripEcho(respuesta, entrada), entrada);
