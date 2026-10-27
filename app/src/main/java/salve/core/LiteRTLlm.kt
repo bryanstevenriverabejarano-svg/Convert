@@ -265,8 +265,10 @@ object LiteRTLlm {
             error.get()?.let { throw IllegalStateException("Falló la generación LiteRT-LM", it) }
             val finished = text.toString().trim()
             // Velocidad medida en el propio móvil: lectura del prompt (1ª palabra) y escritura (palabras/s).
+            // Cuántos tokens leyó y escribió: dice si la primera palabra tarda por un prompt demasiado largo.
+            val tokenCount = try { conversation.getTokenCount() } catch (unavailable: Exception) { -1 }
             val speed = GenerationSpeed.measure(sentAt, firstTokenAt.get(), System.currentTimeMillis(), finished,
-                backendName + (if (repair) " · reparación" else ""))
+                backendName + (if (repair) " · reparación" else "")).withTokens(tokenCount)
             GenerationSpeed.record(speed)
             salve.core.trace.ExecutionTrace.note("VELOCIDAD", speed.describe())
             return finished.also { check(it.isNotEmpty()) { "El modelo no devolvió una respuesta pública" } }
