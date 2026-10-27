@@ -226,6 +226,8 @@ object LiteRTLlm {
             val error = AtomicReference<Throwable?>()
             val text = StringBuffer()
             val lastTokenAt = java.util.concurrent.atomic.AtomicLong(0L)
+            val firstTokenAt = java.util.concurrent.atomic.AtomicLong(0L)
+            val sentAt = System.currentTimeMillis()
             conversation.sendMessageAsync(contents, object : MessageCallback {
                 override fun onMessage(message: Message) {
                     if (message.toolCalls.isNotEmpty()) {
@@ -234,6 +236,7 @@ object LiteRTLlm {
                     val chunk = publicText(message)
                     lastTokenAt.set(System.currentTimeMillis())
                     if (chunk.isEmpty()) return
+                    firstTokenAt.compareAndSet(0L, System.currentTimeMillis())
                     text.append(chunk)
                     // A slow UI/TTS consumer must never break generation.
                     try { onChunk?.accept(chunk) } catch (consumer: RuntimeException) { Log.w(TAG, "Fallo al mostrar el flujo", consumer) }
@@ -260,7 +263,13 @@ object LiteRTLlm {
                 throw interrupted
             }
             error.get()?.let { throw IllegalStateException("Falló la generación LiteRT-LM", it) }
-            return text.toString().trim().also { check(it.isNotEmpty()) { "El modelo no devolvió una respuesta pública" } }
+            val finished = text.toString().trim()
+            // Velocidad medida en el propio móvil: lectura del prompt (1ª palabra) y escritura (palabras/s).
+            val speed = GenerationSpeed.measure(sentAt, firstTokenAt.get(), System.currentTimeMillis(), finished,
+                backendName + (if (repair) " · reparación" else ""))
+            GenerationSpeed.record(speed)
+            salve.core.trace.ExecutionTrace.note("VELOCIDAD", speed.describe())
+            return finished.also { check(it.isNotEmpty()) { "El modelo no devolvió una respuesta pública" } }
         }
     }
 }

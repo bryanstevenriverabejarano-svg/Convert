@@ -556,7 +556,8 @@ public class SalveLLM {
     public String getStatusDescription() {
         String reason = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(LocalModelPolicy.REASON_KEY, "");
-        return runtimeStatus + (reason.isEmpty() ? "" : ". Motivo: " + reason);
+        String speed = GenerationSpeed.summary();
+        return runtimeStatus + (reason.isEmpty() ? "" : ". Motivo: " + reason) + (speed.isEmpty() ? "" : ". " + speed);
     }
     public String getCompactStatus() { return runtimeStatus; }
     public String getMemoryDescription() { return DeviceModelMemory.describe(DeviceModelMemory.read(appContext)); }
