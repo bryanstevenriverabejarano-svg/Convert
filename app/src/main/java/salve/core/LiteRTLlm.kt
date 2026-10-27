@@ -39,6 +39,15 @@ object LiteRTLlm {
     @Volatile @JvmStatic var speculativeActive = false
         private set
 
+    /**
+     * Pensar antes de responder (modo pensamiento de Gemma 4) en las llamadas de ESTE hilo. Lo activa
+     * el motor solo para preguntas difíciles; lo pensado va al canal «thought» y nunca al texto público.
+     */
+    private val thinkingHere = ThreadLocal<Boolean>()
+
+    @JvmStatic fun setThinking(enabled: Boolean) { if (enabled) thinkingHere.set(true) else thinkingHere.remove() }
+    @JvmStatic fun isThinking(): Boolean = thinkingHere.get() == true
+
     @OptIn(ExperimentalApi::class)
     private fun setSpeculative(enabled: Boolean): Boolean = try {
         ExperimentalFlags.enableSpeculativeDecoding = enabled
@@ -176,6 +185,12 @@ object LiteRTLlm {
     }
 
     /** Read text only. Private channels and tool arguments never enter chat or TTS. */
+    /** Si el pensamiento llegara mezclado con el texto (sin canal), se quita: lo pensado no se dice. */
+    @JvmStatic
+    fun stripThoughts(text: String): String = text
+        .replace(Regex("(?s)<think>.*?</think>"), "")
+        .replace(Regex("(?s)<\\|channel>thought.*?<channel\\|>"), "")
+
     @JvmStatic
     fun publicText(message: Message): String = message.contents.contents
         .filterIsInstance<Content.Text>().joinToString("") { it.text }
@@ -188,8 +203,12 @@ object LiteRTLlm {
     // temperature; a 512-token JSON cut a bedtime story in half (15/10/2026).
     @JvmStatic @JvmOverloads
     fun conversationConfig(structured: Boolean, repair: Boolean = false, creative: Boolean = false,
-                           speculative: Boolean = speculativeActive): ConversationConfig = conversationConfigFor(
-        structured, repair, creative, speculative)
+                           speculative: Boolean = speculativeActive, thinking: Boolean = isThinking()): ConversationConfig =
+        conversationConfigFor(structured, repair, creative, speculative, thinking && structured && !repair)
+
+    /** Pensamiento solo en turnos estructurados (no en reparaciones de formato ni cuentos). */
+    @JvmStatic fun thinks(structured: Boolean, repair: Boolean, thinking: Boolean = isThinking()): Boolean =
+        thinking && structured && !repair
 
     /**
      * MTP sí o no en esta conversación (LiteRT-LM 0.18 lo permite por conversación). Las respuestas
@@ -198,22 +217,27 @@ object LiteRTLlm {
      */
     @JvmStatic fun useMtp(speculative: Boolean, repair: Boolean): Boolean = speculative && !repair
 
-    private fun conversationConfigFor(structured: Boolean, repair: Boolean, creative: Boolean, speculative: Boolean): ConversationConfig {
+    private fun conversationConfigFor(structured: Boolean, repair: Boolean, creative: Boolean, speculative: Boolean,
+                                      think: Boolean = false): ConversationConfig {
         val mtp = useMtp(speculative, repair)
+        // Pensando, el JSON tampoco se fuerza: la restricción se aplicaría también al pensamiento.
+        val constrained = structured && !mtp && !think
         return ConversationConfig(
         automaticToolCalling = false,
         samplerConfig = if (creative && !structured) SamplerConfig(topK = 64, topP = 0.95, temperature = 0.8)
             else SamplerConfig(topK = 40, topP = 0.9, temperature = 0.3),
-        maxOutputToken = if (repair) 256 else if (creative && !structured) CREATIVE_OUTPUT_TOKENS else 512,
-        thinkingConfig = ThinkingConfig(enableThinking = false),
-        extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured && !mtp,
+        maxOutputToken = if (repair) 256 else if (creative && !structured) CREATIVE_OUTPUT_TOKENS
+            else if (think) 512 + salve.core.reasoning.HardQuestion.THINKING_BUDGET_TOKENS else 512,
+        thinkingConfig = ThinkingConfig(enableThinking = think,
+            thinkingTokenBudget = if (think) salve.core.reasoning.HardQuestion.THINKING_BUDGET_TOKENS else -1),
+        extraContext = mapOf("enable_thinking" to think), enableResponseFormat = constrained,
         enableSpeculativeDecoding = if (speculative) mtp else null)
     }
 
 
     @JvmStatic @JvmOverloads
     fun responseFormat(structured: Boolean, repair: Boolean = false, speculative: Boolean = speculativeActive): ResponseFormat? =
-        if (structured && !useMtp(speculative, repair)) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
+        if (structured && !useMtp(speculative, repair) && !thinks(structured, repair)) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
 
     private fun respond(contents: Contents, structured: Boolean, repair: Boolean, creative: Boolean,
                         onChunk: java.util.function.Consumer<String>?): String {
@@ -263,7 +287,7 @@ object LiteRTLlm {
                 throw interrupted
             }
             error.get()?.let { throw IllegalStateException("Falló la generación LiteRT-LM", it) }
-            val finished = text.toString().trim()
+            val finished = stripThoughts(text.toString()).trim()
             // Velocidad medida en el propio móvil: lectura del prompt (1ª palabra) y escritura (palabras/s).
             // Cuántos tokens leyó y escribió: dice si la primera palabra tarda por un prompt demasiado largo.
             val tokenCount = try { conversation.getTokenCount() } catch (unavailable: Exception) { -1 }
