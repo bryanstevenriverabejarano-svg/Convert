@@ -31,4 +31,14 @@ public class GenerationSpeedTest {
         assertEquals("Velocidad (media de 2): primera palabra 1,5 s · 7,5 palabras/s", GenerationSpeed.summary());
         GenerationSpeed.clear();
     }
+
+    @Test public void reportsConversationSizeWhenKnown() {
+        GenerationSpeed.clear();
+        GenerationSpeed.Sample s = GenerationSpeed.measure(0, 1000, 2000, "uno dos tres cuatro", "x").withTokens(2400);
+        assertTrue(s.describe(), s.describe().contains("2400 tokens en total"));
+        assertFalse(GenerationSpeed.measure(0, 1000, 2000, "uno", "x").describe().contains("tokens"));
+        GenerationSpeed.record(s);
+        assertTrue(GenerationSpeed.summary(), GenerationSpeed.summary().endsWith("2400 tokens por mensaje"));
+        GenerationSpeed.clear();
+    }
 }

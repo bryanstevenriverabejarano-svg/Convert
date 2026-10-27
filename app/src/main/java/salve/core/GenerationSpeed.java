@@ -14,15 +14,20 @@ public final class GenerationSpeed {
         public final long firstWordMs, writingMs;
         public final int words;
         public final String engine;
-        Sample(long firstWordMs, long writingMs, int words, String engine) {
-            this.firstWordMs = firstWordMs; this.writingMs = writingMs; this.words = words; this.engine = engine;
+        /** Tokens que ocupó la conversación (lo leído + lo escrito); -1 si el motor no lo dice. */
+        public final int tokens;
+        Sample(long firstWordMs, long writingMs, int words, String engine) { this(firstWordMs, writingMs, words, engine, -1); }
+        Sample(long firstWordMs, long writingMs, int words, String engine, int tokens) {
+            this.firstWordMs = firstWordMs; this.writingMs = writingMs; this.words = words; this.engine = engine; this.tokens = tokens;
         }
+        /** La misma medida con el tamaño de la conversación en tokens. */
+        public Sample withTokens(int count) { return new Sample(firstWordMs, writingMs, words, engine, count); }
         /** Palabras por segundo al escribir; 0 si fue demasiado corta para medirla bien. */
         public double wordsPerSecond() { return words < 3 || writingMs < 200 ? 0 : words * 1000.0 / writingMs; }
         public String describe() {
             String speed = wordsPerSecond() > 0 ? String.format(Locale.ROOT, " · %.1f palabras/s", wordsPerSecond()).replace('.', ',') : "";
             return String.format(Locale.ROOT, "primera palabra en %.1f s", firstWordMs / 1000.0).replace('.', ',') + speed
-                    + " · " + words + " palabras · " + engine;
+                    + " · " + words + " palabras" + (tokens > 0 ? " · " + tokens + " tokens en total" : "") + " · " + engine;
         }
     }
 
@@ -54,9 +59,12 @@ public final class GenerationSpeed {
             first += s.firstWordMs;
             if (s.wordsPerSecond() > 0) { speed += s.wordsPerSecond(); speedSamples++; }
         }
+        long tokens = 0; int tokenSamples = 0;
+        for (Sample s : recent) if (s.tokens > 0) { tokens += s.tokens; tokenSamples++; }
         String out = String.format(Locale.ROOT, "Velocidad (media de %d): primera palabra %.1f s", recent.size(),
                 first / 1000.0 / recent.size());
         if (speedSamples > 0) out += String.format(Locale.ROOT, " · %.1f palabras/s", speed / speedSamples);
+        if (tokenSamples > 0) out += " · " + (tokens / tokenSamples) + " tokens por mensaje";
         return out.replace('.', ',');
     }
 
