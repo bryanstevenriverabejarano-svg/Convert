@@ -63,7 +63,11 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         }
         val errorMessage = failure ?: if (ready == null) "No se confirmó la activación del modelo" else null
         return if (errorMessage != null) Result.failure(workDataOf(KEY_STATUS to "error", KEY_MESSAGE to errorMessage))
-            else Result.success(workDataOf(KEY_STATUS to "ready", KEY_MESSAGE to listOfNotNull(ready, notice).joinToString("\n")))
+            else {
+                // Recién preparado E2B en un móvil grande: se encola la mejora a E4B (otro trabajo, solo Wi-Fi).
+                salve.core.AutoModelUpgrade.maybeUpgrade(applicationContext)
+                Result.success(workDataOf(KEY_STATUS to "ready", KEY_MESSAGE to listOfNotNull(ready, notice).joinToString("\n")))
+            }
     }
 
     /**
@@ -143,6 +147,18 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         const val KEY_STATUS = "status"
         private const val KEY_FALLBACK = "fallback_only"
         private const val KEY_OPTIONAL_ID = "optional_model_id"
+
+        /**
+         * Como [enqueueOptional], pero detrás de la descarga en curso si la hay (con KEEP se
+         * descartaría en silencio mientras se prepara el modelo por defecto).
+         */
+        @JvmStatic fun enqueueOptionalAfterCurrent(context: Context, id: String) {
+            val work = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
+                .setInputData(workDataOf(KEY_OPTIONAL_ID to id))
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED)
+                    .setRequiresStorageNotLow(true).build()).build()
+            WorkManager.getInstance(context).enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, work)
+        }
 
         /** Descarga y activa un modelo de config/models_optional.json (solo Wi-Fi). */
         @JvmStatic fun enqueueOptional(context: Context, id: String) {

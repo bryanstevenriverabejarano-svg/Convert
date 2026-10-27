@@ -68,6 +68,9 @@ public class SalveLLM {
     private final Context appContext;
     private final salve.core.compute.DistributedCompute distributed;
     private volatile String modelPath;   // ruta absoluta a la carpeta o archivo del modelo
+
+    /** Ruta del modelo seleccionado ahora (null si aún no hay ninguno). */
+    public String activeModelPath() { return modelPath; }
     private String modelLib;    // nombre de la librería del modelo (solo MLC)
     private volatile boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
     private volatile boolean isGguf = false;
