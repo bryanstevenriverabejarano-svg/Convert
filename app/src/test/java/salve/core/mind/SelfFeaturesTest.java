@@ -29,6 +29,11 @@ public class SelfFeaturesTest {
         assertEquals(ORIGIN, SelfFeatures.detect("¿Eres una AGI?"));
         assertTrue(SelfFeatures.facts(ORIGIN).contains("Claude"));
         assertNull("su origen no tiene pantalla", SelfFeatures.offer(ORIGIN, true));
+        assertEquals(REASONING, SelfFeatures.detect("¿Cómo haces las cuentas?"));
+        assertEquals(REASONING, SelfFeatures.detect("¿Cómo razonas?"));
+        assertEquals(REASONING, SelfFeatures.detect("Háblame de tu memoria causal"));
+        assertTrue(SelfFeatures.facts(REASONING).contains("calculadora exacta"));
+        assertTrue(SelfFeatures.facts(OVERVIEW).contains("WhatsApp"));
         assertNull(SelfFeatures.detect("Hola, ¿qué tal?"));
         assertNull(SelfFeatures.detect(null));
     }

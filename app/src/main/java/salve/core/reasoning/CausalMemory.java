@@ -191,6 +191,9 @@ public final class CausalMemory {
         return "Hecho, he olvidado: " + String.join("; ", gone) + ".";
     }
 
+    /** Cuántas relaciones causales tiene guardadas. */
+    public synchronized int size() { return engine.getTotalLinks(); }
+
     /** Lo aprendido, con cuántas veces se lo ha dicho Bryan. */
     String describe() {
         List<String> lines = new ArrayList<>();
