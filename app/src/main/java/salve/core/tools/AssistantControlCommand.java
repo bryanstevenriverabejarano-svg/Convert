@@ -22,7 +22,7 @@ public final class AssistantControlCommand {
         switch (normalized) {
             case "abre finanzas": case "abrir finanzas": case "finanzas de mi negocio": type = Type.FINANCES; break;
             case "mi movil": case "control del movil": case "abre el panel de dispositivos":
-            case "mis dispositivos": case "abre whatsapp": case "abrir whatsapp": type = Type.DEVICES; break;
+            case "mis dispositivos": type = Type.DEVICES; break; // «abre WhatsApp» ya abre la propia app (AppActionCommand)
             case "abre tu habitacion": case "abrir habitacion": case "cambia tu ropa":
             case "evoluciona visualmente": type = Type.ROOM; break;
             case "camina": case "camina por la pantalla": type = Type.WALK; break;

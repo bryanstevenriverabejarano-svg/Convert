@@ -71,7 +71,18 @@ final class PhoneActionsDesk {
 
     boolean procesarControlExplicito(String original) {
         // Órdenes directas del usuario (nunca salida del modelo ni texto de páginas o mensajes).
-        salve.core.devicecontrol.AppActionCommand action = salve.core.devicecontrol.AppActionCommand.parse(original);
+        salve.core.devicecontrol.AppActionCommand parsed = salve.core.devicecontrol.AppActionCommand.parse(original);
+        salve.devices.PhoneActions.InstalledApp app = null;
+        if (parsed != null && parsed.type == salve.core.devicecontrol.AppActionCommand.Type.OPEN_APP) {
+            // Los paneles propios de Salve («abre finanzas», «abre tu panel flotante») tienen prioridad,
+            // y «abre X» solo es una orden si X es una app instalada; si no, sigue la conversación.
+            boolean ownPanel = salve.core.devicecontrol.MobileCommand.parse(original) != null
+                    || salve.core.tools.AssistantControlCommand.parse(original) != null;
+            app = ownPanel ? null : salve.devices.PhoneActions.findApp(m.context, parsed.target);
+            if (app == null) parsed = null;
+        }
+        final salve.core.devicecontrol.AppActionCommand action = parsed;
+        final salve.devices.PhoneActions.InstalledApp appToOpen = app;
         if (action != null) {
             postConversationTask(() -> {
                 if (m.closed) return;
@@ -92,6 +103,10 @@ final class PhoneActionsDesk {
                             m.hablar("Busco a " + action.target + ". Confirma en pantalla antes de que llame.");
                         } catch (RuntimeException unavailable) { m.hablar("No pude abrir el panel de llamadas."); }
                         break;
+                    case OPEN_APP:
+                        m.hablar(salve.devices.PhoneActions.openApp(m.context, appToOpen)
+                                ? "Abro " + appToOpen.label + "." : "Android no me dejó abrir " + appToOpen.label + ".");
+                        break;
                 }
             });
             return true;
@@ -101,7 +116,10 @@ final class PhoneActionsDesk {
             postConversationTask(() -> {
                 if (m.closed) return;
                 Intent panel = new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                if (mobile.type == salve.core.devicecontrol.MobileCommand.Type.WHATSAPP) {
+                if (mobile.type == salve.core.devicecontrol.MobileCommand.Type.WHATSAPP && mobile.draft == null) {
+                    panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_WHATSAPP_CONTACT, mobile.contact)
+                            .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_MESSAGE, mobile.message);
+                } else if (mobile.type == salve.core.devicecontrol.MobileCommand.Type.WHATSAPP) {
                     panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PHONE, mobile.draft.getPhone())
                             .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_MESSAGE, mobile.draft.getMessage());
                 } else {
@@ -110,7 +128,9 @@ final class PhoneActionsDesk {
                 }
                 try {
                     m.context.startActivity(panel);
-                    m.hablar(mobile.draft == null ? "Abro el panel flotante de Salve. Si Android lo pide, activa Mostrar sobre otras apps."
+                    if (mobile.contact != null) m.hablar("Busco a " + mobile.contact
+                            + " en tus contactos y te enseño el borrador. Revísalo; todavía no se ha enviado.");
+                    else m.hablar(mobile.draft == null ? "Abro el panel flotante de Salve. Si Android lo pide, activa Mostrar sobre otras apps."
                             : "He preparado el borrador. Revisa el número y el texto antes de abrirlo en WhatsApp; todavía no se ha enviado.");
                 } catch (RuntimeException unavailable) { m.hablar("No pude abrir el panel móvil. Puedes abrirlo desde Mi móvil."); }
             });

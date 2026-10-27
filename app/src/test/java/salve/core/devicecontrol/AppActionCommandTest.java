@@ -41,6 +41,16 @@ public class AppActionCommandTest {
         assertNull(AppActionCommand.parse("llama a " + "x".repeat(80)));
     }
 
+    @Test public void openAppKeepsJustTheAppName() {
+        expect("abre la cámara", OPEN_APP, "la cámara");
+        expect("Salve, abre WhatsApp", OPEN_APP, "WhatsApp");
+        expect("abre la aplicación de ajustes", OPEN_APP, "ajustes");
+        expect("lanza Spotify", OPEN_APP, "Spotify");
+        expect("abre maps hacia el aeropuerto", NAVIGATE, "el aeropuerto");
+        assertNull(AppActionCommand.parse("abre WhatsApp y escribe a Ana"));
+        assertNull(AppActionCommand.parse("abre la puerta que da al jardín de atrás"));
+    }
+
     @Test public void ordinaryTalkAndMultilineTextAreIgnored() {
         assertNull(AppActionCommand.parse("¿qué tiempo hace?"));
         assertNull(AppActionCommand.parse("vamos"));

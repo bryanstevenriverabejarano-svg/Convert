@@ -27,6 +27,17 @@ public final class WhatsAppDraft {
         return new WhatsAppDraft(phone, message);
     }
 
+    /**
+     * Número de la agenda en formato internacional si ya lo trae (+34…, 0034…); null si es local.
+     * Los números locales se convierten con el país del móvil en la pantalla, no aquí.
+     */
+    public static String internationalOrNull(String number) {
+        if (number == null) return null;
+        String clean = number.trim().replaceAll("[ ()./-]", "");
+        if (clean.startsWith("00")) clean = "+" + clean.substring(2);
+        return clean.matches("\\+[1-9][0-9]{6,14}") ? clean : null;
+    }
+
     public String getPhone() { return phone; }
     public String getMessage() { return message; }
 
