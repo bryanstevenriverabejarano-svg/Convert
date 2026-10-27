@@ -33,4 +33,13 @@ class StructuredLocalOutputTest {
         // A structured turn never becomes creative: the JSON contract keeps its budget.
         assertEquals(512, LiteRTLlm.conversationConfig(true, false, true).maxOutputToken!!)
     }
+    @Test fun speculativeDecodingDropsTheForcedJsonButKeepsBudgets() {
+        // LiteRT-LM#3944: MTP + ResponseFormat.json rompe la salida; el JSON lo valida CognitiveTurn.
+        val config = LiteRTLlm.conversationConfig(true, speculative = true)
+        assertFalse(config.enableResponseFormat)
+        assertNull(LiteRTLlm.responseFormat(true, true))
+        assertEquals(512, config.maxOutputToken!!)
+        assertEquals(0.3, config.samplerConfig!!.temperature, 0.000001)
+        assertTrue(LiteRTLlm.conversationConfig(true, speculative = false).enableResponseFormat)
+    }
 }

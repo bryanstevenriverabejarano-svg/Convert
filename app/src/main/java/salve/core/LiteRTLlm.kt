@@ -8,6 +8,7 @@ import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.ExperimentalFlags
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.ResponseFormat
@@ -29,6 +30,23 @@ object LiteRTLlm {
     @Volatile private var initialized = false
     @Volatile private var backendName = "sin cargar"
     @Volatile private var contextTokens = 4096
+    /**
+     * Decodificación especulativa activa. Con ella NO se usa el formato JSON forzado: LiteRT-LM 0.17/0.18
+     * rompe la salida cuando se combinan (issue google-ai-edge/LiteRT-LM#3944). El JSON se pide en el
+     * prompt y lo valida CognitiveTurn, que ya repara o recupera el texto si llega mal.
+     */
+    @Volatile @JvmStatic var speculativeActive = false
+        private set
+
+    private fun setSpeculative(enabled: Boolean): Boolean = try {
+        ExperimentalFlags.enableSpeculativeDecoding = enabled
+        speculativeActive = enabled
+        true
+    } catch (unsupported: Throwable) {
+        if (unsupported is VirtualMachineError) throw unsupported
+        speculativeActive = false
+        false
+    }
 
     @JvmStatic fun isInitialized(): Boolean = initialized
     @JvmStatic fun getBackendName(): String = backendName
@@ -44,6 +62,7 @@ object LiteRTLlm {
         visionEnabled = false
         backendName = "sin cargar"
         contextTokens = 4096
+        speculativeActive = false
         val oldEngine = engine
         val oldLegacy = legacy
         engine = null
@@ -80,22 +99,9 @@ object LiteRTLlm {
             if (withVision) attempts += Triple("LiteRT-LM GPU · visión CPU", { Backend.GPU() }, { Backend.CPU(threadCount = 4) })
             attempts += Triple("LiteRT-LM CPU", { Backend.CPU(threadCount = 4) },
                 if (withVision) ({ Backend.CPU(threadCount = 4) }) else null)
-            var lastError: Throwable? = null
-            for ((name, text, vision) in attempts) {
-                try {
-                    engine = load(text(), vision?.invoke())
-                    backendName = name
-                    lastError = null
-                    break
-                } catch (error: Exception) {
-                    Log.w(TAG, "$name no disponible", error)
-                    lastError = error
-                }
-            }
-            if (lastError != null && tokens > 4096) {
-                // Si el contexto ampliado no cabe o el modelo no lo admite, se vuelve a 4.096.
-                Log.w(TAG, "Contexto de $tokens tokens no disponible; reintentando con 4096")
-                tokens = 4096
+            fun loadAll(): Throwable? {
+                tokens = maxTokens
+                var lastError: Throwable? = null
                 for ((name, text, vision) in attempts) {
                     try {
                         engine = load(text(), vision?.invoke())
@@ -107,7 +113,34 @@ object LiteRTLlm {
                         lastError = error
                     }
                 }
+                if (lastError != null && tokens > 4096) {
+                    // Si el contexto ampliado no cabe o el modelo no lo admite, se vuelve a 4.096.
+                    Log.w(TAG, "Contexto de $tokens tokens no disponible; reintentando con 4096")
+                    tokens = 4096
+                    for ((name, text, vision) in attempts) {
+                        try {
+                            engine = load(text(), vision?.invoke())
+                            backendName = name
+                            lastError = null
+                            break
+                        } catch (error: Exception) {
+                            Log.w(TAG, "$name no disponible", error)
+                            lastError = error
+                        }
+                    }
+                }
+                return lastError
             }
+            // Decodificación especulativa (MTP de Gemma 4): ~1,6× en E2B y ~2,2× en E4B según Google.
+            // Si el motor no la admite con este modelo o dispositivo, se carga igual que antes sin ella.
+            val mtp = setSpeculative(true)
+            var lastError = loadAll()
+            if (lastError != null && mtp) {
+                Log.w(TAG, "Decodificación especulativa no disponible; se carga sin ella", lastError)
+                setSpeculative(false)
+                lastError = loadAll()
+            }
+            if (speculativeActive) backendName += " · MTP"
             lastError?.let { throw it }
             contextTokens = tokens
         }
@@ -152,18 +185,19 @@ object LiteRTLlm {
     // Creative text runs without the JSON grammar (it may use paragraphs) and with more room and
     // temperature; a 512-token JSON cut a bedtime story in half (15/10/2026).
     @JvmStatic @JvmOverloads
-    fun conversationConfig(structured: Boolean, repair: Boolean = false, creative: Boolean = false): ConversationConfig = ConversationConfig(
+    fun conversationConfig(structured: Boolean, repair: Boolean = false, creative: Boolean = false,
+                           speculative: Boolean = speculativeActive): ConversationConfig = ConversationConfig(
         automaticToolCalling = false,
         samplerConfig = if (creative && !structured) SamplerConfig(topK = 64, topP = 0.95, temperature = 0.8)
             else SamplerConfig(topK = 40, topP = 0.9, temperature = 0.3),
         maxOutputToken = if (repair) 256 else if (creative && !structured) CREATIVE_OUTPUT_TOKENS else 512,
         thinkingConfig = ThinkingConfig(enableThinking = false),
-        extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured)
+        extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured && !speculative)
 
 
-    @JvmStatic
-    fun responseFormat(structured: Boolean): ResponseFormat? =
-        if (structured) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
+    @JvmStatic @JvmOverloads
+    fun responseFormat(structured: Boolean, speculative: Boolean = speculativeActive): ResponseFormat? =
+        if (structured && !speculative) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
 
     private fun respond(contents: Contents, structured: Boolean, repair: Boolean, creative: Boolean,
                         onChunk: java.util.function.Consumer<String>?): String {
