@@ -8,6 +8,7 @@ import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.ExperimentalFlags
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
@@ -38,6 +39,7 @@ object LiteRTLlm {
     @Volatile @JvmStatic var speculativeActive = false
         private set
 
+    @OptIn(ExperimentalApi::class)
     private fun setSpeculative(enabled: Boolean): Boolean = try {
         ExperimentalFlags.enableSpeculativeDecoding = enabled
         speculativeActive = enabled
@@ -186,25 +188,39 @@ object LiteRTLlm {
     // temperature; a 512-token JSON cut a bedtime story in half (15/10/2026).
     @JvmStatic @JvmOverloads
     fun conversationConfig(structured: Boolean, repair: Boolean = false, creative: Boolean = false,
-                           speculative: Boolean = speculativeActive): ConversationConfig = ConversationConfig(
+                           speculative: Boolean = speculativeActive): ConversationConfig = conversationConfigFor(
+        structured, repair, creative, speculative)
+
+    /**
+     * MTP sí o no en esta conversación (LiteRT-LM 0.18 lo permite por conversación). Las respuestas
+     * normales van con MTP y sin JSON forzado (rápidas); la reparación de formato va sin MTP y con el
+     * JSON forzado, la combinación que funciona bien: así el fallo #3944 no cuesta respuestas.
+     */
+    @JvmStatic fun useMtp(speculative: Boolean, repair: Boolean): Boolean = speculative && !repair
+
+    private fun conversationConfigFor(structured: Boolean, repair: Boolean, creative: Boolean, speculative: Boolean): ConversationConfig {
+        val mtp = useMtp(speculative, repair)
+        return ConversationConfig(
         automaticToolCalling = false,
         samplerConfig = if (creative && !structured) SamplerConfig(topK = 64, topP = 0.95, temperature = 0.8)
             else SamplerConfig(topK = 40, topP = 0.9, temperature = 0.3),
         maxOutputToken = if (repair) 256 else if (creative && !structured) CREATIVE_OUTPUT_TOKENS else 512,
         thinkingConfig = ThinkingConfig(enableThinking = false),
-        extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured && !speculative)
+        extraContext = mapOf("enable_thinking" to false), enableResponseFormat = structured && !mtp,
+        enableSpeculativeDecoding = if (speculative) mtp else null)
+    }
 
 
     @JvmStatic @JvmOverloads
-    fun responseFormat(structured: Boolean, speculative: Boolean = speculativeActive): ResponseFormat? =
-        if (structured && !speculative) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
+    fun responseFormat(structured: Boolean, repair: Boolean = false, speculative: Boolean = speculativeActive): ResponseFormat? =
+        if (structured && !useMtp(speculative, repair)) ResponseFormat.json(CognitiveOutputConstraints.jsonSchema()) else null
 
     private fun respond(contents: Contents, structured: Boolean, repair: Boolean, creative: Boolean,
                         onChunk: java.util.function.Consumer<String>?): String {
         val activeEngine = checkNotNull(engine) { "El runtime LiteRT-LM no está cargado" }
         // The application supplies the history; do not keep a second session or execute native tool calls.
         val config = conversationConfig(structured, repair, creative)
-        val format = responseFormat(structured)
+        val format = responseFormat(structured, repair)
         activeEngine.createConversation(config).use { conversation ->
             val done = CountDownLatch(1)
             val error = AtomicReference<Throwable?>()
