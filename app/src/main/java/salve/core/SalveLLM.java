@@ -559,7 +559,12 @@ public class SalveLLM {
         String speed = GenerationSpeed.summary();
         return runtimeStatus + (reason.isEmpty() ? "" : ". Motivo: " + reason) + (speed.isEmpty() ? "" : ". " + speed);
     }
-    public String getCompactStatus() { return runtimeStatus; }
+    /** Cabecera: modelo y estado, si usa MTP y la velocidad de la última respuesta, medida en el móvil. */
+    public String getCompactStatus() {
+        GenerationSpeed.Sample last = GenerationSpeed.last();
+        return runtimeStatus + (isLiteRT && LiteRTLlm.getSpeculativeActive() ? " · MTP" : "")
+                + (last == null ? "" : " · " + last.compact());
+    }
     public String getMemoryDescription() { return DeviceModelMemory.describe(DeviceModelMemory.read(appContext)); }
     /** Checks before transferring gigabytes. Activation checks again after releasing the previous engine. */
     public synchronized void checkModelPreparation(String id) {

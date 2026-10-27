@@ -31,6 +31,7 @@ public final class VoiceSelectionPolicy {
         // Automatic selection still prefers installed offline speech when network is allowed.
         // A user's explicit, eligible voice choice takes precedence in select().
         result.sort(Comparator.comparing((Choice v) -> v.network)
+                .thenComparingInt(v -> femininePriority(v.name))
                 .thenComparingInt(v -> regionPriority(v.country))
                 .thenComparing(Comparator.comparingInt((Choice v) -> v.quality).reversed())
                 .thenComparingInt(v -> v.latency).thenComparing(v -> v.name));
@@ -50,6 +51,30 @@ public final class VoiceSelectionPolicy {
         String country = selected.country.toUpperCase(Locale.ROOT);
         if (country.matches("[A-Z]{2}") || "419".equals(country)) return "es-" + country;
         return "es-MX";
+    }
+
+    /**
+     * Idioma para reconocer al que habla: el del móvil si está en español (es-ES, es-MX…), porque su
+     * paquete sin red es el que suele estar instalado; si no, el que corresponde a la voz de Salve.
+     */
+    public static String speakerLanguageTag(Locale device, String voiceTag) {
+        if (device != null && "es".equalsIgnoreCase(device.getLanguage())) {
+            String country = device.getCountry() == null ? "" : device.getCountry().toUpperCase(Locale.ROOT);
+            return country.matches("[A-Z]{2}") ? "es-" + country : "es-ES";
+        }
+        return voiceTag == null || voiceTag.isEmpty() ? "es-ES" : voiceTag;
+    }
+
+    /**
+     * Salve tiene voz femenina. Android no informa del género, pero algunos motores lo ponen en el
+     * nombre: «…#female_1…» / «…#male_1…» (Google) o «SMTf00» / «SMTm00» (Samsung). Las que lo dicen
+     * van primero; las masculinas, al final; el resto, en medio. Una voz elegida por Bryan siempre manda.
+     */
+    static int femininePriority(String name) {
+        String n = name == null ? "" : name.toLowerCase(Locale.ROOT);
+        if (n.contains("female") || n.contains("femenin") || n.matches(".*smtf\\d\\d.*")) return 0;
+        if (n.matches(".*(?<!fe)male.*") || n.contains("masculin") || n.matches(".*smtm\\d\\d.*")) return 2;
+        return 1;
     }
 
     private static int regionPriority(String country) {
