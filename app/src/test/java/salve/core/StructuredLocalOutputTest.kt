@@ -54,4 +54,19 @@ class StructuredLocalOutputTest {
         assertTrue(config.enableResponseFormat)
         assertNull(config.enableSpeculativeDecoding)
     }
+    @Test fun hardQuestionsThinkWithABudgetAndWithoutForcedJson() {
+        val config = LiteRTLlm.conversationConfig(true, speculative = false, thinking = true)
+        assertTrue(config.thinkingConfig!!.enableThinking)
+        assertEquals(salve.core.reasoning.HardQuestion.THINKING_BUDGET_TOKENS, config.thinkingConfig!!.thinkingTokenBudget)
+        assertFalse(config.enableResponseFormat)
+        assertEquals(512 + salve.core.reasoning.HardQuestion.THINKING_BUDGET_TOKENS, config.maxOutputToken!!)
+        // Reparar el formato nunca piensa: va rápido y con el JSON forzado.
+        val repair = LiteRTLlm.conversationConfig(true, repair = true, speculative = false, thinking = true)
+        assertFalse(repair.thinkingConfig!!.enableThinking)
+        assertTrue(repair.enableResponseFormat)
+    }
+    @Test fun thoughtsNeverReachThePublicText() {
+        assertEquals("{\"mode\":\"respond\"}", LiteRTLlm.stripThoughts("<think>calculo…</think>{\"mode\":\"respond\"}"))
+        assertEquals("Hola", LiteRTLlm.stripThoughts("<|channel>thought\nprimero…<channel|>Hola"))
+    }
 }

@@ -1359,8 +1359,19 @@ public class MotorConversacional {
         ModelResult creativeResult = creativeTurn ? generarTextoCreativo(entrada, storyTurn ? story : null, creativeParts, live) : null;
         boolean creativeOk = creativeUsable(creativeResult);
         if (live != null && !creativeOk) live.abandon();
-        CognitiveTurn.Outcome cognitive = creativeOk ? null : runCognitiveTurn(entrada, responseContext, resumenAccion,
+        // Preguntas difíciles (acertijos, problemas con varios datos, planes, «razona»): piensa antes de responder.
+        final boolean pensar = !creativeOk && !storyTurn && salve.core.reasoning.HardQuestion.needsThinking(entrada);
+        if (pensar) {
+            estado("Lo pienso con calma…");
+            salve.core.trace.ExecutionTrace.note("PENSAMIENTO", "pregunta difícil: Gemma piensa antes de responder (hasta "
+                    + salve.core.reasoning.HardQuestion.THINKING_BUDGET_TOKENS + " tokens)");
+        }
+        LiteRTLlm.setThinking(pensar);
+        CognitiveTurn.Outcome cognitive;
+        try {
+        cognitive = creativeOk ? null : runCognitiveTurn(entrada, responseContext, resumenAccion,
                 entradaPorVoz, evidence, false);
+        } finally { LiteRTLlm.setThinking(false); }
         if (cognitive != null && cognitive.handedOff) return;
         // Red de seguridad: «Aquí tienes uno corto…» sin el texto detrás → lo escribe en texto libre.
         if (!creativeOk && activePhoto == null && cognitive.result.isSuccess()
