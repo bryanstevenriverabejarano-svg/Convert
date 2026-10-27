@@ -64,6 +64,11 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     private TextView status;
     private Button interrupt;
     private String recognitionErrorText;
+    /**
+     * Tras «faltan datos del idioma» en el reconocimiento sin red, esta sesión usa el reconocimiento
+     * normal de Android (puede usar Internet) y se pide la descarga del paquete para la próxima vez.
+     */
+    private boolean standardRecognizer;
     private long displayedReplyToken = -1L;
 
     public LiveVoiceSession(AppCompatActivity activity, MotorConversacional motor, SalveStageController stage) {
@@ -184,8 +189,9 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             return;
         }
         try {
-            boolean onDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            boolean onDevice = !standardRecognizer && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                     && SpeechRecognizer.isOnDeviceRecognitionAvailable(activity);
+            final String language = recognitionLanguage();
             if (!onDevice && !SpeechRecognizer.isRecognitionAvailable(activity)) {
                 recognitionErrorText = "No hay un servicio de reconocimiento disponible en Android.";
                 apply(loop.stop(VoiceConversationLoop.StopReason.RECOGNIZER_UNAVAILABLE));
@@ -195,8 +201,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                     ? SpeechRecognizer.createOnDeviceSpeechRecognizer(activity)
                     : SpeechRecognizer.createSpeechRecognizer(activity);
             recognizer = capture;
-            backend = (onDevice ? "Reconocimiento: servicio local de Android. "
-                    : "Reconocimiento: servicio de Android; puede enviar audio por Internet. ")
+            backend = (onDevice ? "Reconocimiento: servicio local de Android (" + language + "). "
+                    : "Reconocimiento: servicio de Android (" + language + "); puede enviar audio por Internet. ")
                     + "\n" + motor.getVoiceStatus();
             motor.setListening(true);
             capture.setRecognitionListener(new RecognitionListener() {
@@ -222,8 +228,18 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                     if (!metrics.recognitionFailed(token, timestamp, error)) return;
                     recognitionErrorText = recognitionErrorMessage(error);
                     reportMetrics();
+                    VoiceConversationLoop.RecognitionFailure failure = recognitionFailure(error);
+                    if (onDevice && languageMissing(error) && SpeechRecognizer.isRecognitionAvailable(activity)) {
+                        // El paquete sin red de ese idioma no está instalado: se pide su descarga para la
+                        // próxima vez y, mientras, se reintenta con el reconocimiento normal de Android.
+                        requestLanguageDownload(capture, language);
+                        standardRecognizer = true;
+                        recognitionErrorText = "Falta el paquete de voz sin Internet (" + language
+                                + "); lo pido a Android y mientras uso su reconocimiento normal.";
+                        failure = VoiceConversationLoop.RecognitionFailure.TRANSIENT;
+                    }
                     destroyRecognizer();
-                    apply(loop.recognitionFailed(token, recognitionFailure(error), timestamp));
+                    apply(loop.recognitionFailed(token, failure, timestamp));
                 }
                 @Override public void onResults(Bundle results) {
                     if (!current()) return;
@@ -244,7 +260,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             });
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, motor.getRecognitionLanguageTag());
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language);
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
             intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
             if (onDevice) intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
@@ -255,6 +271,32 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             // Do not silently switch a failed local recognizer to a remote provider.
             recognitionErrorText = "No se pudo iniciar el servicio de reconocimiento de Android.";
             apply(loop.stop(VoiceConversationLoop.StopReason.RECOGNIZER_UNAVAILABLE));
+        }
+    }
+
+    /**
+     * Lo que importa para reconocer es cómo habla Bryan, no el acento de la voz de Salve: si el móvil
+     * está en español se usa su idioma (es-ES en un Galaxy de España, cuyo paquete sin red ya está
+     * instalado); antes se pedía es-MX por la voz y Android respondía «faltan datos».
+     */
+    private String recognitionLanguage() {
+        return salve.core.voice.VoiceSelectionPolicy.speakerLanguageTag(
+                java.util.Locale.getDefault(), motor.getRecognitionLanguageTag());
+    }
+
+    private static boolean languageMissing(int error) {
+        return error == SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE || error == SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED;
+    }
+
+    private void requestLanguageDownload(SpeechRecognizer recognizer, String language) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        try {
+            Intent download = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE, language);
+            recognizer.triggerModelDownload(download);
+        } catch (RuntimeException unavailable) {
+            Log.w("Salve/Voz", "Android no aceptó descargar el paquete de " + language);
         }
     }
 

@@ -24,6 +24,12 @@ public final class GenerationSpeed {
         public Sample withTokens(int count) { return new Sample(firstWordMs, writingMs, words, engine, count); }
         /** Palabras por segundo al escribir; 0 si fue demasiado corta para medirla bien. */
         public double wordsPerSecond() { return words < 3 || writingMs < 200 ? 0 : words * 1000.0 / writingMs; }
+        /** Para la cabecera del chat: «1ª palabra 1,4 s · 21 pal/s». */
+        public String compact() {
+            String out = String.format(Locale.ROOT, "1ª palabra %.1f s", firstWordMs / 1000.0);
+            if (wordsPerSecond() > 0) out += String.format(Locale.ROOT, " · %.0f pal/s", wordsPerSecond());
+            return out.replace('.', ',');
+        }
         public String describe() {
             String speed = wordsPerSecond() > 0 ? String.format(Locale.ROOT, " · %.1f palabras/s", wordsPerSecond()).replace('.', ',') : "";
             return String.format(Locale.ROOT, "primera palabra en %.1f s", firstWordMs / 1000.0).replace('.', ',') + speed
