@@ -23,10 +23,12 @@ public final class AvatarBodyVersions {
     public static final String CURRENT = "realistic";
     public static final String V1 = "realistic_v1";
     /** Variantes del Vestuario que comparten las animaciones de la actual y solo cambian su base. */
-    public static final String OPEN = "realistic_abierto", OCT26 = "realistic_2610";
+    public static final String TILTED = "realistic_inclinada", OPEN = "realistic_abierto", OCT26 = "realistic_2610";
     private static final List<Version> ALL = Collections.unmodifiableList(Arrays.asList(
             new Version(CURRENT, "Salve actual", "27 oct 2026",
-                    "Traje blanco de una pieza con el pecho cubierto, colas y líneas cian que recorren su cuerpo desde el núcleo del cuello; anda, gira, baila, duerme y se despierta."),
+                    "Traje blanco de una pieza con el pecho cubierto y la cabeza recta, colas y líneas cian que recorren su cuerpo desde el núcleo del cuello; anda, gira, baila, duerme y se despierta."),
+            new Version(TILTED, "Salve · cabeza inclinada", "27 oct 2026",
+                    "La misma de pecho cubierto, sonriendo con la cabeza ladeada; mismas animaciones."),
             new Version(OPEN, "Salve · escote abierto", "27 oct 2026",
                     "La misma Salve con el escote abierto; mismas animaciones."),
             new Version(OCT26, "Salve del 26 de octubre", "26 oct 2026",

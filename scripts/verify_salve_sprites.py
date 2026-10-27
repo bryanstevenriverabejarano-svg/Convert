@@ -7,7 +7,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 # avatar/realistic = Salve actual; avatar/realistic_v1 = su primer cuerpo, conservado en el Vestuario.
-BODIES = ('realistic', 'realistic_abierto', 'realistic_2610', 'realistic_v1')
+BODIES = ('realistic', 'realistic_inclinada', 'realistic_abierto', 'realistic_2610', 'realistic_v1')
 total = 0
 for body in BODIES:
   ASSETS = ROOT / 'app/src/main/assets/avatar' / body

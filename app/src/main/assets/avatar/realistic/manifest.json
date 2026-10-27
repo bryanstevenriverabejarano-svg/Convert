@@ -1,12 +1,12 @@
 {
   "version": 4,
-  "identity": "Salve — base de pecho cubierto (27-10-2026); posturas y animaciones de las ilustraciones aprobadas el 26-10-2026",
+  "identity": "Salve — base de pecho cubierto y cabeza recta (27-10-2026); posturas y animaciones de las ilustraciones aprobadas el 26-10-2026",
   "rendering": "Native Canvas 2D; generated RGBA sprites, no 3D mesh. base.png es además el cuerpo vivo (capa astral).",
   "sheets": {
     "base": {
       "width": 1024,
       "height": 1536,
-      "sha256": "04d3d155a3afef1517819cb44942a0f76c86dffe345847b59c58d8f7a950ad32",
+      "sha256": "b2ec3020143d1de8758d4cc6864b7c8ab9ef452616c79ed54ffa0e8bc590180f",
       "frames": [
         [
           0,

@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "identity": "Salve de pecho cubierto con la cabeza inclinada (27-10-2026), opción del Vestuario",
+  "extends": "realistic",
+  "rendering": "Native Canvas 2D. Solo base.png y su capa astral son propios; el resto de hojas se toman de avatar/realistic.",
+  "sheets": {
+    "base": {
+      "width": 1024,
+      "height": 1536,
+      "sha256": "04d3d155a3afef1517819cb44942a0f76c86dffe345847b59c58d8f7a950ad32",
+      "frames": [
+        [
+          0,
+          0,
+          1024,
+          1536
+        ]
+      ],
+      "frameHeights": [
+        1536
+      ]
+    }
+  }
+}
