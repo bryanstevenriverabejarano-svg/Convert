@@ -175,7 +175,8 @@ jobs:
       # Los artefactos son de corta vida y no deben tumbar la CI si se llena la cuota de almacenamiento:
       # el APK para instalar se publica en Releases (salve-release.yml), que no gasta esta cuota.
       - name: Upload test reports
-        if: ${{ always() }}
+        # Solo si algo falla, para poder ver qué pasó; si todo pasa no hace falta guardarlos.
+        if: ${{ failure() }}
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -191,19 +192,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
-      - name: Upload tested ${{ matrix.variant }} APK
-        continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: salve-${{ matrix.variant }}-arm64-${{ github.sha }}
-          path: |
-            app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk
-            app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk.sha256
-            app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk.signing.txt
-            app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk.badging.txt
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 3
+      # Sin subir el APK como artefacto: llenaba la cuota de GitHub (2 × 167 MB por cada cambio) y nadie lo
+      # usaba. El móvil instala Salve desde la release «salve-ultima» (salve-release.yml), que no gasta esa cuota.
 
   agent-sandbox:
     name: Agent tools in real isolated containers
