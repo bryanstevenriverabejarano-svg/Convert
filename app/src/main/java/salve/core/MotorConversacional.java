@@ -793,6 +793,14 @@ public class MotorConversacional {
         }
         String modelSwitch = cambioDeModelo(entrada);
         if (modelSwitch != null) { hablar(modelSwitch); return; }
+        if (creatorSide() && salve.core.voice.WakeWord.asksToEnable(entrada)) {
+            hablar(salve.services.WakeWordService.enable(context));
+            return;
+        }
+        if (salve.core.voice.WakeWord.asksToDisable(entrada)) {
+            hablar(salve.services.WakeWordService.disable(context));
+            return;
+        }
         if (salve.core.voice.AssistantLaunch.asksToBecomeAssistant(entrada)) {
             try {
                 context.startActivity(new android.content.Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)

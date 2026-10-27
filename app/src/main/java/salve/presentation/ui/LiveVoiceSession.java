@@ -72,6 +72,14 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     /** Botón de los auriculares (play/pausa o el botón del cable): corta a Salve o vuelve a escuchar. */
     private android.media.session.MediaSession headsetButton;
     private long displayedReplyToken = -1L;
+    /** Primera petición dicha junto al nombre («Salve, ¿qué hora es?»): se envía sin volver a escuchar. */
+    private String initialRequest;
+    private static volatile int showing;
+
+    /** ¿Hay alguna conversación por voz abierta? (La palabra de activación cede el micrófono mientras tanto.) */
+    public static boolean isAnyShowing() { return showing > 0; }
+
+    public void setInitialRequest(String request) { initialRequest = request; }
 
     public LiveVoiceSession(AppCompatActivity activity, MotorConversacional motor, SalveStageController stage) {
         this.activity = activity;
@@ -116,7 +124,18 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         activity.getOnBackPressedDispatcher().addCallback(activity, back);
         status.setText("Preparando la voz…");
         backend = motor.getVoiceStatus();
+        showing++;
+        salve.services.WakeWordService.pauseForConversation();
         VoiceConversationLoop.Step first = loop.start(now());
+        if (initialRequest != null && first.action == VoiceConversationLoop.Action.LISTEN) {
+            VoiceConversationLoop.Step submit = loop.recognized(first.token, initialRequest, now());
+            if (submit.action == VoiceConversationLoop.Action.SUBMIT) {
+                long at = now();
+                if (metrics.begin(first.token, at)) metrics.recognized(first.token, at);
+                first = submit;
+            }
+            initialRequest = null;
+        }
         if (activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             apply(loop.stop(VoiceConversationLoop.StopReason.MICROPHONE_PERMISSION));
         } else if (!motor.isVoiceReady()) {
@@ -137,6 +156,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         if (dismissed) return;
         apply(loop.stop(VoiceConversationLoop.StopReason.LIFECYCLE));
         dismissed = true;
+        if (showing > 0) showing--;
+        salve.services.WakeWordService.resumeAfterConversation();
         stage.setVoicePresence(null);
         releaseResources();
         controls.setVisibility(View.GONE);

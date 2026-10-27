@@ -7,12 +7,15 @@ import java.util.Locale;
 public final class AssistantLaunch {
     public static final String ACTION_ASSIST = "android.intent.action.ASSIST";
     public static final String ACTION_VOICE_COMMAND = "android.intent.action.VOICE_COMMAND";
+    /** La palabra de activación «Salve» (WakeWordService); EXTRA_REQUEST lleva lo dicho tras el nombre. */
+    public static final String ACTION_WAKE = "salve.action.WAKE_WORD";
+    public static final String EXTRA_REQUEST = "salve.extra.WAKE_REQUEST";
 
     private AssistantLaunch() { }
 
     /** Botón lateral / gesto (ASSIST) o botón de voz de unos auriculares (VOICE_COMMAND). */
     public static boolean isVoiceLaunch(String action) {
-        return ACTION_ASSIST.equals(action) || ACTION_VOICE_COMMAND.equals(action);
+        return ACTION_ASSIST.equals(action) || ACTION_VOICE_COMMAND.equals(action) || ACTION_WAKE.equals(action);
     }
 
     /** «Hazte mi asistente», «quiero que seas el asistente del móvil»… */

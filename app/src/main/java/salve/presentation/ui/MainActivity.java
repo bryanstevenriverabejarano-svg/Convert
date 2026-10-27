@@ -167,6 +167,8 @@ public class MainActivity extends AppCompatActivity {
     // ===== CEREBRO Y OÍDOS =====
     private android.speech.SpeechRecognizer speechRecognizer;
     private LiveVoiceSession liveVoiceSession;
+    /** Lo dicho tras «Salve» con la palabra de activación; se envía como primer mensaje del modo voz. */
+    private String pendingWakeRequest;
     private boolean pendingLiveVoicePermission;
     private boolean pendingLiveVoiceStart;
     private boolean activityResumed;
@@ -724,6 +726,8 @@ public class MainActivity extends AppCompatActivity {
         finalizarEscucha();
         motorConversacional.cancelarTurnoVoz();
         liveVoiceSession = new LiveVoiceSession(this, motorConversacional, stageController);
+        liveVoiceSession.setInitialRequest(pendingWakeRequest);
+        pendingWakeRequest = null;
         liveVoiceSession.show();
     }
 
@@ -1072,6 +1076,10 @@ public class MainActivity extends AppCompatActivity {
      */
     private void handleVoiceLaunch(Intent intent) {
         if (!salve.core.voice.AssistantLaunch.isVoiceLaunch(intent == null ? null : intent.getAction())) return;
+        // Llamada por su nombre: lo que Bryan dijo tras «Salve» es su primera petición.
+        String request = intent.getStringExtra(salve.core.voice.AssistantLaunch.EXTRA_REQUEST);
+        pendingWakeRequest = request == null || request.trim().isEmpty() ? null : request.trim();
+        intent.removeExtra(salve.core.voice.AssistantLaunch.EXTRA_REQUEST);
         intent.setAction(Intent.ACTION_MAIN);
         if (activityResumed) abrirModoVoz(); else pendingLiveVoiceStart = true;
     }
@@ -1103,6 +1111,8 @@ public class MainActivity extends AppCompatActivity {
             pendingLiveVoiceStart = false;
             abrirModoVoz();
         }
+        // Si Bryan activó la palabra «Salve», vuelve a escuchar (solo se puede iniciar con la app delante).
+        salve.services.WakeWordService.ensureRunning(getApplicationContext());
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(true);
         // Salve se sincroniza sola: despierta la sincronización aunque un intento anterior la dejara aplazada.
         if (!salve.data.sync.CloudAutoSync.kick(getApplicationContext(), "app abierta"))
