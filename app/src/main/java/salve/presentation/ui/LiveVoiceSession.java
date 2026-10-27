@@ -64,6 +64,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     private TextView status;
     private Button interrupt;
     private String recognitionErrorText;
+    /** Botón de los auriculares (play/pausa o el botón del cable): corta a Salve o vuelve a escuchar. */
+    private android.media.session.MediaSession headsetButton;
     private long displayedReplyToken = -1L;
 
     public LiveVoiceSession(AppCompatActivity activity, MotorConversacional motor, SalveStageController stage) {
@@ -118,6 +120,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             apply(loop.stop(VoiceConversationLoop.StopReason.AUDIO_FOCUS));
         } else {
             controls.setKeepScreenOn(true);
+            listenToHeadsetButton();
             // Conversation brings her out of the sleeping pose so speech gestures stay visible.
             salve.avatar.AvatarStore.get(activity).change(salve.avatar.AvatarState::wake);
             apply(first);
@@ -331,8 +334,46 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         } catch (RuntimeException unavailable) { return false; }
     }
 
+    /**
+     * Mientras dura el modo voz, el botón de los auriculares hace lo mismo que «Interrumpir»: si Salve
+     * habla, la corta y te escucha; si ya terminó, vuelve a abrir la escucha. Android envía el botón a
+     * la última sesión multimedia activa, así que puede depender de los auriculares.
+     */
+    private void listenToHeadsetButton() {
+        try {
+            headsetButton = new android.media.session.MediaSession(activity, "Salve-voz");
+            headsetButton.setCallback(new android.media.session.MediaSession.Callback() {
+                @Override public boolean onMediaButtonEvent(Intent event) {
+                    android.view.KeyEvent key = event == null ? null : event.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                    if (key == null) return super.onMediaButtonEvent(event);
+                    switch (key.getKeyCode()) {
+                        case android.view.KeyEvent.KEYCODE_HEADSETHOOK:
+                        case android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+                        case android.view.KeyEvent.KEYCODE_MEDIA_PLAY:
+                        case android.view.KeyEvent.KEYCODE_MEDIA_PAUSE:
+                            if (key.getAction() == android.view.KeyEvent.ACTION_UP)
+                                handler.post(() -> { if (!dismissed) interrupt.performClick(); });
+                            return true;
+                        default: return super.onMediaButtonEvent(event);
+                    }
+                }
+            });
+            headsetButton.setPlaybackState(new android.media.session.PlaybackState.Builder()
+                    .setActions(android.media.session.PlaybackState.ACTION_PLAY_PAUSE)
+                    .setState(android.media.session.PlaybackState.STATE_PLAYING, 0, 1f).build());
+            headsetButton.setActive(true);
+        } catch (RuntimeException unavailable) {
+            Log.w("Salve/Voz", "Sin control por el botón de los auriculares");
+            headsetButton = null;
+        }
+    }
+
     private void releaseResources() {
         handler.removeCallbacks(watchdog);
+        if (headsetButton != null) {
+            try { headsetButton.setActive(false); headsetButton.release(); } catch (RuntimeException ignored) { }
+            headsetButton = null;
+        }
         controls.setKeepScreenOn(false);
         destroyRecognizer();
         if (!resourcesReleased) {
