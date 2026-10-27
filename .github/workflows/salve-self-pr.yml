@@ -116,7 +116,7 @@ jobs:
           name: salve-pr-${{ github.event.issue.number }}
           path: ${{ runner.temp }}/salve-pr/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 1 # solo pasa la propuesta al trabajo que publica, en la misma ejecución
 
   publicar:
     name: Abrir el PR o explicar por qué no
