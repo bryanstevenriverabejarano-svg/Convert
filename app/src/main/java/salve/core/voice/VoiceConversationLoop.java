@@ -13,6 +13,9 @@ public final class VoiceConversationLoop {
     public static final long ECHO_GUARD_MS = 300L;
     public static final int MAX_SILENCE_RETRIES = 2;
     public static final int MAX_TRANSIENT_RETRIES = 1;
+    /** Manos libres: sesión larga y paciencia con el silencio, para hablar sin mirar ni tocar la pantalla. */
+    public static final long HANDS_FREE_SESSION_LIMIT_MS = 30 * 60 * 1000L;
+    public static final long HANDS_FREE_SILENCE_PATIENCE_MS = 3 * 60 * 1000L;
 
     public enum State { STOPPED, LISTENING, THINKING, SPEAKING, COOLDOWN }
     public enum Action { NONE, LISTEN, SUBMIT, WAIT, STOP }
@@ -37,6 +40,21 @@ public final class VoiceConversationLoop {
         }
     }
 
+    private final boolean handsFree;
+    /** Desde cuándo no se oye nada en manos libres; -1 si se acaba de oír a Bryan. */
+    private long silentSince = -1L;
+
+    /** Modo clásico: pocos reintentos de silencio y sesión de 10 minutos. */
+    public VoiceConversationLoop() { this(false); }
+
+    /**
+     * @param handsFree sigue escuchando tras cada respuesta hasta que Bryan se despide o pasan
+     *                  {@link #HANDS_FREE_SILENCE_PATIENCE_MS} sin oírle; sesión de hasta 30 minutos.
+     */
+    public VoiceConversationLoop(boolean handsFree) { this.handsFree = handsFree; }
+
+    public boolean isHandsFree() { return handsFree; }
+
     private State state = State.STOPPED;
     private long tokenSequence;
     private long activeToken;
@@ -59,8 +77,9 @@ public final class VoiceConversationLoop {
 
     public Step start(long now) {
         if (isActive()) return none();
-        sessionDeadline = now + SESSION_LIMIT_MS;
+        sessionDeadline = now + (handsFree ? HANDS_FREE_SESSION_LIMIT_MS : SESSION_LIMIT_MS);
         silenceRetries = transientRetries = 0;
+        silentSince = -1L;
         return listen(now);
     }
 
@@ -72,6 +91,7 @@ public final class VoiceConversationLoop {
         if (text.isEmpty()) return recognitionFailed(token, RecognitionFailure.SILENCE, now);
         if (isStopCommand(text)) return stop(StopReason.USER);
         silenceRetries = transientRetries = 0;
+        silentSince = -1L;
         state = State.THINKING;
         phaseDeadline = now + RESPONSE_TIMEOUT_MS;
         return step(Action.SUBMIT, text, null);
@@ -82,6 +102,11 @@ public final class VoiceConversationLoop {
         if (now >= sessionDeadline) return stop(StopReason.SESSION_LIMIT);
         switch (failure) {
             case SILENCE:
+                if (handsFree) {
+                    if (silentSince < 0) silentSince = now;
+                    if (now - silentSince >= HANDS_FREE_SILENCE_PATIENCE_MS) return stop(StopReason.NO_SPEECH);
+                    return waitUntil(now + 500L);
+                }
                 if (silenceRetries++ >= MAX_SILENCE_RETRIES) return stop(StopReason.NO_SPEECH);
                 return waitUntil(now + 500L);
             case TRANSIENT:
@@ -181,6 +206,10 @@ public final class VoiceConversationLoop {
         String clean = Normalizer.normalize(text.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replaceAll("[¿?¡!.,;:]", "")
                 .trim().replaceAll("\\s+", " ");
+        // Despedidas dirigidas a ella («adiós, Salve»); «adiós» a secas puede ser parte de lo que cuenta.
+        if (clean.matches("(?:adios|hasta luego|hasta manana|chao|chau|nos vemos|buenas noches|eso es todo|ya esta|para|basta)"
+                + "(?: ya)?(?: gracias)? salve(?: gracias)?")) return true;
+        if (clean.matches("(?:salve )?(?:deja de escuchar(?:me)?|ya no te necesito|puedes dejar de escuchar(?:me)?)")) return true;
         return clean.equals("termina modo voz") || clean.equals("termina el modo voz")
                 || clean.equals("termina el modo de voz") || clean.equals("salir del modo voz")
                 || clean.equals("salir del modo de voz") || clean.equals("cierra el modo voz")

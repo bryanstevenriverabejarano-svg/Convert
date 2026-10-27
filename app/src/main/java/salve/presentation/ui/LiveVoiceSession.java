@@ -42,7 +42,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         }
     };
     private final MotorConversacional motor;
-    private final VoiceConversationLoop loop = new VoiceConversationLoop();
+    /** Manos libres: tras cada respuesta vuelve a escuchar sola hasta «adiós, Salve» o 3 minutos de silencio. */
+    private final VoiceConversationLoop loop = new VoiceConversationLoop(true);
     private final VoiceTurnMetrics metrics = new VoiceTurnMetrics();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable watchdog = () -> apply(loop.tick(now()));
@@ -468,7 +469,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                     case STARTING: status.setText("Preparando el micrófono…"); break;
                     case FINALIZING:
                     case FINISHED: status.setText("Terminando la transcripción…"); break;
-                    default: status.setText("Te escucho…"); break;
+                    default: status.setText("Te escucho… Di «adiós, Salve» para terminar."); break;
                 }
                 break;
             case THINKING:
@@ -500,7 +501,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     private static String stopMessage(VoiceConversationLoop.StopReason reason) {
         switch (reason) {
             case SESSION_LIMIT: return "Sesión terminada: han pasado 10 minutos. Puedes abrir otra cuando quieras.";
-            case NO_SPEECH: return "No detecté una frase. He cerrado el micrófono; puedes volver a abrir el modo voz.";
+            case NO_SPEECH: return "Llevo un rato sin oírte, así que he cerrado el micrófono. Vuelve a abrir el modo voz cuando quieras.";
             case MICROPHONE_PERMISSION: return "Hace falta permitir el micrófono para conversar por voz.";
             case RECOGNIZER_UNAVAILABLE: return "El reconocimiento no está disponible. Revisa el servicio de voz de Android.";
             case RECOGNIZER_ERROR: return "No pude recuperar el reconocimiento. He cerrado el micrófono.";
