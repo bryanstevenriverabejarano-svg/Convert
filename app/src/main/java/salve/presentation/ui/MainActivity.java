@@ -1049,6 +1049,7 @@ public class MainActivity extends AppCompatActivity {
 
         // ===== manejar Intents de compartir =====
         handleShareIntent(getIntent());
+        handleVoiceLaunch(getIntent());
 
         // Preserve existing model paths. New downloads/imports use app-private storage.
         if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, false)) {
@@ -1062,6 +1063,17 @@ public class MainActivity extends AppCompatActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         handleShareIntent(intent);
+        handleVoiceLaunch(intent);
+    }
+
+    /**
+     * Salve como asistente: el botón lateral, el gesto de esquina o el botón de voz de los auriculares
+     * la abren directamente en la conversación por voz. Se consume la acción para no repetirla al girar.
+     */
+    private void handleVoiceLaunch(Intent intent) {
+        if (!salve.core.voice.AssistantLaunch.isVoiceLaunch(intent == null ? null : intent.getAction())) return;
+        intent.setAction(Intent.ACTION_MAIN);
+        if (activityResumed) abrirModoVoz(); else pendingLiveVoiceStart = true;
     }
 
     @Override

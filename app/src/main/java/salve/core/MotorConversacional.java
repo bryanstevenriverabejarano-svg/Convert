@@ -793,6 +793,14 @@ public class MotorConversacional {
         }
         String modelSwitch = cambioDeModelo(entrada);
         if (modelSwitch != null) { hablar(modelSwitch); return; }
+        if (salve.core.voice.AssistantLaunch.asksToBecomeAssistant(entrada)) {
+            try {
+                context.startActivity(new android.content.Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (RuntimeException unavailable) { Log.w(TAG, "No se pudieron abrir las apps predeterminadas"); }
+            hablar(salve.core.voice.AssistantLaunch.HOW_TO);
+            return;
+        }
         // «¿Qué has aprendido de mí?» / «olvida que X provoca Y»: solo Bryan gestiona su memoria causal.
         String causal = memoriaCausal != null && creatorSide() ? memoriaCausal.command(entrada) : null;
         if (causal != null) { hablar(causal); return; }
