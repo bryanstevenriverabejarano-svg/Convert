@@ -5,7 +5,7 @@ OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT"' EXIT
 SOURCE="$ROOT/app/src/main/java/salve/avatar"
 javac -encoding UTF-8 -d "$OUT" \
-  "$SOURCE/AvatarState.java" "$SOURCE/AvatarMotion.java" \
+  "$SOURCE/AvatarState.java" "$SOURCE/AvatarMotion.java" "$SOURCE/AvatarTurn.java" \
   "$SOURCE/AvatarMotionProtocol.java" "$SOURCE/MotionPreferenceProfile.java" \
   "$SOURCE/AvatarBodyCue.java" "$SOURCE/AvatarLocomotion.java" \
   "$SOURCE/AvatarStageLayout.java" "$SOURCE/RealisticSpriteAnimation.java" \

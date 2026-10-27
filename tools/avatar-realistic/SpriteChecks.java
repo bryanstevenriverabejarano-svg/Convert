@@ -58,6 +58,17 @@ public final class SpriteChecks {
         check(RealisticSpriteAnimation.mouthFrame(.9f, 4f / 6.5f, 3) == 2, "H3 rounded vowel");
         check(RealisticSpriteAnimation.mouthFrame(.9f, 3f / 6.5f, 2) == 1, "Legacy two-frame mouth");
         check(RealisticSpriteAnimation.mouthFrame(Float.NaN, Float.NaN, 3) == 0, "Nonfinite speech");
+        // Nuevos fotogramas: dos giros genuinos por lado, sin reflejos.
+        check(java.util.Arrays.equals(AvatarTurn.RIGHT_PATH, new int[]{0,8,1,9,2}), "Right turn path changed");
+        check(java.util.Arrays.equals(AvatarTurn.LEFT_PATH, new int[]{0,10,7,11,6}), "Left turn path changed");
+        check(AvatarTurn.fallback(8) == 0 && AvatarTurn.fallback(9) == 1
+                && AvatarTurn.fallback(10) == 0 && AvatarTurn.fallback(11) == 7,
+                "Legacy body fallback for side turns");
+        AvatarTurn turning = new AvatarTurn();
+        int[] expectedSpin = {0,8,1,9,2,3,4,5,6,11,7,10};
+        for (int i = 0; i < expectedSpin.length; i++)
+            check(turning.view(true, false, true, (i + .1f) / expectedSpin.length, 0f) == expectedSpin[i],
+                    "Spin order " + i);
         System.out.println("PASS: 16 gait frames, loop closure, directions, both dance tempos, speech/body priority, held poses, close, invalid clocks, stationary gait and narrow stages");
     }
 }

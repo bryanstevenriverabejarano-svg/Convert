@@ -84,12 +84,17 @@ final class RealisticSpriteRenderer {
     private static void loadSheets(Context context, String folder, JSONObject manifest, Map<String, Sheet> ready) throws Exception {
         for (java.util.Iterator<String> names = manifest.keys(); names.hasNext(); ) {
             String name = names.next();
-            if (!name.matches("base|views|turn|walk|walk_inbetween|wave|bend|dance|poses|sleep|wake")) continue;
+            if (!name.matches("base|views|turn_g[1-4]|walk|walk_inbetween|wave|bend|dance|poses|sleep|wake")) continue;
             if (ready.containsKey(name)) continue;
             JSONObject spec = manifest.getJSONObject(name);
+            // Cada giro original es 1024x1536; decodificar a la mitad conserva detalle
+            // para Canvas y evita gastar 24 MiB de RAM en solo cuatro giros.
+            int sample = name.startsWith("turn_g") ? 2 : 1;
             Bitmap bitmap;
             try (InputStream file = context.getAssets().open("avatar/" + folder + "/" + name + ".png")) {
-                BitmapFactory.Options options = new BitmapFactory.Options(); options.inScaled = false;
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inScaled = false;
+                options.inSampleSize = sample;
                 bitmap = BitmapFactory.decodeStream(file, null, options);
             }
             if (bitmap == null) throw new java.io.IOException("Missing sprite " + name);
@@ -98,12 +103,14 @@ final class RealisticSpriteRenderer {
             Rect[] frames = new Rect[regions.length()];
             float[] referenceHeights = new float[regions.length()];
             ready.put(name, new Sheet(bitmap, frames, referenceHeights));
-            if (bitmap.getWidth() != spec.getInt("width") || bitmap.getHeight() != spec.getInt("height")
+            if (bitmap.getWidth() != spec.getInt("width") / sample
+                    || bitmap.getHeight() != spec.getInt("height") / sample
                     || !bitmap.hasAlpha()) throw new java.io.IOException("Invalid sprite " + name);
             for (int i = 0; i < frames.length; i++) {
                 JSONArray r = regions.getJSONArray(i);
-                frames[i] = new Rect(r.getInt(0), r.getInt(1), r.getInt(2), r.getInt(3));
-                referenceHeights[i] = (float)spec.getJSONArray("frameHeights").getDouble(i);
+                frames[i] = new Rect(r.getInt(0) / sample, r.getInt(1) / sample,
+                        r.getInt(2) / sample, r.getInt(3) / sample);
+                referenceHeights[i] = (float)spec.getJSONArray("frameHeights").getDouble(i) / sample;
                 if (!Float.isFinite(referenceHeights[i]) || referenceHeights[i] <= 0)
                     throw new java.io.IOException("Invalid sprite scale " + name);
                 if (frames[i].isEmpty() || frames[i].left < 0 || frames[i].top < 0
@@ -264,9 +271,9 @@ final class RealisticSpriteRenderer {
                     && !motion.speaking && !motion.listening && !motion.thinking;
             float spin = motion.gesture == AvatarMotion.Gesture.SPIN ? motion.gestureProgress : -1;
             int view = upright ? turn.view(state.isFacingRight(), pose == AvatarState.Pose.WALKING, idle, spin, time) : -1;
-            Sheet turnSheet = sheets.get("turn");
-            if (view >= 8 && turnSheet != null && view - 8 < turnSheet.frames.length)
-                selected = new RealisticSpriteAnimation.Frame("turn", view - 8, false, 1);
+            String turnName = view >= 8 && view <= 11 ? "turn_g" + (view - 7) : null;
+            if (turnName != null && sheets.containsKey(turnName))
+                selected = new RealisticSpriteAnimation.Frame(turnName, 0, false, 1);
             else if (view >= 0) {
                 int base = AvatarTurn.fallback(view);
                 // De frente es su propia base (viva), no la vista 0: cada versión conserva su pecho y su cara.
