@@ -85,6 +85,7 @@ public class MotorConversacional {
     private SistemaSensorial sensores;
      boolean conversationForeground;
     private ReasoningEngine motorRazonamiento;
+    private salve.core.reasoning.CausalMemory memoriaCausal;
 
     private boolean jugandoAjedrez = false;
     private GestorAjedrez gestorAjedrez;
@@ -335,6 +336,9 @@ public class MotorConversacional {
 
         this.sensores = new SistemaSensorial(context);
         this.motorRazonamiento = new ReasoningEngine();
+        // Memoria causal: lo que Bryan explica («X porque Y», «si X, Y») alimenta el motor de razonamiento.
+        this.memoriaCausal = new salve.core.reasoning.CausalMemory(motorRazonamiento,
+                new java.io.File(context.getFilesDir(), "causal_memory.tsv"));
         this.gestorAjedrez = new GestorAjedrez(context);
 
         SalveLLM tmpLlm = null;
@@ -1226,11 +1230,17 @@ public class MotorConversacional {
         String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
                 + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext()
                 + salve.core.reasoning.MathGrounding.promptBlock(entrada) + sketchContext;
+        if (!storyTurn && memoriaCausal != null) responseContext += memoriaCausal.promptBlock(entrada);
         // Si quien habla se presenta como otra persona, cambia el estado y no se pisa el perfil de Bryan.
         // En una historia, «soy el explorador Aric» es su personaje: no cambia quién habla ni su perfil.
         boolean otherSpeaker = !storyTurn && mesaIdentidad.registrarIdentidadDeclarada(entrada);
         if (storyTurn) responseContext += salve.core.conversation.StoryMode.promptBlock(story, entrada);
         if (!storyTurn && intent.type != IntentType.GUARDAR_RECUERDO && !otherSpeaker && creatorSide()) {
+            // Solo aprende causas que afirma Bryan (no preguntas, ni respuestas del modelo, ni páginas web).
+            if (memoriaCausal != null) {
+                java.util.List<salve.core.reasoning.CausalMemory.Relation> causas = memoriaCausal.learn(entrada);
+                if (!causas.isEmpty()) salve.core.trace.ExecutionTrace.note("MEMORIA CAUSAL", "aprendí: " + causas);
+            }
             MemoryProfileFact profileFact = MemoryWritePolicy.extractProfileFact(entrada);
             if (!entrada.trim().endsWith("?") && salve.core.mind.Interlocutor.declaresCreator(entrada)) {
                 // Declarado, no verificado: se guarda como presentación del usuario.

@@ -124,17 +124,25 @@ public class ReasoningEngine {
     public synchronized List<Prediction> predict(String cause, int maxDepth) {
         if (cause == null) return Collections.emptyList();
 
-        List<Prediction> predictions = new ArrayList<>();
-        predictRecursive(normalize(cause), maxDepth, 1.0f, predictions, new ArrayList<>());
+        List<Prediction> raw = new ArrayList<>();
+        predictRecursive(normalize(cause), maxDepth, 1.0f, raw, new ArrayList<>());
 
-        // Ordenar por probabilidad descendente
+        // Un mismo efecto alcanzado por varios caminos cuenta una vez, con su camino más fuerte
+        // (antes salía repetido y engordaba las hipótesis).
+        Map<String, Prediction> best = new HashMap<>();
+        for (Prediction p : raw) {
+            Prediction known = best.get(p.concept);
+            if (known == null || p.probability > known.probability) best.put(p.concept, p);
+        }
+        best.remove(normalize(cause));
+        List<Prediction> predictions = new ArrayList<>(best.values());
         Collections.sort(predictions, (a, b) -> Float.compare(b.probability, a.probability));
-
         return predictions;
     }
 
     private void predictRecursive(String concept, int depth, float probability,
                                    List<Prediction> results, List<String> visited) {
+        // chainLength = número de enlaces desde el origen (visited ya incluye este concepto abajo)
         if (depth <= 0 || probability < 0.05f) return;
         if (visited.contains(concept)) return; // Evitar ciclos
 
@@ -220,11 +228,16 @@ public class ReasoningEngine {
 
         if (allPredictions.isEmpty()) return null;
 
-        // Agrupar predicciones por concepto efecto
-        Map<String, Float> aggregated = new HashMap<>();
+        // Agrupar por efecto con OR ruidoso (Pearl, 1988): causas independientes que apuntan al mismo
+        // efecto lo hacen más probable, pero nunca por encima de 1 (antes se sumaban sin más).
+        Map<String, Float> notHappening = new HashMap<>();
         for (Prediction p : allPredictions) {
-            aggregated.merge(p.concept, p.probability, Float::sum);
+            float miss = notHappening.containsKey(p.concept) ? notHappening.get(p.concept) : 1f;
+            notHappening.put(p.concept, miss * (1f - Math.min(1f, p.probability)));
         }
+        Map<String, Float> aggregated = new HashMap<>();
+        for (Map.Entry<String, Float> e : notHappening.entrySet()) aggregated.put(e.getKey(), 1f - e.getValue());
+        for (String premise : activeConcepts) aggregated.remove(normalize(premise));
 
         // Encontrar la prediccion mas fuerte
         String bestConcept = null;
@@ -245,6 +258,64 @@ public class ReasoningEngine {
         hypothesis.reasoning = buildReasoningChain(activeConcepts, bestConcept);
 
         return hypothesis;
+    }
+
+    /**
+     * Razonamiento hacia atrás (abducción): qué causas conocidas llevan a {@code effect}, directas o
+     * en cadena hasta {@code maxDepth} pasos. Responde a «¿por qué X?».
+     */
+    public synchronized List<Prediction> explain(String effect, int maxDepth) {
+        if (effect == null) return Collections.emptyList();
+        String target = normalize(effect);
+        Map<String, Prediction> best = new HashMap<>();
+        java.util.ArrayDeque<String> frontier = new java.util.ArrayDeque<>();
+        Map<String, Float> reach = new HashMap<>();
+        reach.put(target, 1f);
+        frontier.add(target);
+        for (int depth = 1; depth <= maxDepth && !frontier.isEmpty(); depth++) {
+            java.util.ArrayDeque<String> next = new java.util.ArrayDeque<>();
+            while (!frontier.isEmpty()) {
+                String current = frontier.poll();
+                float p = reach.get(current);
+                for (Map.Entry<String, List<CausalLink>> entry : causalGraph.entrySet()) {
+                    for (CausalLink link : entry.getValue()) {
+                        if (!current.equals(link.effect) || link.strength < MIN_CAUSAL_STRENGTH) continue;
+                        String cause = entry.getKey();
+                        float q = p * link.strength;
+                        if (cause.equals(target) || q < 0.05f) continue;
+                        Prediction known = best.get(cause);
+                        if (known != null && known.probability >= q) continue;
+                        Prediction pred = new Prediction();
+                        pred.concept = cause;
+                        pred.probability = q;
+                        pred.chainLength = depth;
+                        pred.linkType = link.type;
+                        best.put(cause, pred);
+                        reach.put(cause, q);
+                        next.add(cause);
+                    }
+                }
+            }
+            frontier = next;
+        }
+        List<Prediction> out = new ArrayList<>(best.values());
+        Collections.sort(out, (a, b) -> Float.compare(b.probability, a.probability));
+        return out;
+    }
+
+    /** El enlace directo cause → effect, o null. */
+    public synchronized CausalLink link(String cause, String effect) {
+        List<CausalLink> links = causalGraph.get(normalize(cause));
+        if (links == null) return null;
+        for (CausalLink l : links) if (normalize(effect).equals(l.effect)) return l;
+        return null;
+    }
+
+    /** Todos los conceptos conocidos (causas y efectos). */
+    public synchronized java.util.Set<String> concepts() {
+        java.util.Set<String> all = new java.util.LinkedHashSet<>(causalGraph.keySet());
+        for (List<CausalLink> links : causalGraph.values()) for (CausalLink l : links) all.add(l.effect);
+        return all;
     }
 
     /**
@@ -291,7 +362,7 @@ public class ReasoningEngine {
     // ── Internos ──────────────────────────────────────────────────────────
 
     private String normalize(String s) {
-        return s.trim().toLowerCase();
+        return s.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private String buildReasoningChain(List<String> premises, String conclusion) {
