@@ -128,7 +128,7 @@ dependencies {
     implementation 'androidx.fragment:fragment-ktx:1.8.9'
     // Verificación del dueño del teléfono (rostro, huella o PIN) para la identidad de Salve.
     implementation 'androidx.biometric:biometric:1.1.0'
-    implementation 'com.google.code.gson:gson:2.13.2'
+    implementation 'com.google.code.gson:gson:2.14.0' // la misma que trae LiteRT-LM 0.18
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'com.squareup.okhttp3:okhttp:5.3.2'
 
@@ -164,8 +164,8 @@ dependencies {
     // ONNX Runtime para ai.onnxruntime.*
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.24.2'
 
-    // Real .litertlm runtime; 0.16.1 keeps compatibility with Kotlin 2.2 in this project.
-    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.16.1'
+    // Real .litertlm runtime. 0.18.0 trae la decodificación especulativa (MTP) de Gemma 4 y exige Kotlin 2.4.
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.18.0'
     // Legacy .task imports keep their original engine.
     implementation 'com.google.mediapipe:tasks-genai:0.10.33'
 
