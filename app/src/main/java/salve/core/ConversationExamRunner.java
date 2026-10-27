@@ -127,25 +127,36 @@ final class ConversationExamRunner {
         salve.core.conversation.DialogueFocus.Reading reading =
                 salve.core.conversation.DialogueFocus.read(focus, c.question, lastReply, now);
         String context = intent.type.name() + " | ACTO_CONVERSACIONAL: " + analysis.getAct().name() + " | "
-                + plan.toPromptContext() + drawing + reading.prompt();
-        CognitiveTurn.Outcome outcome = motor.runCognitiveTurn(c.question, context, null, false, null, false,
-                history, catalog -> dryRun(catalog, tools, queries));
+                + plan.toPromptContext() + drawing + reading.prompt()
+                // Igual que un turno real: cuentas exactas y analogías guiadas (sin leer su memoria causal).
+                + salve.core.reasoning.MathGrounding.promptBlock(c.question)
+                + salve.core.reasoning.AnalogyReasoner.promptBlock(c.question, null);
+        // Igual que un turno real: piensa antes de responder en las preguntas difíciles.
+        LiteRTLlm.setThinking(salve.core.reasoning.HardQuestion.needsThinking(c.question));
+        CognitiveTurn.Outcome outcome;
+        try {
+            outcome = motor.runCognitiveTurn(c.question, context, null, false, null, false,
+                    history, catalog -> dryRun(catalog, tools, queries));
+        } finally { LiteRTLlm.setThinking(false); }
         if (outcome.handedOff) return new ConversationExam.Attempt("(acción del móvil preparada para confirmar)", tools, queries);
         String reply = outcome.result.isSuccess() ? outcome.result.getText() : motor.modelFailureMessage(outcome.result);
         // 5. El mismo revisor que en un turno: como mucho una reescritura.
         if (outcome.result.isSuccess()) {
             ReplyReviewer.Review review = ReplyReviewer.review(reply, c.question, recent, reading, true,
-                    salve.core.conversation.TurnChecks.problem(c.question, reply, true));
+                    salve.core.conversation.TurnChecks.join(salve.core.conversation.TurnChecks.problem(c.question, reply, true),
+                            salve.core.reasoning.MathGrounding.problem(c.question, reply)));
             if (review.needsRewrite()) {
                 CognitiveTurn.Outcome retry = motor.runCognitiveTurn(c.question, context + review.instruction(), null, false, null, false,
                         history, catalog -> dryRun(catalog, tools, queries));
                 if (!retry.handedOff && retry.result.isSuccess() && ReplyReviewer.better(
                         ReplyReviewer.review(retry.result.getText(), c.question, recent, reading, true,
-                                salve.core.conversation.TurnChecks.problem(c.question, retry.result.getText(), true)), review))
+                                salve.core.conversation.TurnChecks.join(salve.core.conversation.TurnChecks.problem(c.question, retry.result.getText(), true),
+                                        salve.core.reasoning.MathGrounding.problem(c.question, retry.result.getText()))), review))
                     reply = retry.result.getText();
             }
             reply = salve.core.conversation.ResponseCritic.firstPerson(reply);
             reply = salve.core.conversation.ReplyStyle.dropEchoes(salve.core.conversation.ReplyStyle.clean(reply, recent), recent);
+            reply = salve.core.reasoning.MathGrounding.ensureResult(c.question, reply);
         }
         return new ConversationExam.Attempt(reply, tools, queries);
     }

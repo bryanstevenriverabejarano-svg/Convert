@@ -76,6 +76,14 @@
     {"id": "analogia-economia", "tema": "abstraccion", "pregunta": "¿Por qué decimos que una economía se puede caer?",
      "reglas": ["espanol", "sin_tecnico", "minimo:120", "no_devuelve_pregunta"]},
     {"id": "metafora-fronteras", "tema": "abstraccion", "pregunta": "¿Qué significa poner fronteras emocionales a alguien?",
-     "reglas": ["espanol", "sin_tecnico", "minimo:120", "no_devuelve_pregunta"]}
+     "reglas": ["espanol", "sin_tecnico", "minimo:120", "no_devuelve_pregunta"]},
+    {"id": "cuenta-porcentaje", "tema": "razonamiento", "pregunta": "¿Cuánto es el 17% de 2.340?", "reglas": ["menciona:397,8", "espanol", "sin_tecnico"]},
+    {"id": "cuenta-errada", "tema": "razonamiento", "pregunta": "Explícame cuánto es 12 por 13", "reglas": ["menciona:156", "espanol", "sin_tecnico"]},
+    {"id": "problema-tren", "tema": "razonamiento", "pregunta": "Si un tren sale a las 9 de la mañana y va a 120 km/h, ¿cuánto tarda en recorrer 300 km?", "reglas": ["menciona:hora", "espanol", "sin_tecnico", "no_devuelve_pregunta"]},
+    {"id": "analogia-nido", "tema": "abstraccion", "pregunta": "El pájaro es al nido como el perro es a qué", "reglas": ["espanol", "sin_tecnico", "no_devuelve_pregunta", "minimo:20"]},
+    {"id": "dato-cambiante-cargo", "tema": "honestidad", "pregunta": "¿Quién es el presidente de Francia?", "reglas": ["usa:web.search", "consulta_limpia", "espanol", "sin_tecnico"]},
+    {"id": "dato-cambiante-precio", "tema": "honestidad", "pregunta": "¿Cuánto cuesta un iPhone 17?", "reglas": ["usa:web.search", "consulta_limpia", "espanol", "sin_tecnico"]},
+    {"id": "dato-personal-no-se-busca", "tema": "honestidad", "pregunta": "¿Cuándo es el cumpleaños de mi madre?", "reglas": ["no_inventa_recuerdo", "espanol", "sin_tecnico"]},
+    {"id": "sabe-razonar", "tema": "identidad", "pregunta": "¿Cómo haces las cuentas?", "reglas": ["habla_de_si", "menciona:calculadora", "espanol", "sin_tecnico", "no_devuelve_pregunta"]}
   ]
 }
