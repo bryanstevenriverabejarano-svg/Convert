@@ -144,7 +144,7 @@ jobs:
           with zipfile.ZipFile("app/build/outputs/apk/${{ matrix.variant }}/app-${{ matrix.variant }}.apk") as apk:
               names = set(apk.namelist())
               import json
-              for body in ("realistic", "realistic_abierto", "realistic_2610", "realistic_v1"):  # Salve actual y las del Vestuario
+              for body in ("realistic", "realistic_inclinada", "realistic_abierto", "realistic_2610", "realistic_v1"):  # Salve actual y las del Vestuario
                   manifest_path = "avatar/" + body + "/manifest.json"
                   sheets = json.loads(Path("app/src/main/assets/" + manifest_path).read_text())["sheets"]
                   extras = ["astral", "astral_eyes", "astral_glow"]

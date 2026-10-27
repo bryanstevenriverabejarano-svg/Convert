@@ -207,10 +207,12 @@ public class AstralBodyTest {
         assertEquals("12 oct 2026", v1.approved);
         assertNull(AvatarBodyVersions.find("../core"));
         // Escote abierto y la base del 26 de octubre: opciones del Vestuario con su propia cara y bocas.
-        assertEquals(AvatarBodyVersions.OPEN, AvatarBodyVersions.all().get(1).id);
+        assertEquals(AvatarBodyVersions.TILTED, AvatarBodyVersions.all().get(1).id);
+        assertEquals(AvatarBodyVersions.OPEN, AvatarBodyVersions.all().get(2).id);
+        assertEquals(3, rig(AvatarBodyVersions.TILTED).mouthFrames);
         assertNotNull(AvatarBodyVersions.find(AvatarBodyVersions.OCT26));
         assertEquals(3, rig(AvatarBodyVersions.OPEN).mouthFrames);
         assertEquals(3, rig(AvatarBodyVersions.OCT26).mouthFrames);
-        assertEquals(rig(AvatarBodyVersions.CURRENT).eyeTop, rig(AvatarBodyVersions.OPEN).eyeTop);
+        assertEquals(rig(AvatarBodyVersions.TILTED).eyeTop, rig(AvatarBodyVersions.OPEN).eyeTop);
     }
 }

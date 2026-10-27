@@ -7,7 +7,8 @@ Salidas (todas derivadas del PNG aprobado, que no se modifica):
   astral.json      - recuadro de ojos, pivotes, inicio del pelo y pesos de malla (pelo y cabeza)
 
 Cuerpos (avatar/<cuerpo>/):
-  realistic         - Salve actual: base de pecho cubierto (27-10-2026)
+  realistic           - Salve actual: pecho cubierto y cabeza recta (27-10-2026)
+  realistic_inclinada - pecho cubierto con la cabeza inclinada (Vestuario)
   realistic_abierto - la misma con el escote abierto (Vestuario)
   realistic_2610    - la base del 26-10-2026 (la 01 de las 32 ilustraciones), conservada en Vestuario
   realistic_v1  - Salve v1 (referencia aprobada el 12-10-2026), conservada en Vestuario
@@ -89,7 +90,25 @@ NEW_BASE = dict(
         ((485, 760), (500, 1510), 64), ((580, 760), (556, 1510), 64),
         ((510, 30), (510, 190), 122), ((505, 190), (500, 275), 56),
     ])
-BODIES["realistic"] = NEW_BASE
+# Base principal: pecho cubierto y cabeza recta (27-10-2026).
+STRAIGHT = dict(NEW_BASE,
+    eye_box=(440, 140, 590, 182),
+    eyes=[
+        dict(c=(472, 162), ax=(18, 9), outer=(455, 159), inner=(490, 163)),
+        dict(c=(554, 162), ax=(18, 9), outer=(572, 159), inner=(537, 163)),
+    ],
+    neck=(512, 248), heart=(510, 274), feet=(518, 1510), head=(198, 262),
+    mouth_box=(478, 188, 548, 228),
+    synth_mouths=dict(center=(513, 208), angle=0, sizes=[(11, 2.6), (12, 5.5), (6.5, 5)]),
+    capsules=[
+        ((410, 310), (355, 590), 44), ((355, 590), (250, 790), 40), ((250, 790), (230, 850), 50),
+        ((615, 310), (680, 590), 44), ((680, 590), (785, 790), 40), ((785, 790), (805, 850), 50),
+        ((512, 300), (512, 560), 115), ((512, 560), (515, 650), 95), ((515, 650), (515, 740), 128),
+        ((470, 760), (495, 1510), 64), ((560, 760), (540, 1510), 64),
+        ((512, 30), (512, 195), 122), ((512, 195), (510, 275), 56),
+    ])
+BODIES["realistic"] = STRAIGHT
+BODIES["realistic_inclinada"] = NEW_BASE
 BODIES["realistic_abierto"] = NEW_BASE
 BODY = None
 
