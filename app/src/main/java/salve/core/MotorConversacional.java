@@ -345,6 +345,8 @@ public class MotorConversacional {
         try { tmpLlm = SalveLLM.getInstance(context); } catch (Exception e) { Log.e(TAG, "SalveLLM no disponible", e); }
         this.llm = tmpLlm;
         this.cortexSeguridad = new CortexSeguridad(this.llm, this.memoria);
+        // Móvil con RAM de sobra (S24 Ultra): pasa una vez a Gemma 4 E4B por Wi-Fi; si no carga, sigue E2B.
+        if (this.llm != null) AutoModelUpgrade.maybeUpgrade(context);
 
         try {
             EmbeddingsIndex index = EmbeddingsIndex.get(context);
@@ -1740,6 +1742,7 @@ public class MotorConversacional {
         if (t.matches("(salve )?(vuelve a|cambia a|usa|pasa a|activa) (el modelo )?gemma 4 e2b( por favor)?")) {
             java.io.File e2b = new java.io.File(ModelStore.dir(context), "gemma-4-E2B-it-6e5c4f1.litertlm");
             if (!e2b.isFile()) return "No tengo Gemma 4 E2B descargado en esta instalación.";
+            AutoModelUpgrade.declined(context);
             new Thread(() -> {
                 ModelResult result = SalveLLM.getInstance(context).activateDownloadedModel(e2b.getAbsolutePath(), true, () -> false);
                 hablar(result.isSuccess() ? "Vuelvo a usar Gemma 4 E2B." : "No pude activar Gemma 4 E2B: " + result.getError());
