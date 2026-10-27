@@ -148,6 +148,9 @@ final class SelfFeaturesDesk {
                 return identity.session().state() == salve.core.identity.SessionIdentity.State.VERIFIED_CREATOR
                         ? "Bryan está verificado ahora mismo" : "no hay una verificación vigente";
             }
+            case REASONING:
+                return "causas aprendidas de Bryan: " + (motor.memoriaCausal == null ? 0 : motor.memoriaCausal.size())
+                        + "; calculadora exacta activa en la conversación";
             default: return "";
         }
     }

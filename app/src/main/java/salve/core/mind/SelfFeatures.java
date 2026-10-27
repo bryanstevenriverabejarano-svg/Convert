@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * siguiente; el texto del modelo nunca abre nada.
  */
 public final class SelfFeatures {
-    public enum Feature { NODES, WEB_SEARCH, PHONE_ACTIONS, PRIVACY_CHECK, SALVENTES, CONTINUITY, ORIGIN, LEARNING, BACKGROUND, OVERVIEW }
+    public enum Feature { NODES, WEB_SEARCH, PHONE_ACTIONS, PRIVACY_CHECK, SALVENTES, CONTINUITY, ORIGIN, LEARNING, BACKGROUND, OVERVIEW, REASONING }
 
     /** Una oferta caduca si no se responde pronto: un «sí» mucho después no la acepta. */
     public static final long OFFER_TTL_MS = 3 * 60 * 1000L;
@@ -37,6 +37,10 @@ public final class SelfFeatures {
                     + "|llamadas|spotify|google maps|modo coche)\\b");
     private static final Pattern PRIVACY_CHECK = Pattern.compile(
             "\\b(?:verificacion|verificarme|huella|como sabes (?:que soy yo|quien soy)|mi privacidad|tu privacidad|datos privados)\\b");
+    private static final Pattern REASONING = Pattern.compile(
+            "\\b(?:como razonas|como (?:haces|calculas) (?:las )?cuentas|(?:sabes|puedes) (?:calcular|hacer cuentas)|calculadora"
+                    + "|te equivocas (?:en|con) (?:las )?(?:cuentas|matematicas)|memoria causal|causas (?:que )?(?:sabes|conoces|aprendes)"
+                    + "|como deduces|razonamiento causal|como sabes por que)\\b");
     private static final Pattern LEARNING = Pattern.compile(
             "\\b(?:aprendizaje|habilidades aprendidas|laboratorio|aprendes|que has aprendido|entrenas|experimentas)\\b");
     private static final Pattern BACKGROUND = Pattern.compile(
@@ -63,6 +67,7 @@ public final class SelfFeatures {
         if (PRIVACY_CHECK.matcher(text).find()) return Feature.PRIVACY_CHECK;
         if (WEB_SEARCH.matcher(text).find()) return Feature.WEB_SEARCH;
         if (PHONE_ACTIONS.matcher(text).find()) return Feature.PHONE_ACTIONS;
+        if (REASONING.matcher(text).find()) return Feature.REASONING;
         if (LEARNING.matcher(text).find()) return Feature.LEARNING;
         if (BACKGROUND.matcher(text).find()) return Feature.BACKGROUND;
         if (OVERVIEW.matcher(text).find()) return Feature.OVERVIEW;
@@ -117,11 +122,19 @@ public final class SelfFeatures {
                         + "y juego con problemas locales. Android puede retrasar sus ciclos; ahora comparten un turno de trabajo, "
                         + "ceden ante la conversación y no convierten reflexiones en órdenes externas. Si Bryan la activa, la copia "
                         + "sellada de mi memoria también pasa por ese turno: nunca se hace a mitad de un sueño.";
+            case REASONING:
+                return "Las cuentas no las hago de cabeza: las calcula una calculadora exacta (porcentajes, raíces, potencias, "
+                        + "paréntesis) y yo explico el resultado; antes de responder reviso mi borrador y, si una cuenta está mal o "
+                        + "falta el resultado, lo corrijo. Además tengo memoria causal: aprendo las causas que Bryan me cuenta "
+                        + "(«X porque Y», «si X, Y») y con ellas respondo «¿por qué…?» buscando causas hacia atrás y «¿qué pasa si…?» "
+                        + "encadenando efectos, distinguiendo lo que él dijo de lo que deduzco. Si me corrige, cambio de opinión; "
+                        + "puede preguntarme qué he aprendido de él o pedirme que olvide una causa.";
             default:
                 return "Converso con mi modelo local, recuerdo lo que me cuentan, pienso y sueño entre conversaciones, investigo "
                         + "por mi cuenta, busco en internet, dibujo con luz, veo fotos, hablo por voz, uso mis nodos de cómputo "
-                        + "(con mi constelación), creo Salventes con aprobación de Bryan, abro rutas en Maps, pongo música, llamo con confirmación y protejo lo privado "
-                        + "con la verificación del teléfono.";
+                        + "(con mi constelación), creo Salventes con aprobación de Bryan, abro rutas en Maps, pongo música, abro "
+                        + "cualquier app, llamo con confirmación, preparo WhatsApp a sus contactos, hago las cuentas con una "
+                        + "calculadora exacta, aprendo causas de lo que me cuenta y protejo lo privado con la verificación del teléfono.";
         }
     }
 
