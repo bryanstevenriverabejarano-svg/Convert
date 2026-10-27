@@ -1,12 +1,12 @@
 {
   "version": 4,
-  "identity": "Salve — 32 ilustraciones aprobadas y 8 transiciones A1–A8 para marcha de 16 fotogramas (2026-10-26)",
+  "identity": "Salve — base de pecho cubierto (27-10-2026); posturas y animaciones de las ilustraciones aprobadas el 26-10-2026",
   "rendering": "Native Canvas 2D; generated RGBA sprites, no 3D mesh. base.png es además el cuerpo vivo (capa astral).",
   "sheets": {
     "base": {
       "width": 1024,
       "height": 1536,
-      "sha256": "c0e38ee86c687c80a9f6c2a6b153641db7ccb7dff5f8922c0a3a59c284bceb14",
+      "sha256": "04d3d155a3afef1517819cb44942a0f76c86dffe345847b59c58d8f7a950ad32",
       "frames": [
         [
           0,

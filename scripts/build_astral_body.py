@@ -7,7 +7,9 @@ Salidas (todas derivadas del PNG aprobado, que no se modifica):
   astral.json      - recuadro de ojos, pivotes, inicio del pelo y pesos de malla (pelo y cabeza)
 
 Cuerpos (avatar/<cuerpo>/):
-  realistic     - Salve actual (32 ilustraciones aprobadas el 26-10-2026; base = la 01)
+  realistic         - Salve actual: base de pecho cubierto (27-10-2026)
+  realistic_abierto - la misma con el escote abierto (Vestuario)
+  realistic_2610    - la base del 26-10-2026 (la 01 de las 32 ilustraciones), conservada en Vestuario
   realistic_v1  - Salve v1 (referencia aprobada el 12-10-2026), conservada en Vestuario
 
 Uso: python3 scripts/build_astral_body.py [realistic|realistic_v1]   (requiere numpy y opencv-python)
@@ -39,7 +41,8 @@ BODIES = {
             ((365, 800), (372, 1840), 78), ((490, 800), (482, 1840), 78),
             ((427, 120), (427, 300), 92), ((427, 250), (427, 340), 60),
         ]),
-    "realistic": dict(
+    # La base del 26-10-2026 (la 01). Sus bocas H1-H3 (astral_mouth_h123.png) vienen del PR #246.
+    "realistic_2610": dict(
         eye_box=(450, 125, 585, 170),
         eyes=[
             dict(c=(482, 145), ax=(20, 10), outer=(462, 139), inner=(500, 148)),
@@ -65,6 +68,29 @@ BODIES = {
             ((510, 30), (510, 190), 122), ((510, 190), (510, 270), 56),
         ]),
 }
+# Base de pecho cubierto (27-10-2026) y su variante de escote abierto: la misma pose y la misma cara.
+NEW_BASE = dict(
+    eye_box=(455, 128, 585, 190),
+    eyes=[
+        dict(c=(483, 150), ax=(19, 10), outer=(465, 145), inner=(500, 153)),
+        dict(c=(553, 173), ax=(19, 9), outer=(571, 176), inner=(536, 171)),
+    ],
+    neck=(498, 250), heart=(496, 272), feet=(530, 1510),
+    mesh=(34, 52), hair_top=235, hair_span=720, hang=(235, 740), head=(196, 258),
+    # Bocas dibujadas sobre la propia boca (sonrisa ligeramente inclinada): H1 entreabierta, H2 «a», H3 «o».
+    mouth_box=(470, 186, 540, 226),
+    synth_mouths=dict(center=(504, 204), angle=12, sizes=[(11, 2.6), (12, 5.5), (6.5, 5)]),
+    lid_thick=.65,
+    glow=[(88, 128, 110, 150), (80, 104, 40, 170)], glow_blur=1.6,
+    capsules=[
+        ((395, 320), (335, 545), 44), ((335, 545), (245, 760), 40), ((245, 760), (222, 830), 50),
+        ((635, 320), (690, 545), 44), ((690, 545), (790, 760), 40), ((790, 760), (812, 830), 50),
+        ((515, 320), (515, 560), 115), ((515, 560), (525, 650), 95), ((525, 650), (530, 740), 128),
+        ((485, 760), (500, 1510), 64), ((580, 760), (556, 1510), 64),
+        ((510, 30), (510, 190), 122), ((505, 190), (500, 275), 56),
+    ])
+BODIES["realistic"] = NEW_BASE
+BODIES["realistic_abierto"] = NEW_BASE
 BODY = None
 
 
@@ -135,11 +161,12 @@ def eye_frames(base):
         rgba = np.dstack([out, np.maximum(alpha, (feather * 255).astype(np.uint8))])
         big = cv2.resize(rgba, (rgba.shape[1] * 4, rgba.shape[0] * 4), interpolation=cv2.INTER_CUBIC)
         for e in EYES:
+            k = BODY.get("lid_thick", 1.0)  # caras más pequeñas: párpado más fino
             if closure < 1.0:
                 shift = -e["ax"][1] + 2 * e["ax"][1] * closure - 3
-                draw_lid(big, e, 1.5, shift, 2.6)
+                draw_lid(big, e, 1.5, shift, 2.6 * k)
             else:
-                draw_lid(big, e, 4.0, 3.5, 2.4)
+                draw_lid(big, e, 4.0 if k == 1.0 else 4.0 * k + 1, 3.5 * k, 2.4 * k)
         frames.append(cv2.resize(big, (rgba.shape[1], rgba.shape[0]), interpolation=cv2.INTER_AREA))
     if BODY.get("closed_eyes"):
         art = cv2.imread(os.path.join(os.path.dirname(os.path.abspath(__file__)), BODY["closed_eyes"]), cv2.IMREAD_UNCHANGED)
@@ -167,6 +194,42 @@ def mouth_frames(base):
         if art is None or art.shape[:2] != (h, w):
             sys.exit("boca ausente o de otro tamaño: " + path)
         frames.append(np.dstack([art[:, :, :3], (m * 255).astype(np.uint8)]))
+    return np.vstack(frames)
+
+def synth_mouth_frames(base):
+    """Bocas abiertas pintadas sobre la boca de la base: interior rosa oscuro, labio y un poco de dientes."""
+    x0, y0, x1, y1 = BODY["mouth_box"]
+    spec = BODY["synth_mouths"]
+    crop = base[y0:y1, x0:x1].copy()
+    h, w = crop.shape[:2]
+    cx, cy = spec["center"][0] - x0, spec["center"][1] - y0
+    S = 8
+    frames = []
+    fade = np.zeros((h, w), np.float32)
+    cv2.ellipse(fade, (w // 2, h // 2), (w // 2 - 4, h // 2 - 4), 0, 0, 360, 1.0, -1)
+    fade = cv2.GaussianBlur(fade, (0, 0), 3.5)
+    for k, (rx, ry) in enumerate(spec["sizes"]):
+        big = cv2.resize(crop, (w * S, h * S), interpolation=cv2.INTER_CUBIC)
+        c = (int(cx * S), int(cy * S + ry * S * .35))
+        axes = (int(rx * S), int(ry * S))
+        lip = np.zeros(big.shape[:2], np.uint8)
+        cv2.ellipse(lip, c, (axes[0] + S, axes[1] + S), spec["angle"], 0, 360, 255, -1)
+        inner = np.zeros(big.shape[:2], np.uint8)
+        cv2.ellipse(inner, c, axes, spec["angle"], 0, 360, 255, -1)
+        out = big[:, :, :3].astype(np.float32)
+        lipf = cv2.GaussianBlur(lip, (0, 0), S * .8).astype(np.float32)[:, :, None] / 255
+        innf = cv2.GaussianBlur(inner, (0, 0), S * .5).astype(np.float32)[:, :, None] / 255
+        out = out * (1 - lipf * .55) + np.array([112, 112, 196], np.float32) * lipf * .55   # labio (BGR)
+        mouth = np.zeros_like(out); mouth[:] = (58, 38, 104)                                # interior
+        if k == 1:  # «a»: asoman los dientes de arriba
+            teeth = np.zeros(big.shape[:2], np.uint8)
+            cv2.ellipse(teeth, (c[0], c[1] - int(axes[1] * .55)), (int(axes[0] * .8), int(axes[1] * .35)),
+                        spec["angle"], 0, 360, 255, -1)
+            t = cv2.GaussianBlur(teeth, (0, 0), S * .4).astype(np.float32)[:, :, None] / 255
+            mouth = mouth * (1 - t) + np.array([236, 236, 244], np.float32) * t
+        out = out * (1 - innf) + mouth * innf
+        small = cv2.resize(out.clip(0, 255).astype(np.uint8), (w, h), interpolation=cv2.INTER_AREA)
+        frames.append(np.dstack([small, (fade * 255).astype(np.uint8)]))
     return np.vstack(frames)
 
 def glow_mask(base):
@@ -212,6 +275,8 @@ def main():
     cv2.imwrite(os.path.join(assets, "astral_glow.png"), glow)
     if BODY.get("mouths"):
         cv2.imwrite(os.path.join(assets, "astral_mouth.png"), mouth_frames(base))
+    if BODY.get("synth_mouths"):
+        cv2.imwrite(os.path.join(assets, "astral_mouth_h123.png"), synth_mouth_frames(base))
     hair, head = mesh_weights(w, h)
     cols, rows = BODY["mesh"]
     spec = {
@@ -223,6 +288,7 @@ def main():
         "neck": list(BODY["neck"]), "heart": list(BODY["heart"]), "feet": list(BODY["feet"]),
         "hairTop": BODY["hair_top"], "hairSpan": BODY["hair_span"],
         **({"mouthBox": list(BODY["mouth_box"]), "mouthFrames": ["a", "o"]} if BODY.get("mouths") else {}),
+        **({"mouthBox": list(BODY["mouth_box"]), "mouthFrames": ["h1", "h2", "h3"]} if BODY.get("synth_mouths") else {}),
         "mesh": {"cols": cols, "rows": rows,
                  "hair": hair.flatten().tolist(), "head": head.flatten().tolist()},
     }

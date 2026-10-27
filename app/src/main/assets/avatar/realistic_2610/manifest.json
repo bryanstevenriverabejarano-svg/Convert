@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "identity": "Salve del 26-10-2026 (la 01 de las 32 ilustraciones), conservada en el Vestuario",
+  "extends": "realistic",
+  "rendering": "Native Canvas 2D. Solo base.png y su capa astral son propios; el resto de hojas se toman de avatar/realistic.",
+  "sheets": {
+    "base": {
+      "width": 1024,
+      "height": 1536,
+      "sha256": "c0e38ee86c687c80a9f6c2a6b153641db7ccb7dff5f8922c0a3a59c284bceb14",
+      "frames": [
+        [
+          0,
+          0,
+          1024,
+          1536
+        ]
+      ],
+      "frameHeights": [
+        1536
+      ]
+    }
+  }
+}
