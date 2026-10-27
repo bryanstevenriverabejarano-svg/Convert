@@ -235,7 +235,13 @@ public final class ConversationMemoryGrounding {
                 java.util.Comparator<RecuerdoEntity> c = (a, b) -> 0;
                 if (when == MemorySalience.When.RECENT) c = java.util.Comparator.comparingLong((RecuerdoEntity r) -> r.timestamp).reversed();
                 else if (when == MemorySalience.When.OLD) c = java.util.Comparator.comparingLong((RecuerdoEntity r) -> r.timestamp <= 0 ? Long.MAX_VALUE : r.timestamp);
-                if (when != MemorySalience.When.ANY) run.sort(c);
+                // Después del tiempo pedido, la importancia (emoción con que se guardó y personas cercanas):
+                // la documentación lo prometía, pero solo se aplicaba el tiempo. Orden estable: a igual
+                // importancia se conserva el orden por parecido de la búsqueda.
+                final Map<String, Double> people = weights;
+                c = c.thenComparing(java.util.Comparator.comparingDouble(
+                        (RecuerdoEntity r) -> MemorySalience.score(r.frase, r.intensidad, people)).reversed());
+                run.sort(c);
             }
             start = end;
         }
