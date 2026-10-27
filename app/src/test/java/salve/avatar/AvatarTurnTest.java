@@ -13,12 +13,15 @@ public class AvatarTurnTest {
             int v = turn.view(false, true, false, -1, 1f + i * .02f);
             if (v >= 0 && (seen.isEmpty() || seen.get(seen.size() - 1) != v)) seen.add(v);
         }
+        // G3 y G4 son los giros originales hacia el lado de la 08: 0 → G3 → 7 → G4 → 6 y vuelta.
         assertEquals("ida y vuelta por el lado de la 08",
-                java.util.Arrays.asList(12, 13, 14, 15, 7, 6, 7, 15, 14, 13, 12), seen);
+                java.util.Arrays.asList(10, 7, 11, 6, 11, 7, 10), seen);
         assertEquals(-1, turn.view(false, true, false, -1, 3f));
-        assertEquals("hacia el otro lado empieza por el giro más leve", 8, turn.view(true, true, false, -1, 4f));
-        assertEquals(9, turn.view(true, true, false, -1, 4.07f));
-        assertEquals("llega al perfil del lado 03", 2, turn.view(true, true, false, -1, 4.33f));
+        // Hacia el lado de la 02: 0 → G1 → 1 → G2 → 2.
+        assertEquals("hacia el otro lado empieza por G1", 8, turn.view(true, true, false, -1, 4f));
+        assertEquals("tres cuartos", 1, turn.view(true, true, false, -1, 4.15f));
+        assertEquals("G2", 9, turn.view(true, true, false, -1, 4.25f));
+        assertEquals("llega al perfil del lado 03", 2, turn.view(true, true, false, -1, 4.35f));
     }
 
     @Test public void glancesAsideNowAndThenOnlyWhenIdle() {
@@ -33,18 +36,19 @@ public class AvatarTurnTest {
         assertEquals("hablando no se distrae", -1, busy.view(true, false, false, -1, 30f));
     }
 
-    @Test public void spinGoesThroughAllSixteenViewsAndEndsFacingFront() {
+    @Test public void spinGoesThroughTheEightViewsAndTheFourOriginalTurnsAndEndsFacingFront() {
         AvatarTurn turn = new AvatarTurn();
         java.util.Set<Integer> views = new java.util.HashSet<>();
         for (int i = 0; i < 160; i++) views.add(turn.view(true, false, false, i / 160f, i * .02f));
-        assertEquals(16, views.size());
+        assertEquals("8 vistas base + G1–G4", 12, views.size());
         assertEquals(0, turn.view(true, false, false, 1f, 4f));
     }
 
     @Test public void bodiesWithoutTurnSheetUseTheNearestView() {
-        assertEquals(0, AvatarTurn.fallback(8));
-        assertEquals(1, AvatarTurn.fallback(11));
-        assertEquals(7, AvatarTurn.fallback(15));
+        assertEquals("G1 → frente", 0, AvatarTurn.fallback(8));
+        assertEquals("G2 → tres cuartos 02", 1, AvatarTurn.fallback(9));
+        assertEquals("G3 → frente", 0, AvatarTurn.fallback(10));
+        assertEquals("G4 → tres cuartos 08", 7, AvatarTurn.fallback(11));
         assertEquals(3, AvatarTurn.fallback(3));
     }
 
