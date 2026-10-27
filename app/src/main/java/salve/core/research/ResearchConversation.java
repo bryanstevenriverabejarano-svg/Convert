@@ -105,8 +105,32 @@ public final class ResearchConversation {
      * Lo que solo se sabe mirando ahora (el tiempo de hoy, las noticias): sin buscar, el modelo lo
      * inventaría. Es una lectura pública, como «busca…», y se hace sin preguntar.
      */
+    /**
+     * Hechos que cambian con el tiempo y que un modelo local inventaría sin fuente: quién ocupa hoy un
+     * cargo, precios y cotizaciones, resultados, fechas de eventos, horarios, últimas versiones.
+     * Saber cuándo no sabe: en vez de contestar de memoria, lo mira (lectura pública, como el tiempo).
+     */
+    private static final Pattern CHANGING_FACT = Pattern.compile(
+            "^(?:salve,? )?(?:sabes |me dices |dime )?(?:"
+            + "quien es (?:el|la) (?:actual |nuev[oa] )?(?:presidente|presidenta|primer ministro|primera ministra|alcalde|alcaldesa|rey|reina|papa"
+            + "|ceo|director|directora|ministro|ministra|lehendakari|entrenador|entrenadora|seleccionador)\\b"
+            + "|quien (?:gano|ha ganado|va ganando|quedo primero)\\b"
+            + "|como (?:quedo|ha quedado|va) (?:el|la) (?:partido|carrera|final|liga|eleccion|elecciones|clasificacion)\\b"
+            + "|(?:cual es el |que )?precio (?:de|del|de la|actual)\\b|a cuanto esta (?:el|la)\\b|cuanto (?:cuesta|vale) (?:el|la|un|una|ahora)\\b"
+            + "|cotizacion (?:de|del)\\b|como esta (?:el bitcoin|la bolsa|el euribor|el ibex)\\b"
+            + "|cuando (?:es|sale|se estrena|empieza|termina|abre|cierra|juega) (?:el|la|los|las)\\b"
+            + "|(?:cual es )?(?:la |el )?(?:ultima|ultimo) (?:version|modelo|actualizacion) de\\b"
+            + "|(?:esta|estan) abiert[oa]s? (?:el|la|los|las|hoy)\\b|(?:cual es el )?horario de\\b"
+            + ").*$");
+
     public static String currentInfoTopic(String input) {
-        Matcher m = CURRENT.matcher(normalize(input));
+        String normalized = normalize(input);
+        // Lo personal («¿cuándo es el cumpleaños de mi madre?») está en su memoria, no en internet.
+        if (CHANGING_FACT.matcher(normalized).matches() && !normalized.matches(".*\\b(?:mi|mis|tu|tus|nuestro|nuestra|nuestros|nuestras|conmigo|contigo)\\b.*")) {
+            String topic = normalized.replaceFirst("^salve,? ", "").replaceFirst("^(?:sabes |me dices |dime )", "").trim();
+            return topic.length() < 8 ? null : limit(topic, 200);
+        }
+        Matcher m = CURRENT.matcher(normalized);
         if (!m.matches()) return null;
         String t = normalize(input).replaceFirst("^salve,? ", "").replaceFirst("^(?:sabes |me dices |dime )", "");
         if (t.matches("^(?:que|cuales son las) (?:noticias|ultimas noticias).*")) return limit(t.replaceFirst("^(?:que|cuales son las) ", ""), 200);
