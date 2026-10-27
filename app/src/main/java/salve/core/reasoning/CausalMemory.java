@@ -191,6 +191,22 @@ public final class CausalMemory {
         return "Hecho, he olvidado: " + String.join("; ", gone) + ".";
     }
 
+    /**
+     * Analogía estructural sobre lo que Bryan le ha contado: si sabe que A → B (o B → A), busca qué
+     * cumple la misma relación con C. Devuelve «D» con la relación usada, o null si no tiene base.
+     */
+    public synchronized String[] analogy(String a, String b, String c) {
+        String ka = closest(a), kb = closest(b), kc = closest(c);
+        if (ka == null || kb == null || kc == null || ka.equals(kc)) return null;
+        if (engine.link(ka, kb) != null) {
+            for (ReasoningEngine.Prediction p : engine.predict(kc, 1)) if (!p.concept.equals(kb)) return new String[]{p.concept, kc + " → " + p.concept};
+        }
+        if (engine.link(kb, ka) != null) {
+            for (ReasoningEngine.Prediction p : engine.explain(kc, 1)) if (!p.concept.equals(kb)) return new String[]{p.concept, p.concept + " → " + kc};
+        }
+        return null;
+    }
+
     /** Cuántas relaciones causales tiene guardadas. */
     public synchronized int size() { return engine.getTotalLinks(); }
 

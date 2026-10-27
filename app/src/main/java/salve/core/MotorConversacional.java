@@ -1236,6 +1236,7 @@ public class MotorConversacional {
                 + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext()
                 + salve.core.reasoning.MathGrounding.promptBlock(entrada) + sketchContext;
         if (!storyTurn && memoriaCausal != null) responseContext += memoriaCausal.promptBlock(entrada);
+        if (!storyTurn) responseContext += salve.core.reasoning.AnalogyReasoner.promptBlock(entrada, memoriaCausal);
         // Si quien habla se presenta como otra persona, cambia el estado y no se pisa el perfil de Bryan.
         // En una historia, «soy el explorador Aric» es su personaje: no cambia quién habla ni su perfil.
         boolean otherSpeaker = !storyTurn && mesaIdentidad.registrarIdentidadDeclarada(entrada);
