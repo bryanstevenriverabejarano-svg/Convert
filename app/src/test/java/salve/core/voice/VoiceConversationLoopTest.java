@@ -546,4 +546,52 @@ public class VoiceConversationLoopTest {
         assertEquals(State.STOPPED, loop.state());
         assertFalse(loop.isActive());
     }
+
+    @Test
+    public void handsFreeKeepsListeningThroughLongSilencesThenStops() {
+        VoiceConversationLoop loop = new VoiceConversationLoop(true);
+        long token = loop.start(0L).token;
+        long now = 100L;
+        for (int i = 0; i < 20; i++) {
+            assertEquals(Action.WAIT, loop.recognitionFailed(token, RecognitionFailure.SILENCE, now).action);
+            now += 500L;
+            token = loop.tick(now).token;
+            now += 8_000L;
+        }
+        assertTrue(loop.isActive());
+        assertStopped(loop, loop.recognitionFailed(token, RecognitionFailure.SILENCE,
+                100L + VoiceConversationLoop.HANDS_FREE_SILENCE_PATIENCE_MS), StopReason.NO_SPEECH);
+    }
+
+    @Test
+    public void handsFreeSilenceClockRestartsWhenBryanSpeaks() {
+        VoiceConversationLoop loop = new VoiceConversationLoop(true);
+        long token = loop.start(0L).token;
+        loop.recognitionFailed(token, RecognitionFailure.SILENCE, 100L);
+        token = loop.tick(170_000L).token;
+        assertEquals(Action.SUBMIT, loop.recognized(token, "hola", 170_100L).action);
+        loop.speechFinished(token, true, 171_000L);
+        token = loop.tick(171_300L).token;
+        assertEquals(Action.WAIT, loop.recognitionFailed(token, RecognitionFailure.SILENCE, 300_000L).action);
+        assertTrue(loop.isActive());
+    }
+
+    @Test
+    public void handsFreeSessionLastsThirtyMinutes() {
+        VoiceConversationLoop loop = new VoiceConversationLoop(true);
+        loop.start(0L);
+        assertTrue("a los 10 minutos sigue activa", loop.isActive() && loop.tick(600_000L).action != Action.STOP);
+        assertStopped(loop, loop.tick(VoiceConversationLoop.HANDS_FREE_SESSION_LIMIT_MS), StopReason.SESSION_LIMIT);
+    }
+
+    @Test
+    public void farewellsToSalveEndTheConversation() {
+        for (String bye : new String[]{"Adiós, Salve", "hasta luego Salve", "eso es todo, Salve",
+                "buenas noches, Salve", "deja de escucharme", "Salve, deja de escuchar"}) {
+            assertTrue(bye, VoiceConversationLoop.isStopCommand(bye));
+        }
+        for (String talk : new String[]{"adiós", "le dije adiós a Salve ayer", "hasta luego"}) {
+            assertFalse(talk, VoiceConversationLoop.isStopCommand(talk));
+        }
+    }
 }
