@@ -85,7 +85,7 @@ public class MotorConversacional {
     private SistemaSensorial sensores;
      boolean conversationForeground;
     private ReasoningEngine motorRazonamiento;
-    private salve.core.reasoning.CausalMemory memoriaCausal;
+    salve.core.reasoning.CausalMemory memoriaCausal;
 
     private boolean jugandoAjedrez = false;
     private GestorAjedrez gestorAjedrez;

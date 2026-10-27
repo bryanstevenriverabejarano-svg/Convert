@@ -207,6 +207,9 @@ public final class CausalMemory {
         return null;
     }
 
+    /** Cuántas relaciones causales tiene guardadas. */
+    public synchronized int size() { return engine.getTotalLinks(); }
+
     /** Lo aprendido, con cuántas veces se lo ha dicho Bryan. */
     String describe() {
         List<String> lines = new ArrayList<>();
