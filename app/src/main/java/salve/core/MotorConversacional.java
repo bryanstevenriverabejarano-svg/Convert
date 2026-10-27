@@ -791,6 +791,9 @@ public class MotorConversacional {
         }
         String modelSwitch = cambioDeModelo(entrada);
         if (modelSwitch != null) { hablar(modelSwitch); return; }
+        // «¿Qué has aprendido de mí?» / «olvida que X provoca Y»: solo Bryan gestiona su memoria causal.
+        String causal = memoriaCausal != null && creatorSide() ? memoriaCausal.command(entrada) : null;
+        if (causal != null) { hablar(causal); return; }
         if (pideFotoEnLaNube(entrada)) {
             if (activePhoto == null) { hablar("No hay ninguna foto en el chat. Añade una y vuelve a pedírmelo."); return; }
             if (!gemini.isAvailable()) {
@@ -1238,6 +1241,8 @@ public class MotorConversacional {
         if (!storyTurn && intent.type != IntentType.GUARDAR_RECUERDO && !otherSpeaker && creatorSide()) {
             // Solo aprende causas que afirma Bryan (no preguntas, ni respuestas del modelo, ni páginas web).
             if (memoriaCausal != null) {
+                java.util.List<salve.core.reasoning.CausalMemory.Relation> retiradas = memoriaCausal.revise(entrada);
+                if (!retiradas.isEmpty()) salve.core.trace.ExecutionTrace.note("MEMORIA CAUSAL", "corregí (Bryan lo desmintió): " + retiradas);
                 java.util.List<salve.core.reasoning.CausalMemory.Relation> causas = memoriaCausal.learn(entrada);
                 if (!causas.isEmpty()) salve.core.trace.ExecutionTrace.note("MEMORIA CAUSAL", "aprendí: " + causas);
             }

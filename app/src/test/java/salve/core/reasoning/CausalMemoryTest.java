@@ -61,4 +61,33 @@ public class CausalMemoryTest {
         assertTrue(reloaded.promptBlock("¿por qué me duele la cabeza? tengo dolor de cabeza").contains("estres"));
         file.delete();
     }
+
+    @Test public void negationsAreNeverLearnedAsCauses() {
+        assertTrue(CausalMemory.extract("El café no me hace dormir mal.").isEmpty());
+        assertTrue(CausalMemory.extract("El estrés ya no me provoca dolor de cabeza.").isEmpty());
+        assertEquals(1, CausalMemory.extract("No duermo bien porque tomo café tarde.").size());
+    }
+
+    @Test public void contradictingABeliefRemovesIt() {
+        CausalMemory memory = new CausalMemory(new ReasoningEngine(), null);
+        memory.learn("El estrés me provoca dolor de cabeza.");
+        assertTrue(memory.revise("Hola, ¿qué tal?").isEmpty());
+        List<CausalMemory.Relation> removed = memory.revise("Ya no es así: el estrés ya no me provoca dolores de cabeza.");
+        assertEquals(1, removed.size());
+        assertEquals("", memory.promptBlock("¿Por qué tengo dolor de cabeza?"));
+        memory.learn("El café provoca insomnio.");
+        assertEquals(1, memory.revise("No es verdad que el café provoca insomnio").size());
+    }
+
+    @Test public void bryanCanAskWhatSheLearnedAndMakeHerForget() {
+        CausalMemory memory = new CausalMemory(new ReasoningEngine(), null);
+        assertTrue(memory.command("¿Qué has aprendido de mí?").startsWith("Todavía no"));
+        memory.learn("El estrés provoca dolor de cabeza. El estrés provoca dolor de cabeza.");
+        String learned = memory.command("¿Qué has aprendido de mí?");
+        assertTrue(learned, learned.contains("estres → dolor de cabeza") && learned.contains("2 veces"));
+        assertTrue(memory.command("Olvida que el estrés provoca dolor de cabeza").startsWith("Hecho"));
+        assertNull(memory.command("olvida que el estrés provoca dolor de cabeza"));
+        assertNull(memory.command("olvida que te lo dije"));
+        assertNull(memory.command("¿Qué tal estás?"));
+    }
 }

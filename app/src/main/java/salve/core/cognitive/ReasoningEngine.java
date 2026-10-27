@@ -303,6 +303,16 @@ public class ReasoningEngine {
         return out;
     }
 
+    /** Borra el enlace cause → effect (Bryan lo desmintió o pidió olvidarlo). true si existía. */
+    public synchronized boolean removeCausalLink(String cause, String effect) {
+        String key = normalize(cause), effectKey = normalize(effect);
+        List<CausalLink> links = causalGraph.get(key);
+        if (links == null) return false;
+        boolean removed = links.removeIf(l -> effectKey.equals(l.effect));
+        if (links.isEmpty()) causalGraph.remove(key);
+        return removed;
+    }
+
     /** El enlace directo cause → effect, o null. */
     public synchronized CausalLink link(String cause, String effect) {
         List<CausalLink> links = causalGraph.get(normalize(cause));

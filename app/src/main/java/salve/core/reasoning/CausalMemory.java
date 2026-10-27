@@ -57,19 +57,40 @@ public final class CausalMemory {
     private static final Pattern DUE_TO = Pattern.compile("^(.+?),? (?:por culpa de|debido a|a causa de) (.+)$");
     private static final Pattern CAUSES = Pattern.compile(
             "^(.+?) (?:provoca|provocan|causa|causan|produce|producen|genera|generan|hace que|hacen que|me hace|me hacen|nos hace|lleva a|llevan a|me da|me dan) (.+)$");
+    /** «el café ya no me quita el sueño», «el estrés no provoca dolor de cabeza». */
+    private static final Pattern NEG_CAUSES = Pattern.compile(
+            "^(.+?) (?:ya )?no (?:me |nos |te |le )?(?:provoca|provocan|causa|causan|produce|producen|genera|generan|hace que|hacen que|"
+            + "hace|hacen|da|dan|lleva a|llevan a|quita|quitan|tiene que ver con) (.+)$");
+    /** «el dolor de cabeza no es por el estrés». («No duermo bien porque…» es una afirmación: su efecto es «no dormir bien».) */
+    private static final Pattern NEG_BECAUSE = Pattern.compile(
+            "^(.+?) no (?:es |viene )?(?:por|porque|debido a|a causa de) (.+)$");
+    private static final Pattern NOT_TRUE = Pattern.compile("^(?:no es (?:verdad|cierto) que|ya no es (?:verdad|cierto) que|eso no es asi,? ) ?(.+)$");
     private static final Pattern QUESTION_START = Pattern.compile("^(?:por que|que|como|donde|quien|cual|cuanto|sabes|crees|puedes)\\b");
     private static final Set<String> EMPTY = new HashSet<>(Arrays.asList(
             "eso", "esto", "lo", "ello", "asi", "si", "no", "todo", "nada", "algo", "pasa", "pasa eso", "ocurre", "es asi", "me gusta",
             "quiero", "puedo", "lo hago", "lo se", "tu", "yo"));
 
     /** Relaciones causales que Bryan afirma en su mensaje (no en preguntas). */
-    public static List<Relation> extract(String input) {
+    public static List<Relation> extract(String input) { return parse(input, false); }
+
+    /** Relaciones que Bryan niega («X ya no provoca Y», «no es verdad que X porque Y»). */
+    public static List<Relation> denials(String input) { return parse(input, true); }
+
+    private static List<Relation> parse(String input, boolean wantDenials) {
         List<Relation> out = new ArrayList<>();
         if (input == null || input.length() > 600) return out;
         for (String raw : input.split("(?<=[.;!?\\n])")) {
             if (raw.contains("?") || raw.contains("¿")) continue;
             String s = normalize(raw).replaceFirst("^(?:y |pues |bueno,? |es que |mira,? |ademas,? |salve,? )+", "").trim();
             if (s.isEmpty() || QUESTION_START.matcher(s).find()) continue;
+            Relation denied = denial(s);
+            if (denied != null) {
+                // Una negación nunca se aprende como causa (antes «el café no me hace dormir mal» habría
+                // dado «café no → dormir mal»).
+                if (wantDenials && denied != null) out.add(denied);
+                continue;
+            }
+            if (wantDenials) continue;
             Relation r = match(IF_THEN, s, false, ReasoningEngine.LinkType.LOGICAL);
             if (r == null) r = match(WHEN, s, false, ReasoningEngine.LinkType.TEMPORAL);
             if (r == null) r = match(CAUSES, s, false, ReasoningEngine.LinkType.LOGICAL);
@@ -78,6 +99,18 @@ public final class CausalMemory {
             if (r != null) out.add(r);
         }
         return out;
+    }
+
+    private static Relation denial(String s) {
+        Matcher notTrue = NOT_TRUE.matcher(s);
+        if (notTrue.matches()) {
+            String inner = notTrue.group(1);
+            List<Relation> stated = parse(inner, false);
+            if (!stated.isEmpty()) return stated.get(0);
+        }
+        Relation r = match(NEG_CAUSES, s, false, ReasoningEngine.LinkType.LOGICAL);
+        if (r == null) r = match(NEG_BECAUSE, s, true, ReasoningEngine.LinkType.LOGICAL);
+        return r;
     }
 
     private static Relation match(Pattern p, String s, boolean effectFirst, ReasoningEngine.LinkType type) {
@@ -106,6 +139,71 @@ public final class CausalMemory {
             engine.registerCausalLink(canonical(r.cause), canonical(r.effect), STATED_STRENGTH, r.type);
         if (!found.isEmpty()) save();
         return found;
+    }
+
+    /**
+     * Revisión de creencias: si Bryan niega una relación que tenía guardada, la borra (lo último que
+     * dice Bryan sobre sí mismo manda). Devuelve las relaciones retiradas.
+     */
+    public synchronized List<Relation> revise(String input) {
+        List<Relation> removed = new ArrayList<>();
+        for (Relation r : denials(input)) {
+            Relation known = known(r);
+            if (known != null && engine.removeCausalLink(known.cause, known.effect)) removed.add(known);
+        }
+        if (!removed.isEmpty()) save();
+        return removed;
+    }
+
+    /** La relación guardada que corresponde a {@code r} aunque esté dicha con otras palabras, o null. */
+    Relation known(Relation r) {
+        String cause = closest(r.cause), effect = closest(r.effect);
+        if (cause == null || effect == null) return null;
+        ReasoningEngine.CausalLink link = engine.link(cause, effect);
+        return link == null ? null : new Relation(cause, effect, link.type);
+    }
+
+    private static final Pattern FORGET = Pattern.compile("^(?:salve,? )?(?:olvida|olvidate de|borra|deja de pensar) que (.+)$");
+    private static final Pattern WHAT_LEARNED = Pattern.compile(
+            "^(?:salve,? )?(?:que (?:has aprendido|sabes|causas (?:has aprendido|conoces)) (?:de mi|sobre mi)|"
+            + "que causas (?:has aprendido|conoces|tienes guardadas)|tu memoria causal|ensename tu memoria causal)$");
+
+    /**
+     * Órdenes de Bryan sobre esta memoria: «¿qué has aprendido de mí?» y «olvida que X provoca Y».
+     * Devuelve la respuesta, o null si el mensaje no es una de ellas.
+     */
+    public synchronized String command(String input) {
+        if (input == null || input.length() > 300) return null;
+        String t = normalize(input).replaceAll("[¿?¡!.]+", " ").replaceAll("\\s+", " ").trim();
+        if (WHAT_LEARNED.matcher(t).matches()) return describe();
+        Matcher forget = FORGET.matcher(t);
+        if (!forget.matches()) return null;
+        List<Relation> asked = extract(forget.group(1));
+        if (asked.isEmpty()) return null; // «olvida que te lo dije»: no es una causa, sigue la conversación
+        List<String> gone = new ArrayList<>();
+        for (Relation r : asked) {
+            Relation known = known(r);
+            if (known != null && engine.removeCausalLink(known.cause, known.effect)) gone.add(known.toString());
+        }
+        if (!gone.isEmpty()) save();
+        // Nada causal que olvidar: el olvido de memoria normal de Salve se encarga.
+        if (gone.isEmpty()) return null;
+        return "Hecho, he olvidado: " + String.join("; ", gone) + ".";
+    }
+
+    /** Lo aprendido, con cuántas veces se lo ha dicho Bryan. */
+    String describe() {
+        List<String> lines = new ArrayList<>();
+        for (Map.Entry<String, List<ReasoningEngine.CausalLink>> e : engine.getAllCausalLinks().entrySet())
+            for (ReasoningEngine.CausalLink l : e.getValue())
+                lines.add(e.getKey() + " → " + l.effect + (l.observationCount > 1 ? " (me lo has dicho " + l.observationCount + " veces)" : ""));
+        if (lines.isEmpty()) return "Todavía no he aprendido ninguna causa de lo que me cuentas. "
+                + "Cuando me digas cosas como «X porque Y» o «si X, Y», las recordaré.";
+        java.util.Collections.sort(lines);
+        int shown = Math.min(lines.size(), 12);
+        return "Esto es lo que he aprendido de lo que me has explicado:\n- " + String.join("\n- ", lines.subList(0, shown))
+                + (lines.size() > shown ? "\n…y " + (lines.size() - shown) + " más." : "")
+                + "\nSi algo ya no es así, dímelo («X ya no provoca Y») o pídeme que lo olvide.";
     }
 
     private static final Pattern WHY = Pattern.compile("(?:^|\\b)por que (?:me |se |te |nos )?(.+)$");
