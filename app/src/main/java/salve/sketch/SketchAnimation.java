@@ -19,6 +19,8 @@ public final class SketchAnimation {
         this.scene = scene;
         List<FourierStroke> list = new ArrayList<>();
         List<Integer> partOf = new ArrayList<>();
+        float[] sceneWeight = StrokeWeight.weights(scene.strokes, scene.isSelfPortrait());
+        List<Float> weights = new ArrayList<>();
         float total = 0;
         float step = Math.max(scene.width, scene.height) / 160f; // pluma a velocidad constante
         for (int k = 0; k < scene.strokes.size(); k++) {
@@ -26,10 +28,13 @@ public final class SketchAnimation {
             if (f.length < 1f) continue;
             list.add(f);
             partOf.add(partIndex(scene, k));
+            weights.add(sceneWeight[k]);
             total += f.length;
         }
         strokePart = new int[partOf.size()];
         for (int i = 0; i < strokePart.length; i++) strokePart[i] = partOf.get(i);
+        weight = new float[weights.size()];
+        for (int i = 0; i < weight.length; i++) weight[i] = weights.get(i);
         if (list.isEmpty()) throw new IllegalArgumentException("Escena sin trazos");
         strokes = Collections.unmodifiableList(list);
         float base = scene.isSelfPortrait() ? 9.5f : clamp(1.4f + total / 1000f * .75f, 2.8f, 7.5f);
@@ -47,6 +52,10 @@ public final class SketchAnimation {
     }
 
     private final int[] strokePart;
+    private final float[] weight;
+
+    /** Grosor relativo del trazo i (contorno más grueso, detalles más finos). */
+    public float weight(int i) { return i >= 0 && i < weight.length ? weight[i] : 1f; }
 
     private static int partIndex(SketchScene scene, int stroke) {
         for (int i = 0; i < scene.parts.size(); i++) {
