@@ -150,7 +150,8 @@ public final class ConversationMemoryGrounding {
         boolean personal = normalized.matches(".*\\b(te dije|hablamos|conmigo|juntos|mi|mis|mio)\\b.*");
         MemorySalience.When when = MemorySalience.when(input);
         Map<String, Double> weights = peopleWeights();
-        MemorySearchService.Result search = new MemorySearchService(memories).search(query, personal, MAX_RECORDS, weights, when);
+        MemorySearchService.Result search = new MemorySearchService(memories)
+                .searchWithRecovery(input, query, personal, MAX_RECORDS, weights, when);
         if (search.failed) out.error();
         List<RecuerdoEntity> semanticOnly = new ArrayList<>();
         List<RecuerdoEntity> ordered = fuseSemantic(input, search.records, personal, semanticOnly);
@@ -159,12 +160,18 @@ public final class ConversationMemoryGrounding {
         ordered = reorderBySalience(ordered, search.records, weights, when);
         for (RecuerdoEntity record : ordered) {
             if (semanticOnly.contains(record)) out.memory(record, "recuerdo_por_significado");
-            else out.memory(record, "recuerdo", query);
+            else out.memory(record, search.recovered ? "candidato_segunda_busqueda" : "recuerdo",
+                    search.evidenceQuery == null ? query : search.evidenceQuery);
         }
         if (!semanticOnly.isEmpty()) out.note(
                 "COINCIDENCIA_POR_SIGNIFICADO: son candidatos, no respuestas confirmadas. Comprueba en el texto original "
                         + "la persona, fecha y negación de la pregunta; si ninguno la responde, dilo. No mezcles personas del mismo nombre.");
-        if (search.expanded && !search.records.isEmpty()) out.note(
+        if (search.recovered) out.note(
+                "SEGUNDA_BUSQUEDA: los primeros términos no devolvieron registros. "
+                        + "Se encontraron candidatos por términos posteriores; verifica el tema completo, "
+                        + "la persona, fecha y negaciones antes de afirmar un recuerdo. "
+                        + "No son prueba automática de que la experiencia ocurrió.");
+        else if (search.expanded && !search.records.isEmpty()) out.note(
                 "BUSQUEDA_AMPLIADA: se probaron variantes de vocabulario; confirma su pertinencia con el texto original.");
         // The graph has no reliable authorship/deletion lineage. Never use it to reconstruct personal history.
         if (!personal) retrieveGraph(query.terms(), out);
