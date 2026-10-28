@@ -796,7 +796,10 @@ public class MotorConversacional {
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
         if (salve.core.mind.MindMapCommand.matches(entrada)) { hablar(abrirMapaMente()); return; }
-        String mindResponse = mind().handleCommand(entrada);
+        String mindResponse = salve.core.cognition.ConversationEvidenceIntent.classify(
+                entrada, conversationSession.snapshot())
+                == salve.core.cognition.ConversationEvidenceIntent.Scope.NONE
+                ? mind().handleCommand(entrada) : null;
         if (mindResponse != null) {
             deliverResponse(mindResponse, AvatarMotionProtocol.parse(""), false, true, true);
             return;
@@ -1307,9 +1310,13 @@ public class MotorConversacional {
         String directAnswer = storyTurn ? null : deviceClock.directReply(entrada);
         // «¿Recuerdas que hablamos de este concepto?», «pues búscalo»: el tema está en el hilo, no en la frase.
         java.util.List<salve.core.conversation.ChatMessage> hilo = conversationSession.snapshot();
-        final boolean recallTurn = !storyTurn && salve.core.conversation.MemoryRecall.isRecallTurn(entrada, hilo);
+        final boolean evidenceRequested = !storyTurn
+                && salve.core.cognition.ConversationEvidenceIntent.classify(entrada, hilo)
+                != salve.core.cognition.ConversationEvidenceIntent.Scope.NONE;
+        final boolean recallTurn = !storyTurn && !evidenceRequested
+                && salve.core.conversation.MemoryRecall.isRecallTurn(entrada, hilo);
         final boolean memoryOpen = creatorSide();
-        boolean recordar = directAnswer == null && !storyTurn
+        boolean recordar = directAnswer == null && !storyTurn && !evidenceRequested
                 && (reasoningPlan.shouldRetrieveLongTermMemory() || recallTurn) && memoryOpen;
         String consultaMemoria = recallTurn ? salve.core.conversation.MemoryRecall.query(entrada, hilo) : entrada;
         if (recordar) estado(recallTurn && !consultaMemoria.equals(entrada)
@@ -1362,7 +1369,7 @@ public class MotorConversacional {
                     + (anteriorEnIngles.length() > 700 ? anteriorEnIngles.substring(0, 700) + "…" : anteriorEnIngles)
                     + "». Dile lo mismo en español, con su contenido, y si quieres explica que se te cruzó el idioma.";
         // Cuentos, poemas y escenas de historia: texto libre, sin el JSON que les cortaba el texto.
-        boolean creativeTurn = activePhoto == null
+        boolean creativeTurn = activePhoto == null && !evidenceRequested
                 && (storyTurn || salve.core.conversation.CreativeRequest.isCreative(entrada, recentAssistantReplies(2)));
         int creativeParts = storyTurn ? 1 : salve.core.conversation.CreativeRequest.parts(entrada);
         LiveWriting live = creativeTurn ? new LiveWriting(creativeParts, storyTurn ? entrada : null) : null;
