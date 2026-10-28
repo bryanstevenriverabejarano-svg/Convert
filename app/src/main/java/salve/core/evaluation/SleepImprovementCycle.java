@@ -56,6 +56,19 @@ public final class SleepImprovementCycle {
         return out;
     }
 
+    /** Richer factual night record; the legacy assessment remains compatible. */
+    public static JsonObject assess(JsonObject exam, List<SkillLab.Outcome> history,
+            List<SkillLab.Decision> decisions, NightPracticePolicy.Outcome practice, long now) {
+        JsonObject result = assess(exam, history, decisions,
+                practice != null && practice.persistedPractice(), now);
+        result.addProperty("practice_attempted", practice == null ? 0 : practice.attempted);
+        result.addProperty("practice_solved", practice == null ? 0 : practice.solved);
+        result.addProperty("practice_saved", practice != null && practice.saved);
+        result.addProperty("practice_result", practice == null ? "sin_resultado_verificable" : practice.reason);
+        result.addProperty("model_weights_updated", false);
+        return result;
+    }
+
     /** A stored hint is never authority: re-derive the candidate from the same current exam. */
     public static JsonObject candidateFor(JsonObject report, JsonObject exam) {
         if (report == null || exam == null) return null;
@@ -110,6 +123,18 @@ public final class SleepImprovementCycle {
             if (report.get("schema").getAsInt() != 1) return "No pude interpretar el informe de sueño.";
             StringBuilder text = new StringBuilder("Mi último análisis nocturno: ");
             text.append(report.get("practice_ran").getAsBoolean() ? "practiqué un reto local." : "no pude practicar un reto nuevo.");
+            if (report.has("practice_attempted") && report.has("practice_solved")) {
+                int attempted = report.get("practice_attempted").getAsInt();
+                int solved = report.get("practice_solved").getAsInt();
+                boolean saved = report.get("practice_saved").getAsBoolean();
+                text.append(" El laboratorio ejecutó ").append(attempted)
+                    .append(" retos y verificó ").append(solved).append(" soluciones.");
+                if (!saved && attempted > 0)
+                    text.append(" No se guardó el progreso: esto no cuenta como aprendizaje persistente.");
+                else if (saved && attempted > 0)
+                    text.append(" Se conservó el progreso del laboratorio.");
+                text.append(" No he reentrenado los pesos de Gemma.");
+            }
             int count = report.get("skill_observations").getAsInt();
             text.append(" Mi laboratorio conserva ").append(count)
                 .append(" observaciones verificadas recientes (")

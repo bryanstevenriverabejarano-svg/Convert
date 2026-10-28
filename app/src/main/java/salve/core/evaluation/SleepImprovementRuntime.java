@@ -44,13 +44,13 @@ public final class SleepImprovementRuntime {
         } catch (Exception invalid) { return null; }
     }
 
-    /** Called only inside the existing sleep gate, after its verified local challenge. */
-    public static boolean record(Context context, MindRuntime mind, boolean practiceRan,
-                                 BooleanSupplier stopped) {
+    /** Called only inside the existing sleep gate, after a bounded verified local challenge. */
+    public static boolean record(Context context, MindRuntime mind,
+                                 NightPracticePolicy.Outcome practice, BooleanSupplier stopped) {
         if (stopped != null && stopped.getAsBoolean()) return false;
         JsonObject exam = lastExam(context);
         JsonObject report = SleepImprovementCycle.assess(exam, mind.skills().history(),
-                mind.skills().decisions(), practiceRan, System.currentTimeMillis());
+                mind.skills().decisions(), practice, System.currentTimeMillis());
         if (stopped != null && stopped.getAsBoolean()) return false;
         File target = reportPath(context);
         File dir = target.getParentFile();
@@ -86,7 +86,11 @@ public final class SleepImprovementRuntime {
 
     public static String status(Context context) {
         JsonObject report = last(context);
-        if (report != null) return SleepImprovementCycle.describe(report);
+        if (report != null) {
+            String transfer = NightTransferTrial.status(context);
+            return SleepImprovementCycle.describe(report)
+                    + (transfer.isEmpty() ? "" : "\n" + transfer);
+        }
         Context app = context.getApplicationContext();
         SharedPreferences prefs = app.getSharedPreferences("salve_sleep_focus", Context.MODE_PRIVATE);
         if (!prefs.getBoolean("enabled", false))
