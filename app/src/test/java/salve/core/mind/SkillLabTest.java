@@ -52,9 +52,10 @@ public class SkillLabTest {
         assertNotNull(d);
         assertEquals("revertido", d.verdict);
         assertEquals("referencia_primero", lab.plan(SkillLab.DIBUJAR, "").variant("estrategia"));
-        // En enfriamiento: otro fallo no reabre el mismo experimento enseguida.
+        // En enfriamiento: otro fallo no reabre el mismo experimento enseguida (puede probar otra estrategia
+        // que aún no ha probado, como empezar por sus iconos, pero nunca la que acaba de descartar).
         lab.record(lab.plan(SkillLab.DIBUJAR, ""), false, "estrategia", "vision", "otra vez");
-        assertTrue(lab.trials().isEmpty());
+        for (SkillLab.Trial t : lab.trials()) assertNotEquals("imaginar_primero", t.challenger);
     }
 
     @Test public void creditGoesOnlyToTheStepThatFailed() {
@@ -93,5 +94,22 @@ public class SkillLabTest {
         assertFalse(SkillLab.asksAbout("dibuja un gato"));
         List<SkillLab.Outcome> h = lab.history();
         assertEquals("bryan", h.get(h.size() - 1).verifier);
+    }
+
+    @Test public void canLearnToStartWithItsLineIcons() {
+        long[] now = {9_000_000L};
+        SkillLab lab = new SkillLab(new Memory(), () -> now[0]);
+        assertEquals("empezar por mi icono de líneas limpio", SkillLab.describe("icono_primero"));
+        // Con edificios las referencias fallan una y otra vez: el laboratorio prueba otra estrategia.
+        java.util.Set<String> tried = new java.util.HashSet<>();
+        for (int i = 0; i < 40; i++) {
+            SkillLab.Plan p = lab.plan(SkillLab.DIBUJAR, "edificio");
+            String v = p.variant("estrategia");
+            tried.add(v);
+            // Bryan sólo aprueba cuando empieza por el icono.
+            lab.record(p, "icono_primero".equals(v), "icono_primero".equals(v) ? null : "estrategia", "bryan", v);
+            now[0] += 60 * 60_000L;
+        }
+        assertTrue("llega a probar los iconos: " + tried, tried.contains("icono_primero"));
     }
 }
