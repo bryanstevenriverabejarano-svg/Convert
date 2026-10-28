@@ -80,15 +80,28 @@ public final class SleepImprovementCycle {
         catch (RuntimeException bad) { return 0; }
     }
 
+    /**
+     * Reliable intent-to-tool bridge. An LLM can paraphrase a question, but without
+     * a tool receipt it must not claim it performed an actual sleeping session.
+     * Match related verbs + sleep context, not a memorized full sentence.
+     */
     public static boolean asksStatus(String input) {
         String s = Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT),
                 Normalizer.Form.NFD).replaceAll("\\p{M}+", "")
-                .replaceAll("[¿?¡!.,;:]+", " ").replaceAll("\\s+", " ").trim()
+                .replaceAll("[^a-z0-9 ]+", " ").replaceAll("\\s+", " ").trim()
                 .replaceFirst("^salve ", "");
-        return s.matches("(?:que|cual) (?:aprendiste|has aprendido) (?:mientras dormias|durmiendo|en el sueno)")
-                || s.matches("(?:muestrame |dame |ensename )?(?:tu )?(?:informe|resumen) (?:de|del) (?:sueno|mejoras nocturnas)")
-                || s.matches("(?:que hiciste|en que pensaste) (?:mientras dormias|durmiendo)")
-                || s.matches("(?:tus )?mejoras nocturnas");
+        if (s.length() > 240 || s.isEmpty() || s.startsWith("no ")
+                || s.startsWith("imagina ") || s.startsWith("inventa ")
+                || s.startsWith("escribe ") || s.startsWith("crea ")) return false;
+        if (s.matches("(?:tus? )?(?:mejoras|progreso|informe|resumen|registro) nocturn[oa]s?"))
+            return true;
+        // Prevent redirecting advice about the user's own sleep to Salve's logs.
+        if (s.matches(".*\\b(?:mi|mis|yo) (?:sueno|descanso)\\b.*")
+                || s.matches(".*\\b(?:yo|mi) (?:duermo|dormi|dormia)\\b.*")) return false;
+        boolean night = s.matches(".*\\b(?:dorm\\w*|durm\\w*|sueno\\w*|nocturn\\w*|noche|anoche|descans\\w*|reposo)\\b.*");
+        boolean review = s.matches(".*\\b(?:aprend\\w*|mejor\\w*|progres\\w*|avanc\\w*|practic\\w*|revis\\w*|consolid\\w*|estudi\\w*|investig\\w*|pens\\w*|hic\\w*|hech\\w*|hiz\\w*|logr\\w*|trabaj\\w*|resultad\\w*|informe\\w*|resumen\\w*|registr\\w*|balance\\w*|descubr\\w*|son\\w*)\\b.*");
+        boolean asking = s.matches("^(?:que|en que|como|cuanto|cual|has|hazme|dime|cuentame|muestrame|ensename|muestame|quiero saber|quiero ver|quiero conocer|puedes contarme|puedes decirme|me puedes contar|me puedes decir|explicame|tus|tu|el|un|una)\\b.*");
+        return night && review && asking;
     }
 
     public static String describe(JsonObject report) {
