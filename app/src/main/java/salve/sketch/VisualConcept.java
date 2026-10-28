@@ -19,7 +19,19 @@ import java.util.regex.Pattern;
 public final class VisualConcept {
     public static final class Part {
         public final String name, shape;
-        Part(String name, String shape) { this.name = name; this.shape = shape; }
+        /** Dónde va dentro del objeto ({x1,y1,x2,y2} en fracciones), si su modelo lo dijo; si no, null. */
+        public final float[] box;
+        Part(String name, String shape) { this(name, shape, null); }
+        Part(String name, String shape, float[] box) { this.name = name; this.shape = shape; this.box = box; }
+    }
+
+    /** La parte de su concepto que corresponde a una pedida («puerta» ↔ «puerta principal»), o null. */
+    public Part part(String wanted) {
+        String k = PartPlan.key(wanted);
+        if (k.isEmpty()) return null;
+        for (Part p : parts) if (PartPlan.key(p.name).equals(k)) return p;
+        for (Part p : parts) if (SketchLibrary.normalize(p.name).contains(k)) return p;
+        return null;
     }
 
     public final String subject, english, kind, pose;
@@ -45,11 +57,17 @@ public final class VisualConcept {
         return "Eres Salve. Antes de dibujar algo, piensas cómo es de verdad. Describe cómo se ve «" + what + "» para "
                 + "dibujarlo con líneas. Responde SOLO con este formato, sin nada más:\n"
                 + "NOMBRE: el objeto bien escrito en español\nINGLES: nombre en inglés\nTIPO: qué es\nPARTES:\n"
-                + "- parte: forma y posición\nPOSE: postura para dibujarlo\n"
+                + "- parte: forma y posición [x1 y1 x2 y2]\nPOSE: postura para dibujarlo\n"
+                + "La caja [x1 y1 x2 y2] dice dónde va la parte dentro del objeto, en % (0 a 100, y crece hacia abajo; "
+                + "negativa si sobresale por encima). Incluye las partes que lo hacen reconocible.\n"
                 + "Ejemplo «gaton»:\nNOMBRE: gato\nINGLES: cat\nTIPO: animal, felino pequeño\nPARTES:\n"
-                + "- cabeza: redonda, delante y arriba, con dos orejas triangulares\n"
-                + "- cuerpo: óvalo alargado y horizontal\n- patas: cuatro, finas y rectas, debajo del cuerpo\n"
-                + "- cola: larga, curvada hacia arriba, detrás\nPOSE: de perfil, de pie\n"
+                + "- cabeza: redonda, delante y arriba, con dos orejas triangulares [62 0 100 42]\n"
+                + "- cuerpo: óvalo alargado y horizontal [10 25 80 75]\n- patas: cuatro, finas y rectas, debajo del cuerpo [15 65 75 100]\n"
+                + "- cola: larga, curvada hacia arriba, detrás [0 5 18 55]\nPOSE: de perfil, de pie\n"
+                + "Ejemplo «iglesia»:\nNOMBRE: iglesia\nINGLES: church\nTIPO: edificio religioso\nPARTES:\n"
+                + "- fachada: rectángulo alto con tejado a dos aguas [0 20 100 100]\n- puerta: arco alto, abajo en el centro [40 60 60 100]\n"
+                + "- campanario: torre estrecha encima del tejado [38 -25 62 22]\n- cruz: dos palos en lo más alto [45 -40 55 -25]\n"
+                + "POSE: de frente\n"
                 + "Ahora «" + what + "»" + w + ":\n";
     }
 
@@ -87,8 +105,10 @@ public final class VisualConcept {
             }
             Matcher p = PART.matcher(line);
             if (p.matches() && (inParts || parts.size() > 0 || kind.length() > 0) && parts.size() < 8) {
-                String partName = p.group(1).trim().toLowerCase(Locale.ROOT), shape = clip(p.group(2).trim(), 110);
-                if (partName.length() >= 2) parts.add(new Part(partName, shape));
+                String partName = p.group(1).trim().toLowerCase(Locale.ROOT);
+                float[] box = PartPlan.parseBox(p.group(2));
+                String shape = clip(PartPlan.withoutBox(p.group(2).trim()), 110);
+                if (partName.length() >= 2) parts.add(new Part(partName, shape, box));
             }
         }
         VisualConcept c = new VisualConcept(subject, english, kind, pose, parts);
