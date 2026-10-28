@@ -93,7 +93,8 @@ public final class MemoryRecall {
                 + " Y NO ENCONTRASTE EVIDENCIA EN LOS REGISTROS DISPONIBLES AHORA. "
                 + "Esto NO demuestra que ese recuerdo nunca se haya guardado: podrían faltar recuerdos de la nube "
                 + "o no coincidir las palabras de búsqueda. Dile qué consultaste y que por ahora no puedes confirmarlo. "
-                + "NO afirmes «sí, lo recuerdo» ni inventes la conversación; tampoco digas que no tienes acceso a tu memoria.";
+                + "NO afirmes «sí, lo recuerdo» ni inventes la conversación. "
+                + "NO digas que no tienes acceso a tus recuerdos: acabas de consultar los registros disponibles.";
     }
 
     private static final Pattern DENIES = Pattern.compile(
