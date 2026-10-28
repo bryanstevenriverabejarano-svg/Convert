@@ -34,8 +34,13 @@ public final class ConversationEvidenceIntent {
         if (!sleep && learn && refer && likelyQuestion(s)) sleep = true;
         // Multi-source question: "¿Qué aprendiste y dónde puedo ver el registro?"
         if (execution && (sleep || (learn && recentSleepContext(history)))) sleep = true;
-        // Ellipsis: "¿Y el registro?" following a sleep question.
-        if (execution && !sleep && recentSleepContext(history)) sleep = true;
+        // Ellipsis "¿Y el registro?" adds a second source to the prior sleep question.
+        if (execution && !sleep && recentSleepContext(history)
+                && s.matches("^(?:y |pues |entonces )?(?:el |tu |un )?(?:registro|logs|log|historial)(?: de (?:tareas|ejecucion|acciones))?$"))
+            sleep = true;
+        if (recentSleepContext(history)
+                && s.matches("^(?:y )?(?:(?:muestrame|ensename|quiero|dame|prefiero) )?(?:los dos|las dos|ambos|ambas|todo|los dos informes)$"))
+            return Scope.BOTH;
         if (!sleep && !execution && recentSleepContext(history) && likelyQuestion(s)
                 && s.matches("^(?:y |pues |entonces )?(?:que|como|y|el|la|muest|ense|dime|cuentame|resum)\\w*\\b.*")
                 && s.matches(".*\\b(?:resultad\\w*|conclus\\w*|prueba\\w*|logr\\w*|hic\\w*|aprend\\w*|progres\\w*|informe\\w*|resumen\\w*)\\b.*"))
