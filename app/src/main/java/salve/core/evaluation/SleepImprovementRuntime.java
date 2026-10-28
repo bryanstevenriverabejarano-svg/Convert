@@ -1,6 +1,10 @@
 package salve.core.evaluation;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.BatteryManager;
+import salve.avatar.AvatarState;
+import salve.work.SleepFocusPolicy;
 import android.util.AtomicFile;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -41,25 +45,27 @@ public final class SleepImprovementRuntime {
     }
 
     /** Called only inside the existing sleep gate, after its verified local challenge. */
-    public static void record(Context context, MindRuntime mind, boolean practiceRan,
-                              BooleanSupplier stopped) {
-        if (stopped != null && stopped.getAsBoolean()) return;
+    public static boolean record(Context context, MindRuntime mind, boolean practiceRan,
+                                 BooleanSupplier stopped) {
+        if (stopped != null && stopped.getAsBoolean()) return false;
         JsonObject exam = lastExam(context);
         JsonObject report = SleepImprovementCycle.assess(exam, mind.skills().history(),
                 mind.skills().decisions(), practiceRan, System.currentTimeMillis());
-        if (stopped != null && stopped.getAsBoolean()) return;
+        if (stopped != null && stopped.getAsBoolean()) return false;
         File target = reportPath(context);
         File dir = target.getParentFile();
-        if (!dir.isDirectory() && !dir.mkdirs()) return;
+        if (!dir.isDirectory() && !dir.mkdirs()) return false;
         AtomicFile file = new AtomicFile(target);
         FileOutputStream stream = null;
         try {
             stream = file.startWrite();
             stream.write(report.toString().getBytes(StandardCharsets.UTF_8));
-            if (stopped != null && stopped.getAsBoolean()) { file.failWrite(stream); return; }
+            if (stopped != null && stopped.getAsBoolean()) { file.failWrite(stream); return false; }
             file.finishWrite(stream);
+            return true;
         } catch (Exception failed) {
             if (stream != null) file.failWrite(stream);
+            return false;
         }
     }
 
@@ -79,6 +85,19 @@ public final class SleepImprovementRuntime {
     }
 
     public static String status(Context context) {
-        return SleepImprovementCycle.describe(last(context));
+        JsonObject report = last(context);
+        if (report != null) return SleepImprovementCycle.describe(report);
+        Context app = context.getApplicationContext();
+        SharedPreferences prefs = app.getSharedPreferences("salve_sleep_focus", Context.MODE_PRIVATE);
+        if (!prefs.getBoolean("enabled", false))
+            return "Todavía no tengo un informe de mejora nocturna guardado. Para crear uno debo entrar en modo sueño y completar un ciclo; la animación por sí sola no demuestra aprendizaje.";
+        AvatarState avatar = AvatarState.decode(app.getSharedPreferences("salve_avatar", Context.MODE_PRIVATE)
+                .getString("state", null));
+        if (!SleepFocusPolicy.active(true, avatar))
+            return "El modo sueño está solicitado, pero mi personaje ya no está dormido. No tengo un ciclo nocturno completado.";
+        BatteryManager battery = (BatteryManager) app.getSystemService(Context.BATTERY_SERVICE);
+        if (battery != null && !battery.isCharging())
+            return "Estoy en modo sueño, pero aún no hay informe. El trabajo nocturno está esperando a que conectes el móvil al cargador y Android permita ejecutarlo; la animación de dormir no significa que el modelo esté trabajando.";
+        return "Estoy en modo sueño y todavía no he guardado ningún ciclo completo. Android puede aplazarlo si hay otras tareas, ahorro de batería o el modelo está ocupado. Consulta el Registro de ejecución para ver los intentos.";
     }
 }
