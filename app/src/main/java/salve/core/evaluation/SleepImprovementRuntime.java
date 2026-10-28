@@ -86,7 +86,11 @@ public final class SleepImprovementRuntime {
 
     public static String status(Context context) {
         JsonObject report = last(context);
-        if (report != null) return SleepImprovementCycle.describe(report);
+        if (report != null) {
+            String transfer = NightTransferTrial.status(context);
+            return SleepImprovementCycle.describe(report)
+                    + (transfer.isEmpty() ? "" : "\n" + transfer);
+        }
         Context app = context.getApplicationContext();
         SharedPreferences prefs = app.getSharedPreferences("salve_sleep_focus", Context.MODE_PRIVATE);
         if (!prefs.getBoolean("enabled", false))
