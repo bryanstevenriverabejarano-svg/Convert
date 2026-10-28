@@ -87,6 +87,36 @@ public final class SatelliteProtocol {
         return out;
     }
 
+    private static final int MAX_SCREEN = 2000;
+
+    /** El texto que un trabajo de pantalla quiere mostrar, recortado, o "". */
+    public static String screenText(JsonObject params) {
+        if (params == null || !params.has("text")) return "";
+        String text = params.get("text").getAsString();
+        if (text == null) return "";
+        text = text.trim();
+        return text.length() > MAX_SCREEN ? text.substring(0, MAX_SCREEN) : text;
+    }
+
+    /** Qué sensor pide un trabajo de sensores: "location", "camera", "mic", o "" si no es uno conocido. */
+    public static String sensorKind(JsonObject params) {
+        if (params == null || !params.has("sensor")) return "";
+        String s = params.get("sensor").getAsString();
+        if (s == null) return "";
+        switch (s) {
+            case "location": case "camera": case "mic": return s;
+            default: return "";
+        }
+    }
+
+    /** Un resultado sencillo (estado y un mensaje), para pantalla y para sensores sin datos. */
+    public static JsonObject simpleOutput(String status, String message) {
+        JsonObject out = new JsonObject();
+        out.addProperty("status", status);
+        out.addProperty("message", message == null ? "" : message);
+        return out;
+    }
+
     /** El resultado de un trabajo, para devolverlo al nodo. */
     public static JsonObject result(String satelliteId, String taskId, JsonObject output) {
         JsonObject payload = new JsonObject();

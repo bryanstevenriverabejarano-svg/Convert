@@ -94,15 +94,19 @@ public final class SatelliteLink {
     public boolean serveOnce() {
         SatelliteProtocol.Assignment task = heartbeat(true);
         if (task == null) return false;
-        if (!task.kind.equals("compute")) {
-            Log.i(TAG, "Trabajo «" + task.kind + "» todavía no se ejecuta en esta versión.");
-            return false;
+        JsonObject output;
+        switch (task.kind) {
+            case "compute": output = SatelliteCompute.execute(app, task); break;
+            case "screen":  output = SatelliteScreen.execute(app, task); break;
+            case "sensors": output = SatelliteSensors.execute(app, task); break;
+            default:
+                Log.i(TAG, "Trabajo «" + task.kind + "» desconocido en esta versión.");
+                return false;
         }
-        JsonObject output = SatelliteCompute.execute(app, task);
         String endpoint = store.parentEndpoint();
         if (endpoint != null) post(endpoint + SatelliteProtocol.RESULT,
                 SatelliteProtocol.result(store.satelliteId(), task.taskId, output));
-        Log.i(TAG, "Trabajo de cómputo «" + task.taskId + "» hecho y devuelto.");
+        Log.i(TAG, "Trabajo «" + task.kind + "» (" + task.taskId + ") hecho y devuelto.");
         return true;
     }
 
