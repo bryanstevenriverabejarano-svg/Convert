@@ -156,6 +156,13 @@ final class CognitiveToolExecutor {
                         System.currentTimeMillis()));
                 return CognitiveTurn.Receipt.handoff();
             }
+            case salve.core.mind.SelfCode.TOOL: {
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Solo para Bryan verificado");
+                String question = CognitiveReply.string(args, "pregunta");
+                m.estado("Mirando mi propio código…");
+                return new CognitiveTurn.Receipt(salve.core.mind.SelfCodeLoader.get(m.context).answer(question == null ? "" : question));
+            }
             case salve.core.mind.SelfFunctions.TOOL: {
                 if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
                     throw new IllegalArgumentException("Solo para Bryan verificado");
