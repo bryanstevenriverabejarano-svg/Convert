@@ -105,3 +105,29 @@ Bryan ordena «abre un PR», GitHub Actions puede fusionar ese PR si está habil
 la variable `SALVE_AUTOMERGE`. Si se desea revisión antes de todo cambio,
 configurar `SALVE_AUTOMERGE=false`. Esta actualización **no cambia** esa variable.
 
+
+## Diagnóstico observable y comprensión de distintas preguntas (28-10-2026)
+
+- El modo dormir conserva la **restricción de cargar el móvil**. No se presenta la
+  animación de la cama como trabajo cognitivo comprobado. Al activarlo, añade una
+  tarea «Sueño autónomo» en **Registro de ejecución** que indica `ESPERANDO_CARGA`
+  o `PROGRAMADO`. También registra la desactivación al despertar.
+- Cada intento que llegue a WorkManager crea su propia tarea. Aparecen
+  `APLAZADO`, `INTERRUMPIDO`, `FALLO`, `INFORME_NO_GUARDADO` o `COMPLETADO`,
+  y las etapas memoria, reflexión y retos solo cuando realmente pasan.
+  Se registran recuentos/estados observados, nunca el texto privado de recuerdos
+  o del prompt ni una supuesta cadena de pensamiento.
+- El guardado del informe devuelve éxito o fracaso a WorkManager; si falló, no se
+  comunica una consolidación verificada y se permite un reintento acotado.
+- Si aún no hay informe, «¿qué aprendiste mientras dormías?» explica que falta
+  ejecutar un ciclo o que Android está esperando al cargador.
+- La detección de la petición ya no exige una frase literal: «¿qué aprendiste
+  mientras dormiste?», «¿qué investigaste anoche?», «informe de tu sueño»,
+  «¿qué mejoraste durante tu descanso?» y otras variantes de intención equivalentes
+  llegan a `SleepImprovementRuntime.status`. Se excluyen preguntas sobre el sueño
+  del usuario y peticiones para inventar sueños. No se delega a Gemma la invención
+  de un informe si existe una ruta de datos verificable.
+- Tras fusionar el PR y actualizar la APK, **volver a activar el sueño** con la
+  cama visible; conectar el teléfono al cargador y dejar que Android permita el
+  trabajo. Después mirar Registro de ejecución → «Sueño autónomo», y consultar
+  el informe nocturno. El código no demuestra aún ejecución física en un S24 Ultra.
