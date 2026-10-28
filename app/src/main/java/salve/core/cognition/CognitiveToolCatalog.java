@@ -34,11 +34,27 @@ public final class CognitiveToolCatalog {
     public static Map<String, CognitiveTurn.Tool> build(String input,
             boolean photoAnalysis, boolean verifiedCreator, boolean accessibilityReady,
             Dispatch dispatch) {
+        return build(input, photoAnalysis, verifiedCreator, accessibilityReady, dispatch,
+                ConversationEvidenceIntent.classify(input, null) != ConversationEvidenceIntent.Scope.NONE);
+    }
+
+    /** The controller may pass recent conversational context for elliptical follow-up requests. */
+    public static Map<String, CognitiveTurn.Tool> build(String input,
+            boolean photoAnalysis, boolean verifiedCreator, boolean accessibilityReady,
+            Dispatch dispatch, boolean evidenceRelevant) {
         if (dispatch == null) throw new IllegalArgumentException("No hay ejecutor autorizado.");
         Map<String, CognitiveTurn.Tool> tools = new LinkedHashMap<>();
         if (photoAnalysis) return tools; // Photo-only requests never perform an action.
         String safeInput = input == null ? "" : input;
         String request = safeInput.toLowerCase(Locale.ROOT);
+
+        // Read-only observability is not a new source of power. The controller must
+        // identify relevance in THIS conversation and verify private access again in
+        // the executor. A small local LLM selects sleep, execution or both.
+        if (verifiedCreator && evidenceRelevant)
+            add(tools, "evidence.inspect",
+                    "{scope:'sleep'|'execution'|'both'}: consulta informes locales verificables de sueño/aprendizaje o Registro de ejecución; nunca inventes resultados",
+                    dispatch, "scope");
 
         if (verifiedCreator) add(tools, "memory.lookup",
                 "{query?:string}: recupera recuerdos; query opcional sobre el mismo tema de la conversación; ninguna consulta privada va a internet",
