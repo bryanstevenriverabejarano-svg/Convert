@@ -225,6 +225,16 @@ final class DrawingStudio {
                 empezarDibujo(fromWeb);
                 return " | " + motor.referenceNote + (revision.length() > 0 ? " PARTES:" + revision : "") + confianza;
             }
+            // 1b) Sin referencia buena en internet (o sin conexión): su icono de líneas, si tiene uno.
+            String webFailure = motor.referenceFailure;
+            salve.sketch.SketchScene icon = dibujarIcono(subject, concept);
+            if (icon != null) {
+                StringBuilder revision = new StringBuilder();
+                if (request.improve) icon = revisarPartes(icon, subject, concept, library, revision);
+                empezarDibujo(icon);
+                return " | " + motor.referenceNote + " En internet no encontraste una referencia buena (" + webFailure + ")."
+                        + (revision.length() > 0 ? " PARTES:" + revision : "") + confianza;
+            }
             if (request.references && !request.improve) return " | DIBUJO: buscaste referencias de «" + subject + "» en internet pero "
                     + motor.referenceFailure + ". Díselo con sencillez; puede enviarte una foto («esto es…»).";
             if (again && !request.improve)
@@ -538,6 +548,37 @@ final class DrawingStudio {
         return image;
     }
 
+    // ───────────── iconos de líneas ─────────────
+
+    /**
+     * Un icono de líneas que lleva dentro (Tabler Icons, MIT), buscado por el nombre en inglés de su
+     * concepto: líneas limpias sin internet ni el ruido de calcar una foto. null si no hay uno que lo sea.
+     */
+    salve.sketch.SketchScene dibujarIcono(String subject, salve.sketch.VisualConcept concept) {
+        salve.sketch.IconLibrary icons = salve.sketch.Sketches.icons(motor.context);
+        String english = concept == null ? "" : concept.english;
+        salve.sketch.IconLibrary.Icon icon = icons == null || english.isEmpty() ? null : icons.find(english);
+        if (icon == null) return null;
+        try {
+            motor.estado("Dibujando «" + subject + "» a partir de mi icono de líneas…");
+            salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(motor.context, subject, icon.strokes(), icon.aspect, "icon");
+            String how = "Usé un icono de líneas que llevo dentro («" + icon.name + "», de Tabler Icons, licencia MIT): "
+                    + "líneas limpias, sin el ruido de calcar una foto.";
+            salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
+            attempt.drawingFingerprint = salve.sketch.SketchExecutionNote.fingerprint(scene);
+            attempt.source = "icon"; attempt.how = how; attempt.reference = icon.name;
+            salve.sketch.Sketches.journal(motor.context).record(subject, attempt);
+            salve.core.trace.ExecutionTrace.note("REFERENCIA — ICONO DE LÍNEAS", how);
+            motor.turnSketchStatus = "Referencia: icono «" + icon.name + "» (Tabler Icons).";
+            motor.referenceNote = "ACCION_REALIZADA: para dibujar «" + subject + "» usaste un icono de líneas que llevas dentro («"
+                    + icon.name + "»), limpio y reconocible; ya lo estás trazando." + ESTILO_DIBUJO;
+            return scene;
+        } catch (java.io.IOException | RuntimeException error) {
+            Log.w(MotorConversacional.TAG, "No se pudo usar el icono", error);
+            return null;
+        }
+    }
+
     // ───────────── dibujar por partes ─────────────
 
     /**
@@ -603,7 +644,9 @@ final class DrawingStudio {
             if (!m.motif.self) return salve.sketch.SketchScene.compose(java.util.Collections.singletonList(m.motif));
         salve.sketch.VisualConcept concept = entender(name, wish);
         salve.sketch.SketchScene web = buscarReferenciaYDibujar(name, concept, wish, improve);
-        return web != null ? web : componerDibujo(name, concept, wish);
+        if (web != null) return web;
+        salve.sketch.SketchScene icon = dibujarIcono(name, concept);
+        return icon != null ? icon : componerDibujo(name, concept, wish);
     }
 
     /**
@@ -620,6 +663,9 @@ final class DrawingStudio {
         }
         List<float[]> simple = salve.sketch.PartPlan.primitive(part);
         if (simple != null) { how.append(" «").append(part).append("» la abstraje con formas simples;"); return simple; }
+        salve.sketch.IconLibrary icons = salve.sketch.Sketches.icons(motor.context);
+        salve.sketch.IconLibrary.Icon icon = icons == null ? null : icons.find(salve.sketch.PartPlan.english(part));
+        if (icon != null) { how.append(" «").append(part).append("» de mi icono de líneas «").append(icon.name).append("»;"); return icon.strokes(); }
         if (quick) return null;
         motor.estado("Buscando cómo es «" + part + "»…");
         salve.sketch.SketchScene own = buscarReferenciaYDibujar(part, entender(part, ""), "", false);
@@ -1381,6 +1427,7 @@ final class DrawingStudio {
                 case "hand": origins.add("es el dibujo a mano que me enseñó Bryan"); break;
                 case "web": origins.add("lo saqué de una imagen de referencia que busqué en internet"); break;
                 case "model": origins.add("lo compuse yo con formas geométricas"); break;
+                case "icon": origins.add("lo saqué de un icono de líneas libre que llevo dentro (Tabler Icons)"); break;
                 default: origins.add("lo tenía en mi repertorio de serie"); break;
             }
         }

@@ -60,6 +60,26 @@ public final class Sketches {
         }
     }
 
+    private static volatile IconLibrary icons;
+
+    /** Sus iconos de líneas (Tabler Icons, MIT) para tener referencias limpias sin internet; null si no cargan. */
+    public static IconLibrary icons(Context context) {
+        IconLibrary current = icons;
+        if (current != null || context == null) return current;
+        synchronized (Sketches.class) {
+            if (icons != null) return icons;
+            try (InputStream input = context.getApplicationContext().getAssets().open("sketch/icons.json")) {
+                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                byte[] buffer = new byte[16384]; int n;
+                while ((n = input.read(buffer)) != -1) bytes.write(buffer, 0, n);
+                icons = IconLibrary.parse(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
+            } catch (Exception | OutOfMemoryError error) {
+                Log.w(TAG, "No se pudieron cargar los iconos de líneas", error);
+            }
+            return icons;
+        }
+    }
+
     /** Lo que ha aprendido a dibujar (files/sketch/learned.json). */
     public static LearnedSketches learned(Context context) {
         LearnedSketches store = learnedStore;

@@ -72,6 +72,24 @@ public final class PartPlan {
         return first;
     }
 
+    /** Nombre en inglés de partes comunes, para buscar su icono de líneas. */
+    private static final Map<String, String> ENGLISH = new HashMap<>();
+    static {
+        String[][] pairs = {{"puerta", "door"}, {"portal", "door"}, {"entrada", "door"}, {"ventana", "window"},
+                {"cruz", "cross"}, {"campana", "bell"}, {"campanario", "bell"}, {"reloj", "clock"}, {"rueda", "wheel"},
+                {"bandera", "flag"}, {"corona", "crown"}, {"sombrero", "hat"}, {"escalera", "stairs"}, {"ojo", "eye"},
+                {"estrella", "star"}, {"corazon", "heart"}, {"luna", "moon"}, {"sol", "sun"}, {"nube", "cloud"},
+                {"arbol", "tree"}, {"flor", "flower"}, {"hoja", "leaf"}, {"lampara", "lamp"}, {"farol", "lamp"},
+                {"vela", "sailboat"}, {"ancla", "anchor"}, {"llave", "key"}, {"candado", "lock"}, {"buzon", "mailbox"}};
+        for (String[] p : pairs) ENGLISH.put(p[0], p[1]);
+    }
+
+    /** El nombre en inglés de una parte para buscar su icono, o "" si no lo sabe. */
+    public static String english(String part) {
+        String e = ENGLISH.get(key(part));
+        return e == null ? "" : e;
+    }
+
     /** ¿Sabe dónde va esta parte sin preguntar (puerta, cruz, ventana…)? */
     public static boolean knownPlace(String part) { return KNOWN.containsKey(key(part)); }
 
