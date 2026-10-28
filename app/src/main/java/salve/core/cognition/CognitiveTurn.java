@@ -38,6 +38,11 @@ public final class CognitiveTurn {
         }
         /** Controller-generated tool receipts, never untrusted model thoughts. */
         public JsonArray receipts() { return receipts.deepCopy(); }
+        /** Controller fallback: a factual, locally retrieved answer after model routing failed. */
+        public static Outcome groundedText(String text) {
+            if (text == null || text.isEmpty()) throw new IllegalArgumentException("Falta evidencia.");
+            return new Outcome(ModelResult.success(text, 0), false, new JsonArray());
+        }
     }
     private CognitiveTurn() { }
     public static Outcome run(Model model, Map<String, Tool> available, BooleanSupplier cancelled) {
