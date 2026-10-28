@@ -90,7 +90,8 @@ public final class LearnedSketches {
         json.addProperty("name", name);
         json.addProperty("place", "any");
         json.addProperty("aspect", Float.isFinite(aspect) && aspect > 0 ? Math.max(.2f, Math.min(5f, aspect)) : 1f);
-        json.addProperty("source", "hand".equals(source) || "model".equals(source) || "web".equals(source) ? source : "photo");
+        json.addProperty("source", "hand".equals(source) || "model".equals(source) || "web".equals(source)
+                || "icon".equals(source) ? source : "photo");
         json.addProperty("learnedAt", System.currentTimeMillis());
         JsonArray words = new JsonArray();
         words.add(key);
