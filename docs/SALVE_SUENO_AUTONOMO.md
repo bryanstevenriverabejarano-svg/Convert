@@ -62,3 +62,46 @@ criterios externos de corrección y pruebas de regresión. Solo propuestas
 comprobables de cambios o nuevas herramientas deben pasar a una bandeja de
 revisión; el modelo no debe reescribirse, subir permisos, instalar programas ni
 publicar parches de GitHub por una conclusión obtenida durante el sueño.
+
+## Reutilización de la autoevaluación y los parches (28-10-2026)
+
+El sueño ya hacía `dream → reflectIfDue → play(1)`. La nueva fase
+`SleepImprovementRuntime.record` conecta esos ciclos con **los sistemas
+existentes** sin crear un segundo corrector:
+
+- Lee `exam/ultimo.json`, que produjo `ConversationExamRunner` **con el LLM
+  real** en un examen anterior. No lo presenta como un examen nuevo.
+- `SleepImprovementCycle` llama a `SynergyEvolution.candidate` para seleccionar
+  únicamente un defecto repetido (2 o más casos) de una lista de módulos
+  permitidos. Los exámenes ausentes o de más de **14 días** no crean prioridades.
+- Consulta `SkillLab.history` y `SkillLab.decisions`: solo cuenta resultados
+  con verificador y adopciones registradas. El desafío de `play(1)` no se
+  confunde con una mejora de los pesos del LLM.
+- Guarda **solo números, fechas y una categoría/módulo permitidos**, mediante
+  `AtomicFile` en `noBackupFilesDir/mind/sleep-improvement.json`. Nunca copia
+  preguntas del examen, respuestas, correcciones privadas, prompts o credenciales.
+- Al preguntar **«¿qué aprendiste mientras dormías?»** o **«tus mejoras
+  nocturnas»**, el dueño ve el último resultado en lenguaje claro, incluyendo
+  la ausencia de evidencia si no hay examen válido.
+- **«Abre un PR»** permanece como orden independiente y exclusiva del dueño.
+  `SelfPrDesk` reutiliza la prioridad nocturna solo después de recalcular el
+  candidato desde el **mismo examen** y verificar su fecha, tipo de fallo,
+  contador y ruta. Si no encaja, aplica la selección normal. Dormir nunca llama
+  a `SelfPrDesk`, `GitHubSelfPr` ni al workflow de autopublicación.
+
+### Qué falta para una automejora general
+
+El examen conversacional completo depende de `MotorConversacional` y no se
+ejecuta sin intervención durante el sueño: hacerlo desde WorkManager sin
+separar sus dependencias de UI, TTS y sesión sería peligroso. El laboratorio
+local sí practica un reto propio en cada ciclo permitido; la revisión nocturna
+analiza el último examen conversacional **ya realizado** y las estrategias
+verificadas. Para medir mejora real habrá que comparar dos versiones del
+modelo/aplicación en un examen independiente sobre el dispositivo, evitando
+promover un parche solo porque compila.
+
+La automatización de publicación existente es una ruta separada: una vez que
+Bryan ordena «abre un PR», GitHub Actions puede fusionar ese PR si está habilitada
+la variable `SALVE_AUTOMERGE`. Si se desea revisión antes de todo cambio,
+configurar `SALVE_AUTOMERGE=false`. Esta actualización **no cambia** esa variable.
+
