@@ -197,12 +197,19 @@ public final class MindMap {
      * Las imágenes llegan ya reducidas como data:image/jpeg;base64 (no se lee nada de fuera).
      */
     public static void attachImages(JsonObject map, Map<String, String> personByFirstName, Map<Integer, String> memoryById) {
+        attachImages(map, personByFirstName, memoryById, null);
+    }
+
+    /** Igual, y además su propio retrato (la cara de su cuerpo actual) en su nodo «yo». */
+    public static void attachImages(JsonObject map, Map<String, String> personByFirstName, Map<Integer, String> memoryById,
+                                    String selfImage) {
         if (map == null || !map.has("nodes")) return;
         for (com.google.gson.JsonElement e : map.getAsJsonArray("nodes")) {
             JsonObject n = e.getAsJsonObject();
             String id = n.get("id").getAsString(), type = n.get("type").getAsString();
             String img = null;
-            if ("persona".equals(type) && personByFirstName != null) img = personByFirstName.get(norm(n.get("label").getAsString()));
+            if ("yo".equals(id)) img = selfImage;
+            else if ("persona".equals(type) && personByFirstName != null) img = personByFirstName.get(norm(n.get("label").getAsString()));
             else if ("recuerdo".equals(type) && memoryById != null && id.startsWith("m:")) {
                 try { img = memoryById.get(Integer.parseInt(id.substring(2))); } catch (NumberFormatException ignored) { }
             }
@@ -263,6 +270,27 @@ public final class MindMap {
             for (salve.core.schema.ImageSchemas.Schema s : salve.core.schema.ImageSchemas.Schema.values())
                 if (part.contains(s.label + " (")) link.accept(s, n.get("id").getAsString());
         }
+    }
+
+    /**
+     * El cuadrado de la cara en base.png a partir de astral.json: centrado entre sus ojos y su boca,
+     * con sitio para el pelo y la barbilla. Devuelve {izquierda, arriba, lado} o null si no hay datos.
+     */
+    public static int[] faceBox(String astralJson) {
+        if (astralJson == null || astralJson.isEmpty()) return null;
+        try {
+            JsonObject a = com.google.gson.JsonParser.parseString(astralJson).getAsJsonObject();
+            if (!a.has("eyeBox")) return null;
+            com.google.gson.JsonArray eyes = a.getAsJsonArray("eyeBox");
+            int ex0 = eyes.get(0).getAsInt(), ey0 = eyes.get(1).getAsInt(), ex1 = eyes.get(2).getAsInt(), ey1 = eyes.get(3).getAsInt();
+            int my1 = ey1 + (ey1 - ey0) * 2;
+            if (a.has("mouthBox")) my1 = a.getAsJsonArray("mouthBox").get(3).getAsInt();
+            int eyeWidth = ex1 - ex0;
+            if (eyeWidth <= 0 || my1 <= ey0) return null;
+            int side = Math.round(eyeWidth * 1.75f);
+            int cx = (ex0 + ex1) / 2, cy = Math.round((ey0 + my1) / 2f);
+            return new int[]{cx - side / 2, Math.max(0, cy - side / 2), side};
+        } catch (RuntimeException bad) { return null; }
     }
 
     /** El identificador de foto que aparece en el texto de un recuerdo visual («Foto dc6c…»), o null. */
