@@ -69,4 +69,27 @@ public class MindMapTest {
         assertTrue(MindMapCommand.matches("mapa de tu mente"));
         assertFalse(MindMapCommand.matches("¿tienes un mapa de Vitoria en tu mente?"));
     }
+
+    @Test public void salveWearsHerOwnFaceOnHerNode() throws Exception {
+        JsonObject map = MindMap.build("Soy Salve.", null, null, null, null, null, null, null);
+        MindMap.attachImages(map, new java.util.HashMap<>(), new java.util.HashMap<>(), "data:image/jpeg;base64,AAAA");
+        String img = null;
+        for (JsonElement e : map.getAsJsonArray("nodes")) {
+            JsonObject n = e.getAsJsonObject();
+            if (n.get("id").getAsString().equals("yo") && n.has("img")) img = n.get("img").getAsString();
+        }
+        assertEquals("data:image/jpeg;base64,AAAA", img);
+    }
+
+    @Test public void faceBoxFramesHerFaceFromTheRealAvatar() throws Exception {
+        String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(
+                "src/main/assets/avatar/realistic/astral.json")), java.nio.charset.StandardCharsets.UTF_8);
+        int[] box = MindMap.faceBox(json);
+        assertNotNull(box);
+        // Ojos (440..590, 140..182) y boca (hasta 228) dentro del recorte.
+        assertTrue(box[0] <= 440 && box[0] + box[2] >= 590);
+        assertTrue(box[1] <= 140 && box[1] + box[2] >= 228);
+        assertNull(MindMap.faceBox("{}"));
+        assertNull(MindMap.faceBox(null));
+    }
 }

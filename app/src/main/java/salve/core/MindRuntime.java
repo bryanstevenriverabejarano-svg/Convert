@@ -384,8 +384,61 @@ public final class MindRuntime {
                 String thumb = thumbnail(store.imageFile(photo), 128);
                 if (thumb != null) byMemory.put(r.id, thumb);
             }
-            salve.core.mind.MindMap.attachImages(data, byPerson, byMemory);
+            salve.core.mind.MindMap.attachImages(data, byPerson, byMemory, selfPortrait(160));
         } catch (Exception unavailable) { /* el mapa se ve igual, sin fotos */ }
+    }
+
+    /**
+     * Su retrato para el mapa: la cara del cuerpo que lleva puesto (el del Vestuario), recortada
+     * alrededor de sus ojos y boca según su astral.json. Si esa versión no tiene, usa el cuerpo actual.
+     */
+    private String selfPortrait(int size) {
+        String chosen = null;
+        try { chosen = salve.avatar.AvatarBodyVersions.selected(app); } catch (Exception ignored) { }
+        String[] folders = chosen == null || chosen.equals(salve.avatar.AvatarBodyVersions.CURRENT)
+                ? new String[]{salve.avatar.AvatarBodyVersions.CURRENT}
+                : new String[]{chosen, salve.avatar.AvatarBodyVersions.CURRENT};
+        for (String folder : folders) {
+            String face = facePortrait(app, folder, size);
+            if (face != null) return face;
+        }
+        return null;
+    }
+
+    static String facePortrait(android.content.Context context, String folder, int size) {
+        int[] box = salve.core.mind.MindMap.faceBox(readAsset(context, "avatar/" + folder + "/astral.json"));
+        if (box == null) return null;
+        android.graphics.Bitmap full;
+        try (java.io.InputStream in = context.getAssets().open("avatar/" + folder + "/base.png")) {
+            full = android.graphics.BitmapFactory.decodeStream(in);
+        } catch (Exception missing) { return null; }
+        if (full == null) return null;
+        int left = Math.max(0, box[0]), top = Math.max(0, box[1]);
+        int side = Math.min(box[2], Math.min(full.getWidth() - left, full.getHeight() - top));
+        if (side < 16) { full.recycle(); return null; }
+        android.graphics.Bitmap face = android.graphics.Bitmap.createBitmap(full, left, top, side, side);
+        android.graphics.Bitmap small = android.graphics.Bitmap.createScaledBitmap(face, size, size, true);
+        // Fondo del mapa detrás de la transparencia (el JPEG no tiene canal alfa).
+        android.graphics.Bitmap flat = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(flat);
+        canvas.drawColor(0xFF0D1626);
+        canvas.drawBitmap(small, 0, 0, null);
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        flat.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out);
+        flat.recycle();
+        if (small != face) small.recycle();
+        if (face != full) face.recycle();
+        full.recycle();
+        return "data:image/jpeg;base64," + android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP);
+    }
+
+    private static String readAsset(android.content.Context context, String path) {
+        try (java.io.InputStream in = context.getAssets().open(path)) {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+            return out.toString("UTF-8");
+        } catch (Exception missing) { return null; }
     }
 
     /** JPEG pequeño en data: URI, o null si no hay foto legible. */
