@@ -19,8 +19,28 @@ public final class SatelliteProtocol {
     public static final String REGISTER = "/v1/satellite/register";
     public static final String HEARTBEAT = "/v1/satellite/heartbeat";
     public static final String RESULT = "/v1/satellite/result";
+    public static final String ENQUEUE = "/v1/satellite/enqueue";
+    public static final String RESULT_OF = "/v1/satellite/result/"; // + id
 
     private SatelliteProtocol() { }
+
+    /** Lo que la Salve del dueño envía al nodo para repartir un trabajo de cómputo a un satélite. */
+    public static JsonObject enqueueCompute(String prompt) {
+        JsonObject params = new JsonObject();
+        params.addProperty("prompt", prompt == null ? "" : prompt);
+        JsonObject body = new JsonObject();
+        body.addProperty("kind", "compute");
+        body.add("params", params);
+        return body;
+    }
+
+    /** El texto de un resultado ya recogido del nodo ({ready:true, output:{status,text,…}}), o null. */
+    public static String resultText(JsonObject resultReply) {
+        if (resultReply == null || !resultReply.has("output") || !resultReply.get("output").isJsonObject()) return null;
+        JsonObject output = resultReply.getAsJsonObject("output");
+        if (!output.has("status") || !"ok".equals(output.get("status").getAsString())) return null;
+        return output.has("text") ? output.get("text").getAsString() : null;
+    }
 
     /** «Sigo aquí»: id, si está disponible para trabajar, y qué capacidades ofrece ahora mismo. */
     public static JsonObject heartbeat(String satelliteId, boolean available, SatelliteCapabilities caps) {

@@ -38,6 +38,19 @@ public class SatelliteProtocolTest {
         assertFalse(SatelliteProtocol.allowed(sensors, new SatelliteCapabilities(true, true, false)));
     }
 
+    @Test public void ownerEnqueueCarriesComputeAndPrompt() {
+        JsonObject e = SatelliteProtocol.enqueueCompute("hola");
+        assertEquals("compute", e.get("kind").getAsString());
+        assertEquals("hola", e.getAsJsonObject("params").get("prompt").getAsString());
+    }
+
+    @Test public void resultTextOnlyWhenReadyAndOk() {
+        assertEquals("respuesta", SatelliteProtocol.resultText(
+                json("{\"ready\":true,\"output\":{\"status\":\"ok\",\"text\":\"respuesta\"}}")));
+        assertNull(SatelliteProtocol.resultText(json("{\"ready\":false}")));
+        assertNull(SatelliteProtocol.resultText(json("{\"output\":{\"status\":\"error\",\"text\":\"x\"}}")));
+    }
+
     @Test public void resultCarriesTaskAndOutput() {
         JsonObject out = new JsonObject(); out.addProperty("text", "listo");
         JsonObject r = SatelliteProtocol.result("sat-1", "t7", out);
