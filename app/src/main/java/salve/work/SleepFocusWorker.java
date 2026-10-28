@@ -71,7 +71,12 @@ public final class SleepFocusWorker extends Worker {
             if (stop.getAsBoolean()) return Result.success();
             mind.reflectIfDue(stop);      // New questions, contradictions and self-assessment.
             if (stop.getAsBoolean()) return Result.success();
-            mind.play(stop, 1);           // One verifiable local strategy challenge, never code deployment.
+            String practice = mind.play(stop, 1); // Bounded local lab: one challenge, no deployment.
+            if (stop.getAsBoolean()) return Result.success();
+            // Reuse the existing real exam and SkillLab results. Queue a read-only diagnostic:
+            // never run SelfPrDesk, publish a GitHub issue or grant permissions from sleep.
+            salve.core.evaluation.SleepImprovementRuntime.record(
+                    app, mind, practice != null && practice.startsWith("Jugué "), stop);
             if (stop.getAsBoolean()) return Result.success();
             lease.complete();
             Log.i(TAG, "Ciclo de concentración nocturna completado");
