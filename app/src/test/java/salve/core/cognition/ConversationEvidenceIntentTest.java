@@ -26,6 +26,10 @@ public class ConversationEvidenceIntentTest {
                 Arrays.asList(prior, reply)));
         assertEquals(SLEEP, ConversationEvidenceIntent.classify("¿Y qué resultados obtuviste?",
                 Arrays.asList(prior, reply)));
+        assertEquals(BOTH, ConversationEvidenceIntent.classify("Muéstrame ambas",
+                Arrays.asList(prior, reply)));
+        assertEquals(EXECUTION, ConversationEvidenceIntent.classify("Muéstrame el registro de ejecución",
+                Arrays.asList(prior, reply)));
         assertEquals(NONE, ConversationEvidenceIntent.classify("¿Y qué resultados obtuviste?",
                 Collections.emptyList()));
     }
