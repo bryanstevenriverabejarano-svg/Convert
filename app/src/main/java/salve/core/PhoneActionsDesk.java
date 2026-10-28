@@ -189,7 +189,7 @@ final class PhoneActionsDesk {
                         switch (command.type) {
                             case WALK:
                                 state.walkTo(state.getX() < .5f ? .9f : .1f);
-                                m.hablar("He indicado al personaje que camine por su habitación.");
+                                m.hablar("Voy a caminar por mi habitación.");
                                 break;
                             case BED:
                                 state.createBed();
@@ -200,16 +200,26 @@ final class PhoneActionsDesk {
                                 m.hablar("He guardado la cama.");
                                 break;
                             case SLEEP:
-                                if (!state.sleep()) m.hablar("Dime «cama» para prepararla primero.");
-                                else m.hablar("El personaje está acostado en su cama.");
+                                // La orden explícita también prepara la cama: no requiere otro turno.
+                                if (!state.hasBed()) state.createBed();
+                                state.sleep();
+                                m.hablar("Voy a descansar y concentrarme en mis recuerdos. Cuando el móvil esté cargando, "
+                                        + "revisaré experiencias, reflexionaré y practicaré habilidades. Puedes despertarme.");
                                 break;
                             case WAKE:
                                 state.wake();
-                                m.hablar("He indicado al personaje que se levante.");
+                                m.hablar("Me levanto. He detenido mis ciclos de concentración del sueño.");
                                 break;
                             default: break;
                         }
                     });
+                    // Programar después de persistir el estado visual; nunca desde una respuesta generada por el modelo.
+                    if (command.type == salve.core.tools.AssistantControlCommand.Type.SLEEP)
+                        salve.work.SleepFocusWorker.start(m.context);
+                    else if (command.type == salve.core.tools.AssistantControlCommand.Type.WAKE
+                            || command.type == salve.core.tools.AssistantControlCommand.Type.WALK
+                            || command.type == salve.core.tools.AssistantControlCommand.Type.HIDE_BED)
+                        salve.work.SleepFocusWorker.stop(m.context);
                 });
                 return true;
         }

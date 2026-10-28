@@ -80,13 +80,29 @@ public final class AvatarRoomActivity extends Activity {
         row(root, "Cuclillas", () -> body(AvatarBodyCue.CROUCH), "De pie", () -> body(AvatarBodyCue.STAND));
         row(root, "Baile pop", () -> body(AvatarBodyCue.DANCE_POP), "Baile urbano", () -> body(AvatarBodyCue.DANCE_URBAN));
         root.addView(label("Núcleo se muestra en 3D con sus animaciones. Los dos botones de baile usan por ahora el mismo baile suave. Otros trajes y el descanso en la cama conservan sus ilustraciones.", 14, 0xFFB3C5D1));
-        row(root, "Caminar", () -> store.change(s -> s.walkTo(s.getX() > .5f ? .08f : .92f)),
-                "Detenerse", () -> store.change(AvatarState::wake));
+        row(root, "Caminar", () -> {
+                    store.change(s -> s.walkTo(s.getX() > .5f ? .08f : .92f));
+                    salve.work.SleepFocusWorker.stop(this);
+                },
+                "Detenerse", () -> {
+                    store.change(AvatarState::wake);
+                    salve.work.SleepFocusWorker.stop(this);
+                });
         row(root, "Crear cama", () -> store.change(AvatarState::createBed), "Acostarse", () -> {
             if (!store.state().hasBed()) toast("Crea primero una cama.");
-            else store.change(AvatarState::sleep);
+            else {
+                store.change(AvatarState::sleep);
+                salve.work.SleepFocusWorker.start(this);
+                toast("Sueño activo. La concentración se ejecuta cuando el móvil esté cargando.");
+            }
         });
-        row(root, "Despertar", () -> store.change(AvatarState::wake), "Guardar cama", () -> store.change(AvatarState::removeBed));
+        row(root, "Despertar", () -> {
+            store.change(AvatarState::wake);
+            salve.work.SleepFocusWorker.stop(this);
+        }, "Guardar cama", () -> {
+            store.change(AvatarState::removeBed);
+            salve.work.SleepFocusWorker.stop(this);
+        });
         button(root, "Núcleo · vistas y movimiento", () -> startActivity(new Intent(this, AvatarCoreActivity.class)));
         button(root, "Taller de posturas · avatar anterior", () -> startActivity(new Intent(this, AvatarPoseActivity.class)));
         root.addView(label("Cómo me muevo", 19, Color.WHITE));
@@ -120,7 +136,10 @@ public final class AvatarRoomActivity extends Activity {
         updateWardrobe();
     }
     private void preview(AvatarMotion.Gesture gesture, AvatarMotion.Expression expression) {
-        if (store.state().getPose() == AvatarState.Pose.SLEEPING) store.change(AvatarState::wake);
+        if (store.state().getPose() == AvatarState.Pose.SLEEPING) {
+            store.change(AvatarState::wake);
+            salve.work.SleepFocusWorker.stop(this);
+        }
         AvatarMotionController.get().previewGesture(gesture, expression);
     }
     private void body(AvatarBodyCue cue) {

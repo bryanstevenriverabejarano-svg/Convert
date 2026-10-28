@@ -29,7 +29,8 @@ public final class AssistantControlCommand {
             case "cama": case "muestra la cama": case "muestra tu cama":
             case "crea una cama": case "crea tu cama": type = Type.BED; break;
             case "guarda la cama": case "oculta la cama": case "quita la cama": type = Type.HIDE_BED; break;
-            case "acuestate": case "vete a dormir": type = Type.SLEEP; break;
+            case "acuestate": case "vete a dormir": case "duerme":
+            case "ve a dormir": case "quiero que duermas": type = Type.SLEEP; break;
             case "despierta": case "levantate": type = Type.WAKE; break;
             case "ponte el pijama": case "ponte pijama": type = Type.PAJAMAS; break;
             case "ponte ropa de dia": type = Type.DAY; break;

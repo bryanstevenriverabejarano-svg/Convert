@@ -20,6 +20,10 @@ public class AssistantControlCommandTest {
     }
     @Test public void exactAvatarCommandHandlesSpanishAccents() {
         assertEquals(AssistantControlCommand.Type.SLEEP, AssistantControlCommand.parse("Salve, ACUÉSTATE!").type);
+        assertEquals(AssistantControlCommand.Type.SLEEP, AssistantControlCommand.parse("Salve, duerme.").type);
+        assertEquals(AssistantControlCommand.Type.SLEEP, AssistantControlCommand.parse("Ve a dormir").type);
+        assertEquals(AssistantControlCommand.Type.WAKE, AssistantControlCommand.parse("Despierta").type);
+        assertNull(AssistantControlCommand.parse("¿Qué harías mientras duermes?"));
     }
     @Test public void aQuestionAboutAnActionDoesNotExecuteIt() {
         assertNull(AssistantControlCommand.parse("¿Puedes explicar cómo se crea una cama?"));
