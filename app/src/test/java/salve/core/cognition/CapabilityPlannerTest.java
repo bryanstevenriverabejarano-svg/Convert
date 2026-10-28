@@ -50,6 +50,16 @@ public class CapabilityPlannerTest {
                 .containsKey("evidence.inspect"));
     }
 
+    @Test public void offeredEvidenceCannotHijackUnrelatedModelActions() {
+        Map<String, CognitiveTurn.Tool> tools = all();
+        assertEquals("AVATAR_CREATE", first(CapabilityPlanner.rank(tools, "Diseña un vestido nuevo")));
+        assertEquals("runtime.status", first(CapabilityPlanner.rank(tools, "Cómo está tu RAM?")));
+        assertEquals("web.search", first(CapabilityPlanner.rank(tools, "Busca noticias de IA")));
+        assertEquals("sketch.draw", first(CapabilityPlanner.rank(tools, "Dibuja la luna")));
+        assertEquals("evidence.inspect", first(CapabilityPlanner.rank(tools, "¿Y el registro?")));
+        assertEquals("evidence.inspect", first(CapabilityPlanner.rank(tools, "Muéstrame ambas")));
+    }
+
     @Test public void greetingsAreUnchangedAndMissingCapabilitiesNeverInvented() {
         Map<String, CognitiveTurn.Tool> tools = all();
         assertEquals(tools.keySet(), CapabilityPlanner.rank(tools, "hola").keySet());
