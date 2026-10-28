@@ -249,7 +249,7 @@ public class ConversationMemoryGroundingTest {
     @Test public void longQuestionSecondPassIsExplicitlyCandidateNotConfirmedLifeHistory() {
         Store store = new Store();
         store.record(11, 1000, "Proyecto Orion: sensores y diagnóstico de fallos",
-                "[\\"hecho_usuario\\"]");
+                "[\"hecho_usuario\"]");
         String question = "¿Me puedes buscar las explicaciones detalladas sobre nuestro sistema antiguo del proyecto Orion?";
         ConversationMemoryGrounding.Result result = store.service().retrieve(question);
         assertTrue(result.hasEvidence());
