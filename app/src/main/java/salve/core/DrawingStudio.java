@@ -319,13 +319,18 @@ final class DrawingStudio {
         salve.sketch.ImageTracer.Result traced;
         Bitmap small = null;
         try {
-            float scale = Math.min(1f, salve.sketch.ImageTracer.MAX_SIDE / (float) Math.max(foto.getWidth(), foto.getHeight()));
-            int w = Math.max(8, Math.round(foto.getWidth() * scale)), h = Math.max(8, Math.round(foto.getHeight() * scale));
-            small = Bitmap.createScaledBitmap(foto, w, h, true);
-            int[] pixels = new int[w * h];
-            small.getPixels(pixels, 0, w, 0, 0, w, h);
             boolean learn = request.kind == salve.sketch.PhotoSketchRequest.Kind.LEARN;
-            traced = salve.sketch.ImageTracer.trace(pixels, w, h, 1600, learn);
+            if (learn) {
+                // «Esto es una silla»: se queda con la silla, sin el fondo ni su textura (sobre una copia).
+                traced = trazarBitmap(foto.copy(Bitmap.Config.ARGB_8888, false), true, true);
+            } else {
+                float scale = Math.min(1f, salve.sketch.ImageTracer.MAX_SIDE / (float) Math.max(foto.getWidth(), foto.getHeight()));
+                int w = Math.max(8, Math.round(foto.getWidth() * scale)), h = Math.max(8, Math.round(foto.getHeight() * scale));
+                small = Bitmap.createScaledBitmap(foto, w, h, true);
+                int[] pixels = new int[w * h];
+                small.getPixels(pixels, 0, w, 0, 0, w, h);
+                traced = salve.sketch.ImageTracer.trace(pixels, w, h, 1600, false);
+            }
         } catch (RuntimeException | OutOfMemoryError error) {
             Log.w(MotorConversacional.TAG, "No se pudo trazar la foto", error);
             motor.photoSketchContext = "DIBUJO: intentaste trazar la foto pero falló el análisis; dilo con sencillez.";
@@ -841,7 +846,8 @@ final class DrawingStudio {
                     // En una foto, primero mira dónde está el objeto y lo recorta: calca sólo eso, no el fondo.
                     float[] box = c.drawing || cropped >= 2 ? null : dondeEsta(bytes, subject);
                     if (box != null) cropped++;
-                    salve.sketch.ImageTracer.Result traced = salve.sketch.ImageReferenceSearch.focus(trazarBytes(bytes, box), 45);
+                    // Una foto se recorta (sujeto sin fondo ni textura); un dibujo de líneas se calca tal cual.
+                    salve.sketch.ImageTracer.Result traced = salve.sketch.ImageReferenceSearch.focus(trazarBytes(bytes, box, !c.drawing), 45);
                     analyzed++;
                     float score = salve.sketch.ImageReferenceSearch.score(c, traced);
                     salve.core.trace.ExecutionTrace.note("ANÁLISIS DE REFERENCIA", c.label() + "\nFuente: " + c.source
@@ -977,15 +983,23 @@ final class DrawingStudio {
     }
 
     /** Decodifica una imagen descargada a ≤320 px y analiza su geometría. */
-    salve.sketch.ImageTracer.Result trazarBytes(byte[] bytes) { return trazarBytes(bytes, null); }
+    salve.sketch.ImageTracer.Result trazarBytes(byte[] bytes) { return trazarBytes(bytes, null, false); }
 
-    /** @param box recorte en fracciones (o null): calca sólo el objeto. */
-    salve.sketch.ImageTracer.Result trazarBytes(byte[] bytes, float[] box) {
+    salve.sketch.ImageTracer.Result trazarBytes(byte[] bytes, float[] box) { return trazarBytes(bytes, box, false); }
+
+    /**
+     * @param box recorte en fracciones (o null): calca sólo el objeto.
+     * @param cutout es una foto (no un dibujo de líneas): recorta el sujeto, quita el fondo y la textura
+     *               antes de calcar, para quedarse con la silueta y los rasgos marcados.
+     */
+    salve.sketch.ImageTracer.Result trazarBytes(byte[] bytes, float[] box, boolean cutout) {
         android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
         bounds.inJustDecodeBounds = true;
         android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
         int sample = 1;
-        while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= salve.sketch.ImageTracer.MAX_SIDE) sample *= 2;
+        // Con recorte, se decodifica el doble de grande: el sujeto suele ocupar sólo parte de la foto.
+        int target = cutout ? 2 * salve.sketch.ImageTracer.MAX_SIDE : salve.sketch.ImageTracer.MAX_SIDE;
+        while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= target) sample *= 2;
         android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
         opts.inSampleSize = sample;
         Bitmap decoded = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
@@ -998,14 +1012,40 @@ final class DrawingStudio {
             Bitmap crop = Bitmap.createBitmap(decoded, x, y, cw, ch);
             if (crop != decoded) { decoded.recycle(); decoded = crop; }
         }
+        return trazarBitmap(decoded, cutout, true);
+    }
+
+    /**
+     * Calca un bitmap (lo recicla). Con {@code cutout}, primero separa el sujeto del fondo con la
+     * segmentación del móvil y lo recorta a su tamaño; si no hay sujeto claro, lo calca como antes.
+     */
+    salve.sketch.ImageTracer.Result trazarBitmap(Bitmap decoded, boolean cutout, boolean subjectOnly) {
         Bitmap small = null;
         try {
-            float scale = Math.min(1f, salve.sketch.ImageTracer.MAX_SIDE / (float) Math.max(decoded.getWidth(), decoded.getHeight()));
-            int w = Math.max(8, Math.round(decoded.getWidth() * scale)), h = Math.max(8, Math.round(decoded.getHeight() * scale));
-            small = Bitmap.createScaledBitmap(decoded, w, h, true);
+            float[] mask = cutout ? salve.core.visual.SubjectCutout.mask(decoded) : null;
+            int dw = decoded.getWidth(), dh = decoded.getHeight();
+            boolean usable = mask != null && salve.sketch.SubjectMask.usable(mask, dw, dh);
+            float[] frame = usable ? salve.sketch.SubjectMask.bounds(mask, dw, dh) : null;
+            Bitmap source = decoded;
+            if (frame != null) {
+                int x = Math.round(frame[0] * dw), y = Math.round(frame[1] * dh);
+                int cw = Math.max(8, Math.round((frame[2] - frame[0]) * dw)), ch = Math.max(8, Math.round((frame[3] - frame[1]) * dh));
+                cw = Math.min(dw - x, cw); ch = Math.min(dh - y, ch);
+                source = Bitmap.createBitmap(decoded, x, y, cw, ch);
+            }
+            float scale = Math.min(1f, salve.sketch.ImageTracer.MAX_SIDE / (float) Math.max(source.getWidth(), source.getHeight()));
+            int w = Math.max(8, Math.round(source.getWidth() * scale)), h = Math.max(8, Math.round(source.getHeight() * scale));
+            small = Bitmap.createScaledBitmap(source, w, h, true);
+            if (source != decoded && source != small) source.recycle();
             int[] pixels = new int[w * h];
             small.getPixels(pixels, 0, w, 0, 0, w, h);
-            return salve.sketch.ImageTracer.trace(pixels, w, h, 1600, true);
+            if (usable) {
+                float[] fitted = salve.sketch.SubjectMask.cropResize(mask, dw, dh, frame, w, h);
+                pixels = salve.sketch.SubjectMask.cutout(pixels, fitted, w, h);
+                salve.core.trace.ExecutionTrace.note("RECORTE DEL SUJETO", "Separé el sujeto del fondo ("
+                        + Math.round(salve.sketch.SubjectMask.coverage(mask) * 100) + " % de la foto) y suavicé su textura antes de calcarlo.");
+            }
+            return salve.sketch.ImageTracer.trace(pixels, w, h, 1600, subjectOnly);
         } finally {
             if (small != null && small != decoded) small.recycle();
             decoded.recycle();

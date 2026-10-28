@@ -194,10 +194,10 @@
                 android:resource="@xml/acceso_salve" />
         </service>
 
-        <!-- Descarga el módulo del lector QR al instalar, no al primer escaneo -->
+        <!-- Descarga al instalar el lector QR y el recorte de sujetos (para calcar dibujos), no al primer uso -->
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="barcode_ui" />
+            android:value="barcode_ui,subject_segment" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
