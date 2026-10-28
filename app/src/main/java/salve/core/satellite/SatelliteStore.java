@@ -20,9 +20,14 @@ public final class SatelliteStore {
 
     public SatelliteStore(Context context) { this.app = context.getApplicationContext(); }
 
-    /** El rol actual, decidido con las señales locales. */
+    /** El rol actual, decidido con las señales locales (por defecto satélite, sin preguntar nada). */
     public InstallRole role() {
-        return InstallRole.decide(prefs().getBoolean(KEY_OWNER, false), parentEndpoint() != null, hasExistingData());
+        return InstallRole.decide(prefs().getBoolean(KEY_OWNER, false), hasExistingData());
+    }
+
+    /** Un satélite que todavía no ha encontrado a qué Salve unirse (busca sola en la red). */
+    public boolean satellitePendingParent() {
+        return role() == InstallRole.SATELITE && parentEndpoint() == null;
     }
 
     /** Esta instalación se declara la Salve del dueño (elección explícita en el arranque). */
