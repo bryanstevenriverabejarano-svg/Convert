@@ -221,7 +221,10 @@ final class DrawingStudio {
             if (fromWeb != null) {
                 if (seguirPlan) esperarVeredicto(plan, subject);
                 StringBuilder revision = new StringBuilder();
-                if (request.improve) fromWeb = revisarPartes(fromWeb, subject, concept, library, revision);
+                if (request.improve) {
+                    fromWeb = revisarPartes(fromWeb, subject, concept, library, revision);
+                    fromWeb = corregirEnBucle(fromWeb, subject, concept, library, revision);
+                }
                 empezarDibujo(fromWeb);
                 return " | " + motor.referenceNote + (revision.length() > 0 ? " PARTES:" + revision : "") + confianza;
             }
@@ -230,7 +233,10 @@ final class DrawingStudio {
             salve.sketch.SketchScene icon = dibujarIcono(subject, concept);
             if (icon != null) {
                 StringBuilder revision = new StringBuilder();
-                if (request.improve) icon = revisarPartes(icon, subject, concept, library, revision);
+                if (request.improve) {
+                    icon = revisarPartes(icon, subject, concept, library, revision);
+                    icon = corregirEnBucle(icon, subject, concept, library, revision);
+                }
                 empezarDibujo(icon);
                 return " | " + motor.referenceNote + " En internet no encontraste una referencia buena (" + webFailure + ")."
                         + (revision.length() > 0 ? " PARTES:" + revision : "") + confianza;
@@ -245,7 +251,10 @@ final class DrawingStudio {
             if (own != null) {
                 if (seguirPlan) esperarVeredicto(plan, subject);
                 StringBuilder revision = new StringBuilder();
-                if (request.improve) own = revisarPartes(own, subject, concept, library, revision);
+                if (request.improve) {
+                    own = revisarPartes(own, subject, concept, library, revision);
+                    own = corregirEnBucle(own, subject, concept, library, revision);
+                }
                 empezarDibujo(own);
                 return " | " + motor.composeNote + (revision.length() > 0 ? " PARTES:" + revision : "") + confianza;
             }
@@ -579,6 +588,98 @@ final class DrawingStudio {
         }
     }
 
+    // ───────────── corregirse en bucle ─────────────
+
+    /**
+     * Como una persona: mira su dibujo, decide si se reconoce y qué parte está peor, rehace sólo esa
+     * parte con otra fuente (o, si falla la forma entera, cambia a su icono limpio) y vuelve a mirar.
+     * Hasta {@link salve.sketch.SelfCritique#MAX_ROUNDS} vueltas. Sin visión, lo deja como está.
+     */
+    salve.sketch.SketchScene corregirEnBucle(salve.sketch.SketchScene scene, String subject, salve.sketch.VisualConcept concept,
+                                             salve.sketch.SketchLibrary library, StringBuilder how) {
+        if (scene == null || motor.llm == null || !motor.llm.supportsVision()) return scene;
+        boolean triedIcon = false;
+        for (int round = 1; round <= salve.sketch.SelfCritique.MAX_ROUNDS; round++) {
+            List<String> names = salve.sketch.SelfCritique.nameable(scene.parts, subject);
+            salve.sketch.SelfCritique.Verdict verdict;
+            Bitmap image = null;
+            try {
+                motor.estado("Mirando mi dibujo para corregirlo (vuelta " + round + ")…");
+                image = pintarTrazos(scene.strokes);
+                ModelResult r = motor.llm.generateImageResult(salve.sketch.SelfCritique.prompt(subject, names), image);
+                if (r == null || !r.isSuccess()) break;
+                verdict = salve.sketch.SelfCritique.parse(r.getText(), names);
+                salve.core.trace.ExecutionTrace.note("AUTOCRÍTICA — VUELTA " + round, r.getText().trim());
+            } catch (Exception | OutOfMemoryError error) {
+                Log.w(MotorConversacional.TAG, "No pudo mirarse para corregir", error);
+                break;
+            } finally { if (image != null) image.recycle(); }
+            if (verdict.recognized) { how.append(round == 1 ? " Al mirarlo, se reconoce." : " Tras corregirlo, ya se reconoce."); break; }
+            if (verdict.worst == null) break;
+            salve.sketch.SketchScene fixed = null;
+            if (salve.sketch.SelfCritique.WHOLE.equals(verdict.worst)) {
+                // Falla la forma entera: su icono de líneas, si tiene uno y no lo está usando ya.
+                if (!triedIcon && !desdeIcono(scene)) {
+                    triedIcon = true;
+                    fixed = dibujarIcono(subject, concept);
+                    if (fixed != null) how.append(" Al mirarlo no se reconocía (").append(verdict.why)
+                            .append("); cambié a mi icono de líneas, más limpio.");
+                }
+            } else {
+                int index = -1;
+                for (int i = 0; i < scene.parts.size(); i++)
+                    if (scene.parts.get(i).name.equalsIgnoreCase(verdict.worst)) { index = i; break; }
+                if (index >= 0) {
+                    salve.sketch.SketchLibrary.Part part = scene.parts.get(index);
+                    List<float[]> old = scene.strokes.subList(part.from, Math.min(part.to, scene.strokes.size()));
+                    float[] rect = salve.sketch.PartPlan.bounds(old), all = salve.sketch.PartPlan.bounds(scene.strokes);
+                    List<float[]> lines = rect == null ? null : otraVersionDeParte(verdict.worst, subject, library, old);
+                    if (lines != null) {
+                        boolean grounded = all != null && Math.abs(rect[3] - all[3]) < .02f * Math.max(1, all[3] - all[1]);
+                        salve.sketch.PartPlan.Combined c = salve.sketch.PartPlan.replacePart(scene.strokes, scene.parts, index,
+                                salve.sketch.PartPlan.fitInto(lines, rect, grounded));
+                        try { fixed = salve.sketch.Sketches.learn(motor.context, scene.title, c.strokes, c.aspect, "model", c.parts); }
+                        catch (java.io.IOException | RuntimeException error) { fixed = null; }
+                        if (fixed != null) how.append(" Al mirarlo, «").append(verdict.worst).append("» estaba mal (")
+                                .append(verdict.why).append("); la rehice.");
+                    }
+                }
+            }
+            if (fixed == null) break;
+            scene = fixed;
+        }
+        return scene;
+    }
+
+    static boolean desdeIcono(salve.sketch.SketchScene scene) {
+        for (salve.sketch.SketchLibrary.Motif m : scene.motifs) if ("icon".equals(m.source)) return true;
+        return false;
+    }
+
+    /**
+     * Otra versión de una parte, distinta de la que ya tiene (repetir la misma fuente daría lo mismo):
+     * su icono, una referencia nueva o imaginarla. null si no encuentra nada distinto.
+     */
+    List<float[]> otraVersionDeParte(String part, String subject, salve.sketch.SketchLibrary library, List<float[]> old) {
+        float[] ob = salve.sketch.PartPlan.bounds(old);
+        float oldAspect = ob == null ? 1 : (ob[2] - ob[0]) / Math.max(1, ob[3] - ob[1]);
+        salve.sketch.IconLibrary icons = salve.sketch.Sketches.icons(motor.context);
+        salve.sketch.IconLibrary.Icon icon = icons == null ? null : icons.find(salve.sketch.PartPlan.english(part));
+        if (icon != null && distinta(icon.strokes(), old.size(), oldAspect)) return icon.strokes();
+        salve.sketch.VisualConcept concept = entender(part, "");
+        salve.sketch.SketchScene web = buscarReferenciaYDibujar(part, concept, "", true);
+        if (web != null && distinta(web.strokes, old.size(), oldAspect)) return web.strokes;
+        salve.sketch.SketchScene own = componerDibujo(part, concept, "");
+        return own != null && distinta(own.strokes, old.size(), oldAspect) ? own.strokes : null;
+    }
+
+    private static boolean distinta(List<float[]> lines, int oldCount, float oldAspect) {
+        float[] b = salve.sketch.PartPlan.bounds(lines);
+        if (b == null) return false;
+        float aspect = (b[2] - b[0]) / Math.max(1, b[3] - b[1]);
+        return lines.size() != oldCount || Math.abs(aspect - oldAspect) > .05f * Math.max(aspect, oldAspect);
+    }
+
     // ───────────── dibujar por partes ─────────────
 
     /**
@@ -617,6 +718,8 @@ final class DrawingStudio {
         if (scene == null) return "DIBUJO: no conseguiste dibujar " + String.join(" ni ", request.parts)
                 + " para ponérselo a «" + mainName + "». Díselo con honestidad y pide una foto de esa parte.";
         if (request.improve) scene = revisarPartes(scene, mainName, concept, library, how);
+        // Lo que pidió con partes se mira siempre: que cada parte se reconozca.
+        scene = corregirEnBucle(scene, mainName, concept, library, how);
         salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
         attempt.drawingFingerprint = salve.sketch.SketchExecutionNote.fingerprint(scene);
         attempt.source = "model"; attempt.how = how.toString(); attempt.wish = request.wish;
