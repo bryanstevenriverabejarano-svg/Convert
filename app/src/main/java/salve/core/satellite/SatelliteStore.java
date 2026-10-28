@@ -15,6 +15,7 @@ public final class SatelliteStore {
     private static final String KEY_OWNER = "claimed_owner";
     private static final String KEY_PARENT_ENDPOINT = "parent_endpoint";
     private static final String KEY_PARENT_NAME = "parent_name";
+    private static final String KEY_SAT_ID = "satellite_id";
 
     private final Context app;
 
@@ -54,6 +55,16 @@ public final class SatelliteStore {
     }
 
     public String parentName() { return prefs().getString(KEY_PARENT_NAME, ""); }
+
+    /** Identificador estable de este satélite (se crea una vez y se conserva). No lleva datos personales. */
+    public String satelliteId() {
+        String id = prefs().getString(KEY_SAT_ID, null);
+        if (id == null) {
+            id = "sat-" + java.util.UUID.randomUUID().toString().substring(0, 12);
+            prefs().edit().putString(KEY_SAT_ID, id).apply();
+        }
+        return id;
+    }
 
     /** Vuelve a un estado sin decidir (para rehacer la elección del arranque). */
     public void reset() {
