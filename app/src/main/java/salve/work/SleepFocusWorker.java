@@ -160,8 +160,8 @@ public final class SleepFocusWorker extends Worker {
                 new OneTimeWorkRequest.Builder(SleepFocusWorker.class)
                         .setConstraints(battery).build());
         // Record the intention as scheduled, not as a successful dream.
-        BatteryManager battery = (BatteryManager) app.getSystemService(Context.BATTERY_SERVICE);
-        boolean charging = battery != null && battery.isCharging();
+        BatteryManager batteryManager = (BatteryManager) app.getSystemService(Context.BATTERY_SERVICE);
+        boolean charging = batteryManager != null && batteryManager.isCharging();
         scheduledTrace(app, charging
                 ? "Trabajo solicitado. Android puede retrasarlo por otras tareas o ahorro de energía."
                 : "Esperando cargador: el sueño visual está activo, pero ningún aprendizaje nocturno está confirmado.",
