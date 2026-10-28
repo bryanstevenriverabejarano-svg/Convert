@@ -86,7 +86,7 @@ public final class SleepImprovementCycle {
                 .replaceAll("[¿?¡!.,;:]+", " ").replaceAll("\\s+", " ").trim()
                 .replaceFirst("^salve ", "");
         return s.matches("(?:que|cual) (?:aprendiste|has aprendido) (?:mientras dormias|durmiendo|en el sueno)")
-                || s.matches("(?:muestrame |dame |enseñame |ensen ame )?(?:tu )?(?:informe|resumen) (?:de|del) (?:sueno|sueño|mejoras nocturnas)")
+                || s.matches("(?:muestrame |dame |ensename )?(?:tu )?(?:informe|resumen) (?:de|del) (?:sueno|mejoras nocturnas)")
                 || s.matches("(?:que hiciste|en que pensaste) (?:mientras dormias|durmiendo)")
                 || s.matches("(?:tus )?mejoras nocturnas");
     }
