@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import salve.core.evaluation.SleepImprovementRuntime;
 import salve.core.selfpr.GitHubSelfPr;
 import salve.core.selfpr.SelfPatch;
 import salve.core.selfpr.SelfPrTokenStore;
@@ -35,7 +36,12 @@ final class SelfPrDesk {
         if (motor.llm == null || motor.llm.isLoading())
             return "Necesito mi modelo cargado para escribir el cambio. Espera a que diga «activo» y pídemelo otra vez.";
         JsonObject exam = lastExam();
-        JsonObject candidate = salve.core.synergy.SynergyEvolution.candidate(exam);
+        // During sleep Salve can select a priority. It has NO power to publish:
+        // this path is reachable only by Bryan's explicit «abre un PR» command.
+        // Revalidate the stored hint against the exact real exam before using it.
+        JsonObject sleepCandidate = SleepImprovementRuntime.eligibleCandidate(motor.context, exam);
+        JsonObject candidate = sleepCandidate != null ? sleepCandidate
+                : salve.core.synergy.SynergyEvolution.candidate(exam);
         if (candidate == null) return exam == null
                 ? "Primero necesito examinarme para saber qué arreglar: dime «hazte el examen» y luego «abre un PR»."
                 : "En mi último examen no hay un fallo repetido (al menos dos casos) en un módulo que sepa tocar. "
