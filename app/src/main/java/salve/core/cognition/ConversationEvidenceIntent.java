@@ -24,6 +24,9 @@ public final class ConversationEvidenceIntent {
             return Scope.NONE; // A geolocation history is not the execution journal.
         boolean execution = s.matches(".*\\b(?:registro de ejecucion|registro de tareas|registro de acciones|historial de ejecucion|historial de tareas|log de ejecucion|logs de ejecucion|notas de tarea|tus registros de ejecucion)\\b.*")
                 || s.matches("^(?:muestrame|ensename|abre|ver|quiero ver|dame|lee) (?:el |tu |tus )?(?:registro|registros|logs|log)$");
+        if (!execution && recentSleepContext(history)
+                && s.matches("^(?:y |pues |entonces )?(?:el |tu |un )?(?:registro|logs|log|historial)(?: de (?:tareas|ejecucion|acciones))?$"))
+            execution = true;
         boolean sleep = SleepImprovementCycle.asksStatus(input)
                 || s.matches(".*\\b(?:informe de sueno|informe de sueño|informe nocturno|actividad nocturna|aprendizaje nocturno)\\b.*");
         boolean learn = s.matches(".*\\b(?:aprend\\w*|mejor\\w*|progres\\w*|practic\\w*|consolid\\w*|investig\\w*|pens\\w*|hic\\w*|hiz\\w*|hech\\w*|trabaj\\w*|avanc\\w*|descubr\\w*|realiz\\w*)\\b.*");
