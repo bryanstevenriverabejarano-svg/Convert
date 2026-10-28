@@ -61,10 +61,12 @@ public final class SketchPainter {
         Path[] done = paths(animation);
         int current = animation.strokeAt(seconds);
         for (int i = 0; i < Math.min(current, done.length); i++) {
+            weigh(animation.weight(i), unit);
             canvas.drawPath(done[i], glow);
             canvas.drawPath(done[i], core);
         }
         if (current < animation.strokes.size()) {
+            weigh(animation.weight(current), unit);
             FourierStroke stroke = animation.strokes.get(current);
             float progress = animation.progress(current, seconds);
             float[] pts = stroke.points();
@@ -96,6 +98,12 @@ public final class SketchPainter {
             }
         }
         canvas.restore();
+    }
+
+    /** El contorno con más cuerpo y los detalles más finos. */
+    private void weigh(float w, float unit) {
+        glow.setStrokeWidth(6.5f * density * unit * w);
+        core.setStrokeWidth(1.7f * density * unit * w);
     }
 
     private Path[] paths(SketchAnimation animation) {
