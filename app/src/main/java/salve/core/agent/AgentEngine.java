@@ -126,7 +126,13 @@ public final class AgentEngine {
             for (String url : observation.links) if (url == null || url.length() > 500 || !salve.core.NetworkResourcePolicy.validateKnowledgeUrl(url).allowed)
                 throw new IllegalArgumentException("Invalid link URL");
         } catch (CancellationException cancelled) { throw cancelled; }
-        catch (Exception failed) { observation = new AgentRun.Observation(call.id, call.tool, "ERROR", "La herramienta no produjo un resultado válido."); }
+        catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new CancellationException(); // Pause/cancel cannot become a false failed-tool receipt.
+        } catch (Exception failed) {
+            // Only controlled categories reach the model: exception messages may contain credentials or prompts.
+            observation = new AgentRun.Observation(call.id, call.tool, "ERROR", toolFailure(failed));
+        }
         observation.id = call.id; observation.tool = call.tool;
         // The host binds the receipt to the request. Tool text cannot forge this association.
         observation.fingerprint = AgentExperience.fingerprint(call.tool, call.input);
@@ -181,7 +187,20 @@ public final class AgentEngine {
             return ModelResult.failure(ModelResult.Status.ERROR, "Context budget changed", 0);
         }
         run.modelCalls++; checkpoint(run); check(stopped);
-        ModelResult result = model.generate(prompt); check(stopped);
+        ModelResult result;
+        try {
+            result = model.generate(prompt);
+        } catch (CancellationException cancelled) {
+            throw cancelled;
+        } catch (RuntimeException failed) {
+            // A local runtime crash must end as a typed failure, not strand the plan as RUNNING.
+            // Do not persist the exception: it may contain private prompt text or credentials.
+            result = ModelResult.failure(ModelResult.Status.ERROR, "Motor local no disponible", 0);
+        }
+        check(stopped);
+        if (result == null)
+            result = ModelResult.failure(ModelResult.Status.ERROR, "Inferencia sin respuesta", 0);
+        if (result.getStatus() == ModelResult.Status.CANCELLED) throw new CancellationException();
         String provider = result.getProvider() == null ? "local no confirmado" : result.getProvider();
         run.providers.add(provider.substring(0, Math.min(120, provider.length())) + " · " + result.getStatus());
         checkpoint(run); return result;
@@ -278,5 +297,19 @@ public final class AgentEngine {
         // verified outcome by asserting "pass" in its own JSON.
         if (!store.finish(run, clock.getAsLong())) throw new CancellationException();
     }
-    private static void check(BooleanSupplier stopped) { if (stopped.getAsBoolean()) throw new CancellationException(); }
+    private static String toolFailure(Exception failure) {
+        if (failure instanceof java.net.SocketTimeoutException
+                || failure instanceof java.util.concurrent.TimeoutException)
+            return "La herramienta agotó el tiempo; prueba otra fuente o reintenta más tarde.";
+        if (failure instanceof java.net.UnknownHostException
+                || failure instanceof java.net.ConnectException
+                || failure instanceof java.net.NoRouteToHostException)
+            return "Red no disponible; conserva el plan y prueba otra fuente o reintenta después.";
+        if (failure instanceof SecurityException)
+            return "Acceso denegado. El agente no puede concederse permisos.";
+        return "La herramienta no produjo un resultado válido.";
+    }
+    private static void check(BooleanSupplier stopped) {
+        if (Thread.currentThread().isInterrupted() || stopped.getAsBoolean()) throw new CancellationException();
+    }
 }
