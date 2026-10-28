@@ -93,6 +93,22 @@ modelo. Para evaluar progreso hacia generalización habrá que medir éxito de
 objetivos nuevos, corrección, regresiones, privacidad y latencia con modelos reales
 en un dispositivo, separando el conjunto de evaluación del entrenamiento.
 
+## Recuperación de fallos del modelo y herramientas (28-10-2026)
+
+Si una inferencia local lanza una excepción o devuelve `null`, `AgentEngine`
+la convierte en un fallo tipado `ERROR`, con una entrada de proveedor sin
+datos privados. El plan termina como `BLOCKED` si aún estaba planificando;
+si falla durante la revisión final, se conserva como `PARTIAL`, sin fingir
+que ha sido verificado. Las cancelaciones `CANCELLED` y las interrupciones
+liberan el ejecutor sin falsos recibos de éxito o fracaso.
+
+Las herramientas distinguen tiempo agotado, falta de red y falta de permisos
+mediante indicaciones acotadas para elegir otro enfoque; nunca se copian al
+diario mensajes arbitrarios de excepciones (podrían incluir credenciales).
+Esta mejora no instala nuevos permisos, no crea servidores ni descarga modelos:
+la gestión efectiva de RAM y el cambio de modelo siguen siendo responsabilidad
+del router de inferencia y las pruebas en el teléfono.
+
 ## Límites verificables
 
 - 20 planes pendientes, 5 vigilancias, intervalo de 1 a 720 horas; sin avalancha de ejecuciones perdidas.

@@ -247,6 +247,56 @@ public class RoomAgentStoreTest {
         AgentRun r = execute(create().id, p -> ModelResult.failure(ModelResult.Status.UNAVAILABLE, "test", 0), tools("SUCCESS"));
         assertEquals("BLOCKED", r.status); assertEquals(0, memories());
     }
+    @Test public void crashedOrNullLocalModelRecordsFailureAndPreservesThePlan() {
+        for (int attempt = 0; attempt < 2; attempt++) {
+            final boolean crashes = attempt == 0;
+            AgentRun result = execute(create().id, prompt -> {
+                if (crashes) throw new IllegalStateException("private-model-token");
+                return null;
+            }, tools("SUCCESS"));
+            assertEquals("BLOCKED", result.status);
+            assertEquals(1, result.modelCalls);
+            assertEquals(1, result.providers.size());
+            assertTrue(result.providers.get(0).contains("ERROR"));
+            assertTrue(result.observations.isEmpty());
+            assertFalse(result.encode().contains("private-model-token"));
+            assertEquals(0, memories());
+        }
+    }
+    @Test public void modelCancellationDoesNotBecomeAFailedOrCompletedPlan() {
+        AgentRun result = execute(create().id,
+                prompt -> ModelResult.failure(ModelResult.Status.CANCELLED, "stopped", 0), tools("SUCCESS"));
+        assertEquals("QUEUED", result.status);
+        assertEquals(1, result.modelCalls);
+        assertTrue(result.providers.isEmpty());
+        assertEquals(0, memories());
+    }
+    @Test public void modelCrashDuringReviewCannotApproveAnUnverifiedAnswer() {
+        AgentRun result = execute(create().id, prompt -> {
+            if (prompt.startsWith("Revisa si")) throw new IllegalStateException("private-review-token");
+            return model().generate(prompt);
+        }, tools("SUCCESS"));
+        assertEquals("PARTIAL", result.status);
+        assertEquals(1, result.observations.size());
+        assertEquals(3, result.modelCalls);
+        assertTrue(result.providers.get(2).contains("ERROR"));
+        assertFalse(result.encode().contains("private-review-token"));
+    }
+    @Test public void failedToolReportsOnlySafeRecoveryHintNotPrivateException() {
+        AgentRun result = execute(create().id, model(), new AgentEngine.Tools() {
+            public String capabilities(AgentRun run) { return "memory.lookup"; }
+            public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call,
+                                                java.util.function.BooleanSupplier stopped) throws Exception {
+                throw new java.net.UnknownHostException("secret-connection-address");
+            }
+        });
+        assertEquals("PARTIAL", result.status);
+        assertEquals(1, result.observations.size());
+        assertEquals("ERROR", result.observations.get(0).status);
+        assertTrue(result.observations.get(0).text.contains("Red no disponible"));
+        assertFalse(result.encode().contains("secret-connection-address"));
+        assertEquals(0, memories());
+    }
     @Test public void malformedModelOutputStopsAtPersistentBudget() {
         AgentRun r = execute(create().id, p -> response("not JSON"), tools("SUCCESS"));
         assertEquals("PARTIAL", r.status); assertEquals(AgentEngine.MAX_MODEL_CALLS, r.modelCalls); assertEquals(0, memories());
