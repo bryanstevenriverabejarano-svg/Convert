@@ -129,6 +129,12 @@ public final class SleepFocusWorker extends Worker {
                 return getRunAttemptCount() < 1 ? Result.retry() : Result.failure();
             }
             journal.append(traceId, "INFORME", SleepImprovementCycle.describe(SleepImprovementRuntime.last(app)));
+            if (stop.getAsBoolean()) return Result.success();
+            // Weekly local holdout, independent from the model and the practice samples.
+            // Never installs learned skills or edits Android/GitHub, and yields on cancellation.
+            String transfer = salve.core.evaluation.NightTransferTrial.runIfDue(app, stop);
+            journal.append(traceId, "TRANSFERENCIA CIEGA", transfer);
+            if (stop.getAsBoolean()) return Result.success();
             lease.complete();
             verdict = "COMPLETADO";
             Log.i(TAG, "Ciclo de concentración nocturna completado");
