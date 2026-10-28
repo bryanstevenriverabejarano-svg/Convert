@@ -56,6 +56,7 @@ public final class MemoryLayerBridge {
                 + "episodios Room recuperados=" + sources.size()
                 + "; creencias son hipótesis, lecciones y estrategias son guías operativas. "
                 + "Si hay contradicción o falta una fuente no atribuyas certeza.\n";
+        if (header.length() > maxChars) return "";
         StringBuilder out = new StringBuilder(header);
         List<String> words = keywords(query);
 
