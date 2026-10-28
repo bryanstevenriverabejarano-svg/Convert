@@ -781,6 +781,11 @@ public class MotorConversacional {
         // «Abre un PR»: escribe su propio parche y lo manda a GitHub; las pruebas y la fusión son de Bryan.
         if (SelfPrDesk.isCommand(entrada)) { hablar(selfPr.run()); return; }
         if (SelfPrDesk.isStatusCommand(entrada)) { hablar(selfPr.status()); return; }
+        if (salve.core.evaluation.SleepImprovementCycle.asksStatus(entrada)) {
+            hablar(creatorSide()
+                    ? salve.core.evaluation.SleepImprovementRuntime.status(context)
+                    : "Mi informe de mejora nocturna es privado."); return;
+        }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
