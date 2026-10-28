@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "identity": "Salve — base de pecho cubierto y cabeza recta (27-10-2026); posturas y animaciones de las ilustraciones aprobadas el 26-10-2026",
+  "version": 5,
+  "identity": "Salve — giros originales G1-G4 (28-10-2026), sin reflejar; vistas y demás animaciones intactas",
   "rendering": "Native Canvas 2D; generated RGBA sprites, no 3D mesh. base.png es además el cuerpo vivo (capa astral).",
   "sheets": {
     "base": {
@@ -344,71 +344,6 @@
         672
       ]
     },
-    "turn": {
-      "width": 1792,
-      "height": 1344,
-      "sha256": "fd1a4825e8d9c47932a4466f5a34c02225b5ed599491e2817a676c109c6032a7",
-      "frames": [
-        [
-          0,
-          0,
-          448,
-          672
-        ],
-        [
-          448,
-          0,
-          896,
-          672
-        ],
-        [
-          896,
-          0,
-          1344,
-          672
-        ],
-        [
-          1344,
-          0,
-          1792,
-          672
-        ],
-        [
-          0,
-          672,
-          448,
-          1344
-        ],
-        [
-          448,
-          672,
-          896,
-          1344
-        ],
-        [
-          896,
-          672,
-          1344,
-          1344
-        ],
-        [
-          1344,
-          672,
-          1792,
-          1344
-        ]
-      ],
-      "frameHeights": [
-        672,
-        672,
-        672,
-        672,
-        672,
-        672,
-        672,
-        672
-      ]
-    },
     "wave": {
       "width": 1344,
       "height": 672,
@@ -576,6 +511,70 @@
         672,
         672,
         672
+      ]
+    },
+    "turn_g1": {
+      "width": 1024,
+      "height": 1536,
+      "sha256": "8e5f1769838e2242282494b204666dd171650cbad834bb205b648c7e4001fa07",
+      "frames": [
+        [
+          0,
+          0,
+          1024,
+          1536
+        ]
+      ],
+      "frameHeights": [
+        1536
+      ]
+    },
+    "turn_g2": {
+      "width": 1024,
+      "height": 1536,
+      "sha256": "90e0fe20970f5eaaaf4d80fd0abbdff3583087112d6d8392a0e1efcffd06e5fb",
+      "frames": [
+        [
+          0,
+          0,
+          1024,
+          1536
+        ]
+      ],
+      "frameHeights": [
+        1536
+      ]
+    },
+    "turn_g3": {
+      "width": 1024,
+      "height": 1536,
+      "sha256": "d1c2ef4cc89f31b0a604466141a44592d4da791118c7bf4a6a5c7f8018ddb541",
+      "frames": [
+        [
+          0,
+          0,
+          1024,
+          1536
+        ]
+      ],
+      "frameHeights": [
+        1536
+      ]
+    },
+    "turn_g4": {
+      "width": 1024,
+      "height": 1536,
+      "sha256": "02d08ae0db5b3bd7808237978c962932d7d947d106a759e2a687ec8022b7671a",
+      "frames": [
+        [
+          0,
+          0,
+          1024,
+          1536
+        ]
+      ],
+      "frameHeights": [
+        1536
       ]
     }
   }
