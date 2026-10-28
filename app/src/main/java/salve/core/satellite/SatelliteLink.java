@@ -48,11 +48,13 @@ public final class SatelliteLink {
                 return addresses;
             }).build();
 
+    private final Context app;
     private final SatelliteStore store;
     private final SatelliteCapabilities caps;
 
     public SatelliteLink(Context context) {
-        this.store = new SatelliteStore(context);
+        this.app = context.getApplicationContext();
+        this.store = new SatelliteStore(app);
         this.caps = SatelliteCapabilities.all(); // los tres usos que eligió el dueño
     }
 
@@ -82,6 +84,26 @@ public final class SatelliteLink {
             return null;
         }
         return task;
+    }
+
+    /**
+     * Una vuelta completa: late, y si el nodo asignó un trabajo de cómputo, lo corre en el modelo
+     * local y devuelve el resultado al nodo. Devuelve true si hizo un trabajo. Nunca lanza.
+     * (Pantalla y sensores aún no se ejecutan aquí; es el siguiente paso.)
+     */
+    public boolean serveOnce() {
+        SatelliteProtocol.Assignment task = heartbeat(true);
+        if (task == null) return false;
+        if (!task.kind.equals("compute")) {
+            Log.i(TAG, "Trabajo «" + task.kind + "» todavía no se ejecuta en esta versión.");
+            return false;
+        }
+        JsonObject output = SatelliteCompute.execute(app, task);
+        String endpoint = store.parentEndpoint();
+        if (endpoint != null) post(endpoint + SatelliteProtocol.RESULT,
+                SatelliteProtocol.result(store.satelliteId(), task.taskId, output));
+        Log.i(TAG, "Trabajo de cómputo «" + task.taskId + "» hecho y devuelto.");
+        return true;
     }
 
     private JsonObject post(String url, JsonObject payload) {

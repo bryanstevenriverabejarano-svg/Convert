@@ -67,6 +67,26 @@ public final class SatelliteProtocol {
         }
     }
 
+    private static final int MAX_PROMPT = 8192;
+
+    /** El texto a inferir que trae un trabajo de cómputo, recortado a un tamaño razonable, o "". */
+    public static String computePrompt(JsonObject params) {
+        if (params == null || !params.has("prompt")) return "";
+        String prompt = params.get("prompt").getAsString();
+        if (prompt == null) return "";
+        prompt = prompt.trim();
+        return prompt.length() > MAX_PROMPT ? prompt.substring(0, MAX_PROMPT) : prompt;
+    }
+
+    /** Da forma al resultado de un trabajo de cómputo: estado, texto y latencia. */
+    public static JsonObject computeOutput(String status, String text, long latencyMs) {
+        JsonObject out = new JsonObject();
+        out.addProperty("status", status);
+        out.addProperty("text", text == null ? "" : text);
+        out.addProperty("latency_ms", latencyMs);
+        return out;
+    }
+
     /** El resultado de un trabajo, para devolverlo al nodo. */
     public static JsonObject result(String satelliteId, String taskId, JsonObject output) {
         JsonObject payload = new JsonObject();

@@ -28,9 +28,10 @@ final class SatelliteGate {
         SatelliteStore store = new SatelliteStore(host);
         if (store.role().fullSalve()) return; // la Salve del dueño: sin cambios.
 
-        // Satélite, automáticamente. Si ya sabe a qué Salve sirve, se presenta; si no, la busca sola.
+        // Satélite, automáticamente. Si ya sabe a qué Salve sirve, se presenta y empieza a servir.
         if (store.parentEndpoint() != null) {
             Log.i(TAG, "Satélite de «" + store.parentName() + "»; registrándose.");
+            salve.work.SatelliteWorker.schedule(host.getApplicationContext());
             final android.content.Context app = host.getApplicationContext();
             new Thread(() -> new salve.core.satellite.SatelliteLink(app).register(), "salve-satelite-registro").start();
             return;
