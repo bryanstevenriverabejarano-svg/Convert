@@ -16,6 +16,66 @@ def verifyExternalLlmWeights = tasks.register('verifyExternalLlmWeights') {
 }
 tasks.named('preBuild').configure { dependsOn(verifyExternalLlmWeights) }
 
+// Su propio código, resumido, dentro de la app: así Salve puede consultarse a sí misma sin red.
+// Por cada archivo: ruta, líneas, qué hace (su comentario de clase) y sus funciones con su comentario.
+def selfCodeDir = layout.buildDirectory.dir('generated/selfCode')
+def generateSelfCodeIndex = tasks.register('generateSelfCodeIndex') {
+    def sources = fileTree('src/main/java') { include '**/*.java', '**/*.kt' }
+    def avatar = fileTree('src/main/assets/avatar')
+    inputs.files(sources)
+    inputs.files(avatar)
+    outputs.dir(selfCodeDir)
+    doLast {
+        def clean = { String c ->
+            c.replaceAll(/(?s)^\/\*\*|\*\/$/, '').readLines().collect { it.replaceFirst(/^\s*\*\s?/, '').trim() }
+                    .findAll { it && !it.startsWith('@') }.join(' ')
+                    .replaceAll(/\{@\w+\s+([^}]*)\}/, '$1').replaceAll(/<[^>]+>/, '').replaceAll(/\s+/, ' ').trim()
+        }
+        def cut = { String t, int n -> t.length() > n ? t.substring(0, n - 1) + '…' : t }
+        def root = file('src/main/java').toPath()
+        def files = []
+        sources.files.sort { it.path }.each { f ->
+            def text = f.getText('UTF-8')
+            def lines = text.readLines()
+            def classDoc = ''
+            def m = (text =~ /(?s)(\/\*\*(?:(?!\*\/).)*\*\/)\s*(?:@\w+(?:\([^)]*\))?\s*)*(?:public |internal |private |final |abstract |data |sealed |open )*(?:class|interface|enum|object|record)\s/)
+            if (m.find()) classDoc = cut(clean(m.group(1)), 400)
+            def methods = []
+            def pending = null
+            def inDoc = false, docBuf = new StringBuilder()
+            for (String line : lines) {
+                def t = line.trim()
+                if (!inDoc && t.startsWith('/**')) { inDoc = true; docBuf.setLength(0) }
+                if (inDoc) {
+                    docBuf.append(line).append('\n')
+                    if (t.contains("*/")) { inDoc = false; pending = clean(docBuf.toString().trim()) }
+                    continue
+                }
+                def jm = (t =~ /^(?:(?:public|protected|private|static|final|synchronized|abstract|default|native)\s+)*(?:<[^>]+>\s+)?[\w.<>\[\]?, ]+\s+(\w+)\s*\([^;]*$/)
+                def km = (t =~ /^(?:(?:public|private|internal|protected|override|suspend|inline|open)\s+)*fun\s+(?:<[^>]+>\s+)?(?:[\w.]+\.)?(\w+)\s*\(/)
+                String name = null
+                if (km.find()) name = km.group(1)
+                else if (jm.find() && !(t =~ /^(return|new|throw|else|if|for|while|switch|case)\b/)) name = jm.group(1)
+                if (name != null && !(name in ['if', 'for', 'while', 'switch', 'catch', 'synchronized'])) {
+                    if (methods.size() < 30) methods << (pending ? [n: name, d: cut(pending, 160)] : [n: name])
+                    pending = null
+                } else if (t && !t.startsWith('@') && !t.startsWith('//')) pending = null
+            }
+            files << [p: root.relativize(f.toPath()).toString().replace('\\', '/'), l: lines.size(), d: classDoc, m: methods]
+        }
+        def bodies = [:]
+        file('src/main/assets/avatar').eachDir { dir ->
+            def names = []
+            dir.eachFile { if (it.isFile()) names << it.name }
+            bodies[dir.name] = names.sort()
+        }
+        def out = selfCodeDir.get().file('self/codigo.json').asFile
+        out.parentFile.mkdirs()
+        out.setText(groovy.json.JsonOutput.toJson([version: 1, files: files, avatar: bodies]), 'UTF-8')
+    }
+}
+tasks.named('preBuild').configure { dependsOn(generateSelfCodeIndex) }
+
 android {
 
     namespace 'com.salve.app'
@@ -105,7 +165,10 @@ android {
         }
     }
 
-    sourceSets { test.resources.srcDir("$projectDir/schemas") }
+    sourceSets {
+        test.resources.srcDir("$projectDir/schemas")
+        main.assets.srcDir(selfCodeDir.get().asFile)
+    }
 
     packagingOptions {
         resources {

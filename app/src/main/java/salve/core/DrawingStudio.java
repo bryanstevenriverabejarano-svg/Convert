@@ -180,6 +180,12 @@ final class DrawingStudio {
             subject = salve.sketch.SketchRequest.cleanName(subject);
             lastSketchSubject = subject;
             motor.lastSketchAskedAt = System.currentTimeMillis();
+            // Si se trata de ella o de Bryan, sus referencias son suyas: su cuerpo y la foto de Bryan, no internet.
+            salve.sketch.SelfPortraitRequest who = salve.sketch.SelfPortraitRequest.of(entrada, subject);
+            if (!again && who.any()) {
+                String note = dibujarRetratoPropio(who, request.wish);
+                if (note != null) return " | " + note;
+            }
             // 0) Antes de dibujar, piensa cómo es: qué es y qué partes tiene (lo guarda para la próxima vez).
             motor.estado("Pensando cómo es «" + subject + "» y qué partes tiene…");
             salve.sketch.VisualConcept concept = entender(subject, request.wish);
@@ -351,6 +357,141 @@ final class DrawingStudio {
     boolean dibujoReciente() {
         long last = Math.max(motor.lastDrawnAt, motor.lastSketchAskedAt);
         return last > 0 && System.currentTimeMillis() - last < 15 * 60_000L;
+    }
+
+    /**
+     * Se dibuja a sí misma (y a Bryan) con sus propias referencias: su cuerpo actual del Vestuario
+     * (base.png) y la foto más reciente de Bryan en su memoria visual. Juntos, uno al lado del otro.
+     * @return la nota para el modelo, o null si no pudo y debe seguir el camino normal
+     */
+    String dibujarRetratoPropio(salve.sketch.SelfPortraitRequest who, String wish) {
+        motor.estado("Mirando mis propias imágenes" + (who.bryan ? " y tu foto" : "") + " para dibujar" + (who.together() ? "nos" : "")
+                + "…");
+        Bitmap ella = who.salve ? cuerpoPropio() : null;
+        Bitmap el = who.bryan ? fotoDeBryan() : null;
+        String missing = who.bryan && el == null
+                ? "No tienes ninguna foto de Bryan en tu memoria visual; pídele una diciendo «este soy yo»." : "";
+        if (ella == null && el == null) {
+            if (who.salve) { motor.referenceFailure = "no pudiste abrir tu propio cuerpo"; return null; }
+            return "DIBUJO: Bryan quiere que lo dibujes, pero " + missing.toLowerCase(java.util.Locale.ROOT)
+                    + " Díselo con sencillez; no busques fotos suyas en internet.";
+        }
+        Bitmap composed = null;
+        salve.sketch.ImageTracer.Result traced;
+        try {
+            Bitmap big = juntos(el, ella);
+            float k = Math.min(1f, salve.sketch.ImageTracer.MAX_SIDE / (float) Math.max(big.getWidth(), big.getHeight()));
+            composed = Bitmap.createScaledBitmap(big, Math.max(8, Math.round(big.getWidth() * k)), Math.max(8, Math.round(big.getHeight() * k)), true);
+            if (composed != big) big.recycle();
+            int w = composed.getWidth(), h = composed.getHeight();
+            int[] pixels = new int[w * h];
+            composed.getPixels(pixels, 0, w, 0, 0, w, h);
+            traced = salve.sketch.ImageReferenceSearch.focus(salve.sketch.ImageTracer.trace(pixels, w, h, 1600, true), 60);
+        } catch (RuntimeException | OutOfMemoryError error) {
+            Log.w(MotorConversacional.TAG, "No se pudo trazar el retrato propio", error);
+            return null;
+        } finally {
+            if (composed != null) composed.recycle();
+            if (ella != null) ella.recycle();
+            if (el != null) el.recycle();
+        }
+        if (!traced.isUsable()) return null;
+        String title = (el == null && who.bryan) ? "yo, Salve" : who.title();
+        salve.sketch.SketchStyle.Result mine = salve.sketch.SketchStyle.ownVersion(traced.strokes, salve.sketch.SketchStyle.MAX_STROKES);
+        salve.sketch.BezierSketch vectors = salve.sketch.BezierSketch.fit(mine.strokes.size() >= 2 ? mine.strokes : traced.strokes, 6f);
+        if (wish != null && wish.contains("pose")) vectors = vectors.vary(System.currentTimeMillis(), 45f);
+        List<float[]> lines = vectors.segments() >= 2 ? vectors.sample(10) : mine.strokes.size() >= 2 ? mine.strokes : traced.strokes;
+        salve.sketch.SketchScene scene;
+        try { scene = salve.sketch.Sketches.learn(motor.context, title, lines, traced.aspect, "photo"); }
+        catch (java.io.IOException | RuntimeException error) {
+            Log.w(MotorConversacional.TAG, "No se pudo guardar el retrato propio", error);
+            return null;
+        }
+        String sources = (ella != null ? "tu cuerpo actual del Vestuario" : "")
+                + (ella != null && el != null ? " y " : "") + (el != null ? "la foto más reciente de Bryan en tu memoria visual" : "");
+        String how = "Usé mis propias imágenes como referencia: " + sources + ". Tracé sus contornos: " + traced.geometry.describe()
+                + "; " + mine.describe() + ".";
+        salve.core.trace.ExecutionTrace.note("RETRATO PROPIO", how);
+        salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
+        attempt.drawingFingerprint = salve.sketch.SketchExecutionNote.fingerprint(scene);
+        attempt.source = "self"; attempt.how = how; attempt.reference = sources; attempt.wish = wish;
+        salve.sketch.Sketches.journal(motor.context).record(title, attempt);
+        motor.registrarAccion(salve.core.mind.SelfActionLog.Kind.LEARN_PHOTO, title, how);
+        lastSketchSubject = title;
+        motor.turnSketchStatus = "Referencia propia: " + sources + "; " + mine.describe() + ".";
+        empezarDibujo(scene);
+        return "ACCION_REALIZADA: para dibujar " + (ella != null && el != null ? "a Bryan y a ti juntos" : ella != null ? "a ti misma" : "a Bryan")
+                + " no buscaste en internet: miraste " + sources + " y estás trazando sus contornos."
+                + (ella != null ? " Ese cuerpo es el tuyo: te reconoces en él." : "")
+                + (missing.isEmpty() ? "" : " " + missing) + ESTILO_DIBUJO;
+    }
+
+    /** Su cuerpo actual (el elegido en el Vestuario) sobre fondo blanco, o null. */
+    Bitmap cuerpoPropio() {
+        String chosen = null;
+        try { chosen = salve.avatar.AvatarBodyVersions.selected(motor.context); } catch (RuntimeException ignored) { }
+        for (String folder : new String[]{chosen, salve.avatar.AvatarBodyVersions.CURRENT}) {
+            if (folder == null) continue;
+            try (java.io.InputStream in = motor.context.getAssets().open("avatar/" + folder + "/base.png")) {
+                android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+                o.inSampleSize = 2;
+                Bitmap body = android.graphics.BitmapFactory.decodeStream(in, null, o);
+                if (body == null) continue;
+                Bitmap flat = Bitmap.createBitmap(body.getWidth(), body.getHeight(), Bitmap.Config.ARGB_8888);
+                android.graphics.Canvas c = new android.graphics.Canvas(flat);
+                c.drawColor(android.graphics.Color.WHITE);
+                c.drawBitmap(body, 0, 0, null);
+                body.recycle();
+                return flat;
+            } catch (java.io.IOException | RuntimeException | OutOfMemoryError ignored) { }
+        }
+        return null;
+    }
+
+    /** La foto más reciente de Bryan en su memoria visual, recortada a él si su visión lo encuentra, o null. */
+    Bitmap fotoDeBryan() {
+        try {
+            salve.core.visual.VisualMemoryStore store = new salve.core.visual.VisualMemoryRepository(motor.context).store;
+            for (salve.core.visual.VisualMemoryRecord v : store.list()) { // de la más reciente a la más antigua
+                if (v == null || v.personName == null) continue;
+                String first = salve.core.visual.VisualMemoryRecord.normalize(v.personName.trim().split("\\s+")[0]);
+                if (!first.equals("bryan")) continue;
+                java.io.File file = store.imageFile(v.id);
+                if (file == null || !file.isFile()) continue;
+                byte[] bytes = java.nio.file.Files.readAllBytes(file.toPath());
+                android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+                o.inSampleSize = 2;
+                Bitmap photo = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length, o);
+                if (photo == null) continue;
+                float[] box = dondeEsta(bytes, "persona");
+                if (box != null) {
+                    int x = Math.round(box[0] * photo.getWidth()), y = Math.round(box[1] * photo.getHeight());
+                    int cw = Math.round((box[2] - box[0]) * photo.getWidth()), ch = Math.round((box[3] - box[1]) * photo.getHeight());
+                    if (cw > 16 && ch > 16 && x >= 0 && y >= 0 && x + cw <= photo.getWidth() && y + ch <= photo.getHeight()) {
+                        Bitmap crop = Bitmap.createBitmap(photo, x, y, cw, ch);
+                        if (crop != photo) photo.recycle();
+                        photo = crop;
+                    }
+                }
+                return photo;
+            }
+        } catch (java.io.IOException | RuntimeException | OutOfMemoryError ignored) { }
+        return null;
+    }
+
+    /** Los pone uno al lado del otro a la misma altura (Bryan a la izquierda), o devuelve el que haya. */
+    static Bitmap juntos(Bitmap left, Bitmap right) {
+        int height = 640;
+        int lw = left == null ? 0 : Math.round(left.getWidth() * (height / (float) left.getHeight()));
+        int rw = right == null ? 0 : Math.round(right.getWidth() * (height / (float) right.getHeight()));
+        int gap = left != null && right != null ? 40 : 0;
+        Bitmap out = Bitmap.createBitmap(Math.max(8, lw + gap + rw), height, Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas c = new android.graphics.Canvas(out);
+        c.drawColor(android.graphics.Color.WHITE);
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
+        if (left != null) c.drawBitmap(left, null, new android.graphics.Rect(0, 0, lw, height), p);
+        if (right != null) c.drawBitmap(right, null, new android.graphics.Rect(lw + gap, 0, lw + gap + rw, height), p);
+        return out;
     }
 
     /** Sin concepto: compatibilidad con la herramienta cognitiva. */

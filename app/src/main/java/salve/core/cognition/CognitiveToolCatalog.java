@@ -58,6 +58,8 @@ public final class CognitiveToolCatalog {
         add(tools, "runtime.status", "{}: mide estado y RAM", dispatch);
         if (salve.core.schema.Abstraction.offered(safeInput))
             add(tools, salve.core.schema.Abstraction.TOOL, salve.core.schema.Abstraction.toolDescription(), dispatch, "concepto");
+        if (verifiedCreator && salve.core.mind.SelfCode.offered(safeInput))
+            add(tools, salve.core.mind.SelfCode.TOOL, salve.core.mind.SelfCode.description(), dispatch, "pregunta");
         if (verifiedCreator && salve.core.mind.SelfFunctions.offered(safeInput))
             add(tools, salve.core.mind.SelfFunctions.TOOL, salve.core.mind.SelfFunctions.description(), dispatch, "accion");
 
