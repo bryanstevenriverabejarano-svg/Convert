@@ -196,6 +196,46 @@ public final class PartPlan {
         return out;
     }
 
+    /**
+     * Encaja unas líneas dentro de un rectángulo absoluto {x1,y1,x2,y2} (donde estaba la parte que se
+     * rehace), conservando su proporción, centradas y apoyadas abajo si {@code grounded}.
+     */
+    public static List<float[]> fitInto(List<float[]> lines, float[] rect, boolean grounded) {
+        float[] pb = bounds(lines);
+        if (pb == null || rect == null) return Collections.emptyList();
+        float tw = Math.max(1, rect[2] - rect[0]), th = Math.max(1, rect[3] - rect[1]);
+        float pw = Math.max(1, pb[2] - pb[0]), ph = Math.max(1, pb[3] - pb[1]);
+        float scale = Math.min(tw / pw, th / ph);
+        float ox = rect[0] + (tw - pw * scale) / 2, oy = grounded ? rect[3] - ph * scale : rect[1] + (th - ph * scale) / 2;
+        List<float[]> out = new ArrayList<>();
+        for (float[] s : lines) {
+            if (s == null || s.length < 4) continue;
+            float[] t = new float[s.length];
+            for (int i = 0; i + 1 < s.length; i += 2) { t[i] = (s[i] - pb[0]) * scale + ox; t[i + 1] = (s[i + 1] - pb[1]) * scale + oy; }
+            out.add(t);
+        }
+        return out;
+    }
+
+    /**
+     * Sustituye los trazos de una parte por otros (ya colocados) y recoloca los índices de las demás
+     * partes. Devuelve el dibujo resultante centrado en el lienzo 0..1000.
+     */
+    public static Combined replacePart(List<float[]> strokes, List<SketchLibrary.Part> parts, int index, List<float[]> replacement) {
+        SketchLibrary.Part target = parts.get(index);
+        List<float[]> all = new ArrayList<>();
+        List<SketchLibrary.Part> moved = new ArrayList<>();
+        for (int i = 0; i < parts.size(); i++) {
+            SketchLibrary.Part p = parts.get(i);
+            int from = all.size();
+            if (i == index) for (float[] s : replacement) all.add(s.clone());
+            else for (int k = p.from; k < p.to && k < strokes.size(); k++) all.add(strokes.get(k).clone());
+            if (all.size() > from) moved.add(new SketchLibrary.Part(p.name, i == index ? target.description : p.description, from, all.size()));
+        }
+        ShapeProgram.Result normalized = ShapeProgram.normalize(all, all.size(), 0);
+        return new Combined(normalized.strokes, normalized.aspect, moved);
+    }
+
     /** La caja reflejada al otro lado (la segunda ventana, el otro ojo). */
     public static float[] mirrored(float[] box) {
         return new float[]{1f - box[2], box[1], 1f - box[0], box[3]};
