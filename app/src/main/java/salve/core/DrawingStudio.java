@@ -216,6 +216,15 @@ final class DrawingStudio {
                             + confianza;
                 }
             }
+            if (seguirPlan && "icono_primero".equals(plan.variant("estrategia"))) {
+                salve.sketch.SketchScene first = dibujarIcono(subject, concept);
+                if (first != null) {
+                    esperarVeredicto(plan, subject);
+                    empezarDibujo(first);
+                    return " | " + motor.referenceNote + " (Empecé por mi icono de líneas porque, con este tipo de cosa, me ha "
+                            + "funcionado mejor que calcar una foto.)" + confianza;
+                }
+            }
             // 1) Referencias reales: siluetas y dibujos de línea primero; al mejorar, nunca la misma que ya usó.
             salve.sketch.SketchScene fromWeb = buscarReferenciaYDibujar(subject, concept, request.wish, request.improve);
             if (fromWeb != null) {
@@ -232,6 +241,10 @@ final class DrawingStudio {
             String webFailure = motor.referenceFailure;
             salve.sketch.SketchScene icon = dibujarIcono(subject, concept);
             if (icon != null) {
+                // Las referencias no funcionaron con esto: el laboratorio lo apunta para este tipo de cosa.
+                if (seguirPlan) try { contarDecision(motor.mind().skills().record(plan, false, "estrategia", "resultado",
+                        "sin referencia buena de «" + subject + "» (" + webFailure + "); usé mi icono")); }
+                catch (RuntimeException ignored) { /* aprender nunca bloquea el turno */ }
                 StringBuilder revision = new StringBuilder();
                 if (request.improve) {
                     icon = revisarPartes(icon, subject, concept, library, revision);
@@ -309,7 +322,11 @@ final class DrawingStudio {
             motor.literalDrawingReply.set(salve.sketch.SketchExecutionNote.describe(last, journal));
             return "";
         }
-        if (talk == salve.sketch.SketchTalk.Kind.CRITIQUE) journal.feedback(subject, entrada);
+        boolean forgotten = false;
+        if (talk == salve.sketch.SketchTalk.Kind.CRITIQUE) {
+            journal.feedback(subject, entrada);
+            forgotten = olvidarVersionRechazada(last);
+        }
         String facts = journal.explain(subject);
         if (facts.isEmpty()) facts = "Lo dibujé así porque " + origen(last) + "; no tengo más notas de cómo lo pensé.";
         String look = "";
@@ -324,9 +341,26 @@ final class DrawingStudio {
                 + (talk == salve.sketch.SketchTalk.Kind.CRITIQUE
                     ? " Bryan opina que no está bien. Dale la razón si la tiene, explica con esos hechos por qué salió así "
                       + "y ofrécele rehacerlo tú misma («mejóralo»): buscarás otras referencias o lo pensarás parte por parte."
+                      + (forgotten ? " Ya no reutilizarás esa versión: la quitaste de tu repertorio para hacerla mejor la próxima vez." : "")
                     : " Explica con honestidad y en primera persona por qué lo dibujaste así, con esos hechos; si salió "
                       + "abstracto o esquemático, di el motivo real.")
                 + ESTILO_DIBUJO;
+    }
+
+    /**
+     * Bryan criticó el dibujo: esa versión aprendida no se vuelve a reutilizar tal cual (la próxima vez
+     * lo rehace). Las de serie no se tocan. El dibujo sigue en pantalla para mejorarlo o añadirle partes.
+     */
+    boolean olvidarVersionRechazada(salve.sketch.SketchScene last) {
+        boolean any = false;
+        for (salve.sketch.SketchLibrary.Motif m : last.motifs) {
+            if (m.self || !m.learned()) continue;
+            salve.sketch.Sketches.forget(motor.context, m.name);
+            any = true;
+        }
+        if (any) salve.core.trace.ExecutionTrace.note("OPINIÓN DE BRYAN", "Quité «" + last.title
+                + "» de mi repertorio para no repetir una versión que no le gustó.");
+        return any;
     }
 
     /**
@@ -568,6 +602,7 @@ final class DrawingStudio {
         String english = concept == null ? "" : concept.english;
         salve.sketch.IconLibrary.Icon icon = icons == null || english.isEmpty() ? null : icons.find(english);
         if (icon == null) return null;
+        ultimaMirada = null; // no lo ha mirado: el veredicto será el de Bryan
         try {
             motor.estado("Dibujando «" + subject + "» a partir de mi icono de líneas…");
             salve.sketch.SketchScene scene = salve.sketch.Sketches.learn(motor.context, subject, icon.strokes(), icon.aspect, "icon");

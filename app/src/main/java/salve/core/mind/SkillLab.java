@@ -59,7 +59,7 @@ public final class SkillLab {
     public static List<Skill> defaults() {
         List<Skill> out = new ArrayList<>();
         out.add(new Skill(DIBUJAR, "dibujar algo nuevo",
-                new Step("estrategia", "qué intento primero", "referencia_primero", "imaginar_primero")));
+                new Step("estrategia", "qué intento primero", "referencia_primero", "imaginar_primero", "icono_primero")));
         out.add(new Skill(REFERENCIAS, "buscar imágenes de referencia",
                 new Step("fuente", "dónde busco primero", "commons", "wikipedia", "openverse")));
         out.add(new Skill(RESPONDER, "responder a lo que Bryan pide",
@@ -72,6 +72,7 @@ public final class SkillLab {
         switch (variant == null ? "" : variant) {
             case "referencia_primero": return "buscar referencias reales primero";
             case "imaginar_primero": return "imaginarlo parte por parte primero";
+            case "icono_primero": return "empezar por mi icono de líneas limpio";
             case "commons": return "Wikimedia Commons primero";
             case "wikipedia": return "la imagen del artículo de Wikipedia primero";
             case "openverse": return "Openverse primero";
