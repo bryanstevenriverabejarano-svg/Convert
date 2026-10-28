@@ -68,6 +68,8 @@ public final class CapabilityPlanner {
                 != ConversationEvidenceIntent.Scope.NONE
                 || has(s, "registro de ejecucion", "registro de tareas",
                        "ambas", "ambos", "informe nocturno", "resultados del sueno");
+        if (!evidenceQuestion && s.matches("^(?:y )?(?:el |tu )?registro$"))
+            evidenceQuestion = true;
         if (evidenceQuestion) prefer(available, first, "evidence.inspect");
 
         if (sync) prefer(available, first, "cloud.sync");
