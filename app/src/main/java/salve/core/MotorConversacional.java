@@ -1342,6 +1342,10 @@ public class MotorConversacional {
         }
         if (recallTurn) responseContext += "\n" + salve.core.conversation.MemoryRecall.note(memoryOpen,
                 evidence != null && evidence.hasEvidence(), consultaMemoria.equals(entrada) ? null : consultaMemoria);
+        // Room episodes remain the only factual source; verified source IDs may
+        // point to beliefs, lessons and adopted strategies as *separate* layers.
+        if (!storyTurn && memoryOpen && evidence != null && evidence.hasEvidence())
+            responseContext += "\n" + mind().memoryLayersForPrompt(consultaMemoria, evidence);
         final Boolean memoryFound = evidence == null ? null : evidence.hasEvidence();
         // Charla corta sin memoria ni verificación: prompt ligero para que empiece a hablar antes.
         turnPromptBudgetInput = entrada;
