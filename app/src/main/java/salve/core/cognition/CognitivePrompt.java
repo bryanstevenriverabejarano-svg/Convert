@@ -66,6 +66,7 @@ public final class CognitivePrompt {
     public static Map<String, CognitiveTurn.Tool> prioritize(Map<String, CognitiveTurn.Tool> available, String input) {
         if (available == null || input == null) return available;
         java.util.List<String> first = new java.util.ArrayList<>();
+        if (available.containsKey("evidence.inspect")) first.add("evidence.inspect");
         boolean drawing = DRAWING.matcher(input).find();
         // «Dibuja un vestido» es un dibujo, no ropa para su avatar.
         if (!drawing && WARDROBE.matcher(input).matches()) for (String name : available.keySet()) if (name.startsWith("AVATAR_")) first.add(name);
@@ -124,6 +125,8 @@ public final class CognitivePrompt {
         task.add("pending_action", state.has("pending_action") ? state.get("pending_action").deepCopy() : com.google.gson.JsonNull.INSTANCE);
         task.addProperty("authorization", "Objetivo actual; efectos externos: aprobación existente");
         task.addProperty("format_repair", repair);
+        if (tools.containsKey("evidence.inspect"))
+            task.addProperty("evidence_policy", "Si pregunta por mi actividad pasada, usa evidence.inspect: scope sleep, execution o both. Nunca inventes hechos sin registro.");
         if (repair) task.addProperty("correction", "La salida anterior no cumplió el contrato; devuelve sólo el JSON exigido");
         data.add("TASK_STATE", task);
         data.add("TOOL_CATALOG", catalog);

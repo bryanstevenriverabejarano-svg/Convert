@@ -781,17 +781,25 @@ public class MotorConversacional {
         // «Abre un PR»: escribe su propio parche y lo manda a GitHub; las pruebas y la fusión son de Bryan.
         if (SelfPrDesk.isCommand(entrada)) { hablar(selfPr.run()); return; }
         if (SelfPrDesk.isStatusCommand(entrada)) { hablar(selfPr.status()); return; }
-        if (salve.core.evaluation.SleepImprovementCycle.asksStatus(entrada)) {
-            hablar(creatorSide()
-                    ? salve.core.evaluation.SleepImprovementRuntime.status(context)
-                    : "Mi informe de mejora nocturna es privado."); return;
+        // Evidence questions are not answered by a literal command matcher.
+        // They enter the same memory -> LLM -> tool -> verified receipt conversation cycle.
+        // The creator gate remains authoritative even when the model requests a tool.
+        if (salve.core.cognition.ConversationEvidenceIntent.classify(
+                entrada, conversationSession.snapshot())
+                != salve.core.cognition.ConversationEvidenceIntent.Scope.NONE
+                && !salve.core.identity.IdentityManager.get(context).privateAccess()) {
+            hablar("Para consultar mis informes internos y el registro, necesito que verifiques tu identidad en el teléfono.");
+            return;
         }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
         if (salve.core.mind.MindMapCommand.matches(entrada)) { hablar(abrirMapaMente()); return; }
-        String mindResponse = mind().handleCommand(entrada);
+        String mindResponse = salve.core.cognition.ConversationEvidenceIntent.classify(
+                entrada, conversationSession.snapshot())
+                == salve.core.cognition.ConversationEvidenceIntent.Scope.NONE
+                ? mind().handleCommand(entrada) : null;
         if (mindResponse != null) {
             deliverResponse(mindResponse, AvatarMotionProtocol.parse(""), false, true, true);
             return;
@@ -1302,9 +1310,13 @@ public class MotorConversacional {
         String directAnswer = storyTurn ? null : deviceClock.directReply(entrada);
         // «¿Recuerdas que hablamos de este concepto?», «pues búscalo»: el tema está en el hilo, no en la frase.
         java.util.List<salve.core.conversation.ChatMessage> hilo = conversationSession.snapshot();
-        final boolean recallTurn = !storyTurn && salve.core.conversation.MemoryRecall.isRecallTurn(entrada, hilo);
+        final boolean evidenceRequested = !storyTurn
+                && salve.core.cognition.ConversationEvidenceIntent.classify(entrada, hilo)
+                != salve.core.cognition.ConversationEvidenceIntent.Scope.NONE;
+        final boolean recallTurn = !storyTurn && !evidenceRequested
+                && salve.core.conversation.MemoryRecall.isRecallTurn(entrada, hilo);
         final boolean memoryOpen = creatorSide();
-        boolean recordar = directAnswer == null && !storyTurn
+        boolean recordar = directAnswer == null && !storyTurn && !evidenceRequested
                 && (reasoningPlan.shouldRetrieveLongTermMemory() || recallTurn) && memoryOpen;
         String consultaMemoria = recallTurn ? salve.core.conversation.MemoryRecall.query(entrada, hilo) : entrada;
         if (recordar) estado(recallTurn && !consultaMemoria.equals(entrada)
@@ -1357,7 +1369,7 @@ public class MotorConversacional {
                     + (anteriorEnIngles.length() > 700 ? anteriorEnIngles.substring(0, 700) + "…" : anteriorEnIngles)
                     + "». Dile lo mismo en español, con su contenido, y si quieres explica que se te cruzó el idioma.";
         // Cuentos, poemas y escenas de historia: texto libre, sin el JSON que les cortaba el texto.
-        boolean creativeTurn = activePhoto == null
+        boolean creativeTurn = activePhoto == null && !evidenceRequested
                 && (storyTurn || salve.core.conversation.CreativeRequest.isCreative(entrada, recentAssistantReplies(2)));
         int creativeParts = storyTurn ? 1 : salve.core.conversation.CreativeRequest.parts(entrada);
         LiveWriting live = creativeTurn ? new LiveWriting(creativeParts, storyTurn ? entrada : null) : null;
@@ -2012,8 +2024,12 @@ public class MotorConversacional {
             boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis,
             List<salve.core.conversation.ChatMessage> historyOverride,
             java.util.function.UnaryOperator<Map<String, CognitiveTurn.Tool>> toolOverride) {
+        List<salve.core.conversation.ChatMessage> evidenceHistory = historyOverride != null
+                ? historyOverride : conversationSession.snapshot();
+        salve.core.cognition.ConversationEvidenceIntent.Scope evidenceScope =
+                salve.core.cognition.ConversationEvidenceIntent.classify(input, evidenceHistory);
         Map<String, CognitiveTurn.Tool> catalog = CognitivePrompt.limitTools(
-                CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis), input));
+                CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis, evidenceHistory), input));
         Map<String, CognitiveTurn.Tool> tools = toolOverride == null ? catalog : toolOverride.apply(catalog);
         List<salve.core.conversation.ChatMessage> turnHistory = historyOverride;
         // Sin la herramienta (Bryan aún no verificado) no se le puede decir «usa memory.lookup»: acababa
@@ -2056,6 +2072,32 @@ public class MotorConversacional {
                 salve.core.cognition.CognitiveToolAudit.from(outcome);
         if (audit.hasActions())
             salve.core.trace.ExecutionTrace.note("RECIBOS DEL TURNO COGNITIVO", audit.toJson().toString());
+        // Gemma sometimes answers from general language patterns without calling a
+        // local evidence tool. Never turn an unsupported claim into a sleep achievement.
+        // This fallback is read-only, and NEVER runs for simulated exams or guests.
+        if (!photoAnalysis && toolOverride == null && historyOverride == null
+                && evidenceScope != salve.core.cognition.ConversationEvidenceIntent.Scope.NONE
+                && tools.containsKey("evidence.inspect") && !outcome.handedOff) {
+            boolean checked = false;
+            for (com.google.gson.JsonElement element : outcome.receipts()) {
+                if (element != null && element.isJsonObject()) {
+                    com.google.gson.JsonObject receipt = element.getAsJsonObject();
+                    if (receipt.has("name") && "evidence.inspect".equals(receipt.get("name").getAsString())
+                            && receipt.has("status") && "completed".equals(receipt.get("status").getAsString())) {
+                        checked = true; break;
+                    }
+                }
+            }
+            if (!checked) {
+                String scope = evidenceScope == salve.core.cognition.ConversationEvidenceIntent.Scope.BOTH
+                        ? "both" : evidenceScope == salve.core.cognition.ConversationEvidenceIntent.Scope.EXECUTION
+                        ? "execution" : "sleep";
+                String verified = salve.core.cognition.ReadOnlyEvidenceDesk.render(context, scope);
+                salve.core.trace.ExecutionTrace.note("RUTA DE EVIDENCIA",
+                        "El modelo no consultó el informe ofrecido; respuesta sustituida por datos locales verificados.");
+                return CognitiveTurn.Outcome.groundedText(verified);
+            }
+        }
         return outcome;
     }
 
@@ -2119,12 +2161,15 @@ public class MotorConversacional {
     }
 
     /** Tool availability is owned by CognitiveToolCatalog, not by model text. */
-    private Map<String, CognitiveTurn.Tool> cognitiveTools(String input, boolean photoAnalysis) {
+    private Map<String, CognitiveTurn.Tool> cognitiveTools(String input, boolean photoAnalysis,
+            List<salve.core.conversation.ChatMessage> history) {
+        boolean evidenceRelevant = salve.core.cognition.ConversationEvidenceIntent.classify(input, history)
+                != salve.core.cognition.ConversationEvidenceIntent.Scope.NONE;
         return salve.core.cognition.CognitiveToolCatalog.build(
                 input, photoAnalysis,
                 salve.core.identity.IdentityManager.get(context).privateAccess(),
                 SalveAccessibilityService.getInstance() != null,
-                (name, args) -> herramientas.executeCognitiveTool(name, args, input));
+                (name, args) -> herramientas.executeCognitiveTool(name, args, input), evidenceRelevant);
     }
 
 

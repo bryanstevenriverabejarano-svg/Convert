@@ -70,6 +70,22 @@ final class CognitiveToolExecutor {
      * use their specific confirmation or per-tool policy. */
     CognitiveTurn.Receipt executeCognitiveTool(String name, JsonObject args, String input) {
         switch (name) {
+            case "evidence.inspect": {
+                // Arguments from Gemma are never an authorization. The real, verified
+                // creator must ask in the current turn for private local evidence.
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Sin identidad verificada para informes privados.");
+                if (salve.core.cognition.ConversationEvidenceIntent.classify(
+                        input, m.conversationSession.snapshot())
+                        == salve.core.cognition.ConversationEvidenceIntent.Scope.NONE)
+                    throw new IllegalArgumentException("La petición actual no autoriza consultar este registro.");
+                String scope = CognitiveReply.string(args, "scope");
+                String verified = salve.core.cognition.ReadOnlyEvidenceDesk.render(m.context, scope);
+                salve.core.trace.ExecutionTrace.note("FUENTE LOCAL VERIFICADA",
+                        "Consulté " + scope + "; se entregó solo el registro local disponible.");
+                m.hablar(verified);
+                return CognitiveTurn.Receipt.handoff();
+            }
             case "memory.lookup": {
                 if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
                     throw new IllegalArgumentException("Sin autorización para recuerdos privados");
