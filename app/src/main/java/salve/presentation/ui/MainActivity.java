@@ -1059,6 +1059,10 @@ public class MainActivity extends AppCompatActivity {
         if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, false)) {
             iniciarDescargaModelos();
         }
+
+        // Solo en una instalación nueva sin dueño (una copia recién compilada del repositorio): ofrece
+        // ser dueña o unirse a una Salve como satélite. La Salve de Bryan ya es dueña y no ve nada de esto.
+        SatelliteGate.onStart(this);
     }
 
     // Si la Activity ya estaba abierta y llega un nuevo share, lo recibimos aquí

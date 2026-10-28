@@ -62,6 +62,16 @@ public final class ComputeHttpTransport implements ComputeRouter.Transport {
 
     /** Olvida el cliente de un nodo (al retirarlo o cambiar su perfil). */
     public static void forget(String nodeId) { ROUTES.keySet().removeIf(other -> other.startsWith(nodeId + "|")); }
+
+    /** Reparte un trabajo a un satélite a través del nodo; devuelve la respuesta (con el id del trabajo). */
+    public JsonObject satelliteEnqueue(ComputeNode node, com.google.gson.JsonObject task, BooleanSupplier stopped) throws IOException {
+        return request(node, salve.core.satellite.SatelliteProtocol.ENQUEUE, task, 10, stopped, null);
+    }
+
+    /** Pregunta al nodo si ya hay resultado para un trabajo repartido a un satélite. */
+    public JsonObject satelliteResult(ComputeNode node, String taskId, BooleanSupplier stopped) throws IOException {
+        return request(node, salve.core.satellite.SatelliteProtocol.RESULT_OF + taskId, null, 5, stopped, null);
+    }
     public JsonObject familyStatus(ComputeNode node, BooleanSupplier stopped) throws IOException {
         return familyStatus(node, null, stopped);
     }

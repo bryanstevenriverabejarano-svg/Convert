@@ -10,9 +10,13 @@ import java.util.function.Supplier;
 public final class DistributedCompute {
     private final ComputeNodeStore store;
     private final ComputeRouter router;
+    private final ComputeHttpTransport transport;
+    private final SatelliteDispatch satellites;
     public DistributedCompute(Context context) {
         store = new ComputeNodeStore(context);
-        router = new ComputeRouter(new ComputeHttpTransport(context), () -> System.nanoTime() / 1_000_000L);
+        transport = new ComputeHttpTransport(context);
+        router = new ComputeRouter(transport, () -> System.nanoTime() / 1_000_000L);
+        satellites = new SatelliteDispatch(transport);
     }
     public boolean enabled() { return store.enabled(); }
     public void setEnabled(boolean enabled) { store.setEnabled(enabled); }
@@ -21,7 +25,17 @@ public final class DistributedCompute {
         if (!enabled() || Looper.myLooper() == Looper.getMainLooper()) return local.get();
         long revision = store.revision();
         List<ComputeNode> nodes = store.loadActive(); // los nodos pausados por el dueño no reciben tareas
-        return router.generate(nodes, true, role, prompt,
-                () -> Thread.currentThread().isInterrupted() || !store.enabled() || store.revision() != revision, local);
+        java.util.function.BooleanSupplier stopped =
+                () -> Thread.currentThread().isInterrupted() || !store.enabled() || store.revision() != revision;
+        // Reparte el cómputo a un satélite (a través del nodo) solo si tú lo usas como respaldo del local.
+        return router.generate(nodes, true, role, prompt, stopped,
+                () -> {
+                    for (ComputeNode node : nodes) {
+                        if (stopped.getAsBoolean()) break;
+                        ModelResult viaSatellite = satellites.compute(node, prompt, stopped);
+                        if (viaSatellite != null) return viaSatellite;
+                    }
+                    return local.get();
+                });
     }
 }

@@ -172,6 +172,126 @@ class GpuTelemetry:
         return None
 
 
+SATELLITE_KINDS = frozenset(('compute', 'screen', 'sensors'))
+SAT_ID = re.compile(r'[A-Za-z0-9_-]{3,64}')
+SAT_MAX_BODY = 300_000
+
+
+class SatelliteBroker:
+    """Punto de encuentro entre la Salve del dueño y sus satélites (móviles que la ayudan).
+
+    El nodo es un servidor con dirección fija al que llegan los dos, estén donde estén. El dueño
+    encola trabajo (enqueue); cada satélite, al latir, recoge uno que ofrezca y devuelve el resultado.
+    Todo en memoria y acotado: no guarda prompts ni resultados más allá de lo imprescindible.
+    """
+
+    def __init__(self, clock=time.monotonic, max_satellites=32, max_queue=64, max_results=128, ttl=180):
+        self.clock, self.ttl = clock, ttl
+        self.max_satellites, self.max_queue, self.max_results = max_satellites, max_queue, max_results
+        self.lock = threading.Lock()
+        self.satellites = OrderedDict()   # id -> {'name', 'caps', 'seen'}
+        self.queue = deque()              # trabajos pendientes: {'id','kind','params'}
+        self.results = OrderedDict()      # task_id -> output (lo que devolvió el satélite)
+
+    @staticmethod
+    def _caps(raw):
+        if not isinstance(raw, list):
+            return set()
+        return {c for c in raw if isinstance(c, str) and c in SATELLITE_KINDS}
+
+    def register(self, body):
+        payload = _load(body, SAT_MAX_BODY)
+        if not isinstance(payload, dict) or payload.get('v') != 1:
+            raise ValueError()
+        sid = payload.get('id')
+        if not isinstance(sid, str) or not SAT_ID.fullmatch(sid):
+            raise ValueError()
+        name = payload.get('name') if isinstance(payload.get('name'), str) else ''
+        with self.lock:
+            self.satellites[sid] = {'name': name[:60], 'caps': self._caps(payload.get('capabilities')), 'seen': self.clock()}
+            self.satellites.move_to_end(sid)
+            while len(self.satellites) > self.max_satellites:
+                self.satellites.popitem(last=False)
+        return 200, {'protocol': 1, 'registered': True, 'id': sid}
+
+    def heartbeat(self, body):
+        payload = _load(body, SAT_MAX_BODY)
+        if not isinstance(payload, dict) or payload.get('v') != 1:
+            raise ValueError()
+        sid = payload.get('id')
+        if not isinstance(sid, str) or not SAT_ID.fullmatch(sid):
+            raise ValueError()
+        available = bool(payload.get('available'))
+        caps = self._caps(payload.get('capabilities'))
+        with self.lock:
+            known = self.satellites.get(sid)
+            if known is None:
+                self.satellites[sid] = known = {'name': '', 'caps': caps, 'seen': 0}
+            known['caps'], known['seen'] = caps, self.clock()
+            if not available:
+                return 200, {'protocol': 1}
+            for index, job in enumerate(self.queue):
+                if job['kind'] in caps:
+                    del self.queue[index]
+                    return 200, {'protocol': 1, 'task': job}
+        return 200, {'protocol': 1}
+
+    def enqueue(self, body):
+        """El dueño reparte un trabajo. Devuelve su id para recoger luego el resultado."""
+        payload = _load(body, SAT_MAX_BODY)
+        if not isinstance(payload, dict) or set(payload) - {'kind', 'params'} or 'kind' not in payload:
+            raise ValueError()
+        kind = payload.get('kind')
+        if kind not in SATELLITE_KINDS:
+            raise ValueError()
+        params = payload.get('params', {})
+        if not isinstance(params, dict):
+            raise ValueError()
+        task_id = uuid.uuid4().hex
+        with self.lock:
+            if len(self.queue) >= self.max_queue:
+                return 429, {'error': 'queue_full'}
+            if not any(kind in s['caps'] and self.clock() - s['seen'] <= self.ttl for s in self.satellites.values()):
+                return 503, {'error': 'no_satellite_for', 'kind': kind}
+            self.queue.append({'id': task_id, 'kind': kind, 'params': params})
+        return 200, {'protocol': 1, 'id': task_id}
+
+    def result(self, body):
+        payload = _load(body, SAT_MAX_BODY)
+        if not isinstance(payload, dict) or payload.get('v') != 1:
+            raise ValueError()
+        task_id, output = payload.get('task'), payload.get('output')
+        if not isinstance(task_id, str) or not output or not isinstance(output, dict):
+            raise ValueError()
+        with self.lock:
+            self.results[task_id] = output
+            self.results.move_to_end(task_id)
+            while len(self.results) > self.max_results:
+                self.results.popitem(last=False)
+        return 200, {'protocol': 1, 'stored': True}
+
+    def result_of(self, task_id):
+        with self.lock:
+            output = self.results.get(task_id)
+        if output is None:
+            return 404, {'protocol': 1, 'ready': False}
+        return 200, {'protocol': 1, 'ready': True, 'output': output}
+
+    def listing(self):
+        now = self.clock()
+        with self.lock:
+            connected = [{'id': sid, 'name': s['name'], 'capabilities': sorted(s['caps']),
+                          'online': now - s['seen'] <= self.ttl}
+                         for sid, s in self.satellites.items()]
+        return 200, {'protocol': 1, 'satellites': connected}
+
+
+def _load(body, maximum):
+    if len(body) > maximum:
+        raise ValueError()
+    return json.loads(body)
+
+
 class ComputeApplication:
     def __init__(self, token, backend, *, slots=1, hourly_limit=60, max_prompt=MAX_PROMPT, clock=time.monotonic, location_store=None, location_token=None,
                  vault=None, gpu=None, home=None):
@@ -190,6 +310,7 @@ class ComputeApplication:
         self.lock = threading.Lock()
         self.active, self.calls = set(), deque()
         self.receipts = OrderedDict()  # hashes/status only: no prompts or generated memories retained
+        self.satellites = SatelliteBroker(clock=clock)  # móviles que ayudan a la Salve del dueño
 
     def authorized(self, authorization, path='/v1/health'):
         token = self.location_token if path == '/v1/location' else self.token
@@ -242,6 +363,25 @@ class ComputeApplication:
             return self.HOME_STATUS.get(refused.code, 502), {'error': refused.code}
         return 404, {'error': 'unknown_endpoint'}
 
+    def handle_satellite(self, method, path, body):
+        """Las rutas de los satélites y las del dueño para repartirles trabajo. Mismo token del nodo."""
+        try:
+            if method == 'POST' and path == '/v1/satellite/register':
+                return self.satellites.register(body)
+            if method == 'POST' and path == '/v1/satellite/heartbeat':
+                return self.satellites.heartbeat(body)
+            if method == 'POST' and path == '/v1/satellite/result':
+                return self.satellites.result(body)
+            if method == 'POST' and path == '/v1/satellite/enqueue':
+                return self.satellites.enqueue(body)
+            if method == 'GET' and path == '/v1/satellite/list':
+                return self.satellites.listing()
+            if method == 'GET' and path.startswith('/v1/satellite/result/'):
+                return self.satellites.result_of(path[len('/v1/satellite/result/'):])
+        except (ValueError, TypeError, UnicodeError):
+            return 400, {'error': 'invalid_satellite_request'}
+        return 404, {'error': 'unknown_endpoint'}
+
     def handle(self, method, path, authorization, body=b'', known_location=None):
         if not self.authorized(authorization, path):
             return 401, {'error': 'unauthorized'}
@@ -249,6 +389,8 @@ class ComputeApplication:
             return self.handle_home(method, path, body)
         if path == '/v1/vault' or path.startswith('/v1/vault/'):
             return self.handle_vault(method, path, body)
+        if path == '/v1/satellite' or path.startswith('/v1/satellite/'):
+            return self.handle_satellite(method, path, body)
         if method == 'GET' and path == '/v1/family/status':
             try:
                 location = self.location_store.read() if self.location_store else None

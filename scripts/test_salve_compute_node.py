@@ -195,5 +195,59 @@ class WireTests(unittest.TestCase):
         self.assertEqual(404, request('/v1/shell', task())[0])
 
 
+class SatelliteBrokerTests(unittest.TestCase):
+    def setUp(self):
+        self.clock = [1000.0]
+        self.app = node.ComputeApplication(TOKEN, Mock(model='m'))
+        self.app.satellites.clock = lambda: self.clock[0]
+
+    def call(self, method, path, payload=None, token=TOKEN):
+        body = b'' if payload is None else json.dumps(payload).encode()
+        return self.app.handle(method, path, 'Bearer ' + token, body)
+
+    def register(self, sid='sat-abc', caps=('compute', 'screen', 'sensors')):
+        return self.call('POST', '/v1/satellite/register', {'v': 1, 'id': sid, 'name': 'Viejo', 'capabilities': list(caps)})
+
+    def test_satellite_routes_need_the_node_token(self):
+        self.assertEqual(401, self.call('POST', '/v1/satellite/register', {'v': 1, 'id': 'sat-abc'}, token='bad')[0])
+
+    def test_full_compute_round_trip(self):
+        self.assertEqual(200, self.register()[0])
+        status, reply = self.call('POST', '/v1/satellite/enqueue', {'kind': 'compute', 'params': {'prompt': 'hola'}})
+        self.assertEqual(200, status)
+        task_id = reply['id']
+        # Aún no hay resultado.
+        self.assertEqual(404, self.call('GET', '/v1/satellite/result/' + task_id)[0])
+        # El satélite late y recoge el trabajo.
+        beat = self.call('POST', '/v1/satellite/heartbeat', {'v': 1, 'id': 'sat-abc', 'available': True, 'capabilities': ['compute']})
+        self.assertEqual(task_id, beat[1]['task']['id'])
+        self.assertEqual('compute', beat[1]['task']['kind'])
+        # Devuelve el resultado y el dueño lo recoge.
+        self.assertEqual(200, self.call('POST', '/v1/satellite/result',
+                                        {'v': 1, 'id': 'sat-abc', 'task': task_id, 'output': {'status': 'ok', 'text': 'hola!'}})[0])
+        done = self.call('GET', '/v1/satellite/result/' + task_id)
+        self.assertEqual((200, 'hola!'), (done[0], done[1]['output']['text']))
+
+    def test_enqueue_refused_when_no_satellite_offers_the_kind(self):
+        self.register(caps=('compute',))
+        self.assertEqual(503, self.call('POST', '/v1/satellite/enqueue', {'kind': 'sensors', 'params': {'sensor': 'location'}})[0])
+
+    def test_offline_satellite_does_not_count(self):
+        self.register()
+        self.clock[0] += 1000  # pasa el ttl: se considera desconectado
+        self.assertEqual(503, self.call('POST', '/v1/satellite/enqueue', {'kind': 'compute', 'params': {'prompt': 'x'}})[0])
+
+    def test_heartbeat_only_takes_a_task_it_offers(self):
+        self.register(caps=('compute', 'screen', 'sensors'))
+        self.call('POST', '/v1/satellite/enqueue', {'kind': 'sensors', 'params': {'sensor': 'location'}})
+        beat = self.call('POST', '/v1/satellite/heartbeat', {'v': 1, 'id': 'sat-abc', 'available': True, 'capabilities': ['compute']})
+        self.assertNotIn('task', beat[1])  # solo ofrece compute: no se lleva el de sensores
+
+    def test_bad_satellite_payloads_are_rejected(self):
+        self.assertEqual(400, self.call('POST', '/v1/satellite/register', {'id': 'sat-abc'})[0])
+        self.assertEqual(400, self.call('POST', '/v1/satellite/enqueue', {'kind': 'teleport'})[0])
+        self.assertEqual(404, self.call('GET', '/v1/satellite/nope')[0])
+
+
 if __name__ == '__main__':
     unittest.main()
