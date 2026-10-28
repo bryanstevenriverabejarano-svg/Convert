@@ -92,6 +92,39 @@ public class SleepImprovementCycleTest {
         assertTrue(SleepImprovementCycle.describe(report).contains("no señala un fallo repetido"));
     }
 
+    @Test public void paraphrasesRouteToTheSameGroundedSleepReport() {
+        for (String message : Arrays.asList(
+                "¿Qué aprendiste mientras dormiste?",
+                "¿Qué aprendiste mientras dormías?",
+                "Salve, ¿qué has aprendido durante tu descanso?",
+                "¿En qué has mejorado anoche?",
+                "¿Qué investigaste cuando dormías?",
+                "¿Qué descubriste durante el sueño?",
+                "Dime qué lograste esta noche",
+                "Cuéntame qué hiciste mientras estabas dormida",
+                "Muéstrame el informe de tu sueño",
+                "Tu resumen del sueño",
+                "Tus mejoras nocturnas",
+                "¿Qué pensaste al dormir?",
+                "¿Has practicado algo durante tu descanso?")) {
+            assertTrue(message, SleepImprovementCycle.asksStatus(message));
+        }
+    }
+
+    @Test public void unrelatedSleepAdviceOrFictionDoesNotOpenPrivateReport() {
+        for (String message : Arrays.asList(
+                "¿Cómo puedo mejorar mi sueño?",
+                "Quiero escribir un cuento sobre los sueños",
+                "Inventa qué aprendiste mientras dormías",
+                "No me digas qué aprendiste anoche",
+                "¿Qué aprendiste ayer?",
+                "Salve, duerme",
+                "¿Qué es la fase REM?",
+                "Abre un PR")) {
+            assertFalse(message, SleepImprovementCycle.asksStatus(message));
+        }
+    }
+
     @Test public void statusCommandsDoNotRunDuringOrdinaryDiscussion() {
         assertTrue(SleepImprovementCycle.asksStatus("Salve, qué aprendiste mientras dormías?"));
         assertTrue(SleepImprovementCycle.asksStatus("En qué pensaste mientras dormías?"));
