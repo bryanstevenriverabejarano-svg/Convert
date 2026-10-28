@@ -6,10 +6,17 @@ import java.io.File;
 /** One trace per conversation worker turn. Unrelated/background threads cannot inherit its notes. */
 public final class ExecutionTrace {
     private static ExecutionJournal journal;
+    private static File journalPath;
     private static final ThreadLocal<String> current = new ThreadLocal<>();
     private ExecutionTrace() { }
     public static synchronized ExecutionJournal journal(Context context) {
-        if (journal == null) journal = new ExecutionJournal(new File(context.getNoBackupFilesDir(), "execution-trace"));
+        File expected = new File(context.getApplicationContext().getNoBackupFilesDir(), "execution-trace");
+        // Test/application contexts can change over the lifetime of a process.
+        // Never expose the previous context's journal from a static singleton.
+        if (journal == null || journalPath == null || !journalPath.equals(expected)) {
+            journal = new ExecutionJournal(expected);
+            journalPath = expected;
+        }
         return journal;
     }
     public static void begin(Context context, String type, String request) {
