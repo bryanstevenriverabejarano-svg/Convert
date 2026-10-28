@@ -126,6 +126,7 @@ public final class AgentRuntime {
                 for (int i = 0; i < Math.min(10, all.size()); i++) {
                     AgentRun r = all.get(i); list.append(shortId(r.id)).append(" · ").append(r.status)
                             .append(r.terminal() ? " · verificación " + r.goalVerification : "")
+                            .append(" · supervisor ").append(AgentProgressSupervisor.inspect(r).phase)
                             .append(" · ")
                             .append(r.goal.substring(0, Math.min(100, r.goal.length()))).append('\n');
                 }
@@ -153,7 +154,7 @@ public final class AgentRuntime {
         return result;
     }
     private String describe(AgentRun run) {
-        StringBuilder text = new StringBuilder("Plan ").append(shortId(run.id)).append(" · ").append(run.status).append('\n');
+        StringBuilder text = new StringBuilder("Plan ").append(shortId(run.id)).append(" · ").append(run.status).append('\n');        text.append(AgentProgressSupervisor.inspect(run).summary()).append('\n');
         if (run.terminal()) {
             text.append("Comprobación independiente: ").append(run.goalVerification)
                     .append(" (criterio ").append(run.verificationCriterion).append(").\n");

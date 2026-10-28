@@ -1322,6 +1322,24 @@ public class MotorConversacional {
         if (recordar) estado(recallTurn && !consultaMemoria.equals(entrada)
                 ? "Buscando «" + consultaMemoria + "» en mis recuerdos…" : "Buscando en mis recuerdos…");
         ConversationMemoryGrounding.Result evidence = recordar ? memoria.recuperarContextoConversacional(consultaMemoria) : null;
+        // After an explicit recall miss, clean conversational filler from the
+        // *same* user-derived topic for one semantic second pass. This is not
+        // a new memory, web query, model guess or unlimited retry. Never retry
+        // a failed/partial DAO read or a chronology/profile question.
+        String secondMemoryQuery = evidence == null ? null : salve.core.memory.MemoryRetryPlanner.secondQuery(
+                entrada, consultaMemoria, evidence.getStatus(), recallTurn, memoryOpen);
+        if (secondMemoryQuery != null) {
+            salve.core.trace.ExecutionTrace.note("RECUPERACIÓN MEMORIA",
+                    "Segundo intento acotado con términos del tema original; sin transmitir recuerdos a la red.");
+            ConversationMemoryGrounding.Result secondEvidence =
+                    memoria.recuperarContextoConversacional(secondMemoryQuery);
+            if (secondEvidence != null && secondEvidence.hasEvidence()) {
+                evidence = secondEvidence;
+                responseContext += "\nMEMORIA_BUSQUEDA_ITERATIVA: segunda consulta local basada solo en palabras del usuario. "
+                        + "Mantén el origen, la fecha y la incertidumbre de la fuente; no completes huecos imaginando.";
+            } else responseContext += "\nMEMORIA_BUSQUEDA_ITERATIVA: se reintentó localmente sin evidencia confirmada. "
+                    + "No conviertas una búsqueda vacía en prueba de que nada se guardó.";
+        }
         if (recallTurn) responseContext += "\n" + salve.core.conversation.MemoryRecall.note(memoryOpen,
                 evidence != null && evidence.hasEvidence(), consultaMemoria.equals(entrada) ? null : consultaMemoria);
         final Boolean memoryFound = evidence == null ? null : evidence.hasEvidence();

@@ -89,9 +89,12 @@ public final class MemoryRecall {
                 + "Díselo así de simple; no digas que no tienes recuerdos ni que no puedes acceder a ellos.";
         if (found) return "BUSCASTE_EN_TUS_RECUERDOS " + what + ": lo que encontraste está arriba. Cuéntale lo que dice ese recuerdo, "
                 + "con sus palabras y su fecha si la tiene. No digas que no puedes acceder a tus recuerdos: acabas de hacerlo.";
-        return "BUSCASTE_EN_TUS_RECUERDOS " + what + " Y NO HAY NADA GUARDADO SOBRE ESO. Dile con naturalidad que lo has buscado en tus "
-                + "recuerdos y no lo encuentras, y pregúntale qué recuerda él. NO digas «sí, lo recuerdo» ni inventes lo que hablasteis, "
-                + "y NO digas que no tienes acceso a tus recuerdos: sí lo tienes y lo acabas de mirar.";
+        return "BUSCASTE_EN_TUS_RECUERDOS " + what
+                + " Y NO ENCONTRASTE EVIDENCIA EN LOS REGISTROS DISPONIBLES AHORA. "
+                + "Esto NO demuestra que ese recuerdo nunca se haya guardado: podrían faltar recuerdos de la nube "
+                + "o no coincidir las palabras de búsqueda. Dile qué consultaste y que por ahora no puedes confirmarlo. "
+                + "NO afirmes «sí, lo recuerdo» ni inventes la conversación. "
+                + "NO digas que no tienes acceso a tus recuerdos: acabas de consultar los registros disponibles.";
     }
 
     private static final Pattern DENIES = Pattern.compile(
