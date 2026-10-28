@@ -18,8 +18,6 @@ import androidx.work.WorkerParameters;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.function.BooleanSupplier;
 
 import salve.avatar.AvatarState;
@@ -46,7 +44,6 @@ public final class SleepFocusWorker extends Worker {
     private static final ExecutorService TRACE_WRITER = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "salve-sleep-trace"); t.setDaemon(true); return t;
     });
-    private static final Pattern PLAY_COUNT = Pattern.compile("^Jugué (\\d+) retos inventados por mí; resolví (\\d+)");
 
     /** An event of scheduling is not a completed sleep session. Never copy private memories to the trace. */
     private static void scheduledTrace(Context app, String description, String status) {
@@ -111,14 +108,20 @@ public final class SleepFocusWorker extends Worker {
             mind.reflectIfDue(stop);
             journal.append(traceId, "REFLEXIÓN", "Se consultó el ciclo de reflexión; puede aplazarse por intervalo o ausencia de novedades.");
             if (stop.getAsBoolean()) return Result.success();
-            String practice = mind.play(stop, 1);
-            Matcher count = PLAY_COUNT.matcher(practice == null ? "" : practice);
-            boolean practiced = count.find();
-            journal.append(traceId, "PRÁCTICA LOCAL", practiced
-                    ? "Se realizaron " + count.group(1) + " retos; se resolvieron " + count.group(2) + "."
-                    : "El laboratorio no confirmó un reto ejecutado.");
+            salve.core.evaluation.NightPracticePolicy.Plan plan =
+                    salve.core.evaluation.NightPracticePolicy.choose(
+                            mind.skills().history(), System.currentTimeMillis());
+            journal.append(traceId, "PLAN DE PRÁCTICA",
+                    plan.reason + "; máximo " + plan.rounds + " retos acotados.");
+            String practice = mind.play(stop, plan.rounds);
+            salve.core.evaluation.NightPracticePolicy.Outcome observed =
+                    salve.core.evaluation.NightPracticePolicy.observed(practice, plan.rounds);
+            journal.append(traceId, "PRÁCTICA LOCAL",
+                    "Ejecutados: " + observed.attempted + ", soluciones verificadas: "
+                    + observed.solved + ", persistencia: " + observed.saved
+                    + ". Motivo: " + observed.reason + ".");
             if (stop.getAsBoolean()) return Result.success();
-            boolean saved = SleepImprovementRuntime.record(app, mind, practiced, stop);
+            boolean saved = SleepImprovementRuntime.record(app, mind, observed, stop);
             if (stop.getAsBoolean()) return Result.success();
             if (!saved) {
                 journal.append(traceId, "INFORME", "No pude guardar de forma atómica el informe. No afirmo haberlo conservado.");
