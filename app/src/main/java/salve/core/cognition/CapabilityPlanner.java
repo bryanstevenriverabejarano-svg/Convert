@@ -45,9 +45,9 @@ public final class CapabilityPlanner {
         boolean solver = has(s, "resuelve", "calcula", "optimiza", "ruta mas corta",
                 "organiza tareas", "algoritmo");
 
-        // A read-only factual report about Salve takes precedence over a model
-        // improvisation. It was offered only for a verified, relevant request.
-        prefer(available, first, "evidence.inspect");
+        // Prioritize the user's explicit action before optional observability.
+        // A tool being offered is NOT evidence that it answers this turn:
+        // broad/combined catalogs must not turn "diseña ropa" into a log read.
         if (draw) prefer(available, first, "sketch.draw");
 
         if (wardrobe && !draw) {
@@ -59,6 +59,16 @@ public final class CapabilityPlanner {
             prefer(available, first, "AVATAR_WEAR");
             prefer(available, first, "AVATAR_CREATE");
         }
+
+        // Grounded self-report or a contextual follow-up ("¿y el registro?",
+        // "muéstrame ambas") needs the already-authorized evidence reader.
+        // Those elliptical follow-ups are offered by the conversation
+        // controller; do not rank it for unrelated greetings or device state.
+        boolean evidenceQuestion = ConversationEvidenceIntent.classify(input, null)
+                != ConversationEvidenceIntent.Scope.NONE
+                || has(s, "registro de ejecucion", "registro de tareas",
+                       "ambas", "ambos", "informe nocturno", "resultados del sueno");
+        if (evidenceQuestion) prefer(available, first, "evidence.inspect");
 
         if (sync) prefer(available, first, "cloud.sync");
         // Natural combined tasks can expose memory and web together; the model
