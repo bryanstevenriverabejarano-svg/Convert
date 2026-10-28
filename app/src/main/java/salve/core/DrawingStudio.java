@@ -166,6 +166,12 @@ final class DrawingStudio {
                     + "; mejora: " + request.improve + "; referencias solicitadas: " + request.references + "; cambios: " + request.wish);
             motor.referenceFailure = "no se ha realizado una búsqueda en esta tarea";
         }
+        if (request.kind == salve.sketch.SketchRequest.Kind.ADD || request.kind == salve.sketch.SketchRequest.Kind.WITH_PARTS) {
+            String note = dibujarConPartes(request, library);
+            if (note != null) return " | " + note;
+            // «Ponle una puerta» sin dibujo al que ponérsela: dibuja la parte sola.
+            request = salve.sketch.SketchRequest.parse("dibuja " + String.join(" y ", request.parts), library);
+        }
         boolean again = request.kind == salve.sketch.SketchRequest.Kind.AGAIN;
         String subject = again ? lastSketchSubject : request.unknown;
         if (again && (subject == null || subject.isEmpty()))
@@ -214,8 +220,10 @@ final class DrawingStudio {
             salve.sketch.SketchScene fromWeb = buscarReferenciaYDibujar(subject, concept, request.wish, request.improve);
             if (fromWeb != null) {
                 if (seguirPlan) esperarVeredicto(plan, subject);
+                StringBuilder revision = new StringBuilder();
+                if (request.improve) fromWeb = revisarPartes(fromWeb, subject, concept, library, revision);
                 empezarDibujo(fromWeb);
-                return " | " + motor.referenceNote + confianza;
+                return " | " + motor.referenceNote + (revision.length() > 0 ? " PARTES:" + revision : "") + confianza;
             }
             if (request.references && !request.improve) return " | DIBUJO: buscaste referencias de «" + subject + "» en internet pero "
                     + motor.referenceFailure + ". Díselo con sencillez; puede enviarte una foto («esto es…»).";
@@ -226,8 +234,10 @@ final class DrawingStudio {
                     ? null : componerDibujo(subject, concept, request.wish);
             if (own != null) {
                 if (seguirPlan) esperarVeredicto(plan, subject);
+                StringBuilder revision = new StringBuilder();
+                if (request.improve) own = revisarPartes(own, subject, concept, library, revision);
                 empezarDibujo(own);
-                return " | " + motor.composeNote + confianza;
+                return " | " + motor.composeNote + (revision.length() > 0 ? " PARTES:" + revision : "") + confianza;
             }
             // Ni referencia ni composición: falla la habilidad, sin culpar a la estrategia elegida.
             if (seguirPlan) try { contarDecision(motor.mind().skills().record(plan, false, "ejecucion", "resultado", "no pude dibujarlo")); }
@@ -492,6 +502,212 @@ final class DrawingStudio {
         if (left != null) c.drawBitmap(left, null, new android.graphics.Rect(0, 0, lw, height), p);
         if (right != null) c.drawBitmap(right, null, new android.graphics.Rect(lw + gap, 0, lw + gap + rw, height), p);
         return out;
+    }
+
+    /** Sus trazos en negro sobre blanco (448 px), para mirarlos con su visión. */
+    static Bitmap pintarTrazos(List<float[]> strokes) {
+        float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+        for (float[] s : strokes) for (int i = 0; i + 1 < s.length; i += 2) {
+            minX = Math.min(minX, s[i]); maxX = Math.max(maxX, s[i]); minY = Math.min(minY, s[i + 1]); maxY = Math.max(maxY, s[i + 1]);
+        }
+        float w = Math.max(1, maxX - minX), h = Math.max(1, maxY - minY);
+        int side = 448, margin = 28;
+        float scale = (side - 2f * margin) / Math.max(w, h);
+        float ox = (side - w * scale) / 2, oy = (side - h * scale) / 2;
+        Bitmap image = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(image);
+        canvas.drawColor(android.graphics.Color.WHITE);
+        android.graphics.Paint pen = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        pen.setColor(android.graphics.Color.BLACK);
+        pen.setStyle(android.graphics.Paint.Style.STROKE);
+        pen.setStrokeWidth(5f);
+        pen.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+        pen.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+        for (float[] s : strokes) {
+            if (s.length < 4) continue;
+            android.graphics.Path path = new android.graphics.Path();
+            path.moveTo(ox + (s[0] - minX) * scale, oy + (s[1] - minY) * scale);
+            for (int i = 2; i + 1 < s.length; i += 2) path.lineTo(ox + (s[i] - minX) * scale, oy + (s[i + 1] - minY) * scale);
+            canvas.drawPath(path, pen);
+        }
+        return image;
+    }
+
+    // ───────────── dibujar por partes ─────────────
+
+    /**
+     * «Una iglesia con su puerta», «mejora el dibujo y añádele una puerta»: dibuja (o reutiliza) el objeto
+     * principal, piensa dónde va cada parte (su concepto, o lo pregunta a su modelo), la encaja a su escala
+     * dentro del contorno real y, si pidió mejorarlo, se mira para ver si le falta alguna parte típica.
+     * @return la nota para el modelo, o null si no aplica (sin dibujo al que añadir)
+     */
+    String dibujarConPartes(salve.sketch.SketchRequest request, salve.sketch.SketchLibrary library) {
+        boolean add = request.kind == salve.sketch.SketchRequest.Kind.ADD;
+        salve.sketch.SketchScene base = null;
+        String mainName;
+        if (add) {
+            salve.sketch.SketchScene last = ultimoDibujo(); // aunque la app se haya reiniciado
+            String lastName = last == null ? "" : principal(last.title);
+            String target = salve.sketch.SketchLibrary.normalize(request.target);
+            boolean onLast = last != null && !last.isSelfPortrait()
+                    && (target.isEmpty() || salve.sketch.SketchLibrary.normalize(lastName).contains(target));
+            if (onLast) { base = last; mainName = lastName; }
+            else if (!target.isEmpty()) mainName = target;
+            else return null; // «ponle una puerta» sin dibujo al que ponérsela
+        } else {
+            mainName = request.unknown;
+            base = request.scene;
+        }
+        if (base == null) {
+            motor.estado("Dibujando primero «" + mainName + "»…");
+            base = dibujarObjeto(mainName, request.wish, request.improve, library);
+        }
+        if (base == null) return "DIBUJO: Bryan quiere «" + mainName + "» con " + String.join(" y ", request.parts)
+                + ", pero no conseguiste dibujar «" + mainName + "» (" + motor.referenceFailure + "). Díselo con sencillez.";
+        salve.sketch.VisualConcept concept = entender(mainName, request.wish);
+        StringBuilder how = new StringBuilder();
+        salve.sketch.SketchScene scene = conPartes(base, mainName, request.parts, request.where, concept, library,
+                add ? mainName : mainName + " con " + String.join(" y ", request.parts), true, how);
+        if (scene == null) return "DIBUJO: no conseguiste dibujar " + String.join(" ni ", request.parts)
+                + " para ponérselo a «" + mainName + "». Díselo con honestidad y pide una foto de esa parte.";
+        if (request.improve) scene = revisarPartes(scene, mainName, concept, library, how);
+        salve.sketch.SketchJournal.Attempt attempt = new salve.sketch.SketchJournal.Attempt();
+        attempt.drawingFingerprint = salve.sketch.SketchExecutionNote.fingerprint(scene);
+        attempt.source = "model"; attempt.how = how.toString(); attempt.wish = request.wish;
+        salve.sketch.Sketches.journal(motor.context).record(scene.title, attempt);
+        salve.core.trace.ExecutionTrace.note("DIBUJO POR PARTES", how.toString());
+        lastSketchSubject = scene.title;
+        motor.lastSketchAskedAt = System.currentTimeMillis();
+        motor.turnSketchStatus = how.toString();
+        empezarDibujo(scene);
+        return "ACCION_REALIZADA: " + (add ? "a tu dibujo de «" + mainName + "» le has añadido " : "has dibujado «" + mainName
+                + "» con ") + String.join(" y ", request.parts) + ", cada parte en su sitio y a su tamaño: " + how
+                + " Ya lo estás trazando parte por parte." + ESTILO_DIBUJO;
+    }
+
+    /** El objeto principal de un título: «iglesia con puerta» → «iglesia». */
+    static String principal(String title) {
+        String t = salve.sketch.SketchRequest.cleanName(title == null ? "" : title);
+        java.util.List<String> split = salve.sketch.PartPlan.split(salve.sketch.SketchLibrary.normalize(t));
+        return split == null ? t : split.get(0);
+    }
+
+    /** El objeto principal: de su repertorio, de una referencia real o imaginado por partes. */
+    salve.sketch.SketchScene dibujarObjeto(String name, String wish, boolean improve, salve.sketch.SketchLibrary library) {
+        if (!improve) for (salve.sketch.SketchLibrary.Mention m : library.mentions(name, false))
+            if (!m.motif.self) return salve.sketch.SketchScene.compose(java.util.Collections.singletonList(m.motif));
+        salve.sketch.VisualConcept concept = entender(name, wish);
+        salve.sketch.SketchScene web = buscarReferenciaYDibujar(name, concept, wish, improve);
+        return web != null ? web : componerDibujo(name, concept, wish);
+    }
+
+    /**
+     * Las líneas de una parte. Primero lo que ya sabe dibujar (su repertorio), luego lo que abstrae con
+     * geometría (una cruz, una ventana) y, si no, una referencia real o imaginarla.
+     * @param quick sólo repertorio y geometría (para lo que añade sola al mirarse: rápido y sin red)
+     */
+    List<float[]> lineasDeParte(String part, String mainName, salve.sketch.SketchLibrary library, boolean quick, StringBuilder how) {
+        String mainKey = salve.sketch.SketchLibrary.normalize(mainName);
+        for (salve.sketch.SketchLibrary.Mention m : library.mentions(part, false)) {
+            if (m.motif.self || salve.sketch.SketchLibrary.normalize(m.motif.name).equals(mainKey)) continue;
+            how.append(" «").append(part).append("» de mi repertorio;");
+            return salve.sketch.SketchScene.compose(java.util.Collections.singletonList(m.motif)).strokes;
+        }
+        List<float[]> simple = salve.sketch.PartPlan.primitive(part);
+        if (simple != null) { how.append(" «").append(part).append("» la abstraje con formas simples;"); return simple; }
+        if (quick) return null;
+        motor.estado("Buscando cómo es «" + part + "»…");
+        salve.sketch.SketchScene own = buscarReferenciaYDibujar(part, entender(part, ""), "", false);
+        String source = "de una referencia";
+        if (own == null) { own = componerDibujo(part, entender(part, ""), ""); source = "imaginada por partes"; }
+        if (own == null) return null;
+        how.append(" «").append(part).append("» ").append(source).append(';');
+        return own.strokes;
+    }
+
+    /** Pregunta a su modelo dónde va una parte que no conoce («¿dónde va el reloj en una torre?»). */
+    float[] dondeVa(String mainName, String part) {
+        if (motor.llm == null) return null;
+        try {
+            motor.estado("Pensando dónde va «" + part + "» en «" + mainName + "»…");
+            ModelResult r = pensarDibujo(salve.sketch.PartPlan.whereGoesPrompt(mainName, part));
+            return r == null || !r.isSuccess() ? null : salve.sketch.PartPlan.parseBox(r.getText());
+        } catch (Exception | OutOfMemoryError e) { return null; }
+    }
+
+    /** Encaja las partes en el dibujo base y lo guarda como un dibujo nuevo con sus partes nombradas. */
+    salve.sketch.SketchScene conPartes(salve.sketch.SketchScene base, String mainName, List<String> parts, String where,
+                                       salve.sketch.VisualConcept concept, salve.sketch.SketchLibrary library, String title,
+                                       boolean full, StringBuilder how) {
+        List<salve.sketch.PartPlan.Placed> placed = new java.util.ArrayList<>();
+        for (String part : parts) {
+            List<float[]> lines = lineasDeParte(part, mainName, library, !full, how);
+            if (lines == null || lines.isEmpty()) { how.append(" no supe dibujar «").append(part).append("»;"); continue; }
+            salve.sketch.VisualConcept.Part known = concept == null ? null : concept.part(part);
+            float[] box;
+            String why;
+            if (where != null && !where.isEmpty()) { box = salve.sketch.PartPlan.fromWords(where); why = "donde pediste (" + where + ")"; }
+            else {
+                float[] explicit = known == null ? null : known.box;
+                if (explicit == null && !salve.sketch.PartPlan.knownPlace(part) && full) explicit = dondeVa(mainName, part);
+                box = salve.sketch.PartPlan.boxFor(part, known == null ? "" : known.shape, explicit);
+                why = explicit != null ? "donde la pensé" : salve.sketch.PartPlan.knownPlace(part) ? "en su sitio típico" : "por cómo la describí";
+            }
+            String desc = known == null ? "" : known.shape;
+            placed.add(new salve.sketch.PartPlan.Placed(part, desc, salve.sketch.PartPlan.attach(base.strokes, lines, box)));
+            if (salve.sketch.PartPlan.paired(part))
+                placed.add(new salve.sketch.PartPlan.Placed(part, desc,
+                        salve.sketch.PartPlan.attach(base.strokes, lines, salve.sketch.PartPlan.mirrored(box))));
+            how.append(" puse «").append(part).append("» ").append(why).append(" (")
+                    .append(Math.round(box[0] * 100)).append(' ').append(Math.round(box[1] * 100)).append(' ')
+                    .append(Math.round(box[2] * 100)).append(' ').append(Math.round(box[3] * 100)).append(" % de «")
+                    .append(mainName).append("»);");
+        }
+        if (placed.isEmpty()) return null;
+        salve.sketch.PartPlan.Combined c = salve.sketch.PartPlan.combine(base.strokes, base.parts, mainName, placed);
+        try { return salve.sketch.Sketches.learn(motor.context, title, c.strokes, c.aspect, "model", c.parts); }
+        catch (java.io.IOException | RuntimeException error) {
+            Log.w(MotorConversacional.TAG, "No se pudo guardar el dibujo por partes", error);
+            return null;
+        }
+    }
+
+    /**
+     * Se mira el dibujo y comprueba si tiene las partes que lo hacen reconocible (su concepto: una iglesia
+     * lleva puerta y cruz). Lo que falte y sepa dibujar al momento, lo añade en su sitio.
+     */
+    salve.sketch.SketchScene revisarPartes(salve.sketch.SketchScene scene, String mainName, salve.sketch.VisualConcept concept,
+                                           salve.sketch.SketchLibrary library, StringBuilder how) {
+        if (scene == null || concept == null || motor.llm == null || !motor.llm.supportsVision()) return scene;
+        java.util.Set<String> already = new java.util.HashSet<>();
+        for (salve.sketch.SketchLibrary.Part p : scene.parts) already.add(salve.sketch.PartPlan.key(p.name));
+        List<String> asked = new java.util.ArrayList<>();
+        for (salve.sketch.VisualConcept.Part p : concept.parts) {
+            String k = salve.sketch.PartPlan.key(p.name);
+            if (already.contains(k) || asked.contains(p.name)) continue;
+            if (salve.sketch.PartPlan.knownPlace(p.name) || salve.sketch.PartPlan.primitive(p.name) != null) asked.add(p.name);
+            if (asked.size() == 4) break;
+        }
+        if (asked.isEmpty()) return scene;
+        Bitmap image = null;
+        try {
+            motor.estado("Mirando si a mi «" + mainName + "» le falta alguna parte…");
+            image = pintarTrazos(scene.strokes);
+            ModelResult r = motor.llm.generateImageResult(salve.sketch.PartPlan.lookForPartsPrompt(mainName, asked), image);
+            if (r == null || !r.isSuccess()) return scene;
+            List<String> missing = salve.sketch.PartPlan.missing(r.getText(), asked);
+            salve.core.trace.ExecutionTrace.note("REVISIÓN DE PARTES", "Busqué: " + asked + "\nVi: " + r.getText().trim());
+            if (missing.isEmpty()) { how.append(" Al mirarlo vi que ya tenía ").append(String.join(", ", asked)).append('.'); return scene; }
+            if (missing.size() > 2) missing = missing.subList(0, 2);
+            StringBuilder added = new StringBuilder();
+            salve.sketch.SketchScene fixed = conPartes(scene, mainName, missing, "", concept, library, scene.title, false, added);
+            if (fixed == null) return scene;
+            how.append(" Al mirarlo vi que le faltaba ").append(String.join(" y ", missing)).append(" y se lo añadí:").append(added);
+            return fixed;
+        } catch (Exception | OutOfMemoryError error) {
+            Log.w(MotorConversacional.TAG, "No pudo revisar las partes", error);
+            return scene;
+        } finally { if (image != null) image.recycle(); }
     }
 
     /** Sin concepto: compatibilidad con la herramienta cognitiva. */
@@ -942,30 +1158,7 @@ final class DrawingStudio {
         motor.estado("Mirando mi dibujo para ver si se parece…");
         Bitmap image = null;
         try {
-            float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
-            for (float[] s : strokes) for (int i = 0; i + 1 < s.length; i += 2) {
-                minX = Math.min(minX, s[i]); maxX = Math.max(maxX, s[i]); minY = Math.min(minY, s[i + 1]); maxY = Math.max(maxY, s[i + 1]);
-            }
-            float w = Math.max(1, maxX - minX), h = Math.max(1, maxY - minY);
-            int side = 448, margin = 28;
-            float scale = (side - 2f * margin) / Math.max(w, h);
-            float ox = (side - w * scale) / 2, oy = (side - h * scale) / 2;
-            image = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
-            android.graphics.Canvas canvas = new android.graphics.Canvas(image);
-            canvas.drawColor(android.graphics.Color.WHITE);
-            android.graphics.Paint pen = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-            pen.setColor(android.graphics.Color.BLACK);
-            pen.setStyle(android.graphics.Paint.Style.STROKE);
-            pen.setStrokeWidth(5f);
-            pen.setStrokeCap(android.graphics.Paint.Cap.ROUND);
-            pen.setStrokeJoin(android.graphics.Paint.Join.ROUND);
-            for (float[] s : strokes) {
-                if (s.length < 4) continue;
-                android.graphics.Path path = new android.graphics.Path();
-                path.moveTo(ox + (s[0] - minX) * scale, oy + (s[1] - minY) * scale);
-                for (int i = 2; i + 1 < s.length; i += 2) path.lineTo(ox + (s[i] - minX) * scale, oy + (s[i + 1] - minY) * scale);
-                canvas.drawPath(path, pen);
-            }
+            image = pintarTrazos(strokes);
             ModelResult result = motor.llm.generateImageResult(salve.sketch.SketchTalk.lookPrompt(subject), image);
             if (result == null || !result.isSuccess()) return null;
             salve.sketch.SketchTalk.Look look = salve.sketch.SketchTalk.parseLook(result.getText(), subject);

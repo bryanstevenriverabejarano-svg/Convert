@@ -36,4 +36,36 @@ public class SketchRequestTest {
         assertNotNull(night);
         assertFalse(night.isSelfPortrait());
     }
+
+    @Test public void anObjectWithItsPartsIsOneDrawing() throws Exception {
+        SketchRequest r = parse("Dibuja una iglesia con su puerta");
+        assertEquals(SketchRequest.Kind.WITH_PARTS, r.kind);
+        assertEquals("iglesia", r.unknown);
+        assertEquals(java.util.Arrays.asList("puerta"), r.parts);
+        SketchRequest casa = parse("dibújame una casa con ventanas y una chimenea");
+        assertEquals(SketchRequest.Kind.WITH_PARTS, casa.kind);
+        assertNotNull("la casa ya la sabe dibujar", casa.scene);
+        assertEquals(java.util.Arrays.asList("ventanas", "chimenea"), casa.parts);
+        // Dos dibujos que conoce juntos siguen siendo una escena.
+        assertEquals(SketchRequest.Kind.DRAW, parse("¿Puedes dibujar un castillo con un dragón?").kind);
+        assertEquals(SketchRequest.Kind.UNKNOWN, parse("dibuja un gorila con más detalle").kind);
+    }
+
+    @Test public void addingAPartToTheLastDrawing() throws Exception {
+        SketchRequest r = parse("Mejora el dibujo y agrégale una puerta");
+        assertEquals(SketchRequest.Kind.ADD, r.kind);
+        assertEquals(java.util.Arrays.asList("puerta"), r.parts);
+        assertTrue(r.improve);
+        assertFalse("habla del dibujo", r.implicit);
+        SketchRequest cruz = parse("ponle una cruz a la iglesia");
+        assertEquals(SketchRequest.Kind.ADD, cruz.kind);
+        assertEquals("iglesia", cruz.target);
+        SketchRequest solo = parse("ponle una puerta");
+        assertEquals(SketchRequest.Kind.ADD, solo.kind);
+        assertTrue("sin dibujo reciente no cuenta", solo.implicit);
+        // No son dibujos.
+        assertNotEquals(SketchRequest.Kind.ADD, parse("pon la tele").kind);
+        assertNotEquals(SketchRequest.Kind.ADD, parse("me falta tiempo").kind);
+        assertNotEquals(SketchRequest.Kind.ADD, parse("dibuja un gato").kind);
+    }
 }

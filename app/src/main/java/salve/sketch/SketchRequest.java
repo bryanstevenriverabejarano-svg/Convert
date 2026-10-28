@@ -11,7 +11,11 @@ import java.util.regex.Pattern;
 
 /** Reconoce cuándo Bryan pide un dibujo ("dibújame un árbol y la luna", "dibújate", "¿qué sabes dibujar?"). */
 public final class SketchRequest {
-    public enum Kind { NONE, DRAW, SELF, FREE, LIST, UNKNOWN, AGAIN }
+    /**
+     * ADD: añadir partes a un dibujo («ponle una puerta a la iglesia»); WITH_PARTS: un objeto con las
+     * partes que debe llevar, cada una en su sitio («una iglesia con su puerta y una cruz»).
+     */
+    public enum Kind { NONE, DRAW, SELF, FREE, LIST, UNKNOWN, AGAIN, ADD, WITH_PARTS }
 
     public final Kind kind;
     public final SketchScene scene;
@@ -31,6 +35,29 @@ public final class SketchRequest {
      * de un dibujo hace poco.
      */
     public boolean implicit;
+    /** Las partes que debe llevar o que hay que añadir («puerta», «cruz»). Vacío si no las pide. */
+    public List<String> parts = java.util.Collections.emptyList();
+    /** En ADD: a qué objeto («iglesia»), o "" si es «al dibujo» (el último). */
+    public String target = "";
+    /** Dónde quiere Bryan la parte («arriba a la derecha»); manda sobre la posición típica. "" si no lo dice. */
+    public String where = "";
+
+    private static SketchRequest withParts(Kind kind, SketchScene scene, String main, List<String> parts, String target,
+                                           boolean references, boolean improve, String wish) {
+        SketchRequest r = new SketchRequest(kind, scene, main, references, improve, wish);
+        r.parts = java.util.Collections.unmodifiableList(new ArrayList<>(parts));
+        r.target = target == null ? "" : target;
+        return r;
+    }
+
+    /** ¿Es una parte que sabe dibujar (la conoce, la abstrae con geometría o está en su repertorio)? */
+    static boolean drawablePart(String part, SketchLibrary library) {
+        if (PartPlan.primitive(part) != null || PartPlan.knownPlace(part)) return true;
+        for (SketchLibrary.Mention m : library.mentions(part, false)) if (!m.motif.self) return true;
+        return false;
+    }
+
+    private static final Pattern DRAW_WORD = Pattern.compile("\\b(dibuj\\w*|pint\\w*|traz\\w*|ilustr\\w*)\\b");
 
     private SketchRequest(Kind kind, SketchScene scene, String unknown) { this(kind, scene, unknown, false); }
     private SketchRequest(Kind kind, SketchScene scene, String unknown, boolean references) {
@@ -108,6 +135,20 @@ public final class SketchRequest {
         boolean references = REFERENCES.matcher(text).find();
         boolean improve = IMPROVE.matcher(text).find();
         String wish = wishes(text);
+        // «Mejora el dibujo y añádele una puerta», «ponle una cruz a la iglesia»: partes para un dibujo.
+        PartPlan.Add add = PartPlan.add(text);
+        if (add != null) {
+            boolean drawWord = DRAW_WORD.matcher(text).find();
+            boolean drawable = true;
+            for (String p : add.parts) drawable &= drawablePart(p, library);
+            // «pon la tele» no es un dibujo: hace falta una parte dibujable o que hable del dibujo.
+            if (drawable || drawWord) {
+                SketchRequest r = withParts(Kind.ADD, null, add.target, add.parts, add.target, references, improve, wish);
+                r.where = add.where;
+                r.implicit = !drawWord && add.target.isEmpty(); // sin «dibujo» ni objeto: sólo justo después de dibujar
+                return r;
+            }
+        }
         if (IMPROVE_ONLY.matcher(text).matches()) return new SketchRequest(Kind.AGAIN, null, null, true, true, wish);
         Matcher verb = VERB.matcher(text);
         if (!verb.find()) {
@@ -122,6 +163,23 @@ public final class SketchRequest {
                     : new SketchRequest(Kind.UNKNOWN, null, wanted, true, improve || strong, wish);
             r.implicit = true;
             return r;
+        }
+        // «Una iglesia con su puerta y una cruz»: el objeto y las partes que lleva, cada una en su sitio.
+        List<String> split = PartPlan.split(text.substring(verb.end()).trim());
+        if (split == null && verb.start() > 0) split = PartPlan.split(text.substring(0, verb.start()).trim());
+        if (split != null) {
+            // Sólo partes con sitio conocido (puerta, ventanas, cruz…). «Un castillo con un dragón» es una
+            // escena y «un vestido con volantes» un detalle del vestido: ésos siguen como antes.
+            for (String part : split.subList(1, split.size()))
+                if (!PartPlan.knownPlace(part) && PartPlan.primitive(part) == null) { split = null; break; }
+        }
+        if (split != null) {
+            String main = split.get(0);
+            SketchScene known = null;
+            if (!references && !improve)
+                for (SketchLibrary.Mention m : library.mentions(main, false))
+                    if (!m.motif.self) { known = SketchScene.compose(java.util.Collections.singletonList(m.motif)); break; }
+            return withParts(Kind.WITH_PARTS, known, main, split.subList(1, split.size()), "", references, improve, wish);
         }
         if (improve) {
             // Rehacerlo mejor: nunca la versión guardada; ella vuelve a buscar o a pensar sus partes.
