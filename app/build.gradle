@@ -214,6 +214,8 @@ dependencies {
 
     implementation 'com.google.mlkit:vision-common:17.3.0'
     implementation 'com.google.android.gms:play-services-mlkit-face-detection:17.1.0'
+    // Recorta el sujeto de una foto antes de calcarla (sin fondo ni textura): dibujos más limpios.
+    implementation 'com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1'
     // Lector de QR de Google Play services: sin permiso de cámara propio (emparejar nodos).
     implementation 'com.google.android.gms:play-services-code-scanner:16.1.0'
 
