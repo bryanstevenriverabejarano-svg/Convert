@@ -64,24 +64,7 @@ public final class CognitivePrompt {
      * necesita entra primero (pedir ropa nueva debe traer AVATAR_CREATE aunque el catálogo esté lleno).
      */
     public static Map<String, CognitiveTurn.Tool> prioritize(Map<String, CognitiveTurn.Tool> available, String input) {
-        if (available == null || input == null) return available;
-        java.util.List<String> first = new java.util.ArrayList<>();
-        if (available.containsKey("evidence.inspect")) first.add("evidence.inspect");
-        boolean drawing = DRAWING.matcher(input).find();
-        // «Dibuja un vestido» es un dibujo, no ropa para su avatar.
-        if (!drawing && WARDROBE.matcher(input).matches()) for (String name : available.keySet()) if (name.startsWith("AVATAR_")) first.add(name);
-        if (CLOUD.matcher(input).matches() && available.containsKey("cloud.sync")) first.add("cloud.sync");
-        if (RESEARCH.matcher(input).matches() && available.containsKey("web.search")) first.add("web.search");
-        if (drawing && available.containsKey("sketch.draw")) first.add(0, "sketch.draw");
-        if (available.containsKey(salve.core.mind.SelfFunctions.TOOL) && salve.core.mind.SelfFunctions.offered(input))
-            first.add(0, salve.core.mind.SelfFunctions.TOOL);
-        if (first.isEmpty()) return available;
-        Map<String, CognitiveTurn.Tool> ordered = new java.util.LinkedHashMap<>();
-        // Dentro del vestuario, crear va antes que listar o vestir: es la más grande y la que se perdía.
-        if (first.remove("AVATAR_CREATE")) ordered.put("AVATAR_CREATE", available.get("AVATAR_CREATE"));
-        for (String name : first) ordered.put(name, available.get(name));
-        for (Map.Entry<String, CognitiveTurn.Tool> e : available.entrySet()) ordered.putIfAbsent(e.getKey(), e.getValue());
-        return ordered;
+        return CapabilityPlanner.rank(available, input);
     }
 
     public static Map<String, CognitiveTurn.Tool> limitTools(Map<String, CognitiveTurn.Tool> available) {
