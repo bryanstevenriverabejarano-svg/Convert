@@ -90,10 +90,19 @@ public final class BurbujaFlotanteService extends Service {
         avatar = new AvatarView(this);
         avatar.setOverlayMode(true);
         window.addView(avatar, new LinearLayout.LayoutParams(-1, dp(178)));
-        controls("← →", "Caminar por la pantalla", () -> store.change(s -> s.walkTo(s.getX() > .5f ? 0f : 1f)),
-                "II", "Detenerse o despertar", () -> store.change(AvatarState::wake),
+        controls("← →", "Caminar por la pantalla", () -> {
+                    store.change(s -> s.walkTo(s.getX() > .5f ? 0f : 1f));
+                    salve.work.SleepFocusWorker.stop(this);
+                },
+                "II", "Detenerse o despertar", () -> {
+                    store.change(AvatarState::wake);
+                    salve.work.SleepFocusWorker.stop(this);
+                },
                 "×", "Cerrar personaje", this::stopSelf);
-        controls("Cama", "Crear cama y acostarse", () -> store.change(s -> { s.createBed(); s.sleep(); }),
+        controls("Cama", "Crear cama y acostarse", () -> {
+                    store.change(s -> { s.createBed(); s.sleep(); });
+                    salve.work.SleepFocusWorker.start(this);
+                },
                 "Saludo", "Mostrar gesto de saludo", () -> salve.avatar.AvatarMotionController.get().previewGesture(
                         salve.avatar.AvatarMotion.Gesture.WAVE, salve.avatar.AvatarMotion.Expression.WARM),
                 "…", "Abrir habitación y gestos", this::openRoom);
