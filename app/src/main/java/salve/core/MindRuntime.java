@@ -130,6 +130,20 @@ public final class MindRuntime {
     public salve.core.mind.LessonBook lessons() { return lessons; }
     /** Su laboratorio de habilidades: estrategias verificadas, experimentos y calibración. */
     public salve.core.mind.SkillLab skills() { return skills; }
+
+    /**
+     * Read-only cross-layer context. The original Room evidence is authoritative;
+     * journal beliefs, lessons and adopted strategies are distinct lower-trust
+     * layers, never promoted to facts or resurrected after source deletion.
+     * Not available outside an explicitly verified private session.
+     */
+    public String memoryLayersForPrompt(String question,
+            salve.core.memory.ConversationMemoryGrounding.Result retrieved) {
+        if (!salve.core.identity.IdentityManager.get(app).privateAccess()) return "";
+        return salve.core.memory.MemoryLayerBridge.render(question, retrieved,
+                journal.beliefs(), lessons.relevant(question, 2),
+                skills.decisions(), 900);
+    }
     private final salve.core.mind.Biography biography;
     private final salve.core.mind.PersonFamiliarity people;
     private final salve.core.mind.Milestones milestones;
