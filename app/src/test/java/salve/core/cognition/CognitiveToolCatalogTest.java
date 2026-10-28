@@ -91,6 +91,34 @@ public class CognitiveToolCatalogTest {
         assertTrue(catalog.get("AVATAR_WEAR").description.contains("id:string"));
     }
 
+    @Test public void evidenceToolIsPrivateRelevantAndSurvivesTinyCatalog() {
+        Map<String, CognitiveTurn.Tool> creator = CognitiveToolCatalog.build(
+                "¿Qué aprendiste mientras dormías?", false, true, false, NO_OP);
+        assertTrue(creator.containsKey("evidence.inspect"));
+        assertTrue(CognitivePrompt.limitTools(
+                CognitivePrompt.prioritize(creator, "¿Qué aprendiste mientras dormías?"))
+                .containsKey("evidence.inspect"));
+        Map<String, CognitiveTurn.Tool> guest = CognitiveToolCatalog.build(
+                "¿Qué aprendiste mientras dormías?", false, false, false, NO_OP);
+        assertFalse(guest.containsKey("evidence.inspect"));
+        assertFalse(CognitiveToolCatalog.build("Hola", false, true, false, NO_OP)
+                .containsKey("evidence.inspect"));
+        assertFalse(CognitiveToolCatalog.build("Muéstrame tu registro de ejecución",
+                true, true, false, NO_OP).containsKey("evidence.inspect"));
+    }
+
+    @Test public void modelCannotPassUndocumentedEvidenceArguments() {
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        Map<String, CognitiveTurn.Tool> tools = CognitiveToolCatalog.build(
+                "tu registro de ejecución", false, true, false, (name, args) -> {
+                    calls.incrementAndGet(); return new CognitiveTurn.Receipt("datos locales");
+                });
+        String bad = "{\"mode\":\"tool\",\"message\":null,\"action\":{\"name\":\"evidence.inspect\",\"arguments\":{\"scope\":\"both\",\"delete\":true}}}";
+        CognitiveTurn.run((results,repair,left) -> salve.core.ModelResult.success(bad,0),
+                tools, () -> false);
+        assertEquals(0, calls.get());
+    }
+
     @Test public void catalogNeverExecutesUntilCognitiveTurnAuthorizesCall() {
         AtomicInteger calls = new AtomicInteger();
         Map<String, CognitiveTurn.Tool> tools = CognitiveToolCatalog.build(
