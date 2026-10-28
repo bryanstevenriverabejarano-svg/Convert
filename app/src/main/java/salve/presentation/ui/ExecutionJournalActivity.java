@@ -35,7 +35,7 @@ public class ExecutionJournalActivity extends Activity {
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(20, 20, 20, 20); root.setBackgroundColor(Color.rgb(15, 30, 43));
         TextView title = text(root, "Registro de ejecución", 23);
-        text(root, "Peticiones, operaciones y notas completas de dibujos y búsquedas. Se conservan las últimas 20 tareas en este dispositivo. No es una transcripción del pensamiento interno del modelo.", 14);
+        text(root, "Peticiones, operaciones y resultados de dibujos, búsquedas y sueño autónomo. Se conservan las últimas 20 tareas en este dispositivo. Solo se muestra actividad registrada y verificable; no es una transcripción del pensamiento interno del modelo.", 14);
         selector = new Spinner(this); root.addView(selector);
         selector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             public void onNothingSelected(AdapterView<?> parent) { }
