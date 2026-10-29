@@ -112,7 +112,7 @@ class MemoryEvidenceTests(unittest.TestCase):
         self.assertEqual("CANDIDATE", outcome["verdict"])
         m = outcome["memory_evidence"]
         self.assertEqual(0, m["recall_regressions"])
-        self.assertEqual(5 / 6, m["baseline"]["recall_at_4"], 4)
+        self.assertAlmostEqual(5 / 6, m["baseline"]["recall_at_4"], places=4)
         self.assertEqual(1, m["candidate"]["recall_at_4"])
         self.assertEqual(0, m["candidate"]["citation_errors"])
 
