@@ -95,7 +95,11 @@ final class CognitiveToolExecutor {
                 String scoped = salve.core.conversation.MemoryProbePolicy.scoped(
                         input, m.conversationSession.snapshot(), requested);
                 ConversationMemoryGrounding.Result result = m.memoria.recuperarContextoConversacional(scoped);
-                return new CognitiveTurn.Receipt(result.getStatus().name() + "\n" + result.getDataContext());
+                String layers = m.mind().memoryLayersForPrompt(scoped, result);
+                // Receipt distinguishes primary records from derived, source-checked
+                // layers. Never replaces missing Room evidence with model beliefs.
+                return new CognitiveTurn.Receipt(result.getStatus().name() + "\n"
+                        + result.getDataContext() + (layers.isEmpty() ? "" : "\n" + layers));
             }
             case "web.search":
                 return m.mesaInvestigacion.herramientaBuscarWeb(CognitiveReply.string(args, "query").trim(), input);
