@@ -129,9 +129,9 @@ public class IndexedMemoryIntegrationTest {
     }
 
     @Test public void cloudTombstoneRevokesOnlyTheExactCommittedProfileSourceIds() {
-        add("Mi nombre de ejemplo es Luisa", 1000, "[\\"profile:name\\"]");
-        add("Nombre de otra categoría", 1100, "[\\"profile:name_extra\\"]");
-        String payload = "{\\"type\\":\\"profile_delete\\",\\"category\\":\\"name\\",\\"time_ms\\":2000}";
+        add("Mi nombre de ejemplo es Luisa", 1000, "[\"profile:name\"]");
+        add("Nombre de otra categoría", 1100, "[\"profile:name_extra\"]");
+        String payload = "{\"type\":\"profile_delete\",\"category\":\"name\",\"time_ms\":2000}";
         java.util.List<Integer> ids = CloudMemoryImporter.profileDeletionIds(payload, db.recuerdoDao());
         assertEquals(1, ids.size());
         int oldId = ids.get(0);
@@ -141,11 +141,11 @@ public class IndexedMemoryIntegrationTest {
                 db.recuerdoDao(), db.memorySyncStateDao()).ingest(payload, 2000)));
         assertTrue(db.recuerdoDao().porIds(java.util.Collections.singletonList(oldId)).isEmpty());
         assertEquals(1, db.recuerdoDao().porIds(java.util.Collections.singletonList(otherId)).size());
-        assertEquals(1, ids.size()); // caller retains the exact revoked IDs
+        assertEquals(1, ids.size()); // caller retains exact revoked IDs after the deletion
         assertTrue(CloudMemoryImporter.profileDeletionIds(payload, db.recuerdoDao()).isEmpty());
         assertTrue(CloudMemoryImporter.profileDeletionIds("{malformed", db.recuerdoDao()).isEmpty());
         assertTrue(CloudMemoryImporter.profileDeletionIds(
-                "{\\"type\\":\\"memory\\",\\"category\\":\\"name\\"}",
+                "{\"type\":\"memory\",\"category\":\"name\"}",
                 db.recuerdoDao()).isEmpty());
     }
 
