@@ -43,17 +43,24 @@ public final class ConversationMemoryGrounding {
         // Internal IDs of records ACTUALLY emitted within the context budget.
         // Not part of any normal user-facing or model-facing output.
         private final List<Integer> emittedMemoryIds;
+        private final boolean cloudIncompleteForEvaluation;
         private Result(String context, String directAnswer, Status status, boolean evidence) {
-            this(context, directAnswer, status, evidence, Collections.emptyList());
+            this(context, directAnswer, status, evidence, Collections.emptyList(), false);
         }
         private Result(String context, String directAnswer, Status status, boolean evidence,
                        List<Integer> emittedMemoryIds) {
+            this(context, directAnswer, status, evidence, emittedMemoryIds, false);
+        }
+        private Result(String context, String directAnswer, Status status, boolean evidence,
+                       List<Integer> emittedMemoryIds, boolean cloudIncomplete) {
             this.context = context; this.directAnswer = directAnswer;
             this.status = status; this.evidence = evidence;
             this.emittedMemoryIds = Collections.unmodifiableList(new ArrayList<>(emittedMemoryIds));
+            this.cloudIncompleteForEvaluation = cloudIncomplete;
         }
-        /** Package-private input to the explicitly invoked, local evaluation adapter. */
+        /** Package-private inputs to the explicitly invoked, local evaluation adapter. */
         List<Integer> emittedMemoryIdsForEvaluation() { return emittedMemoryIds; }
+        boolean cloudIncompleteForEvaluation() { return cloudIncompleteForEvaluation; }
         public String getContext() { return context; }
         /** The cognitive core already supplies the rules; reserve small contexts for evidence itself. */
         public String getDataContext() { return context.startsWith(HEADER) ? context.substring(HEADER.length()) : context; }
@@ -70,7 +77,7 @@ public final class ConversationMemoryGrounding {
             return new Result(context + "\nESTADO_PERSISTENCIA: " + cloudStatus
                     + " No confundas una recuperación incompleta con ausencia de historia.",
                     answer, complete ? status : (evidence ? Status.PARTIAL : status),
-                    evidence, emittedMemoryIds);
+                    evidence, emittedMemoryIds, !complete || cloudIncompleteForEvaluation);
         }
         public static Result unavailable() { return unavailable(null); }
         public static Result unavailable(String input) {
