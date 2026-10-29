@@ -62,7 +62,8 @@ public final class SleepFocusWorker extends Worker {
     }
 
     /** Use persisted avatar state, not the UI singleton (which belongs to the main thread). */
-    private static boolean active(Context context) {
+    /** Shared persisted guard: legacy periodic workers must defer to focused sleep. */
+    static boolean active(Context context) {
         Context app = context.getApplicationContext();
         SharedPreferences prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String avatar = app.getSharedPreferences("salve_avatar", Context.MODE_PRIVATE)
