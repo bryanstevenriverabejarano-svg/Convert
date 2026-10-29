@@ -315,6 +315,13 @@ public class ConversationMemoryGroundingTest {
                 loaded.withCloudStatus("recuperación incompleta", false), 1L, key);
         assertEquals("PARTIAL", partial.status);
         assertTrue(partial.retrieved.isEmpty());
+        // The conversational API historically returns EMPTY when local DB is
+        // empty during cloud restore; the evaluator must not report absence.
+        MemoryEvaluationProbe.Observation pendingEmpty = MemoryEvaluationProbe.capture(
+                new Store().service().retrieve("sin coincidencias")
+                        .withCloudStatus("restauración aún pendiente", false), 1L, key);
+        assertEquals("PARTIAL", pendingEmpty.status);
+        assertTrue(pendingEmpty.retrieved.isEmpty());
         store.failMemory = true;
         MemoryEvaluationProbe.Observation error = MemoryEvaluationProbe.capture(
                 store.service().retrieve("¿Cuál es mi nombre?"), 1L, key);
