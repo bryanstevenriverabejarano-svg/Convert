@@ -85,5 +85,105 @@ class GateTests(unittest.TestCase):
                 gate.read(path)
 
 
+def add_anonymous_memory_receipts(base, candidate):
+    """Same independent gold IDs for both versions; no actual memories stored."""
+    for i in range(0, 30, 5):
+        cid = "case-%02d" % i
+        identifier = "%016x" % (1000 + i)
+        for report in (base, candidate):
+            found = report["cases"][cid]["passed"]
+            report["cases"][cid]["memory_evidence"] = {
+                "gold": [identifier],
+                "retrieved": [identifier] if found else [],
+                "cited": [identifier] if found else [],
+                "conflict": False, "acknowledged": False,
+                "status": "OK" if found else "EMPTY",
+            }
+
+
+class MemoryEvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.base = fixture("1" * 40)
+        self.good = fixture("2" * 40, 28)
+        add_anonymous_memory_receipts(self.base, self.good)
+
+    def test_uses_existing_gate_and_reports_recall_without_private_text(self):
+        outcome = gate.compare(self.base, self.good)
+        self.assertEqual("CANDIDATE", outcome["verdict"])
+        m = outcome["memory_evidence"]
+        self.assertEqual(0, m["recall_regressions"])
+        self.assertEqual(5 / 6, m["baseline"]["recall_at_4"], 4)
+        self.assertEqual(1, m["candidate"]["recall_at_4"])
+        self.assertEqual(0, m["candidate"]["citation_errors"])
+
+    def test_rejects_recall_regression_even_when_other_domains_improve(self):
+        old = self.good["cases"]["case-00"]
+        old["memory_evidence"]["retrieved"] = []
+        old["memory_evidence"]["cited"] = []
+        old["memory_evidence"]["status"] = "EMPTY"
+        # Independently verified status is not controlled by this metric.
+        self.assertEqual("REJECTED", gate.compare(self.base, self.good)["verdict"])
+        self.assertEqual(1, gate.compare(self.base, self.good)["memory_evidence"]["recall_regressions"])
+
+    def test_rejects_citation_without_matching_gold_and_visible_evidence(self):
+        receipt = self.good["cases"]["case-00"]["memory_evidence"]
+        receipt["cited"] = ["ffffffffffffffff"]
+        outcome = gate.compare(self.base, self.good)
+        self.assertEqual("REJECTED", outcome["verdict"])
+        self.assertEqual(1, outcome["memory_evidence"]["candidate"]["citation_errors"])
+
+    def test_rejects_unacknowledged_contradiction(self):
+        for report in (self.base, self.good):
+            report["cases"]["case-00"]["memory_evidence"]["conflict"] = True
+        outcome = gate.compare(self.base, self.good)
+        self.assertEqual("REJECTED", outcome["verdict"])
+        self.assertEqual(1, outcome["memory_evidence"]["candidate"]["unacknowledged_conflicts"])
+
+    def test_rejects_changed_gold_annotations(self):
+        self.good["cases"]["case-00"]["memory_evidence"]["gold"] = ["0000000000009999"]
+        with self.assertRaisesRegex(ValueError, "Frozen memory gold"):
+            gate.compare(self.base, self.good)
+
+    def test_incomplete_evidence_cannot_be_candidate(self):
+        for report in (self.base, self.good):
+            report["cases"]["case-00"].pop("memory_evidence")
+        self.assertEqual("INSUFFICIENT", gate.compare(self.base, self.good)["verdict"])
+
+    def test_legacy_results_without_evidence_are_unchanged(self):
+        self.assertEqual("CANDIDATE", gate.compare(fixture("1" * 40),
+                                                       fixture("2" * 40, 28))["verdict"])
+
+    def test_privacy_schema_rejects_raw_memories_and_partial_citations(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            receipt = copy.deepcopy(self.good)
+            bad = receipt["cases"]["case-00"]["memory_evidence"]
+            bad["gold"] = ["Mi nombre es un dato privado"]
+            path.write_text(json.dumps({
+                **receipt, "cases": list(receipt["cases"].values())
+            }), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "anonymous hex"):
+                gate.read(path)
+            bad["gold"] = ["0000000000001000"]
+            bad["status"] = "PARTIAL"
+            path.write_text(json.dumps({
+                **receipt, "cases": list(receipt["cases"].values())
+            }), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "cannot provide trusted"):
+                gate.read(path)
+
+    def test_empty_gold_with_spurious_candidate_is_rejected(self):
+        for report in (self.base, self.good):
+            data = report["cases"]["case-00"]["memory_evidence"]
+            data["gold"] = []
+        outcome = gate.compare(self.base, self.good)
+        self.assertEqual("REJECTED", outcome["verdict"])
+        self.assertEqual(1, outcome["memory_evidence"]["candidate"]["false_hits_on_empty_gold"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
