@@ -416,7 +416,11 @@ public class MemoriaEmocional {
                     db.memorySyncStateDao().put(salve.data.db.MemorySyncStateEntity.of(etiqueta, deletionTime, true));
                     CloudSyncManager.enqueueProfileDeletion(context, categoria.trim().toLowerCase(Locale.ROOT), deletionTime);
                 });
-                salve.core.MindRuntime.get(context).pruneDeletedMemoriesAsync();
+                // A confirmed deletion must not wait for a future dream or a
+                // best-effort background worker before derived beliefs are scrubbed.
+                // Reuse MindRuntime's existing vector/journal reconciliation.
+                if (removedFromMemory || removed[0] > 0)
+                    salve.core.MindRuntime.get(context).pruneDeletedMemories();
                 return removedFromMemory || removed[0] > 0;
             }).get(3, TimeUnit.SECONDS);
         } catch (Exception e) {
