@@ -69,6 +69,22 @@ public class CapabilityPlannerTest {
         assertEquals(tools.size(), ranked.size());
     }
 
+    @Test public void adaptiveCatalogShowsMoreExistingCapabilitiesWithoutGrantingAny() {
+        Map<String, CognitiveTurn.Tool> offered = new LinkedHashMap<>();
+        for (int i = 0; i < 12; i++) {
+            String key = "tool_" + i;
+            offered.put(key, new CognitiveTurn.Tool("{}: " + key + " " + "x".repeat(84),
+                    args -> new CognitiveTurn.Receipt("ok")));
+        }
+        Map<String, CognitiveTurn.Tool> compact = CognitivePrompt.limitTools(offered);
+        Map<String, CognitiveTurn.Tool> small = CognitivePrompt.limitTools(offered, 3000);
+        Map<String, CognitiveTurn.Tool> large = CognitivePrompt.limitTools(offered, 9500);
+        assertEquals(compact.keySet(), small.keySet());
+        assertTrue(large.size() > compact.size());
+        assertTrue(offered.keySet().containsAll(large.keySet()));
+        assertFalse(large.containsKey("not_authorized"));
+    }
+
     @Test public void statusSyncAndPhysicalActionRemainExplicit() {
         Map<String, CognitiveTurn.Tool> tools = all();
         tools.remove("evidence.inspect");

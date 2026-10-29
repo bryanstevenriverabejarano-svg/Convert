@@ -62,7 +62,8 @@ public final class SleepFocusWorker extends Worker {
     }
 
     /** Use persisted avatar state, not the UI singleton (which belongs to the main thread). */
-    private static boolean active(Context context) {
+    /** Shared persisted guard: legacy periodic workers must defer to focused sleep. */
+    static boolean active(Context context) {
         Context app = context.getApplicationContext();
         SharedPreferences prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String avatar = app.getSharedPreferences("salve_avatar", Context.MODE_PRIVATE)
@@ -86,6 +87,11 @@ public final class SleepFocusWorker extends Worker {
             journal.finish(traceId, "APLAZADO");
             return Result.success(); // The foreground or another cycle has priority.
         }
+        // A selected model is not necessarily resident in RAM. Never describe the
+        // avatar animation or a scheduled worker as confirmed model inference.
+        journal.append(traceId, "MODELO", llm.activeModelPath() == null
+                ? "No hay un modelo local seleccionado; la práctica sin inferencia puede continuar."
+                : "Modelo local seleccionado; la carga y el resultado se verifican al intentar inferir.");
         BooleanSupplier stop = () -> isStopped() || Thread.currentThread().isInterrupted()
                 || !active(app) || goals.hasActiveConversation() || mind.journal().isPaused();
         String verdict = "INTERRUMPIDO";

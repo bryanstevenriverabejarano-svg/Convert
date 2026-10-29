@@ -38,6 +38,9 @@ public class DreamWorker extends Worker {
     @Override
     public Result doWork() {
         if (isStopped()) return Result.success();
+        // Focused sleep already performs dream/reflect/play. Keep explicit user work available.
+        if (!SleepFocusPolicy.allowStandalone(SleepFocusWorker.active(getApplicationContext()),
+                getInputData().getBoolean(SleepFocusPolicy.EXPLICIT_REQUEST, false))) return Result.success();
         salve.core.mind.BackgroundMindGate.Lease lease = salve.core.mind.BackgroundMindGate.get().acquire(
                 salve.core.mind.BackgroundMindGate.Task.DREAM,
                 salve.core.GoalAutonomyRuntime.get(getApplicationContext()).hasActiveConversation(),
@@ -73,6 +76,8 @@ public class DreamWorker extends Worker {
     /** Sueño solicitado por Bryan: no exige reposo del dispositivo, sí carga. */
     public static void enqueueNow(Context context) {
         OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(DreamWorker.class)
+                .setInputData(new androidx.work.Data.Builder()
+                        .putBoolean(SleepFocusPolicy.EXPLICIT_REQUEST, true).build())
                 .setConstraints(constraints(false))
                 .build();
         WorkManager.getInstance(context.getApplicationContext()).enqueueUniqueWork(

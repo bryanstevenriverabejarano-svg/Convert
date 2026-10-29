@@ -2050,8 +2050,16 @@ public class MotorConversacional {
                 ? historyOverride : conversationSession.snapshot();
         salve.core.cognition.ConversationEvidenceIntent.Scope evidenceScope =
                 salve.core.cognition.ConversationEvidenceIntent.classify(input, evidenceHistory);
+        // Reuse the existing ranking and allowlist. Match the catalog to the
+        // actual local model turn budget instead of hiding relevant later tools.
+        int catalogPromptBudget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
+        if (turnPromptBudget > 0 && input != null && input.equals(turnPromptBudgetInput))
+            catalogPromptBudget = Math.min(catalogPromptBudget, turnPromptBudget);
+        if (activePhoto != null && mesaFotos.canAnalyzePhoto(activePhoto))
+            catalogPromptBudget = Math.min(catalogPromptBudget, 6000);
         Map<String, CognitiveTurn.Tool> catalog = CognitivePrompt.limitTools(
-                CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis, evidenceHistory), input));
+                CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis, evidenceHistory), input),
+                catalogPromptBudget);
         Map<String, CognitiveTurn.Tool> tools = toolOverride == null ? catalog : toolOverride.apply(catalog);
         List<salve.core.conversation.ChatMessage> turnHistory = historyOverride;
         // Sin la herramienta (Bryan aún no verificado) no se le puede decir «usa memory.lookup»: acababa

@@ -28,6 +28,13 @@ public class SleepFocusPolicyTest {
         assertFalse(SleepFocusPolicy.active(true, state));
     }
 
+    @Test public void focusedSleepOwnsScheduledWorkButNeverCancelsExplicitUserRequest() {
+        assertTrue(SleepFocusPolicy.allowStandalone(false, false));
+        assertTrue(SleepFocusPolicy.allowStandalone(false, true));
+        assertFalse(SleepFocusPolicy.allowStandalone(true, false));
+        assertTrue(SleepFocusPolicy.allowStandalone(true, true));
+    }
+
     @Test public void savedSleepingStateSurvivesReloadButNotCorruptData() {
         AvatarState state = new AvatarState();
         state.createBed();

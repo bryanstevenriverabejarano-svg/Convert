@@ -30,6 +30,12 @@ sincronización, aplicar esta secuencia antes de escribir código:
 - Pruebas nuevas y existentes, resultados concretos de GitHub Actions.
 - Limitaciones pendientes y plan de reversión si aplica.
 
+**Prueba transversal de coordinación** (auditoría del 29-10-2026):
+- En tareas privadas (`MindRuntime.local`, notas/objetivos internos) usar la ruta telefónica existente `SalveLLM.generateLocalResult`, no el enrutador genérico de nodos, salvo que exista una autorización y clasificación de datos explícita.
+- Antes de crear otro `Worker` o programa periódico, comprobar si `SleepFocusWorker`, `DreamWorker`, `ThinkWorker`, `PlayWorker` o `BackgroundMindGate` ejecutan ya la función y si la orden es manual o automática.
+- Priorizar solo herramientas ya presentes en `CognitiveToolCatalog`. El presupuesto ampliado nunca puede eludir la allowlist, `CognitiveTurn` o el ejecutor.
+- Exigir una prueba de contrato en cada frontera y citar la matriz viva [SALVE_AUDITORIA_INTERCONEXIONES_2026_10_29.md](SALVE_AUDITORIA_INTERCONEXIONES_2026_10_29.md).
+
 **Nunca** declarar que algo está implementado por un plan teórico, que está
 probado por CI si solo se comprobó la sintaxis, o que se olvidó completamente
 un dato si aún quedan copias externas/archivos de respaldo.
