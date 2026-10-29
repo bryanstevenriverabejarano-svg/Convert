@@ -44,8 +44,8 @@ creencias y pensamientos derivados; `MindRuntime.pruneDeletedMemories`
 elimina vectores huérfanos; Room FTS tiene sus disparadores de borrado.
 
 **Huecos conectados en esta etapa:**
-- La reconciliación del modelo derivado se ejecuta tras el borrado confirmado,
-  sin esperar a un sueño o un worker posterior.
+- La reconciliación por IDs del modelo derivado se ejecuta tras el borrado confirmado,
+  sin esperar a un sueño o un worker posterior y sin barrer recuerdos cloud pendientes.
 - `MindRuntime.exportMindSnapshot` depura fuentes ausentes y valida el
   respaldo antes de subir una copia del yo persistente.
 - `MindRuntime.importMindSnapshot` rechaza respaldos anteriores que citen
@@ -59,3 +59,10 @@ semántico de texto libre en narrativas, experiencias y documentos; coordinació
 de identificadores estables entre dispositivos. Una respuesta de Salve debe
 explicar esas limitaciones. No se debe asegurar «eliminación total» hasta
 contar con protocolo de revocación confirmado de extremo a extremo.
+
+**Regla adicional para restauración parcial:** los IDs que todavía no están en
+Room mientras pCloud sincroniza **no son borrados demostrados**. La poda global
+queda suspendida hasta confirmar la recuperación; los borrados explícitos se
+procesan por los IDs exactos capturados antes de la transacción. Si el respaldo
+cita una fuente local ausente, se rechaza la copia hasta resolverla, sin alterar
+los recuerdos existentes.
