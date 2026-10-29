@@ -66,8 +66,12 @@ public final class MemoryEvaluationProbe {
             default: status = "ERROR"; break;
         }
 
-        // A graph node is not an episodic Room memory; a partial cloud restore
-        // is not a complete memory hit. Neither is scored as trusted evidence.
+        // Missing local records while pCloud is still restoring is UNKNOWN,
+        // never an established empty personal history. Do not alter the
+        // application's regular conversational status for this measurement.
+        if (result.cloudIncompleteForEvaluation() && !"ERROR".equals(status))
+            status = "PARTIAL";
+        // Graph nodes and incomplete reads never count as episodic evidence.
         if (!"OK".equals(status))
             return new Observation(status, elapsedNanos / 1_000_000L, Collections.emptyList());
 
