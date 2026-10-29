@@ -796,6 +796,13 @@ public final class MindRuntime {
 
     /** Borra vectores de recuerdos eliminados, para que lo olvidado no siga siendo recuperable. */
     public int pruneDeletedMemories() {
+        // A missing local ID is NOT proof of deletion while pCloud is still
+        // restoring its history. Confirmed deletes use revokeMemorySources(ids)
+        // immediately, so they do not depend on this broader orphan scan.
+        if (salve.data.sync.CloudSyncManager.isEnabled(app)
+                && salve.data.sync.CloudSyncManager.isPCloudConfigured(app)
+                && !salve.data.sync.CloudSyncManager.memoryRestoreComplete(app))
+            return 0;
         try {
             HashSet<Integer> ids = new HashSet<>(memories.todosLosIds());
             int removed = vectors.retainOnly(ids);
@@ -980,9 +987,10 @@ public final class MindRuntime {
      * acciones pendientes ni permisos). null si su mente no se pudo leer.
      */
     public String exportMindSnapshot() {
-        // An old conceptual belief must not be backed up again after its
-        // supporting Room episode was forgotten. Reuse existing cleanup.
-        pruneDeletedMemories();
+        // Do not mutate a partially restored mind solely because some of its
+        // episodes are not on this device yet. Fail closed: export only when
+        // every cited Room source exists. Explicit deletions were reconciled
+        // by revokeMemorySources at confirmation/accepted cloud tombstones.
         String self = journal.snapshotJson();
         if (self == null) return null;
         try {
