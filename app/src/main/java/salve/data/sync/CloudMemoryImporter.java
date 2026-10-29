@@ -14,6 +14,26 @@ public final class CloudMemoryImporter {
         this.memories = memories; this.states = states;
     }
 
+    /**
+     * IDs of already-local profile rows about to be removed by a cloud tombstone.
+     * The caller must only revoke them AFTER a successful Room transaction.
+     * Deliberately leaves non-profile and malformed events untouched.
+     */
+    public static List<Integer> profileDeletionIds(String payload, RecuerdoDao memories) {
+        if (payload == null || memories == null) return Collections.emptyList();
+        try {
+            JsonObject event = JsonParser.parseString(payload).getAsJsonObject();
+            if (!event.has("type") || !"profile_delete".equals(event.get("type").getAsString())
+                    || !event.has("category")) return Collections.emptyList();
+            String category = event.get("category").getAsString();
+            requireCategory(category);
+            List<Integer> ids = memories.idsPorEtiqueta("profile:" + category);
+            return ids == null ? Collections.emptyList() : ids;
+        } catch (RuntimeException malformed) {
+            return Collections.emptyList();
+        }
+    }
+
     public boolean ingest(String payload, long fallbackTime) { return ingest(payload, fallbackTime, true); }
 
     public boolean ingest(String payload, long fallbackTime, boolean fromCloud) {
