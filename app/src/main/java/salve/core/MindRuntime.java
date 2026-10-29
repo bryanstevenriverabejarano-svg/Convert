@@ -98,7 +98,7 @@ public final class MindRuntime {
     /** Solo el modelo local: el contenido de la mente es personal y no se envía a la nube. */
     private MindGenerator local(SalveLLM.Role role) {
         return prompt -> {
-            ModelResult result = SalveLLM.getInstance(app).generateResult(prompt, role);
+            ModelResult result = SalveLLM.getInstance(app).generateLocalResult(prompt, role, null);
             if (!result.isSuccess()) throw new IllegalStateException("Modelo local no disponible o fallido.");
             return result.getText();
         };
