@@ -46,8 +46,9 @@ elimina vectores huérfanos; Room FTS tiene sus disparadores de borrado.
 **Huecos conectados en esta etapa:**
 - La reconciliación por IDs del modelo derivado se ejecuta tras el borrado confirmado,
   sin esperar a un sueño o un worker posterior y sin barrer recuerdos cloud pendientes.
-- `MindRuntime.exportMindSnapshot` depura fuentes ausentes y valida el
-  respaldo antes de subir una copia del yo persistente.
+- `MindRuntime.exportMindSnapshot` valida las fuentes sin podar la mente
+  si pCloud todavía está restaurando episodios; suspende la subida cuando
+  las citas disponibles no bastan.
 - `MindRuntime.importMindSnapshot` rechaza respaldos anteriores que citen
   IDs Room ausentes. No reactiva automáticamente recuerdos desaparecidos.
 - `SelfModelJournal.snapshotReferencesAvailable` reutiliza los tipos y
