@@ -22,7 +22,7 @@ public class MemoryStrategyExperimentTest {
     private static final class FakeDao {
         int reads;
         boolean fail;
-        boolean wrongCandidate;
+        int returnedRecords = 4;
         final RecuerdoDao dao = (RecuerdoDao) Proxy.newProxyInstance(
                 RecuerdoDao.class.getClassLoader(), new Class<?>[]{RecuerdoDao.class},
                 (proxy, method, args) -> {
@@ -32,7 +32,7 @@ public class MemoryStrategyExperimentTest {
                     if (fail) throw new IllegalStateException("never expose database errors");
                     String expression = (String) args[0];
                     List<RecuerdoEntity> out = new ArrayList<>();
-                    for (int i = 1; i <= 4; i++) {
+                    for (int i = 1; i <= returnedRecords; i++) {
                         RecuerdoEntity row = new RecuerdoEntity();
                         row.id = i;
                         row.frase = "orion lunar document " + i;
@@ -127,17 +127,18 @@ public class MemoryStrategyExperimentTest {
                     MemoryStrategyExperiment.BASELINE,
                     run(new FakeDao(), MemorySearchService.Strategy.BASELINE), correct(), true);
         }
-        assertEquals(1, lab.evidence(MemoryStrategyExperiment.PERSONAL).pairedProblems);
+        assertEquals(0, lab.evidence(MemoryStrategyExperiment.PERSONAL).pairedProblems);
         assertEquals(MemoryStrategyExperiment.BASELINE,
                 lab.candidateForManualReview(MemoryStrategyExperiment.PERSONAL));
     }
 
     @Test public void exactFastPathDoesNotSkipWhenEvidenceIsInsufficient() {
         FakeDao store = new FakeDao();
+        store.returnedRecords = 2;
         MemorySearchService.Result outcome = new MemorySearchService(store.dao).searchWithRecovery(
-                "orion", MemorySearchQuery.parse("orion"), true, 4, null,
+                "orion lunar", MemorySearchQuery.parse("orion lunar"), true, 4, null,
                 MemorySalience.When.ANY, MemorySearchService.Strategy.EXACT_FAST_PATH);
-        assertEquals(2, outcome.indexReads);
-        assertEquals(4, outcome.records.size());
+        assertEquals(3, outcome.indexReads);
+        assertEquals(2, outcome.records.size());
     }
 }
