@@ -39,7 +39,7 @@ Antes de tocar la memoria se inspeccionaron los siguientes componentes:
 
 - `AGENTS.md` instruye a agentes y colaboradores a seguir
   **Buscar → inspeccionar → reutilizar → conectar → desarrollar solo lo que falte → probar**.
-- `.github/PULL_REQUEST_TEMPLATE.md` solicita en cada PR las rutas revisadas,
+- `.github/pull_request_template.md` solicita en cada PR las rutas revisadas,
   las funciones reutilizadas, el hueco real y las pruebas de regresión.
 - Esta regla queda documentada en el repositorio, pero los checkboxes **no
   sustituyen una revisión humana ni hacen técnicamente imposible omitirla**.
