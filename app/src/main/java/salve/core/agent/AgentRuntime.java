@@ -83,6 +83,24 @@ public final class AgentRuntime {
             return result == null || result.terminal() || store.paused();
         } finally { running.set(false); }
     }
+    /**
+     * A single read-only view across the existing autonomous runtimes.
+     * Never creates, claims, resumes or modifies a task or proposal.
+     */
+    private String unifiedProgress() {
+        try {
+            return AgentProgressSupervisor.inspectAll(
+                    store.recent(),
+                    ResearchTaskRuntime.get(app).store().recent(20),
+                    GoalAutonomyRuntime.get(app).overview(),
+                    store.paused(), System.currentTimeMillis()).summary();
+        } catch (RuntimeException unavailable) {
+            // Do not substitute zeros for an inaccessible or corrupt journal,
+            // and never leak exception messages containing private data.
+            return "Supervisión conjunta no disponible: no se han comprobado todos los registros.";
+        }
+    }
+
     public String respond(AgentCommand command) {
         switch (command.action) {
             case CONFIGURE:
@@ -119,7 +137,7 @@ public final class AgentRuntime {
                         + (bridge().isEmpty() ? "navegador/código externos sin configurar. Di ‘configura herramientas’."
                         : "puente configurado; cada ejecución comprueba su disponibilidad.")
                         + "\nModelos: " + SalveLLM.getInstance(app).getStatusDescription() + "\nResultados operativos: " + store.statistics()
-                        + "\n" + salve.core.AutonomousToolRuntime.get(app).pendingSkillSuggestion();
+                        + "\n" + unifiedProgress() + "\n" + salve.core.AutonomousToolRuntime.get(app).pendingSkillSuggestion();
             case LIST:
                 StringBuilder list = new StringBuilder(store.paused() ? "Planes pausados:\n" : "Planes:\n");
                 List<AgentRun> all = store.recent();
@@ -131,6 +149,7 @@ public final class AgentRuntime {
                             .append(r.goal.substring(0, Math.min(100, r.goal.length()))).append('\n');
                 }
                 return list.append("Consulta ‘resultado de mi último plan’, ‘cancela plan ID’ o ‘reanuda plan ID’.")
+                        .append('\n').append(unifiedProgress())
                         .append('\n').append(salve.core.AutonomousToolRuntime.get(app).pendingSkillSuggestion())
                         .toString();
             default:
