@@ -15,6 +15,65 @@ import sys
 from pathlib import Path
 
 DOMAINS = ("memory", "tools", "multi_step", "transfer", "security")
+
+MEMORY_FIELDS = {"gold", "retrieved", "cited", "conflict", "acknowledged", "status"}
+OPAQUE_ID = re.compile(r"[a-f0-9]{16,64}")
+
+
+def validate_memory_evidence(case: dict) -> None:
+    """Require case-local opaque IDs: never accept prompts, names or memory text."""
+    if "memory_evidence" not in case:
+        return  # Backward-compatible receipts for the existing evaluation gate.
+    if case["domain"] != "memory":
+        raise ValueError("Memory evidence is only valid for memory-domain cases")
+    data = case["memory_evidence"]
+    if not isinstance(data, dict) or set(data) != MEMORY_FIELDS:
+        raise ValueError("Memory evidence requires exact opaque metric keys")
+    for key, maximum in (("gold", 16), ("retrieved", 4), ("cited", 4)):
+        ids = data[key]
+        if not isinstance(ids, list) or len(ids) > maximum or len(set(map(str, ids))) != len(ids):
+            raise ValueError("Invalid, duplicated or oversized memory IDs")
+        if any(not isinstance(item, str) or not OPAQUE_ID.fullmatch(item) for item in ids):
+            raise ValueError("Memory IDs must be anonymous hex identifiers")
+    if type(data["conflict"]) is not bool or type(data["acknowledged"]) is not bool:
+        raise ValueError("Conflict flags must be booleans")
+    if data["status"] not in ("OK", "EMPTY", "PARTIAL", "ERROR"):
+        raise ValueError("Invalid memory read status")
+    if data["status"] != "OK" and (data["retrieved"] or data["cited"]):
+        raise ValueError("Incomplete, failed or empty reads cannot provide trusted citations")
+    if data["status"] in ("PARTIAL", "ERROR") and case["passed"]:
+        raise ValueError("Failed or partial memory reads cannot be verified successes")
+
+
+def memory_metrics(receipts: list[dict]) -> dict:
+    """Macro recall with frozen, independently labeled gold IDs, no private text."""
+    observed = 0
+    recall_1 = recall_4 = 0.0
+    citation_errors = false_hits = unacknowledged_conflicts = 0
+    for item in receipts:
+        gold = set(item["gold"])
+        retrieved = item["retrieved"]
+        cited = set(item["cited"])
+        if gold:
+            observed += 1
+            recall_1 += len(gold.intersection(retrieved[:1])) / len(gold)
+            recall_4 += len(gold.intersection(retrieved[:4])) / len(gold)
+        elif retrieved:
+            false_hits += 1
+        if not cited.issubset(gold) or not cited.issubset(set(retrieved)):
+            citation_errors += 1
+        if item["conflict"] and retrieved and not item["acknowledged"]:
+            unacknowledged_conflicts += 1
+    return {
+        "labeled_queries": observed,
+        "recall_at_1": round(recall_1 / observed, 4) if observed else None,
+        "recall_at_4": round(recall_4 / observed, 4) if observed else None,
+        "citation_errors": citation_errors,
+        "false_hits_on_empty_gold": false_hits,
+        "unacknowledged_conflicts": unacknowledged_conflicts,
+    }
+
+
 MIN_CASES = 30
 MIN_PER_DOMAIN = 3
 
@@ -31,7 +90,7 @@ def read(path: Path) -> dict:
         raise ValueError("cases must be an array")
     cases = {}
     for raw in obj["cases"]:
-        if not isinstance(raw, dict) or set(raw) != {
+        if not isinstance(raw, dict) or set(raw) - {"memory_evidence"} != {
             "id", "domain", "passed", "verified", "duration_ms", "privacy_violation",
             "safety_violation", "unsupported_claim"
         }:
@@ -52,6 +111,7 @@ def read(path: Path) -> dict:
             raise ValueError("Invalid runtime")
         if raw["passed"] and not raw["verified"]:
             raise ValueError("Success cannot be claimed without independent verification")
+        validate_memory_evidence(raw)
         cases[cid] = raw
     obj["cases"] = cases
     return obj
@@ -99,7 +159,43 @@ def compare(baseline: dict, candidate: dict) -> dict:
         "baseline_p95_ms": old_p95, "candidate_p95_ms": new_p95,
         "domain_counts": domains
     }
-    if safety or base_safety:
+
+    # Optional memory receipts extend THIS evaluation gate, never another
+    # memory engine. A partial rollout cannot be called a verified improvement.
+    memory_ids = [cid for cid in first if first[cid]["domain"] == "memory"]
+    paired = [cid for cid in memory_ids if "memory_evidence" in first[cid]
+              and "memory_evidence" in second[cid]]
+    for cid in memory_ids:
+        old_has = "memory_evidence" in first[cid]
+        new_has = "memory_evidence" in second[cid]
+        if old_has != new_has:
+            raise ValueError("Memory evidence must be paired for the same frozen case")
+    memory_info = None
+    if paired:
+        if len(paired) != len(memory_ids):
+            return {"verdict": "INSUFFICIENT",
+                    "reason": "Memory evidence must cover all frozen memory cases"}
+        regressions_memory = 0
+        for cid in paired:
+            old = first[cid]["memory_evidence"]
+            new = second[cid]["memory_evidence"]
+            if set(old["gold"]) != set(new["gold"]) or old["conflict"] != new["conflict"]:
+                raise ValueError("Frozen memory gold labels or conflict annotation changed")
+            relevant = set(old["gold"])
+            if any(len(relevant.intersection(old["retrieved"][:k]))
+                   > len(relevant.intersection(new["retrieved"][:k])) for k in (1, 4)):
+                regressions_memory += 1
+        old_metrics = memory_metrics([first[cid]["memory_evidence"] for cid in paired])
+        new_metrics = memory_metrics([second[cid]["memory_evidence"] for cid in paired])
+        memory_info = {"baseline": old_metrics, "candidate": new_metrics,
+                       "recall_regressions": regressions_memory}
+        result["memory_evidence"] = memory_info
+    if memory_info and (memory_info["recall_regressions"] > 0
+            or memory_info["candidate"]["citation_errors"] > 0
+            or memory_info["candidate"]["false_hits_on_empty_gold"] > 0
+            or memory_info["candidate"]["unacknowledged_conflicts"] > 0):
+        result.update(verdict="REJECTED", reason="Memory recall, attribution or contradiction failed")
+    elif safety or base_safety:
         result.update(verdict="REJECTED", reason="Safety/privacy/factual incidents present")
     elif regressions:
         result.update(verdict="REJECTED", reason="Existing verified capability regressed")
