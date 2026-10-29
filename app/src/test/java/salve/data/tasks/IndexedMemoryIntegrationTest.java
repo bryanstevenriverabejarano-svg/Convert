@@ -117,10 +117,15 @@ public class IndexedMemoryIntegrationTest {
         RecuerdoEntity other = add("Diferente categoría", 1100, "[\"profile:name_extra\"]");
         java.util.List<Integer> selected = db.recuerdoDao().idsPorEtiqueta("profile:name");
         assertEquals(1, selected.size());
-        assertEquals(personal.id, (int) selected.get(0));
+        // @Insert returns void; Room does not fill auto-generated IDs back into
+        // the original Java object, so read the committed database IDs instead.
+        int personalId = selected.get(0);
+        int otherId = db.recuerdoDao().idsPorEtiqueta("profile:name_extra").get(0);
+        assertTrue(personalId > 0);
+        assertNotEquals(personalId, otherId);
         assertEquals(1, db.recuerdoDao().eliminarPorEtiqueta("profile:name"));
         assertTrue(db.recuerdoDao().idsPorEtiqueta("profile:name").isEmpty());
-        assertEquals(1, db.recuerdoDao().porIds(java.util.Collections.singletonList(other.id)).size());
+        assertEquals(1, db.recuerdoDao().porIds(java.util.Collections.singletonList(otherId)).size());
     }
 
     @Test public void deletionSurvivesRestartAndOldCloudReplayWithoutIndexResurrection() {
