@@ -957,8 +957,15 @@ public final class MindRuntime {
      * acciones pendientes ni permisos). null si su mente no se pudo leer.
      */
     public String exportMindSnapshot() {
+        // An old conceptual belief must not be backed up again after its
+        // supporting Room episode was forgotten. Reuse existing cleanup.
+        pruneDeletedMemories();
         String self = journal.snapshotJson();
         if (self == null) return null;
+        try {
+            if (!salve.core.mind.SelfModelJournal.snapshotReferencesAvailable(self,
+                    new HashSet<>(memories.todosLosIds()))) return null;
+        } catch (RuntimeException inaccessible) { return null; }
         com.google.gson.JsonObject bundle = new com.google.gson.JsonObject();
         bundle.addProperty("schema", 1);
         bundle.addProperty("exported_at", System.currentTimeMillis());
@@ -976,7 +983,12 @@ public final class MindRuntime {
         try {
             com.google.gson.JsonObject bundle = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
             if (!bundle.has("schema") || bundle.get("schema").getAsInt() != 1 || !bundle.has("self_model")) return false;
-            boolean restored = journal.restoreFrom(bundle.get("self_model").toString());
+            // Refuse a historical mind backup if any of its Room citations has
+            // vanished. Restoring then pruning would briefly resurrect deleted facts.
+            String self = bundle.get("self_model").toString();
+            if (!salve.core.mind.SelfModelJournal.snapshotReferencesAvailable(self,
+                    new HashSet<>(memories.todosLosIds()))) return false;
+            boolean restored = journal.restoreFrom(self);
             File play = new File(new File(app.getNoBackupFilesDir(), "mind"), "play.json");
             if (bundle.has("play") && !play.isFile()) restored |= writeAtomically(play, bundle.get("play").toString());
             if (restored) lastPlay = null;
