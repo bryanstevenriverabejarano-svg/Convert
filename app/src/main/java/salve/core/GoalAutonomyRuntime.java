@@ -46,6 +46,9 @@ public final class GoalAutonomyRuntime {
 
     public boolean isPaused() { return goals.isPaused(); }
 
+    /** Read-only counts from the existing goal journal. Does not run the model. */
+    public GoalAutonomy.Overview overview() { return goals.overview(); }
+
     public void setIdentityEvidenceSupplier(Supplier<String> supplier) {
         goals.setIdentityEvidenceSupplier(supplier);
     }
