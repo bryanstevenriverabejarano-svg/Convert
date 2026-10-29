@@ -475,6 +475,25 @@ public class MemoriaEmocional {
         }
     }
 
+    /**
+     * Explicit, local-only diagnostic entrypoint. Reuses exactly the normal
+     * memory path (including write barriers and cloud PARTIAL/ERROR status);
+     * it never stores observations or transmits memories. A test runner must
+     * explicitly provide a secret and an authenticated owner session.
+     * Human gold labels and model citations are NOT inferred here.
+     */
+    public salve.core.memory.MemoryEvaluationProbe.Observation evaluarRecuperacionLocal(
+            String consulta, byte[] claveLocal) {
+        if (!salve.core.identity.IdentityManager.get(context).privateAccess())
+            throw new SecurityException("Owner verification required for private memory evaluation");
+        if (consulta == null || consulta.trim().isEmpty())
+            throw new IllegalArgumentException("Evaluation query is required");
+        long start = System.nanoTime();
+        ConversationMemoryGrounding.Result result = recuperarContextoConversacional(consulta);
+        return salve.core.memory.MemoryEvaluationProbe.capture(result,
+                Math.max(0, System.nanoTime() - start), claveLocal);
+    }
+
     /** Legacy callers share the same grounded retrieval instead of a second lexical path. */
     public String recuperarContextoRelevante(String consulta, int limite) {
         return limite <= 0 ? "" : recuperarContextoConversacional(consulta).getContext();
