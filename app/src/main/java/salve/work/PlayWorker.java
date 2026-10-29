@@ -33,6 +33,9 @@ public class PlayWorker extends Worker {
 
     @NonNull @Override public Result doWork() {
         Context app = getApplicationContext();
+        // Avoid scheduling the same local practice twice from sleep and play workers.
+        if (!SleepFocusPolicy.allowStandalone(SleepFocusWorker.active(app),
+                getInputData().getBoolean(SleepFocusPolicy.EXPLICIT_REQUEST, false))) return Result.success();
         salve.core.mind.BackgroundMindGate.Lease lease = salve.core.mind.BackgroundMindGate.get().acquire(
                 salve.core.mind.BackgroundMindGate.Task.PLAY,
                 salve.core.GoalAutonomyRuntime.get(getApplicationContext()).hasActiveConversation(),
@@ -74,6 +77,7 @@ public class PlayWorker extends Worker {
     public static void enqueueNow(Context context) {
         WorkManager.getInstance(context.getApplicationContext()).enqueueUniqueWork(NOW, ExistingWorkPolicy.REPLACE,
                 new OneTimeWorkRequest.Builder(PlayWorker.class)
-                        .setInputData(new androidx.work.Data.Builder().putInt(ROUNDS, 6).build()).build());
+                        .setInputData(new androidx.work.Data.Builder().putInt(ROUNDS, 6)
+                                .putBoolean(SleepFocusPolicy.EXPLICIT_REQUEST, true).build()).build());
     }
 }
