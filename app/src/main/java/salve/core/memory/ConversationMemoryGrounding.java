@@ -40,10 +40,27 @@ public final class ConversationMemoryGrounding {
         private final String directAnswer;
         private final Status status;
         private final boolean evidence;
+        // Internal IDs of records ACTUALLY emitted within the context budget.
+        // Not part of any normal user-facing or model-facing output.
+        private final List<Integer> emittedMemoryIds;
+        private final boolean cloudIncompleteForEvaluation;
         private Result(String context, String directAnswer, Status status, boolean evidence) {
+            this(context, directAnswer, status, evidence, Collections.emptyList(), false);
+        }
+        private Result(String context, String directAnswer, Status status, boolean evidence,
+                       List<Integer> emittedMemoryIds) {
+            this(context, directAnswer, status, evidence, emittedMemoryIds, false);
+        }
+        private Result(String context, String directAnswer, Status status, boolean evidence,
+                       List<Integer> emittedMemoryIds, boolean cloudIncomplete) {
             this.context = context; this.directAnswer = directAnswer;
             this.status = status; this.evidence = evidence;
+            this.emittedMemoryIds = Collections.unmodifiableList(new ArrayList<>(emittedMemoryIds));
+            this.cloudIncompleteForEvaluation = cloudIncomplete;
         }
+        /** Package-private inputs to the explicitly invoked, local evaluation adapter. */
+        List<Integer> emittedMemoryIdsForEvaluation() { return emittedMemoryIds; }
+        boolean cloudIncompleteForEvaluation() { return cloudIncompleteForEvaluation; }
         public String getContext() { return context; }
         /** The cognitive core already supplies the rules; reserve small contexts for evidence itself. */
         public String getDataContext() { return context.startsWith(HEADER) ? context.substring(HEADER.length()) : context; }
@@ -59,7 +76,8 @@ public final class ConversationMemoryGrounding {
             }
             return new Result(context + "\nESTADO_PERSISTENCIA: " + cloudStatus
                     + " No confundas una recuperación incompleta con ausencia de historia.",
-                    answer, complete ? status : (evidence ? Status.PARTIAL : status), evidence);
+                    answer, complete ? status : (evidence ? Status.PARTIAL : status),
+                    evidence, emittedMemoryIds, !complete || cloudIncompleteForEvaluation);
         }
         public static Result unavailable() { return unavailable(null); }
         public static Result unavailable(String input) {
@@ -409,6 +427,7 @@ public final class ConversationMemoryGrounding {
         private final int budget;
         private final StringBuilder body = new StringBuilder();
         private boolean failed, evidence, clipped;
+        private final List<Integer> emittedMemoryIds = new ArrayList<>();
         private Evidence(int budget) { this.budget = budget; }
         private boolean append(String line) {
             if (HEADER.length() + body.length() + line.length() + 101 > budget) { clipped = true; return false; }
@@ -426,7 +445,10 @@ public final class ConversationMemoryGrounding {
                     + ",\"fecha_registro\":" + json(date(r.timestamp)) + ",\"fecha_legible\":" + json(readable(r.timestamp))
                     + (now > 0 && r.timestamp > 0 ? ",\"cuando\":" + json(MemorySalience.ago(r.timestamp, now)) : "")
                     + (r.intensidad >= 7 ? ",\"importancia\":\"alta\"" : "") + ",\"texto\":"
-                    + json(query == null ? shorten(r.frase, 620) : MemoryEvidenceExcerpt.extract(r.frase, query, 620)) + "}")) evidence = true;
+                    + json(query == null ? shorten(r.frase, 620) : MemoryEvidenceExcerpt.extract(r.frase, query, 620)) + "}")) {
+                evidence = true;
+                emittedMemoryIds.add(r.id);
+            }
         }
         private boolean node(KnowledgeNodeEntity n) {
             boolean added = append("{\"fuente\":\"knowledge_nodes:" + n.id + "\",\"tipo\":" + json(shorten(n.tipo, 80))
@@ -445,7 +467,7 @@ public final class ConversationMemoryGrounding {
             String terminal = (failed ? "ERROR_DE_LECTURA: consulta incompleta; no equivale a ausencia.\n" : "")
                     + (clipped ? "LIMITE_CONTEXTO: se omitieron datos.\n" : "");
             String context = body.length() == 0 && terminal.isEmpty() ? "" : HEADER + body + terminal;
-            return new Result(context, answer, status, evidence);
+            return new Result(context, answer, status, evidence, emittedMemoryIds);
         }
     }
 }

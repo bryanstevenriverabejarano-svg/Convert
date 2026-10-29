@@ -142,3 +142,80 @@ sincronización entre dispositivos.
 activa automáticamente el registro de recuerdos en la nube. Es una fase
 de validación reproducible y privada para decidir de forma responsable
 si ampliar después la recuperación o modificar el planificador.
+
+## PR #297 — Observación real de recuperación en Android, sin replicar motores
+
+### Revisión previa de código existente
+- **Se conserva el motor único:** `MemoriaEmocional.recuperarContextoConversacional`
+  espera escrituras, usa `ConversationMemoryGrounding` / Room FTS / E5,
+  y consulta el estado de recuperación de pCloud. No se añade otro DAO,
+  buscador, sincronizador ni cambio de modelo.
+- **Se conserva la evaluación general:** `ConversationOutcomeAudit` ya observa
+  el estado de respuestas, y `scripts/salve_eval_gate.py` compara revisiones.
+  El nuevo `MemoryEvaluationProbe` es únicamente el adaptador de métricas
+  de fuentes de memoria realmente emitidas, sin emitir veredictos.
+- **Se conserva la fuente:** el `Result` ya tenía estado y contexto. Ahora
+  mantiene internamente los IDs de episodios Room que **sí caben** en el
+  contexto, excluyendo candidatos recortados, nodos y relaciones del grafo.
+  `withCloudStatus` conserva esos IDs, pero si el resultado es `PARTIAL`
+  no se exportan como evidencia completa.
+
+### Activación explícita y privacidad
+`MemoriaEmocional.evaluarRecuperacionLocal(consulta, claveLocal)` ejecuta
+la MISMA recuperación que usa la conversación. Requiere acceso privado
+verificado mediante `IdentityManager` y una clave HMAC local de 32+ bytes;
+esta función no se invoca automáticamente en conversaciones normales.
+
+El adaptador `MemoryEvaluationProbe.capture` solo devuelve:
+`status` (`OK`, `EMPTY`, `PARTIAL`, `ERROR`),
+`duration_ms` e identificadores hexadecimales de 32 caracteres obtenidos
+con HMAC-SHA256 sobre el ID de un episodio Room. No incluye consultas,
+respuestas, memoria textual, identificación personal, GPS, claves ni
+referencias al grafo. La clave no se guarda ni se envía. Para comparar dos
+revisiones del MISMO conjunto congelado debe usarse la misma clave aleatoria
+guardada de forma segura en el dispositivo; una clave nueva produce códigos
+distintos. Los IDs Room no son globalmente estables entre dispositivos.
+
+No se genera ningún `gold` ni `cited` ficticio: la observación tiene
+`human_verified=false`. El etiquetado independiente de los recuerdos
+correctos, citas realmente expresadas por Gemma y contradicciones es un paso
+de evaluación separado y obligatorio antes de alimentar el comparador #296.
+No se acepta una respuesta autodeclarada como fuente verificada.
+
+### Prueba en Android con base aislada
+La prueba `MemoryEvidenceDeviceTest`, inspirada en las pruebas de
+instrumentación opt-in ya existentes (`MindContinuityRealTest`), crea una
+base Room **en memoria** con frases sintéticas, ejecuta la recuperación
+FTS real y mide latencia y estado de hallazgo/ausencia. No abre
+`memoria.db` de producción ni usa recuerdos del dueño. No prueba
+los pesos Gemma, la respuesta final ni el comportamiento de E5. Se ejecuta
+en un dispositivo o emulador Android conectado:
+
+```sh
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.runMemoryEvidence=true \
+  -Pandroid.testInstrumentationRunnerArguments.class=salve.core.MemoryEvidenceDeviceTest
+```
+
+El test Java de JVM verifica también que la sonda no filtra texto,
+que la nube `PARTIAL` no es `OK`, que grafo solo no equivale a episodio
+y que una clave HMAC corta se rechaza.
+
+### Qué falta para afirmar una mejora de inteligencia
+1. Crear un conjunto de casos congelados **con consentimiento**, etiquetar
+   las respuestas correctas sin publicarlas y conservar una clave de
+   pseudonimización secreta y estable para los dos ensayos.
+2. Ejecutar ambas versiones en el Galaxy S24 Ultra con los mismos pesos
+   Gemma; capturar fuentes desde el controlador y las citas presentes en
+   la respuesta final, sin inventar verificación por suposición del LLM.
+3. Adjuntar `gold`, `cited`, `conflict`, `acknowledged` y `passed`
+   independientemente para producir recibos estrictamente compatibles
+   con #296. Mantener los textos privados fuera de CI.
+4. Comparar resultados y p95; solo entonces considerar adaptaciones de
+   búsqueda. Ninguna observación permite que el modelo autoedite políticas,
+   acceda a memorias sin autenticar o fusionar un PR por sí mismo.
+
+**Límite explícito:** esta fase sí conecta una medición con el código Android
+real, pero NO demuestra aún recall humano ni veracidad de respuestas de Gemma.
+La prueba instrumental de base sintética no sustituye la validación completa
+en el dispositivo físico.
