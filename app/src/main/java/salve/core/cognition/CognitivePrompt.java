@@ -67,12 +67,26 @@ public final class CognitivePrompt {
         return CapabilityPlanner.rank(available, input);
     }
 
+    /** Legacy compact catalog: callers without a real context budget stay at 500 chars. */
     public static Map<String, CognitiveTurn.Tool> limitTools(Map<String, CognitiveTurn.Tool> available) {
+        return limitTools(available, 0);
+    }
+
+    /**
+     * Reuse the SAME controller-authorized tools; larger local context can expose
+     * more of them without allowing the LLM to invent permissions or executors.
+     * Conservative limits protect task text, history, memory and JSON contracts.
+     */
+    public static Map<String, CognitiveTurn.Tool> limitTools(
+            Map<String, CognitiveTurn.Tool> available, int promptBudgetChars) {
+        final int catalogLimit = promptBudgetChars >= 9000 ? 1100
+                : promptBudgetChars >= 6000 ? 850
+                : promptBudgetChars >= 4000 ? 650 : 500;
         Map<String, CognitiveTurn.Tool> selected = new java.util.LinkedHashMap<>();
         JsonObject catalog = new JsonObject();
         for (Map.Entry<String, CognitiveTurn.Tool> entry : available.entrySet()) {
             catalog.addProperty(entry.getKey(), entry.getValue().description);
-            if (catalog.toString().length() > 500) catalog.remove(entry.getKey());
+            if (catalog.toString().length() > catalogLimit) catalog.remove(entry.getKey());
             else selected.put(entry.getKey(), entry.getValue());
         }
         return selected;
