@@ -156,14 +156,14 @@ public class SelfModelJournalTest {
                 .thought("Volver a comprobar el telescopio", list("recuerdos:5")));
         String oldSnapshot = journal.snapshotJson();
         assertTrue(SelfModelJournal.snapshotReferencesAvailable(oldSnapshot,
-                new HashSet<>(list(5, 6))));
+                new HashSet<>(java.util.Arrays.asList(5, 6))));
         assertFalse("La copia previa al olvido no puede reintroducir referencias borradas",
                 SelfModelJournal.snapshotReferencesAvailable(oldSnapshot,
-                        new HashSet<>(list(6))));
+                        Collections.singleton(6)));
         assertFalse(SelfModelJournal.snapshotReferencesAvailable(oldSnapshot,
                 Collections.emptySet()));
         assertFalse(SelfModelJournal.snapshotReferencesAvailable("{malformado",
-                new HashSet<>(list(5))));
+                Collections.singleton(5)));
         journal.forgetSources(new HashSet<>(list("recuerdos:5")));
         String clean = journal.snapshotJson();
         assertTrue("Tras limpiar las fuentes puede respaldarse el resto del estado",
