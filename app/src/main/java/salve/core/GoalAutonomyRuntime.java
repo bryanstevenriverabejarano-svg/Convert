@@ -26,7 +26,7 @@ public final class GoalAutonomyRuntime {
         goals = new GoalAutonomy(new GoalFileStore(new File(app.getNoBackupFilesDir(),
                 "autonomy/goals.json")), prompt -> {
             // These notes may be personal. Background reflection never falls back to a cloud model.
-            ModelResult result = SalveLLM.getInstance(app).generateResult(prompt, SalveLLM.Role.EVALUADOR);
+            ModelResult result = SalveLLM.getInstance(app).generateLocalResult(prompt, SalveLLM.Role.EVALUADOR, null);
             if (!result.isSuccess()) throw new IllegalStateException("Modelo local no disponible o fallido.");
             return result.getText();
         }, System::currentTimeMillis);
