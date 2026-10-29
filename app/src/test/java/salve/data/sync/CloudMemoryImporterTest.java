@@ -54,6 +54,23 @@ public class CloudMemoryImporterTest {
         assertTrue(store.profile("profile:name").frase.contains("de nuevo"));
     }
 
+    @Test public void deletionRevokesOnlyExactLocalProfileSourcesAfterImport() {
+        Store store = new Store();
+        store.importer.ingest(event("user_message", "Me llamo Bryan", 1000), 1000);
+        RecuerdoEntity personal = store.profile("profile:name");
+        assertNotNull(personal);
+        final int id = personal.id;
+        String tombstone = "{\"type\":\"profile_delete\",\"category\":\"name\",\"time_ms\":2000}";
+        assertEquals(Collections.singletonList(id),
+                CloudMemoryImporter.profileDeletionIds(tombstone, store.memories));
+        assertTrue(store.importer.ingest(tombstone, 2000));
+        assertTrue(CloudMemoryImporter.profileDeletionIds(tombstone, store.memories).isEmpty());
+        assertTrue(CloudMemoryImporter.profileDeletionIds(
+                "{\"type\":\"memory\",\"category\":\"name\"}", store.memories).isEmpty());
+        assertTrue(CloudMemoryImporter.profileDeletionIds(
+                "{\"type\":\"profile_delete\",\"category\":\"../../x\"}", store.memories).isEmpty());
+    }
+
     @Test public void oldCategoryOnlyLogAndAssistantTextCannotInventUserIdentity() {
         Store store = new Store();
         assertFalse(store.importer.ingest(event("memoria_perfil", "name", 1000), 1000));
@@ -134,6 +151,12 @@ public class CloudMemoryImporterTest {
                             int before = rows.size(); rows.removeIf(r -> Math.abs(r.timestamp - (Long) args[0]) <= 5000 && r.frase.equals(args[1])
                                     && (r.etiquetas.contains("memoria_manual") || r.etiquetas.contains("memoria_auto")));
                             return before - rows.size();
+                        }
+                        case "idsPorEtiqueta": {
+                            String tag = "\"" + args[0] + "\"";
+                            java.util.List<Integer> ids = new java.util.ArrayList<>();
+                            for (RecuerdoEntity row : rows) if (row.etiquetas.contains(tag)) ids.add(row.id);
+                            return ids;
                         }
                         case "ultimoPorEtiqueta": return profile((String) args[0]);
                         case "eliminarPorEtiqueta": {
