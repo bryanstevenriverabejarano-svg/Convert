@@ -286,7 +286,7 @@ public class ConversationMemoryGroundingTest {
 
     @Test public void optInProbeUsesRealEmittedRecordNotGraphOrOriginalCandidatePool() {
         Store store = new Store();
-        store.record(17, 1000, "Prueba telescopio lunar privado", "[\\"hecho_usuario\\"]");
+        store.record(17, 1000, "Prueba telescopio lunar privado", "[]");
         ConversationMemoryGrounding.Result result = store.service().retrieve("telescopio");
         byte[] key = new byte[32]; // Synthetic fixture only; real tests must use a secret random key.
         java.util.Arrays.fill(key, (byte) 7);
@@ -306,7 +306,7 @@ public class ConversationMemoryGroundingTest {
 
     @Test public void evaluationProbeNeverCertifiesPartialCloudOrErrorAsEvidence() {
         Store store = new Store();
-        store.record(17, 1000, "Prueba telescopio lunar privado", "[\\"hecho_usuario\\"]");
+        store.record(17, 1000, "Prueba telescopio lunar privado", "[]");
         byte[] key = new byte[32];
         java.util.Arrays.fill(key, (byte) 8);
         ConversationMemoryGrounding.Result loaded = store.service().retrieve("telescopio");
