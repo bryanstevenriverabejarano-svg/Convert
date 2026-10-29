@@ -813,6 +813,29 @@ public final class MindRuntime {
         }
     }
 
+    /**
+     * Immediately revoke exact removed Room sources after the committing transaction.
+     * Unlike a full orphan scan, this does not delete evidence from a partially
+     * restored pCloud history. Returns false when journal or vector cleanup fails.
+     */
+    public boolean revokeMemorySources(java.util.Collection<Integer> removedIds) {
+        if (removedIds == null || removedIds.isEmpty()) return true;
+        java.util.Set<String> gone = new HashSet<>();
+        for (Integer id : removedIds) if (id != null && id > 0) gone.add("recuerdos:" + id);
+        if (gone.isEmpty()) return true;
+        try {
+            journal.forgetSources(gone);
+            for (String ref : journal.referencedSources()) if (gone.contains(ref)) return false;
+            for (Integer id : removedIds) if (id != null && id > 0) vectors.remove(id);
+            if (vectors.isDirty()) vectors.save(vectorFile);
+            return true;
+        } catch (Exception blocked) {
+            Log.w(TAG, "No pude completar la revocación de fuentes: "
+                    + blocked.getClass().getSimpleName());
+            return false;
+        }
+    }
+
     /** Tras un borrado: retira vectores y creencias que dependían de lo olvidado. */
     public void pruneDeletedMemoriesAsync() {
         background.execute(this::pruneDeletedMemories);
