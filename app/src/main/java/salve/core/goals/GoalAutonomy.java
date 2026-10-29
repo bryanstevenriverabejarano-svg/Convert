@@ -97,6 +97,37 @@ public final class GoalAutonomy {
         synchronized (lock) { return loadFailure != null || state.paused; }
     }
 
+    /**
+     * Read-only and content-free summary for the existing agent supervisor.
+     * Personal goal notes, proposals and identity evidence never leave this store.
+     * This is preparation/review progress, NOT completion of real-world tasks.
+     */
+    public static final class Overview {
+        public final boolean paused, unavailable, preparing;
+        public final int configured, pausedGoals, pendingReviews, eligibleForPreparation;
+        private Overview(boolean paused, boolean unavailable, boolean preparing,
+                         int configured, int pausedGoals, int pendingReviews, int eligible) {
+            this.paused = paused; this.unavailable = unavailable; this.preparing = preparing;
+            this.configured = configured; this.pausedGoals = pausedGoals;
+            this.pendingReviews = pendingReviews; this.eligibleForPreparation = eligible;
+        }
+    }
+
+    public Overview overview() {
+        synchronized (lock) {
+            if (loadFailure != null || state == null)
+                return new Overview(true, true, false, 0, 0, 0, 0);
+            int pausedGoals = 0, reviews = 0, eligible = 0;
+            for (Goal goal : state.goals) {
+                if (goal.paused) pausedGoals++;
+                if (goal.pending != null) reviews++;
+                if (!goal.paused && goal.pending == null && goal.revision > goal.reviewedRevision) eligible++;
+            }
+            return new Overview(state.paused, false, busy, state.goals.size(),
+                    pausedGoals, reviews, eligible);
+        }
+    }
+
     /** Supplies bounded, retrieved local evidence only when preparing the identity objective. */
     public void setIdentityEvidenceSupplier(Supplier<String> supplier) {
         identityEvidence = supplier == null ? () -> "" : supplier;
