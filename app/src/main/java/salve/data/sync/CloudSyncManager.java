@@ -440,7 +440,7 @@ public final class CloudSyncManager {
                         // Capture exact live Room IDs BEFORE applying a cloud tombstone.
                         // Revoke only those sources afterward: an incomplete cloud restore
                         // is not proof that other missing episode IDs were deleted.
-                        java.util.List<Integer> revokedIds = profileDeletionIds(payload, db.recuerdoDao());
+                        java.util.List<Integer> revokedIds = CloudMemoryImporter.profileDeletionIds(payload, db.recuerdoDao());
                         final boolean[] changed = {false};
                         db.runInTransaction(() -> {
                             changed[0] = importer.ingest(payload, createdAt);
@@ -473,21 +473,6 @@ public final class CloudSyncManager {
                         + " Los recuerdos locales se conservan.", false);
                 return new RestoreBatch(restored, true);
             }
-        }
-    }
-
-    /** Profile tombstones already exist; locate exact affected Room IDs without new storage. */
-    static java.util.List<Integer> profileDeletionIds(String payload, salve.data.db.RecuerdoDao memories) {
-        try {
-            com.google.gson.JsonObject item = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
-            if (!item.has("type") || !"profile_delete".equals(item.get("type").getAsString())
-                    || !item.has("category")) return java.util.Collections.emptyList();
-            String category = item.get("category").getAsString();
-            if (!category.matches("[a-z][a-z0-9_]{0,63}")) return java.util.Collections.emptyList();
-            java.util.List<Integer> ids = memories.idsPorEtiqueta("profile:" + category);
-            return ids == null ? java.util.Collections.emptyList() : ids;
-        } catch (RuntimeException malformed) {
-            return java.util.Collections.emptyList();
         }
     }
 
