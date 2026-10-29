@@ -284,6 +284,64 @@ public class ConversationMemoryGroundingTest {
         assertFalse(ConversationMemoryGrounding.shouldRetrieve(null));
     }
 
+    @Test public void optInProbeUsesRealEmittedRecordNotGraphOrOriginalCandidatePool() {
+        Store store = new Store();
+        store.record(17, 1000, "Prueba telescopio lunar privado", "[\\"hecho_usuario\\"]");
+        ConversationMemoryGrounding.Result result = store.service().retrieve("telescopio");
+        byte[] key = new byte[32]; // Synthetic fixture only; real tests must use a secret random key.
+        java.util.Arrays.fill(key, (byte) 7);
+        MemoryEvaluationProbe.Observation a = MemoryEvaluationProbe.capture(result, 1_234_000L, key);
+        MemoryEvaluationProbe.Observation b = MemoryEvaluationProbe.capture(result, 5_000_000L, key);
+        assertEquals("OK", a.status);
+        assertEquals(1, a.durationMs);
+        assertEquals(1, a.retrieved.size());
+        assertEquals(a.retrieved, b.retrieved);
+        assertTrue(a.retrieved.get(0).matches("[a-f0-9]{32}"));
+        String exported = a.toJson().toString();
+        assertFalse(exported.contains("telescopio"));
+        assertFalse(exported.contains("recuerdos:17"));
+        assertFalse(exported.contains("clave"));
+        assertTrue(exported.contains("requires_independent_gold_and_citations"));
+    }
+
+    @Test public void evaluationProbeNeverCertifiesPartialCloudOrErrorAsEvidence() {
+        Store store = new Store();
+        store.record(17, 1000, "Prueba telescopio lunar privado", "[\\"hecho_usuario\\"]");
+        byte[] key = new byte[32];
+        java.util.Arrays.fill(key, (byte) 8);
+        ConversationMemoryGrounding.Result loaded = store.service().retrieve("telescopio");
+        assertEquals("OK", MemoryEvaluationProbe.capture(loaded, 1234L, key).status);
+        MemoryEvaluationProbe.Observation partial = MemoryEvaluationProbe.capture(
+                loaded.withCloudStatus("recuperación incompleta", false), 1L, key);
+        assertEquals("PARTIAL", partial.status);
+        assertTrue(partial.retrieved.isEmpty());
+        store.failMemory = true;
+        MemoryEvaluationProbe.Observation error = MemoryEvaluationProbe.capture(
+                store.service().retrieve("¿Cuál es mi nombre?"), 1L, key);
+        assertEquals("ERROR", error.status);
+        assertTrue(error.retrieved.isEmpty());
+        assertEquals("ERROR", MemoryEvaluationProbe.capture(
+                ConversationMemoryGrounding.Result.unavailable(), 1L, key).status);
+    }
+
+    @Test public void graphOnlyDoesNotCountAsRoomMemoryAndKeyIsRequired() {
+        Store store = new Store();
+        store.node(5, "Telescopio", "Dato conceptual sintético");
+        byte[] key = new byte[32];
+        java.util.Arrays.fill(key, (byte) 9);
+        MemoryEvaluationProbe.Observation graph = MemoryEvaluationProbe.capture(
+                store.service().retrieve("Telescopio"), 1_000_000L, key);
+        assertEquals("EMPTY", graph.status);
+        assertTrue(graph.retrieved.isEmpty());
+        try {
+            MemoryEvaluationProbe.capture(store.service().retrieve("Telescopio"),
+                    1_000_000L, new byte[8]);
+            fail("No short or guessable key");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("32"));
+        }
+    }
+
     private static final class Store {
         final List<RecuerdoEntity> records = new ArrayList<>();
         final List<KnowledgeNodeEntity> graph = new ArrayList<>();
