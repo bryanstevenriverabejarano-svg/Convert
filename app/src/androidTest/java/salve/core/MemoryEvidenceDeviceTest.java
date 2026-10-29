@@ -34,7 +34,7 @@ public final class MemoryEvidenceDeviceTest {
             RecuerdoEntity row = new RecuerdoEntity();
             row.frase = "Proyecto telescopio lunar y sus lentes";
             row.timestamp = 1000L;
-            row.etiquetas = "[\\\"hecho_usuario\\\"]";
+            row.etiquetas = "[]";
             db.recuerdoDao().insertRecuerdo(row);
 
             ConversationMemoryGrounding memory = new ConversationMemoryGrounding(db.recuerdoDao(),
