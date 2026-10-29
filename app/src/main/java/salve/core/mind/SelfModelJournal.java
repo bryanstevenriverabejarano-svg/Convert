@@ -253,12 +253,40 @@ public final class SelfModelJournal {
 
     /** Todas las fuentes que cita el modelo interno (para comprobar si siguen existiendo). */
     public synchronized java.util.Set<String> referencedSources() {
+        return referencedSources(state);
+    }
+
+    private static java.util.Set<String> referencedSources(SelfModel.State data) {
         java.util.Set<String> out = new java.util.HashSet<>();
-        for (SelfModel.Belief b : state.beliefs) { out.addAll(b.sources); out.addAll(b.contradictions); }
-        for (SelfModel.Question q : state.questions) out.addAll(q.sources);
-        for (SelfModel.Thought t : state.thoughts) out.addAll(t.sources);
-        if (state.pendingNarrative != null) out.addAll(state.pendingNarrative.sources);
+        for (SelfModel.Belief b : data.beliefs) { out.addAll(b.sources); out.addAll(b.contradictions); }
+        for (SelfModel.Question q : data.questions) out.addAll(q.sources);
+        for (SelfModel.Thought t : data.thoughts) out.addAll(t.sources);
+        if (data.pendingNarrative != null) out.addAll(data.pendingNarrative.sources);
         return out;
+    }
+
+    /**
+     * Reject a cloud/continuity snapshot citing Room episodes that this device
+     * cannot currently validate. Unlike a late clean-up this never makes a
+     * stale belief visible, even briefly. No network calls or state changes.
+     * Unknown external source schemes keep their existing trust rules.
+     */
+    public static boolean snapshotReferencesAvailable(String json, java.util.Set<Integer> existingIds) {
+        if (json == null || existingIds == null || json.length() > MAX_STATE_CHARS) return false;
+        try {
+            SelfModel.State candidate = GSON.fromJson(json, SelfModel.State.class);
+            if (candidate == null || candidate.schema != 1) return false;
+            normalizeLoaded(candidate);
+            for (String source : referencedSources(candidate)) {
+                if (source == null || !source.startsWith("recuerdos:")) continue;
+                String id = source.substring("recuerdos:".length());
+                if (!id.matches("[1-9][0-9]{0,9}") || !existingIds.contains(Integer.parseInt(id)))
+                    return false;
+            }
+            return true;
+        } catch (RuntimeException damaged) {
+            return false;
+        }
     }
 
     /**
