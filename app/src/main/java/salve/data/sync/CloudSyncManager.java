@@ -437,8 +437,13 @@ public final class CloudSyncManager {
                             if (image == null && !archive.store.imageFile(photo.id).isFile()) { errors++; continue; }
                             archive.restore(photo, image);
                         }
+                        // Capture exact live Room IDs BEFORE applying a cloud tombstone.
+                        // Revoke only those sources afterward: an incomplete cloud restore
+                        // is not proof that other missing episode IDs were deleted.
+                        java.util.List<Integer> revokedIds = profileDeletionIds(payload, db.recuerdoDao());
+                        final boolean[] changed = {false};
                         db.runInTransaction(() -> {
-                            importer.ingest(payload, createdAt);
+                            changed[0] = importer.ingest(payload, createdAt);
                             if (db.syncEventDao().countExact(createdAt, payload) == 0) {
                                 SyncEventEntity event = new SyncEventEntity();
                                 event.payload = payload; event.createdAt = createdAt; event.tries = -1;
@@ -446,6 +451,11 @@ public final class CloudSyncManager {
                             }
                             db.memorySyncStateDao().put(MemorySyncStateEntity.of("remote:" + remote, createdAt, false));
                         });
+                        if (changed[0] && !revokedIds.isEmpty()
+                                && !salve.core.MindRuntime.get(ctx).revokeMemorySources(revokedIds)) {
+                            errors++;
+                            Log.w(TAG, "La nube confirmó el borrado, pero quedaron fuentes derivadas por reconciliar.");
+                        }
                         restored++; verified++;
                     } catch (com.google.gson.JsonParseException | IllegalArgumentException invalidData) {
                         // Retain a rejection receipt without letting one malformed file block older siblings.
@@ -463,6 +473,21 @@ public final class CloudSyncManager {
                         + " Los recuerdos locales se conservan.", false);
                 return new RestoreBatch(restored, true);
             }
+        }
+    }
+
+    /** Profile tombstones already exist; locate exact affected Room IDs without new storage. */
+    static java.util.List<Integer> profileDeletionIds(String payload, salve.data.db.RecuerdoDao memories) {
+        try {
+            com.google.gson.JsonObject item = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
+            if (!item.has("type") || !"profile_delete".equals(item.get("type").getAsString())
+                    || !item.has("category")) return java.util.Collections.emptyList();
+            String category = item.get("category").getAsString();
+            if (!category.matches("[a-z][a-z0-9_]{0,63}")) return java.util.Collections.emptyList();
+            java.util.List<Integer> ids = memories.idsPorEtiqueta("profile:" + category);
+            return ids == null ? java.util.Collections.emptyList() : ids;
+        } catch (RuntimeException malformed) {
+            return java.util.Collections.emptyList();
         }
     }
 
