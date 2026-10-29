@@ -112,6 +112,17 @@ public class IndexedMemoryIntegrationTest {
         assertTrue(recall("¿Dónde vivo?").getContext().contains("Lima"));
         assertFalse(recall("¿Dónde vivo?").getContext().contains("Quito"));
     }
+    @Test public void exactProfileIdsAreCapturedBeforeDeleteAndNeverIncludeAdjacentTags() {
+        RecuerdoEntity personal = add("Preferencia del usuario", 1000, "[\"profile:name\"]");
+        RecuerdoEntity other = add("Diferente categoría", 1100, "[\"profile:name_extra\"]");
+        java.util.List<Integer> selected = db.recuerdoDao().idsPorEtiqueta("profile:name");
+        assertEquals(1, selected.size());
+        assertEquals(personal.id, (int) selected.get(0));
+        assertEquals(1, db.recuerdoDao().eliminarPorEtiqueta("profile:name"));
+        assertTrue(db.recuerdoDao().idsPorEtiqueta("profile:name").isEmpty());
+        assertEquals(1, db.recuerdoDao().porIds(java.util.Collections.singletonList(other.id)).size());
+    }
+
     @Test public void deletionSurvivesRestartAndOldCloudReplayWithoutIndexResurrection() {
         String old = "{\"type\":\"profile\",\"category\":\"name\",\"content\":\"Me llamo Ana\",\"time_ms\":1000}";
         ingest(old);
