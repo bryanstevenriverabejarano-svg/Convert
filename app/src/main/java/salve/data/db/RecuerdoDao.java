@@ -54,6 +54,10 @@ public interface RecuerdoDao {
     @Query("DELETE FROM recuerdos WHERE instr(etiquetas, '\"' || :etiqueta || '\"') > 0")
     int eliminarPorEtiqueta(String etiqueta);
 
+    /** IDs exactos antes del borrado: conectar citas y vectores, sin escanear memoria no restaurada. */
+    @Query("SELECT id FROM recuerdos WHERE instr(etiquetas, '\"' || :etiqueta || '\"') > 0")
+    List<Integer> idsPorEtiqueta(String etiqueta);
+
     @Query("SELECT COUNT(*) FROM recuerdos WHERE timestamp = :time AND frase = :text")
     int countExact(long time, String text);
 

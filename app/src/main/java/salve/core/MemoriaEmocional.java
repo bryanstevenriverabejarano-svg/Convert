@@ -398,7 +398,9 @@ public class MemoriaEmocional {
         if (categoria == null || categoria.trim().isEmpty()) return false;
         String etiqueta = "profile:" + categoria.trim().toLowerCase(Locale.ROOT);
         try {
-            return memoryWriteExecutor.submit(() -> {
+            final java.util.concurrent.atomic.AtomicReference<java.util.List<Integer>> deletedIds =
+                    new java.util.concurrent.atomic.AtomicReference<>(java.util.Collections.emptyList());
+            boolean deleted = memoryWriteExecutor.submit(() -> {
                 boolean removedFromMemory = false;
                 synchronized (recuerdos) {
                     for (int i = recuerdos.size() - 1; i >= 0; i--) {
@@ -412,13 +414,22 @@ public class MemoriaEmocional {
                 MemoriaDatabase db = MemoriaDatabase.getInstance(context);
                 final int[] removed = {0};
                 db.runInTransaction(() -> {
+                    deletedIds.set(recuerdoDao.idsPorEtiqueta(etiqueta));
                     removed[0] = recuerdoDao.eliminarPorEtiqueta(etiqueta);
                     db.memorySyncStateDao().put(salve.data.db.MemorySyncStateEntity.of(etiqueta, deletionTime, true));
                     CloudSyncManager.enqueueProfileDeletion(context, categoria.trim().toLowerCase(Locale.ROOT), deletionTime);
                 });
-                salve.core.MindRuntime.get(context).pruneDeletedMemoriesAsync();
                 return removedFromMemory || removed[0] > 0;
             }).get(3, TimeUnit.SECONDS);
+            // The existing 3-second database transaction timeout must not also
+            // include potentially expensive vector-file I/O. The Future's
+            // happens-before relationship makes the exact IDs visible here.
+            if (deleted && !deletedIds.get().isEmpty()
+                    && !salve.core.MindRuntime.get(context).revokeMemorySources(deletedIds.get())) {
+                Log.w(TAG, "Room borró el perfil, pero la limpieza de fuentes derivadas no se completó.");
+                salve.core.MindRuntime.get(context).pruneDeletedMemoriesAsync();
+            }
+            return deleted;
         } catch (Exception e) {
             Log.e(TAG, "No se pudo eliminar el dato de perfil " + categoria, e);
             return false;

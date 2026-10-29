@@ -796,6 +796,13 @@ public final class MindRuntime {
 
     /** Borra vectores de recuerdos eliminados, para que lo olvidado no siga siendo recuperable. */
     public int pruneDeletedMemories() {
+        // A missing local ID is NOT proof of deletion while pCloud is still
+        // restoring its history. Confirmed deletes use revokeMemorySources(ids)
+        // immediately, so they do not depend on this broader orphan scan.
+        if (salve.data.sync.CloudSyncManager.isEnabled(app)
+                && salve.data.sync.CloudSyncManager.isPCloudConfigured(app)
+                && !salve.data.sync.CloudSyncManager.memoryRestoreComplete(app))
+            return 0;
         try {
             HashSet<Integer> ids = new HashSet<>(memories.todosLosIds());
             int removed = vectors.retainOnly(ids);
@@ -810,6 +817,29 @@ public final class MindRuntime {
             return removed + journal.forgetSources(gone);
         } catch (Exception failure) {
             return 0;
+        }
+    }
+
+    /**
+     * Immediately revoke exact removed Room sources after the committing transaction.
+     * Unlike a full orphan scan, this does not delete evidence from a partially
+     * restored pCloud history. Returns false when journal or vector cleanup fails.
+     */
+    public boolean revokeMemorySources(java.util.Collection<Integer> removedIds) {
+        if (removedIds == null || removedIds.isEmpty()) return true;
+        java.util.Set<String> gone = new HashSet<>();
+        for (Integer id : removedIds) if (id != null && id > 0) gone.add("recuerdos:" + id);
+        if (gone.isEmpty()) return true;
+        try {
+            journal.forgetSources(gone);
+            for (String ref : journal.referencedSources()) if (gone.contains(ref)) return false;
+            for (Integer id : removedIds) if (id != null && id > 0) vectors.remove(id);
+            if (vectors.isDirty()) vectors.save(vectorFile);
+            return true;
+        } catch (Exception blocked) {
+            Log.w(TAG, "No pude completar la revocación de fuentes: "
+                    + blocked.getClass().getSimpleName());
+            return false;
         }
     }
 
@@ -957,8 +987,16 @@ public final class MindRuntime {
      * acciones pendientes ni permisos). null si su mente no se pudo leer.
      */
     public String exportMindSnapshot() {
+        // Do not mutate a partially restored mind solely because some of its
+        // episodes are not on this device yet. Fail closed: export only when
+        // every cited Room source exists. Explicit deletions were reconciled
+        // by revokeMemorySources at confirmation/accepted cloud tombstones.
         String self = journal.snapshotJson();
         if (self == null) return null;
+        try {
+            if (!salve.core.mind.SelfModelJournal.snapshotReferencesAvailable(self,
+                    new HashSet<>(memories.todosLosIds()))) return null;
+        } catch (RuntimeException inaccessible) { return null; }
         com.google.gson.JsonObject bundle = new com.google.gson.JsonObject();
         bundle.addProperty("schema", 1);
         bundle.addProperty("exported_at", System.currentTimeMillis());
@@ -976,7 +1014,12 @@ public final class MindRuntime {
         try {
             com.google.gson.JsonObject bundle = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
             if (!bundle.has("schema") || bundle.get("schema").getAsInt() != 1 || !bundle.has("self_model")) return false;
-            boolean restored = journal.restoreFrom(bundle.get("self_model").toString());
+            // Refuse a historical mind backup if any of its Room citations has
+            // vanished. Restoring then pruning would briefly resurrect deleted facts.
+            String self = bundle.get("self_model").toString();
+            if (!salve.core.mind.SelfModelJournal.snapshotReferencesAvailable(self,
+                    new HashSet<>(memories.todosLosIds()))) return false;
+            boolean restored = journal.restoreFrom(self);
             File play = new File(new File(app.getNoBackupFilesDir(), "mind"), "play.json");
             if (bundle.has("play") && !play.isFile()) restored |= writeAtomically(play, bundle.get("play").toString());
             if (restored) lastPlay = null;

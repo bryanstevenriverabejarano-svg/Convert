@@ -148,6 +148,39 @@ public class SelfModelJournalTest {
         assertFalse(journal.referencedSources().contains("recuerdos:5"));
     }
 
+    @Test public void staleCloudMindCannotRestoreDeletedRoomCitations() {
+        SelfModelJournal journal = MindTestSupport.journal(
+                new MindTestSupport.MemoryStore(), new MindTestSupport.Clock());
+        journal.apply(new MindPatch("sueño")
+                .belief("bryan", "Recordatorio del telescopio", 0.6, list("recuerdos:5"))
+                .thought("Volver a comprobar el telescopio", list("recuerdos:5")));
+        String oldSnapshot = journal.snapshotJson();
+        assertTrue(SelfModelJournal.snapshotReferencesAvailable(oldSnapshot,
+                new HashSet<>(java.util.Arrays.asList(5, 6))));
+        assertFalse("La copia previa al olvido no puede reintroducir referencias borradas",
+                SelfModelJournal.snapshotReferencesAvailable(oldSnapshot,
+                        Collections.singleton(6)));
+        assertFalse(SelfModelJournal.snapshotReferencesAvailable(oldSnapshot,
+                Collections.emptySet()));
+        assertFalse(SelfModelJournal.snapshotReferencesAvailable("{malformado",
+                Collections.singleton(5)));
+        journal.forgetSources(new HashSet<>(list("recuerdos:5")));
+        String clean = journal.snapshotJson();
+        assertTrue("Tras limpiar las fuentes puede respaldarse el resto del estado",
+                SelfModelJournal.snapshotReferencesAvailable(clean, Collections.emptySet()));
+        assertFalse(clean.contains("Recordatorio del telescopio"));
+        assertFalse(clean.contains("Volver a comprobar el telescopio"));
+    }
+
+    @Test public void unrelatedSourcesDoNotBecomeDeletedRoomCitations() {
+        SelfModelJournal journal = MindTestSupport.journal(
+                new MindTestSupport.MemoryStore(), new MindTestSupport.Clock());
+        journal.apply(new MindPatch("t").question("¿Cómo vuelan las aves?", .6,
+                list("web:example.org/aves")));
+        assertTrue(SelfModelJournal.snapshotReferencesAvailable(
+                journal.snapshotJson(), Collections.emptySet()));
+    }
+
     @Test public void surpriseNeedsCalibrationThenFlagsOutliers() {
         for (int i = 0; i < 7; i++) assertFalse(journal.recordSurprise(0.95));
         SelfModelJournal calibrated = MindTestSupport.journal(new MindTestSupport.MemoryStore(), clock);

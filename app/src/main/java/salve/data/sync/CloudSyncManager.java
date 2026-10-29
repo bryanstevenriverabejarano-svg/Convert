@@ -437,8 +437,18 @@ public final class CloudSyncManager {
                             if (image == null && !archive.store.imageFile(photo.id).isFile()) { errors++; continue; }
                             archive.restore(photo, image);
                         }
+                        // Capture exact live Room IDs BEFORE applying a cloud tombstone.
+                        // Revoke only those sources afterward: an incomplete cloud restore
+                        // is not proof that other missing episode IDs were deleted.
+                        final java.util.concurrent.atomic.AtomicReference<java.util.List<Integer>> revokedIds =
+                                new java.util.concurrent.atomic.AtomicReference<>(java.util.Collections.emptyList());
+                        final boolean[] changed = {false};
                         db.runInTransaction(() -> {
-                            importer.ingest(payload, createdAt);
+                            // Snapshot the exact affected rows in the SAME Room transaction
+                            // as the accepted tombstone: concurrent profile updates must not
+                            // change which source IDs are revoked.
+                            revokedIds.set(CloudMemoryImporter.profileDeletionIds(payload, db.recuerdoDao()));
+                            changed[0] = importer.ingest(payload, createdAt);
                             if (db.syncEventDao().countExact(createdAt, payload) == 0) {
                                 SyncEventEntity event = new SyncEventEntity();
                                 event.payload = payload; event.createdAt = createdAt; event.tries = -1;
@@ -446,6 +456,11 @@ public final class CloudSyncManager {
                             }
                             db.memorySyncStateDao().put(MemorySyncStateEntity.of("remote:" + remote, createdAt, false));
                         });
+                        if (changed[0] && !revokedIds.get().isEmpty()
+                                && !salve.core.MindRuntime.get(ctx).revokeMemorySources(revokedIds.get())) {
+                            errors++;
+                            Log.w(TAG, "La nube confirmó el borrado, pero quedaron fuentes derivadas por reconciliar.");
+                        }
                         restored++; verified++;
                     } catch (com.google.gson.JsonParseException | IllegalArgumentException invalidData) {
                         // Retain a rejection receipt without letting one malformed file block older siblings.
