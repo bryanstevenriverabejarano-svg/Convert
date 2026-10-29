@@ -52,6 +52,28 @@ public final class MemorySearchQuery {
         }
         return new MemorySearchQuery(terms);
     }
+    /**
+     * Second-pass topic hint for a long conversational question when the first
+     * indexed retrieval did not find any evidence. Do not re-submit raw user
+     * text or untrusted FTS operators; every term still passes the normal parser.
+     * Returns null if there is no later unused topic (no broader full-DB scan).
+     */
+    public static MemorySearchQuery tailFocus(String input, MemorySearchQuery first) {
+        if (first == null || first.terms.size() < MAX_TERMS || input == null) return null;
+        String bounded = input.substring(0, Math.min(input.length(), 4096));
+        List<String> remaining = new ArrayList<>();
+        for (String token : MemoryQueryTerms.extract(bounded, 24)) {
+            String word = normalize(token);
+            if (!NOISE.contains(word) && !first.terms.contains(word)
+                    && !remaining.contains(word)) remaining.add(word);
+        }
+        if (remaining.isEmpty()) return null;
+        // The end of a long question often contains the concrete subject
+        // after conversational lead-in words. At most TWO independent searches.
+        int from = Math.max(0, remaining.size() - 2);
+        return new MemorySearchQuery(new ArrayList<>(remaining.subList(from, remaining.size())));
+    }
+
     public List<String> terms() { return terms; }
     public List<List<String>> groups() { return Collections.unmodifiableList(groups); }
     public boolean isEmpty() { return terms.isEmpty(); }

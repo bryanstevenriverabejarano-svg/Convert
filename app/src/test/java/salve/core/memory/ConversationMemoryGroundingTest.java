@@ -246,6 +246,21 @@ public class ConversationMemoryGroundingTest {
         assertTrue(context.length() <= 512);
     }
 
+    @Test public void longQuestionSecondPassIsExplicitlyCandidateNotConfirmedLifeHistory() {
+        Store store = new Store();
+        store.record(11, 1000, "Proyecto Orion: sensores y diagnóstico de fallos",
+                "[\"hecho_usuario\"]");
+        String question = "¿Me puedes buscar las explicaciones detalladas sobre nuestro sistema antiguo del proyecto Orion?";
+        ConversationMemoryGrounding.Result result = store.service().retrieve(question);
+        assertTrue(result.hasEvidence());
+        assertTrue(result.getContext().contains("recuerdos:11"));
+        assertTrue(result.getContext().contains("candidato_segunda_busqueda"));
+        assertTrue(result.getContext().contains("SEGUNDA_BUSQUEDA"));
+        assertTrue(result.getContext().contains("no son prueba") || result.getContext().contains("No son prueba"));
+        assertTrue(store.lexicalReads <= MemorySearchService.MAX_SEARCHES);
+        assertTrue(result.getContext().length() <= 3200);
+    }
+
     @Test public void missingSubjectDoesNotClaimEntireMemoryEmpty() {
         Store store = new Store();
         store.record(1, 1000, "Otro asunto", "[]");
