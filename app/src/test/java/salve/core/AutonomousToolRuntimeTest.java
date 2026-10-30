@@ -206,6 +206,34 @@ public class AutonomousToolRuntimeTest {
                 .contains("No existe ninguna propuesta"));
     }
 
+    @Test public void newSequenceSkillIsProposedBeforeOwnerApprovalAndCanBeUsedAfterRestart()
+            throws Exception {
+        File file = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime laboratory = new AutonomousToolRuntime(file);
+        String proposal = laboratory.respond("propón habilidad: calcular sumas acumuladas", () -> false);
+        assertTrue(proposal, proposal.contains("Propuesta NO instalada"));
+        assertTrue(proposal, proposal.contains("96/96"));
+        File catalog = new File(folder.getRoot(), "inductive-skills.json");
+        assertFalse(catalog.exists());
+        File pending = new File(folder.getRoot(), "proposed-inductive-skill.json");
+        assertTrue(pending.isFile());
+        String raw = new String(Files.readAllBytes(pending.toPath()), StandardCharsets.UTF_8);
+        assertFalse(raw.contains("\\"train\\""));
+        assertFalse(raw.contains("\\"holdout\\""));
+        String id = com.google.gson.JsonParser.parseString(raw).getAsJsonObject()
+                .get("id").getAsString();
+        assertTrue(new AutonomousToolRuntime(file).respond(
+                "aprueba habilidad " + id, () -> false).contains("verificada y guardada"));
+        assertTrue(catalog.isFile());
+        assertEquals("Resultado de habilidad guardada: [4,3,10]",
+                new AutonomousToolRuntime(file).respond(
+                    "usa habilidad: {\\"name\\":\\"auto_prefix_sum\\",\\"input\\":[4,-1,7]}",
+                    () -> false));
+        String canceled = laboratory.respond("propón habilidad: rotar lista a la izquierda", () -> true);
+        assertTrue(canceled.contains("cancelad"));
+        assertFalse(pending.exists());
+    }
+
     @Test public void proposalsCanBeDiscardedOrCancelledWithoutWritingInstalledSkills() {
         File file = new File(folder.getRoot(), "tools.json");
         AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
