@@ -16,6 +16,30 @@ public class AutonomousToolRuntimeTest {
     private static final String CHALLENGE = "{\"schema\":1,\"id\":\"consulta\",\"family\":\"dependencies\","
             + "\"input\":{\"nodes\":3,\"edges\":[[0,1],[1,2]]}}";
 
+    @Test public void pCloudSkillRestorationNeedsExplicitOwnerAndPausedLaboratory() throws Exception {
+        File state = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(state);
+        File inbox = new File(new File(folder.getRoot(), "cloud-inbox"), "inductive-skills.json");
+        String learned = "{\"schema\":1,\"skills\":{\"sorted_values\":"
+                + "{\"program\":[\"sort\"],\"training\":3,\"holdout\":3}}}";
+        String envelope = salve.data.sync.SkillCloudArchive.pack(
+                salve.data.sync.SkillCloudArchive.INDUCTIVE, learned, 1_000L);
+        String remote = salve.data.sync.SkillCloudArchive.unpack(envelope, null).remotePath();
+        File target = new File(folder.getRoot(), "inductive-skills.json");
+        assertTrue(salve.data.sync.SkillCloudArchive.stageIfMissing(target, inbox, envelope, remote));
+        assertTrue(AutonomousToolRuntime.handles("estado habilidades pcloud"));
+        assertTrue(AutonomousToolRuntime.handles("restaura habilidades pcloud"));
+        assertFalse(target.exists());
+        assertTrue(runtime.restoreStagedForVerifiedOwner(false).contains("denegada"));
+        assertTrue(runtime.restoreStagedForVerifiedOwner(true).contains("pausa"));
+        runtime.pause();
+        assertTrue(runtime.restoreStagedForVerifiedOwner(true).contains("Restauré 1"));
+        assertEquals(learned, new salve.core.autonomy.FileToolStateStore(target).read());
+        assertTrue(runtime.respond("habilidades aprendidas", () -> false).contains("pausado"));
+        assertFalse(runtime.restoreStagedForVerifiedOwner(true).contains("Restauré 1"));
+        assertTrue(inbox.exists());
+    }
+
     @Test public void explicitBlindLearningExperimentDoesNotInstallOrWritePersonalHistory() {
         File state = new File(folder.getRoot(), "tools.json");
         AutonomousToolRuntime runtime = new AutonomousToolRuntime(state);
