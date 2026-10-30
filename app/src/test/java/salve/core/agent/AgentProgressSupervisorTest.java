@@ -143,6 +143,16 @@ public class AgentProgressSupervisorTest {
         } catch (IllegalArgumentException expected) { }
     }
 
+    @Test public void supervisedReplanBlockedIsNotACompletedPlan() {
+        AgentRun r = run("BLOCKED", "UNKNOWN");
+        r.replanAttempts = AgentEngine.MAX_REPLANS;
+        r.replanState = "NEEDS_REVIEW";
+        AgentProgressSupervisor.Finding finding = AgentProgressSupervisor.inspect(r);
+        assertEquals(AgentProgressSupervisor.Phase.NEEDS_RESOURCES, finding.phase);
+        assertTrue(finding.summary().contains("Solo el dueño"));
+        assertEquals("BLOCKED", r.status);
+    }
+
     @Test public void supervisorNeverCallsModelOrExternalTools() {
         AgentRun r = run("RUNNING", "UNKNOWN");
         r.pending = new AgentRun.Pending("call", "web.search", "pending");
