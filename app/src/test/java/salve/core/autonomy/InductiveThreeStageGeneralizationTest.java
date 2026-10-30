@@ -63,7 +63,7 @@ public class InductiveThreeStageGeneralizationTest {
         InductiveSkillLab lab = new InductiveSkillLab(store);
         JsonObject result = lab.learn(request(), () -> false);
         assertEquals(result.toString(), "CERTIFIED_ON_PROVIDED_HOLDOUT", result.get("status").getAsString());
-        assertEquals(1110, result.get("candidates_tested").getAsInt());
+        assertEquals(InductiveSkillLab.MAX_CANDIDATES, result.get("candidates_tested").getAsInt());
         assertTrue(result.get("candidates_matching_training").getAsInt() >= 1);
         assertEquals(3, result.get("selected_length").getAsInt());
         assertEquals(3, result.getAsJsonArray("program").size());
