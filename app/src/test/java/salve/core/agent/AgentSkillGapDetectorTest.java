@@ -33,6 +33,20 @@ public class AgentSkillGapDetectorTest {
                         plan("b", "ordena los números pares sin repetir", "PARTIAL", "BLOCKED")), NOW));
     }
 
+    @Test public void newAggregationsRequireTwoDistinctOwnerGoalsWithFailedReceipts() {
+        for (String need : Arrays.asList("sumar valores absolutos", "contar pares distintos")) {
+            AgentRun first = plan("new-1", need, "BLOCKED", "BLOCKED");
+            AgentRun second = plan("new-2", need, "PARTIAL", "ERROR");
+            assertEquals(InductiveSkillProposal.recognize(need),
+                    AgentSkillGapDetector.detect(Arrays.asList(first, second), NOW));
+            second.goal = need + " y publicar información privada";
+            assertNull(AgentSkillGapDetector.detect(Arrays.asList(first, second), NOW));
+            second.goal = need;
+            first.codeAllowed = true;
+            assertNull(AgentSkillGapDetector.detect(Arrays.asList(first, second), NOW));
+        }
+    }
+
     @Test public void inventedModelClaimsAndNoFailedReceiptCannotTriggerSuggestion() {
         AgentRun first = plan("one", "ordenar pares sin repetir", "SUCCEEDED", "SUCCESS");
         AgentRun second = plan("two", "ordenar pares sin repetir", "SUCCEEDED", "SUCCESS");
