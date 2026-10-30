@@ -63,6 +63,9 @@ public final class RoomAgentStore implements AgentEngine.Store {
         return db.runInTransaction(() -> {
             if (dao.resume(id, now) != 1) return false;
             AgentRun run = get(id); run.attempts = 0; run.error = "";
+            // Only the owner's explicit resume resets the bounded corrective budget.
+            // Successful and blocked tool receipts stay in place for idempotence.
+            run.replanAttempts = 0; run.replanState = "NONE"; run.skippedRepeats = 0;
             // A user may have fixed connectivity/configuration. Only failed-call retry markers reset.
             for (AgentRun.Observation observation : run.observations) if (!observation.useful()) observation.fingerprint = null;
             dao.resetJournal(id, run.encode()); return true;
