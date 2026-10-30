@@ -28,10 +28,11 @@ public final class InductiveSkillLab {
     }
     private static final List<String> OPS = Collections.unmodifiableList(Arrays.asList(
             "reverse", "sort", "unique", "abs", "negate", "filter_even",
-            "filter_odd", "square", "plus_one", "minus_one"));
+            "filter_odd", "square", "plus_one", "minus_one",
+            "rotate_left", "prefix_sum"));
     private static final int MAX_ITEMS = 24;
     private static final int MAX_PROGRAM_LENGTH = 3;
-    private static final int MAX_CANDIDATES = 1110; // 10 + 10² + 10³; finite search.
+    private static final int MAX_CANDIDATES = 1884; // 12 + 12² + 12³; finite search.
     private static final int MAX_SKILLS = 16;
     private static final int MAX_EXAMPLES = 32;
     private static final int MAX_VALUE = 10000;
@@ -112,6 +113,22 @@ public final class InductiveSkillLab {
                     Collections.sort(data); continue;
                 case "unique":
                     for (int x : data) if (!next.contains(x)) next.add(x);
+                    break;
+                case "rotate_left":
+                    // No special case for empty input: it remains empty.
+                    if (!data.isEmpty()) {
+                        next.addAll(data.subList(1, data.size()));
+                        next.add(data.get(0));
+                    }
+                    break;
+                case "prefix_sum":
+                    long running = 0;
+                    for (int x : data) {
+                        running += x;
+                        if (Math.abs(running) > MAX_VALUE)
+                            throw new IllegalArgumentException("Acumulado fuera de rango");
+                        next.add((int) running);
+                    }
                     break;
                 default:
                     for (int x : data) {
