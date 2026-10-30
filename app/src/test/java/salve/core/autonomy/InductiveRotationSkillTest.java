@@ -47,8 +47,13 @@ public class InductiveRotationSkillTest {
                 proposal.program.deepCopy(), () -> false);
         assertTrue(result.get("certified").getAsBoolean());
         assertNotNull(memory.json);
-        assertFalse(memory.json.contains("holdout"));
-        assertFalse(memory.json.contains("train"));
+        JsonObject saved = com.google.gson.JsonParser.parseString(memory.json).getAsJsonObject();
+        assertFalse(saved.has("train"));
+        JsonObject programOnly = saved.getAsJsonObject("skills").getAsJsonObject("auto_rotate_left");
+        assertEquals(3, programOnly.size()); // program + train/holdout counts, no input/output examples
+        assertTrue(programOnly.has("program"));
+        assertTrue(programOnly.has("training"));
+        assertTrue(programOnly.has("holdout"));
 
         InductiveSkillLab restored = new InductiveSkillLab(memory);
         Random novel = new Random(0x5A115E);
