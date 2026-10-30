@@ -28,10 +28,12 @@ public final class InductiveSkillLab {
     }
     private static final List<String> OPS = Collections.unmodifiableList(Arrays.asList(
             "reverse", "sort", "unique", "abs", "negate", "filter_even",
-            "filter_odd", "square", "plus_one", "minus_one"));
+            "filter_odd", "square", "plus_one", "minus_one",
+            "running_total", "adjacent_delta"));
     private static final int MAX_ITEMS = 24;
     private static final int MAX_PROGRAM_LENGTH = 3;
-    private static final int MAX_CANDIDATES = 1110; // 10 + 10² + 10³; finite search.
+    private static final int MAX_CANDIDATES = OPS.size() + OPS.size() * OPS.size()
+            + OPS.size() * OPS.size() * OPS.size(); // 12 + 12² + 12³, finite.
     private static final int MAX_SKILLS = 16;
     private static final int MAX_EXAMPLES = 32;
     private static final int MAX_VALUE = 10000;
@@ -112,6 +114,24 @@ public final class InductiveSkillLab {
                     Collections.sort(data); continue;
                 case "unique":
                     for (int x : data) if (!next.contains(x)) next.add(x);
+                    break;
+                case "running_total": {
+                    long total = 0;
+                    for (int x : data) {
+                        total += x;
+                        if (Math.abs(total) > MAX_VALUE)
+                            throw new IllegalArgumentException("Resultado acumulado fuera de rango");
+                        next.add((int) total);
+                    }
+                    break;
+                }
+                case "adjacent_delta":
+                    for (int index = 1; index < data.size(); index++) {
+                        long delta = (long) data.get(index) - data.get(index - 1);
+                        if (Math.abs(delta) > MAX_VALUE)
+                            throw new IllegalArgumentException("Diferencia fuera de rango");
+                        next.add((int) delta);
+                    }
                     break;
                 default:
                     for (int x : data) {
