@@ -15,7 +15,7 @@ import java.util.function.BooleanSupplier;
 public final class InductiveSkillProposal {
     public enum Kind {
         SORT_UNIQUE_ODDS, SORT_UNIQUE_EVENS,
-        SUM_ABSOLUTE_VALUES, COUNT_DISTINCT_EVENS
+        SUM_ABSOLUTE_VALUES, COUNT_DISTINCT_EVENS, ROTATE_LEFT
     }
     private static final int[][] TRAIN = {
             {7,3,7,4,1,3,4}, {-1,2,-3,7,-1,7,2}, {9,8,3,9,2,-5,3,8},
@@ -49,6 +49,9 @@ public final class InductiveSkillProposal {
                 || folded.equals("contar numeros pares sin repetir")
                 || folded.equals("cuenta los pares distintos"))
             return Kind.COUNT_DISTINCT_EVENS;
+        if (folded.equals("rotar lista a la izquierda")
+                || folded.equals("rotar numeros a la izquierda"))
+            return Kind.ROTATE_LEFT;
         return null;
     }
     public static String skillName(Kind kind) {
@@ -57,6 +60,7 @@ public final class InductiveSkillProposal {
             case SORT_UNIQUE_EVENS: return "auto_even_sorted";
             case SUM_ABSOLUTE_VALUES: return "auto_abs_sum";
             case COUNT_DISTINCT_EVENS: return "auto_distinct_even_count";
+            case ROTATE_LEFT: return "auto_rotate_left";
             default: throw new IllegalArgumentException("Habilidad no disponible");
         }
     }
@@ -68,6 +72,11 @@ public final class InductiveSkillProposal {
     private static JsonArray expected(Kind kind, int[] data) {
         // Independent oracle owned by the evaluator, not the DSL under test.
         JsonArray result = new JsonArray();
+        if (kind == Kind.ROTATE_LEFT) {
+            for (int i = 1; i < data.length; i++) result.add(data[i]);
+            if (data.length > 0) result.add(data[0]);
+            return result;
+        }
         if (kind == Kind.SUM_ABSOLUTE_VALUES) {
             long sum = 0;
             for (int value : data) sum += Math.abs((long) value);
