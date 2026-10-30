@@ -46,6 +46,7 @@ public class InductiveSequenceSkillsTest {
         for (InductiveSkillProposal.Kind kind : new InductiveSkillProposal.Kind[]{
                 InductiveSkillProposal.Kind.RUNNING_TOTAL,
                 InductiveSkillProposal.Kind.ADJACENT_DELTA}) {
+            String before = memory.json;
             InductiveSkillProposal.Evaluation proposal =
                     InductiveSkillProposal.evaluate(lab, kind, () -> false);
             assertTrue(proposal.promotable());
@@ -55,7 +56,7 @@ public class InductiveSequenceSkillsTest {
             String expectedOp = kind == InductiveSkillProposal.Kind.RUNNING_TOTAL
                     ? "running_total" : "adjacent_delta";
             assertEquals(expectedOp, proposal.program.get(0).getAsString());
-            assertNull("Preview must not install anything on disk", memory.json);
+            assertEquals("Preview must not change the installed catalog", before, memory.json);
 
             JsonObject approved = InductiveSkillProposal.promote(lab, kind,
                     proposal.program.deepCopy(), () -> false);
