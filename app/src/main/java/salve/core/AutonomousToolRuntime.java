@@ -264,7 +264,7 @@ public final class AutonomousToolRuntime {
                     return "Ya hay una propuesta pendiente; revísala o descártala antes de crear otra.";
                 InductiveSkillProposal.Kind kind = InductiveSkillProposal.recognize(
                         raw.substring(raw.indexOf(':') + 1).trim());
-                if (kind == null) return "Necesidad no reconocida. Por ahora: ordenar impares sin repetir, ordenar pares sin repetir, sumar valores absolutos o contar pares distintos.";
+                if (kind == null) return "Necesidad no reconocida. Por ahora: ordenar impares sin repetir, ordenar pares sin repetir, sumar valores absolutos, contar pares distintos o rotar lista a la izquierda.";
                 InductiveSkillProposal.Evaluation result = InductiveSkillProposal.evaluate(skills(), kind, cancelled);
                 if (!result.promotable()) return "Propuesta rechazada: no superó la referencia independiente.";
                 if (cancelled.getAsBoolean()) return "Propuesta cancelada.";
@@ -520,7 +520,7 @@ public final class AutonomousToolRuntime {
                 + "También puedes pausar, reanudar o revertir una herramienta. Se admiten cuatro familias acotadas; el laboratorio no cambia el código de la aplicación. "
                 + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental. " 
                 + "Laboratorio inductivo: habilidades aprendidas; aprende habilidad: {nombre, train, holdout}; usa habilidad: {name, input}. "
-                + "Propuestas locales: propón habilidad: ordenar impares sin repetir, sumar valores absolutos o contar pares distintos; aprueba habilidad ID; descarta habilidad ID. "
+                + "Propuestas locales: propón habilidad: ordenar impares sin repetir, sumar valores absolutos, contar pares distintos o rotar lista a la izquierda; aprueba habilidad ID; descarta habilidad ID. "
                 + "Copias: estado habilidades pcloud; primero pausa el laboratorio y luego restaura habilidades pcloud (solo dueño verificado). "
                 + "Experimento controlado: experimento de aprendizaje (reintentos solo en desarrollo y examen final no reutilizado). " 
                 + "Cada ejemplo de train/holdout usa las claves in y out, con listas numéricas.";
