@@ -310,9 +310,54 @@ public class RoomAgentStoreTest {
             public String capabilities(AgentRun r) { return "none"; }
             public AgentRun.Observation execute(AgentRun r, AgentRun.Pending p, java.util.function.BooleanSupplier stop) { throw new AssertionError("Must not execute"); }
         });
-        assertEquals(1, r.observations.size()); assertEquals("BLOCKED", r.observations.get(0).status); assertEquals("PARTIAL", r.status);
-        assertEquals(11, r.skippedRepeats); assertEquals(1, db.agentDao().stat("code.python").failures);
+        assertEquals(1, r.observations.size()); assertEquals("BLOCKED", r.observations.get(0).status); assertEquals("BLOCKED", r.status);
+        assertEquals(AgentEngine.MAX_REPLANS, r.skippedRepeats);
+        assertEquals(AgentEngine.MAX_REPLANS, r.replanAttempts);
+        assertEquals("NEEDS_REVIEW", r.replanState);
+        assertEquals(1, db.agentDao().stat("code.python").failures);
     }
+    @Test public void blockedReplanCheckpointSurvivesRestartAndOnlyUserResumeResetsBudget() {
+        AgentRun created = create();
+        java.util.concurrent.atomic.AtomicInteger executions = new java.util.concurrent.atomic.AtomicInteger();
+        AgentEngine.Tools blocked = new AgentEngine.Tools() {
+            public String capabilities(AgentRun run) { return "code.python not authorized"; }
+            public AgentRun.Observation execute(AgentRun run, AgentRun.Pending call,
+                    java.util.function.BooleanSupplier stopped) {
+                executions.incrementAndGet();
+                throw new AssertionError("Policy must block before any side effect");
+            }
+        };
+        AgentRun stop = execute(created.id,
+                prompt -> response("{\\"tool\\":\\"code.python\\",\\"input\\":\\"print(42)\\"}"),
+                blocked);
+        assertEquals("BLOCKED", stop.status);
+        assertEquals("NEEDS_REVIEW", stop.replanState);
+        assertEquals(2, stop.replanAttempts);
+        assertEquals(0, executions.get());
+        assertEquals(1, stop.observations.size());
+        int modelBudget = stop.modelCalls;
+        db.close(); open();
+        AgentRun restored = store.get(created.id);
+        assertEquals(stop.goal, restored.goal);
+        assertEquals("NEEDS_REVIEW", restored.replanState);
+        assertEquals(2, restored.replanAttempts);
+        assertEquals(modelBudget, restored.modelCalls);
+        assertEquals(1, restored.observations.size());
+        assertEquals("BLOCKED", restored.observations.get(0).status);
+        assertFalse(store.pending().stream().anyMatch(r -> r.id.equals(created.id)));
+        assertNull(store.claim(created.id, "silent-worker", now));
+        assertTrue(store.resume(created.id, now));
+        AgentRun resumed = store.get(created.id);
+        assertEquals("QUEUED", resumed.status);
+        assertEquals(0, resumed.replanAttempts);
+        assertEquals("NONE", resumed.replanState);
+        assertEquals(0, resumed.skippedRepeats);
+        assertEquals(1, resumed.observations.size());
+        assertEquals(stop.goal, resumed.goal);
+        assertFalse(resumed.codeAllowed);
+        assertEquals(0, executions.get());
+    }
+
     @Test public void restartReusesPendingCallIdAndPersistedObservation() {
         AgentRun r = create(); r = store.claim(r.id, "old", now);
         r.pending = new AgentRun.Pending("same-call", "memory.lookup", "origen"); assertTrue(store.save(r, now));
@@ -448,6 +493,8 @@ public class RoomAgentStoreTest {
         assertEquals(1, reads.get());
         assertEquals(3, result.observations.size());
         assertEquals(1, result.skippedRepeats);
+        assertEquals(1, result.replanAttempts);
+        assertEquals("SAFE_FALLBACK", result.replanState);
         assertEquals("web.read", result.observations.get(2).tool);
         assertEquals(1, memories());
     }
@@ -514,8 +561,10 @@ public class RoomAgentStoreTest {
     }
     @Test public void transientFailureIsRetriedOnceAndThenChangesAreRequested() {
         AgentRun done = execute(create().id, p -> response("{\"tool\":\"memory.lookup\",\"input\":\"origen\"}"), tools("ERROR"));
-        assertEquals("PARTIAL", done.status); assertEquals(2, done.observations.size());
-        assertEquals(10, done.skippedRepeats); assertEquals(2, db.agentDao().stat("memory.lookup").failures);
+        assertEquals("BLOCKED", done.status); assertEquals(2, done.observations.size());
+        assertEquals(AgentEngine.MAX_REPLANS, done.skippedRepeats);
+        assertEquals("NEEDS_REVIEW", done.replanState);
+        assertEquals(2, db.agentDao().stat("memory.lookup").failures);
         assertEquals(0, memories());
     }
     @Test public void interruptionDoesNotForgetDuplicateGuardButExplicitResumeAllowsFailedRetry() {
