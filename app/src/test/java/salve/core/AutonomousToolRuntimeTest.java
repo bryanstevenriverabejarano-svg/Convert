@@ -218,17 +218,21 @@ public class AutonomousToolRuntimeTest {
         File pending = new File(folder.getRoot(), "proposed-inductive-skill.json");
         assertTrue(pending.isFile());
         String raw = new String(Files.readAllBytes(pending.toPath()), StandardCharsets.UTF_8);
-        assertFalse(raw.contains("\\"train\\""));
-        assertFalse(raw.contains("\\"holdout\\""));
+        assertFalse(raw.contains("train"));
+        assertFalse(raw.contains("holdout"));
         String id = com.google.gson.JsonParser.parseString(raw).getAsJsonObject()
                 .get("id").getAsString();
         assertTrue(new AutonomousToolRuntime(file).respond(
                 "aprueba habilidad " + id, () -> false).contains("verificada y guardada"));
         assertTrue(catalog.isFile());
+        com.google.gson.JsonObject request = new com.google.gson.JsonObject();
+        request.addProperty("name", "auto_prefix_sum");
+        com.google.gson.JsonArray values = new com.google.gson.JsonArray();
+        values.add(4); values.add(-1); values.add(7);
+        request.add("input", values);
         assertEquals("Resultado de habilidad guardada: [4,3,10]",
                 new AutonomousToolRuntime(file).respond(
-                    "usa habilidad: {\\"name\\":\\"auto_prefix_sum\\",\\"input\\":[4,-1,7]}",
-                    () -> false));
+                    "usa habilidad: " + request.toString(), () -> false));
         String canceled = laboratory.respond("propón habilidad: rotar lista a la izquierda", () -> true);
         assertTrue(canceled.contains("cancelad"));
         assertFalse(pending.exists());
