@@ -264,7 +264,7 @@ public final class AutonomousToolRuntime {
                     return "Ya hay una propuesta pendiente; revísala o descártala antes de crear otra.";
                 InductiveSkillProposal.Kind kind = InductiveSkillProposal.recognize(
                         raw.substring(raw.indexOf(':') + 1).trim());
-                if (kind == null) return "Necesidad no reconocida. Por ahora: ordenar impares sin repetir, u ordenar pares sin repetir.";
+                if (kind == null) return "Necesidad no reconocida. Por ahora: ordenar impares sin repetir, ordenar pares sin repetir, sumas acumuladas o diferencias consecutivas.";
                 InductiveSkillProposal.Evaluation result = InductiveSkillProposal.evaluate(skills(), kind, cancelled);
                 if (!result.promotable()) return "Propuesta rechazada: no superó la referencia independiente.";
                 if (cancelled.getAsBoolean()) return "Propuesta cancelada.";
