@@ -101,7 +101,7 @@ public final class AgentEngine {
             // existing controller; do not build another recovery engine.
             AgentExperimentOpportunity experiment = run.replanAttempts < MAX_REPLANS
                     ? AgentExperimentOpportunity.afterRepeat(run, call) : null;
-            run.replanAttempts++;
+            run.replanAttempts = Math.min(MAX_REPLANS, run.replanAttempts + 1);
             run.skippedRepeats++;
             if (experiment != null) {
                 run.pending = new AgentRun.Pending(UUID.randomUUID().toString(),
