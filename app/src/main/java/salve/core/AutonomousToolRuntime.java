@@ -169,7 +169,7 @@ public final class AutonomousToolRuntime {
                 JsonObject last = AutonomousToolCommand.parseObject(lastJson);
                 if (last.size() != 3 || !last.has("schema") || last.get("schema").getAsInt() != 1
                         || !last.has("kind") || !last.has("until")
-                        || !last.get("kind").getAsString().matches("SORT_UNIQUE_ODDS|SORT_UNIQUE_EVENS|SUM_ABSOLUTE_VALUES|COUNT_DISTINCT_EVENS"))
+                        || !last.get("kind").getAsString().matches("SORT_UNIQUE_ODDS|SORT_UNIQUE_EVENS|SUM_ABSOLUTE_VALUES|COUNT_DISTINCT_EVENS|ADJACENT_DELTA"))
                     return false; // corrupt marker: do not overwrite automatically
                 if (kind.name().equals(last.get("kind").getAsString())
                         && last.get("until").getAsLong() > System.currentTimeMillis())
@@ -264,7 +264,7 @@ public final class AutonomousToolRuntime {
                     return "Ya hay una propuesta pendiente; revísala o descártala antes de crear otra.";
                 InductiveSkillProposal.Kind kind = InductiveSkillProposal.recognize(
                         raw.substring(raw.indexOf(':') + 1).trim());
-                if (kind == null) return "Necesidad no reconocida. Por ahora: ordenar impares sin repetir, ordenar pares sin repetir, sumar valores absolutos o contar pares distintos.";
+                if (kind == null) return "Necesidad no reconocida. Por ahora: ordenar impares sin repetir, ordenar pares sin repetir, sumar valores absolutos, contar pares distintos o diferencias consecutivas.";
                 InductiveSkillProposal.Evaluation result = InductiveSkillProposal.evaluate(skills(), kind, cancelled);
                 if (!result.promotable()) return "Propuesta rechazada: no superó la referencia independiente.";
                 if (cancelled.getAsBoolean()) return "Propuesta cancelada.";
@@ -520,7 +520,7 @@ public final class AutonomousToolRuntime {
                 + "También puedes pausar, reanudar o revertir una herramienta. Se admiten cuatro familias acotadas; el laboratorio no cambia el código de la aplicación. "
                 + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental. " 
                 + "Laboratorio inductivo: habilidades aprendidas; aprende habilidad: {nombre, train, holdout}; usa habilidad: {name, input}. "
-                + "Propuestas locales: propón habilidad: ordenar impares sin repetir, sumar valores absolutos o contar pares distintos; aprueba habilidad ID; descarta habilidad ID. "
+                + "Propuestas locales: propón habilidad: ordenar impares sin repetir, sumar valores absolutos, contar pares distintos o diferencias consecutivas; aprueba habilidad ID; descarta habilidad ID. "
                 + "Copias: estado habilidades pcloud; primero pausa el laboratorio y luego restaura habilidades pcloud (solo dueño verificado). "
                 + "Experimento controlado: experimento de aprendizaje (reintentos solo en desarrollo y examen final no reutilizado). " 
                 + "Cada ejemplo de train/holdout usa las claves in y out, con listas numéricas.";
