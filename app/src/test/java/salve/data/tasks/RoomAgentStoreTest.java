@@ -328,7 +328,7 @@ public class RoomAgentStoreTest {
             }
         };
         AgentRun stop = execute(created.id,
-                prompt -> response("{\\"tool\\":\\"code.python\\",\\"input\\":\\"print(42)\\"}"),
+                prompt -> response("{\"tool\":\"code.python\",\"input\":\"print(42)\"}"),
                 blocked);
         assertEquals("BLOCKED", stop.status);
         assertEquals("NEEDS_REVIEW", stop.replanState);
