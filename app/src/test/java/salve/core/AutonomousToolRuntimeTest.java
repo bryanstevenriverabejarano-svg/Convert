@@ -206,6 +206,43 @@ public class AutonomousToolRuntimeTest {
                 .contains("No existe ninguna propuesta"));
     }
 
+    @Test public void sequenceSkillProposalsNeedOwnerApprovalAndSurviveRestart() throws Exception {
+        File state = new File(folder.getRoot(), "tools.json");
+        File installed = new File(folder.getRoot(), "inductive-skills.json");
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(state);
+        String[] needs = {"sumas acumuladas", "diferencias consecutivas"};
+        String[] names = {"auto_running_total", "auto_adjacent_delta"};
+        String[] outputs = {"[1,3,6]", "[2,3]"};
+        for (int i = 0; i < needs.length; i++) {
+            String proposal = runtime.respond("propón habilidad: " + needs[i], () -> false);
+            assertTrue(proposal, proposal.contains("Propuesta NO instalada"));
+            assertTrue(proposal, proposal.contains("96/96"));
+            String pending = new String(java.nio.file.Files.readAllBytes(new File(
+                    folder.getRoot(), "proposed-inductive-skill.json").toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8);
+            String id = com.google.gson.JsonParser.parseString(pending).getAsJsonObject()
+                    .get("id").getAsString();
+            assertFalse(pending.contains("\\\"train\\\""));
+            assertFalse(pending.contains("\\\"holdout\\\""));
+            assertTrue(runtime.respond("aprueba habilidad " + id, () -> false)
+                    .contains("aprobada, verificada y guardada"));
+            assertTrue(installed.exists());
+            String request = "usa habilidad: {\\\"name\\\":\\\"" + names[i]
+                    + "\\\",\\\"input\\\":[1,3,6]}";
+            String output = new AutonomousToolRuntime(state).respond(request, () -> false);
+            assertTrue(output, output.contains(outputs[i]));
+            // No changes to the already installed catalog when the same skill is proposed again.
+            String again = runtime.respond("propón habilidad: " + needs[i], () -> false);
+            assertFalse(again.contains("Propuesta NO instalada"));
+        }
+        String saved = new String(java.nio.file.Files.readAllBytes(installed.toPath()),
+                java.nio.charset.StandardCharsets.UTF_8);
+        assertFalse(saved.contains("\\\"input\\\""));
+        assertFalse(saved.contains("\\\"train\\\""));
+        assertTrue(saved.contains("auto_running_total"));
+        assertTrue(saved.contains("auto_adjacent_delta"));
+    }
+
     @Test public void proposalsCanBeDiscardedOrCancelledWithoutWritingInstalledSkills() {
         File file = new File(folder.getRoot(), "tools.json");
         AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
