@@ -117,6 +117,44 @@ public final class SkillCloudArchive {
         }
     }
 
+    /**
+     * A remote catalog is never activated by synchronization. Stage it in a
+     * separate no-backup inbox for explicit owner review in a later workflow.
+     * Neither an existing skill file nor an earlier staged snapshot is replaced.
+     */
+    public static boolean stageIfMissing(java.io.File active, java.io.File inbox,
+            String envelope, String path) throws java.io.IOException {
+        if (active == null || inbox == null || active.exists() || inbox.exists())
+            return false;
+        if (!recognizedPath(path)) return false;
+        Snapshot snapshot = unpack(envelope, path);
+        String expected = TOOLS.equals(snapshot.kind) ? "tools.json" : "inductive-skills.json";
+        if (!expected.equals(active.getName()) || !expected.equals(inbox.getName()))
+            return false;
+        new salve.core.autonomy.FileToolStateStore(inbox).write(envelope);
+        return true;
+    }
+
+    /** A bounded chooser; names are timestamped, but content still needs validation. */
+    public static java.util.List<String> candidates(String type, java.util.List<String> paths) {
+        kind(type);
+        java.util.List<String> matches = new java.util.ArrayList<>();
+        if (paths == null || paths.size() > 256) return matches;
+        for (String path : paths) if (recognizedPath(path)
+                && path.startsWith(ROOT + "/" + type + "-")) matches.add(path);
+        matches.sort((a,b) -> Long.compare(timestamp(b), timestamp(a)));
+        return matches;
+    }
+
+    private static long timestamp(String path) {
+        try {
+            int start = path.lastIndexOf('/') + 1;
+            int first = path.indexOf('-', start);
+            int second = path.indexOf('-', first + 1);
+            return Long.parseLong(path.substring(first + 1, second));
+        } catch (RuntimeException invalid) { return 0; }
+    }
+
     /** Strict known filename, no arbitrary remote paths, folders or executable extensions. */
     public static boolean recognizedPath(String path) {
         return path != null && path.matches(
