@@ -28,10 +28,13 @@ public final class InductiveSkillLab {
     }
     private static final List<String> OPS = Collections.unmodifiableList(Arrays.asList(
             "reverse", "sort", "unique", "abs", "negate", "filter_even",
-            "filter_odd", "square", "plus_one", "minus_one"));
+            "filter_odd", "square", "plus_one", "minus_one",
+            // Audited data-only aggregations. Appended to preserve old candidate
+            // preference order and compatibility with pCloud program archives.
+            "sum", "count", "prefix_sum"));
     private static final int MAX_ITEMS = 24;
     private static final int MAX_PROGRAM_LENGTH = 3;
-    private static final int MAX_CANDIDATES = 1110; // 10 + 10² + 10³; finite search.
+    public static final int MAX_CANDIDATES = 2379; // 13 + 13² + 13³; finite search.
     private static final int MAX_SKILLS = 16;
     private static final int MAX_EXAMPLES = 32;
     private static final int MAX_VALUE = 10000;
@@ -113,6 +116,29 @@ public final class InductiveSkillLab {
                 case "unique":
                     for (int x : data) if (!next.contains(x)) next.add(x);
                     break;
+                case "count":
+                    // Output contract stays a list; empty input has count zero.
+                    next.add(data.size()); break;
+                case "sum": {
+                    long total = 0;
+                    for (int x : data) {
+                        total += x;
+                        if (Math.abs(total) > MAX_VALUE)
+                            throw new IllegalArgumentException("Suma fuera de rango");
+                    }
+                    next.add((int) total);
+                    break;
+                }
+                case "prefix_sum": {
+                    long total = 0;
+                    for (int x : data) {
+                        total += x;
+                        if (Math.abs(total) > MAX_VALUE)
+                            throw new IllegalArgumentException("Suma acumulada fuera de rango");
+                        next.add((int) total);
+                    }
+                    break;
+                }
                 default:
                     for (int x : data) {
                         long y = x;
