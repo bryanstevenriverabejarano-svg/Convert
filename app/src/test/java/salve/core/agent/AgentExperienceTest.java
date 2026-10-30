@@ -191,10 +191,17 @@ public class AgentExperienceTest {
         AgentRun run = completed("id", "goal");
         JsonObject old = JsonParser.parseString(run.encode()).getAsJsonObject();
         old.remove("experience"); old.remove("skippedRepeats");
+        old.remove("replanAttempts"); old.remove("replanState");
         old.remove("goalVerification"); old.remove("verificationCriterion"); old.remove("verificationEvidence");
         AgentRun decoded = AgentRun.decode(old.toString()); assertEquals("", decoded.experience); assertEquals(0, decoded.skippedRepeats);
         assertEquals("UNKNOWN", decoded.goalVerification); assertEquals("NONE", decoded.verificationCriterion);
+        assertEquals(0, decoded.replanAttempts); assertEquals("NONE", decoded.replanState);
         assertNull(decoded.observations.get(0).fingerprint);
+        run.replanAttempts = AgentEngine.MAX_REPLANS + 1;
+        assertThrows(IllegalArgumentException.class, () -> AgentRun.decode(run.encode()));
+        run.replanAttempts = 0; run.replanState = "UNKNOWN_REASON";
+        assertThrows(IllegalArgumentException.class, () -> AgentRun.decode(run.encode()));
+        run.replanState = "NONE";
         run.experience = "{\"version\":1,\"planes\":[\"id\"],\"herramientas\":[{\"tool\":\"account.delete\",\"ok\":1,\"parcial\":0,\"error\":0,\"bloqueo\":0}]}";
         assertFalse(AgentExperience.valid(run.experience)); assertThrows(IllegalArgumentException.class, () -> AgentRun.decode(run.encode()));
         run.experience = ""; run.observations.get(0).fingerprint = "forged";
