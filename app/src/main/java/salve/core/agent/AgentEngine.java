@@ -14,6 +14,8 @@ import salve.core.ModelResult;
 /** Bounded plan/act/observe/evaluate/correct loop with a checkpoint before every external call. */
 public final class AgentEngine {
     public static final int MAX_STEPS = 8, MAX_MODEL_CALLS = 12;
+    /** Max duplicate proposals before the SAME goal requires explicit owner review. */
+    public static final int MAX_REPLANS = 2;
     public static final long LEASE_MS = 15 * 60_000L;
     public interface Store {
         AgentRun get(String id);
@@ -93,20 +95,34 @@ public final class AgentEngine {
         AgentRun.Pending call = run.pending;
         String repeated = AgentExperience.repeatFeedback(run, call);
         if (repeated != null) {
-            // A failed search is a discovered obstacle. If the original user
-            // supplied exactly one safe public URL, test reading it instead.
-            // Pending is journaled first; normal AgentPolicy runs on the next loop.
-            AgentExperimentOpportunity experiment =
-                    AgentExperimentOpportunity.afterRepeat(run, call);
+            // The original goal, completed observations and idempotency receipts
+            // stay in this SAME durable journal. Nothing here expands permissions.
+            // A safe, exact-URL alternative is already implemented by the
+            // existing controller; do not build another recovery engine.
+            AgentExperimentOpportunity experiment = run.replanAttempts < MAX_REPLANS
+                    ? AgentExperimentOpportunity.afterRepeat(run, call) : null;
+            run.replanAttempts = Math.min(MAX_REPLANS, run.replanAttempts + 1);
+            run.skippedRepeats++;
             if (experiment != null) {
                 run.pending = new AgentRun.Pending(UUID.randomUUID().toString(),
                         experiment.tool, experiment.input);
+                run.replanState = "SAFE_FALLBACK";
                 run.feedback = experiment.reason;
-                run.skippedRepeats++;
-                checkpoint(run); return;
+                checkpoint(run); // Alternative saved BEFORE its actual execution.
+                return;
             }
-            run.pending = null; run.feedback = repeated; run.skippedRepeats++;
-            checkpoint(run); return;
+            run.pending = null;
+            run.feedback = repeated;
+            run.replanState = run.replanAttempts >= MAX_REPLANS
+                    ? "NEEDS_REVIEW" : "RECONSIDER";
+            checkpoint(run); // The corrective instruction survives a process restart.
+            if (run.replanAttempts >= MAX_REPLANS) {
+                finish(run, "BLOCKED",
+                        "El plan repitió propuestas ya observadas o bloqueadas. "
+                        + "Revisa los recibos y reanuda explícitamente si hay nuevas condiciones; "
+                        + "no se repetirán acciones sin una nueva decisión.");
+            }
+            return;
         }
         String denied = AgentPolicy.denial(run, call.tool, call.input);
         AgentRun.Observation observation;
@@ -227,6 +243,9 @@ public final class AgentEngine {
         o.addProperty("objetivo", run.goal);
         if (reviewing) o.addProperty("respuesta", run.answer);
         o.addProperty("correccion", bounded(run.feedback, 160));
+        // Controller-owned checkpoint, not an instruction taken from tool text.
+        o.addProperty("replanificaciones", run.replanAttempts);
+        o.addProperty("replanificacion_estado", run.replanState);
         o.addProperty("herramientas_restantes", Math.max(0, MAX_STEPS - run.observations.size()));
         o.addProperty("inferencias_restantes", Math.max(0, MAX_MODEL_CALLS - run.modelCalls));
         com.google.gson.JsonArray outline = new com.google.gson.JsonArray();

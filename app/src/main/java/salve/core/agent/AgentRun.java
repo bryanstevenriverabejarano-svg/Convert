@@ -17,6 +17,9 @@ public final class AgentRun {
     public long createdAt, updatedAt, leaseUntil;
     public int modelCalls, revisions, attempts;
     public int skippedRepeats;
+    /** Bounded supervised replanning checkpoint, persisted in the existing Room journal. */
+    public int replanAttempts;
+    public String replanState = "NONE";
     public List<String> outline = new ArrayList<>(), evidence = new ArrayList<>(), providers = new ArrayList<>();
     public List<Observation> observations = new ArrayList<>();
     public Pending pending;
@@ -62,6 +65,9 @@ public final class AgentRun {
                 || (run.goalVerification.equals("VERIFIED") != !run.verificationEvidence.isEmpty())
                 || (run.verificationCriterion.equals("NONE") && !run.goalVerification.equals("UNKNOWN"))
                 || run.skippedRepeats < 0 || run.skippedRepeats > 32
+                || run.replanAttempts < 0 || run.replanAttempts > AgentEngine.MAX_REPLANS
+                || !java.util.Arrays.asList("NONE", "RECONSIDER", "SAFE_FALLBACK", "NEEDS_REVIEW")
+                        .contains(run.replanState)
                 || run.goal.length() > 2048 || run.id.length() > 60 || run.answer.length() > 2500
                 || run.outline.size() > 6 || run.evidence.size() > 8 || run.providers.size() > AgentEngine.MAX_MODEL_CALLS
                 || run.attempts < 0 || run.attempts > 8

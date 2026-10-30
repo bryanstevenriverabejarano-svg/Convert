@@ -187,6 +187,9 @@ public final class AgentRuntime {
         }
         if (!run.experience.isEmpty()) text.append(AgentExperience.describe(run.experience)).append('\n');
         if (run.skippedRepeats > 0) text.append("Llamadas repetidas evitadas: ").append(run.skippedRepeats).append('\n');
+        if (run.replanAttempts > 0) text.append("Replanificaciones supervisadas: ")
+                .append(run.replanAttempts).append(" · ").append(run.replanState)
+                .append(". No se modificó la autorización original.\n");
         if (!run.outline.isEmpty()) text.append("Plan actual: ").append(String.join(" → ", run.outline)).append('\n');
         for (AgentRun.Observation o : run.observations) text.append(o.tool).append(" · ").append(o.status).append(" · ")
                 .append(o.text.substring(0, Math.min(run.answer.isEmpty() ? 700 : 120, o.text.length()))).append('\n');
