@@ -135,6 +135,81 @@ public final class CloudSyncManager {
             } catch (Exception skip) { /* uno que falle no frena los demás */ }
         }
         moved += syncLibrary(ctx, provider, prefs);
+        // Existing symbolic skill files are backed up as immutable snapshots,
+        // never downloaded into the live autonomy/ registry by a network worker.
+        moved += syncVerifiedSkillArchives(ctx, provider);
+        return moved;
+    }
+
+    /**
+     * One opt-in cloud transport for the ALREADY verified symbolic laboratories.
+     * Immutable, content-addressed files avoid overwriting versions from another
+     * device. Remote downloads are quarantined; only the owner's explicit,
+     * independently validated restoration can make them available for use.
+     */
+    static int syncVerifiedSkillArchives(Context ctx, PCloudProvider provider) {
+        if (!isEnabled(ctx) || !isPCloudConfigured(ctx)) return 0;
+        java.util.List<String> available;
+        try { available = provider.listFilesChecked(SkillCloudArchive.ROOT); }
+        catch (Exception notAvailable) { return 0; } // Never infer an empty cloud
+        if (available == null || available.size() > 256) return 0;
+        int moved = 0;
+        File folder = new File(ctx.getNoBackupFilesDir(), "autonomy");
+        File inboxFolder = new File(folder, "cloud-inbox");
+        String[][] catalogs = {
+            {SkillCloudArchive.TOOLS, "tools.json"},
+            {SkillCloudArchive.INDUCTIVE, "inductive-skills.json"}
+        };
+        for (String[] item : catalogs) {
+            File active = new File(folder, item[1]);
+            File inbox = new File(inboxFolder, item[1]);
+            try {
+                if (active.isFile()) {
+                    String payload = new salve.core.autonomy.FileToolStateStore(active).read();
+                    // No backup of an empty laboratory or a rejected/corrupt file.
+                    com.google.gson.JsonObject record = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
+                    com.google.gson.JsonObject learned = record.getAsJsonObject(
+                            SkillCloudArchive.TOOLS.equals(item[0]) ? "tools" : "skills");
+                    if (learned == null || learned.size() == 0) continue;
+                    String digest = SkillCloudArchive.sha256(payload);
+                    boolean uploaded = false;
+                    for (String remote : available) {
+                        if (SkillCloudArchive.recognizedPath(remote)
+                                && remote.startsWith(SkillCloudArchive.ROOT + "/" + item[0] + "-")
+                                && remote.endsWith("-" + digest + ".json")) {
+                            uploaded = true; break;
+                        }
+                    }
+                    if (!uploaded) {
+                        long at = System.currentTimeMillis();
+                        String envelope = SkillCloudArchive.pack(item[0], payload, at);
+                        String path = SkillCloudArchive.ROOT + "/" + item[0]
+                                + "-" + at + "-" + digest + ".json";
+                        if (provider.uploadJson(path, envelope)) {
+                            available.add(path);
+                            moved++;
+                        }
+                    }
+                } else if (!active.exists() && !inbox.exists()) {
+                    java.util.List<String> possible = SkillCloudArchive.candidates(item[0], available);
+                    // Up to three recent, bounded attempts. Never search arbitrary cloud files.
+                    for (int i = 0; i < possible.size() && i < 3; i++) {
+                        String path = possible.get(i);
+                        byte[] data = provider.downloadBounded(path, SkillCloudArchive.MAX_ARCHIVE_BYTES);
+                        if (data == null || data.length == 0) continue;
+                        try {
+                            String envelope = java.nio.charset.StandardCharsets.UTF_8.newDecoder()
+                                    .decode(java.nio.ByteBuffer.wrap(data)).toString();
+                            if (SkillCloudArchive.stageIfMissing(active, inbox, envelope, path)) {
+                                moved++; break;
+                            }
+                        } catch (Exception rejected) { /* Invalid cloud data remains inert. */ }
+                    }
+                }
+            } catch (Exception invalidLocal) {
+                // Do not delete or overwrite a corrupt, incompatible or private local registry.
+            }
+        }
         return moved;
     }
 
