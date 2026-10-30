@@ -520,7 +520,7 @@ public final class AutonomousToolRuntime {
                 + "También puedes pausar, reanudar o revertir una herramienta. Se admiten cuatro familias acotadas; el laboratorio no cambia el código de la aplicación. "
                 + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental. " 
                 + "Laboratorio inductivo: habilidades aprendidas; aprende habilidad: {nombre, train, holdout}; usa habilidad: {name, input}. "
-                + "Propuestas locales: propón habilidad: ordenar impares sin repetir; aprueba habilidad ID; descarta habilidad ID. "
+                + "Propuestas locales: propón habilidad: ordenar impares sin repetir, sumas acumuladas o diferencias consecutivas; aprueba habilidad ID; descarta habilidad ID. "
                 + "Copias: estado habilidades pcloud; primero pausa el laboratorio y luego restaura habilidades pcloud (solo dueño verificado). "
                 + "Experimento controlado: experimento de aprendizaje (reintentos solo en desarrollo y examen final no reutilizado). " 
                 + "Cada ejemplo de train/holdout usa las claves in y out, con listas numéricas.";
