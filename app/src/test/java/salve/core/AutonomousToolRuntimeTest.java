@@ -206,6 +206,33 @@ public class AutonomousToolRuntimeTest {
                 .contains("No existe ninguna propuesta"));
     }
 
+    @Test public void adjacentDifferenceProposalRequiresApprovalAndSurvivesRestart() throws Exception {
+        File state = new File(folder.getRoot(), "tools.json");
+        AutonomousToolRuntime runtime = new AutonomousToolRuntime(state);
+        String proposed = runtime.respond("propón habilidad: diferencias consecutivas", () -> false);
+        assertTrue(proposed, proposed.contains("Propuesta NO instalada"));
+        assertTrue(proposed, proposed.contains("96/96"));
+        File pending = new File(folder.getRoot(), "proposed-inductive-skill.json");
+        File installed = new File(folder.getRoot(), "inductive-skills.json");
+        assertFalse(installed.exists());
+        String pendingData = new String(java.nio.file.Files.readAllBytes(pending.toPath()),
+                java.nio.charset.StandardCharsets.UTF_8);
+        String id = com.google.gson.JsonParser.parseString(pendingData).getAsJsonObject()
+                .get("id").getAsString();
+        assertFalse(pendingData.contains("holdout"));
+        assertTrue(runtime.respond("aprueba habilidad " + id, () -> false)
+                .contains("aprobada, verificada y guardada"));
+        assertTrue(installed.isFile());
+        com.google.gson.JsonObject request = new com.google.gson.JsonObject();
+        request.addProperty("name", "auto_adjacent_delta");
+        com.google.gson.JsonArray input = new com.google.gson.JsonArray();
+        for (int value : new int[]{5, 7, 4, 11}) input.add(value);
+        request.add("input", input);
+        String reply = new AutonomousToolRuntime(state).respond(
+                "usa habilidad: " + request.toString(), () -> false);
+        assertTrue(reply, reply.contains("[2,-3,7]"));
+    }
+
     @Test public void proposalsCanBeDiscardedOrCancelledWithoutWritingInstalledSkills() {
         File file = new File(folder.getRoot(), "tools.json");
         AutonomousToolRuntime runtime = new AutonomousToolRuntime(file);
