@@ -212,7 +212,7 @@ public class AutonomousToolRuntimeTest {
         AutonomousToolRuntime runtime = new AutonomousToolRuntime(state);
         String[] needs = {"sumas acumuladas", "diferencias consecutivas"};
         String[] names = {"auto_running_total", "auto_adjacent_delta"};
-        String[] outputs = {"[1,3,6]", "[2,3]"};
+        String[] outputs = {"[1,4,10]", "[2,3]"};
         for (int i = 0; i < needs.length; i++) {
             String proposal = runtime.respond("propón habilidad: " + needs[i], () -> false);
             assertTrue(proposal, proposal.contains("Propuesta NO instalada"));
