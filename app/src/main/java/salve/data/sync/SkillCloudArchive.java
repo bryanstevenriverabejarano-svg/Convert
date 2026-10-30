@@ -135,6 +135,26 @@ public final class SkillCloudArchive {
         return true;
     }
 
+    /**
+     * Local approval step, separate from the cloud worker. Only the existing
+     * whitelisted symbolic operations can be restored. Refuses to overwrite a
+     * live catalog, even when the staged version has a newer timestamp.
+     */
+    public static boolean installIfApproved(java.io.File active, java.io.File inbox,
+            String type, boolean explicitOwnerApproval) throws java.io.IOException {
+        kind(type);
+        if (!explicitOwnerApproval || active == null || inbox == null || active.exists()
+                || !inbox.isFile()) return false;
+        String expected = TOOLS.equals(type) ? "tools.json" : "inductive-skills.json";
+        if (!expected.equals(active.getName()) || !expected.equals(inbox.getName()))
+            return false;
+        String envelope = new salve.core.autonomy.FileToolStateStore(inbox).read();
+        Snapshot snapshot = unpack(envelope, null);
+        if (!type.equals(snapshot.kind) || active.exists()) return false;
+        new salve.core.autonomy.FileToolStateStore(active).write(snapshot.payload);
+        return true;
+    }
+
     /** A bounded chooser; names are timestamped, but content still needs validation. */
     public static java.util.List<String> candidates(String type, java.util.List<String> paths) {
         kind(type);
