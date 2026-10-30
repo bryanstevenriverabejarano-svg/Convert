@@ -30,8 +30,12 @@ public class SkillCloudArchiveTest {
             assertTrue(SkillCloudArchive.recognizedPath(remote));
             assertThrows(IllegalArgumentException.class,
                     () -> SkillCloudArchive.unpack(packed, remote.replace("123456789-", "123456788-")));
+            String tampered = kind.equals(SkillCloudArchive.TOOLS)
+                    ? packed.replace("revision", "modified_revision")
+                    : packed.replace("sort_numbers", "other_skill");
+            assertNotEquals(packed, tampered);
             assertThrows(IllegalArgumentException.class,
-                    () -> SkillCloudArchive.unpack(packed.replace("sort_numbers", "other_skill"), remote));
+                    () -> SkillCloudArchive.unpack(tampered, remote));
         }
     }
 
@@ -85,8 +89,9 @@ public class SkillCloudArchiveTest {
         File inbox = new File(new File(root, "cloud-inbox"), active.getName());
         String envelope = SkillCloudArchive.pack(SkillCloudArchive.TOOLS, TOOLS, 9876L);
         String path = SkillCloudArchive.unpack(envelope, null).remotePath();
-        assertFalse(SkillCloudArchive.stageIfMissing(active, inbox, envelope,
-                path.replace("tools-", "inductive-")));
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillCloudArchive.stageIfMissing(active, inbox, envelope,
+                        path.replace("tools-", "inductive-")));
         assertFalse(inbox.exists());
         assertTrue(SkillCloudArchive.stageIfMissing(active, inbox, envelope, path));
         new FileToolStateStore(inbox).write(envelope.replace("revision", "tampered"));
