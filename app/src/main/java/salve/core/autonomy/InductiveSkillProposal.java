@@ -13,7 +13,10 @@ import java.util.function.BooleanSupplier;
  * benchmark pipeline. No LLM-selected permissions or model-generated labels.
  */
 public final class InductiveSkillProposal {
-    public enum Kind { SORT_UNIQUE_ODDS, SORT_UNIQUE_EVENS }
+    public enum Kind {
+        SORT_UNIQUE_ODDS, SORT_UNIQUE_EVENS,
+        SUM_ABSOLUTE_VALUES, COUNT_DISTINCT_EVENS
+    }
     private static final int[][] TRAIN = {
             {7,3,7,4,1,3,4}, {-1,2,-3,7,-1,7,2}, {9,8,3,9,2,-5,3,8},
             {7,7,-7,4,0,1}, {6,4,3,-9,3,0,1}, {-11,2,-11,5,5,3,3}
@@ -38,10 +41,24 @@ public final class InductiveSkillProposal {
                 || folded.equals("ordena pares sin repetir")
                 || folded.equals("ordena los numeros pares sin repetir"))
             return Kind.SORT_UNIQUE_EVENS;
+        if (folded.equals("sumar valores absolutos")
+                || folded.equals("suma los valores absolutos")
+                || folded.equals("sumar los valores absolutos"))
+            return Kind.SUM_ABSOLUTE_VALUES;
+        if (folded.equals("contar pares distintos")
+                || folded.equals("contar numeros pares sin repetir")
+                || folded.equals("cuenta los pares distintos"))
+            return Kind.COUNT_DISTINCT_EVENS;
         return null;
     }
     public static String skillName(Kind kind) {
-        return kind == Kind.SORT_UNIQUE_ODDS ? "auto_odd_sorted" : "auto_even_sorted";
+        switch (kind) {
+            case SORT_UNIQUE_ODDS: return "auto_odd_sorted";
+            case SORT_UNIQUE_EVENS: return "auto_even_sorted";
+            case SUM_ABSOLUTE_VALUES: return "auto_abs_sum";
+            case COUNT_DISTINCT_EVENS: return "auto_distinct_even_count";
+            default: throw new IllegalArgumentException("Habilidad no disponible");
+        }
     }
     private static JsonArray vector(int[] data) {
         JsonArray array = new JsonArray();
@@ -49,11 +66,27 @@ public final class InductiveSkillProposal {
         return array;
     }
     private static JsonArray expected(Kind kind, int[] data) {
+        // Independent oracle owned by the evaluator, not the DSL under test.
+        JsonArray result = new JsonArray();
+        if (kind == Kind.SUM_ABSOLUTE_VALUES) {
+            long sum = 0;
+            for (int value : data) sum += Math.abs((long) value);
+            if (sum > 10000) throw new IllegalArgumentException("Suma de prueba fuera de rango");
+            result.add((int) sum);
+            return result;
+        }
         TreeSet<Integer> sorted = new TreeSet<>();
         for (int value : data) {
-            if ((value % 2 == 0) == (kind == Kind.SORT_UNIQUE_EVENS)) sorted.add(value);
+            if (kind == Kind.COUNT_DISTINCT_EVENS) {
+                if (value % 2 == 0) sorted.add(value);
+            } else if ((value % 2 == 0) == (kind == Kind.SORT_UNIQUE_EVENS)) {
+                sorted.add(value);
+            }
         }
-        JsonArray result = new JsonArray();
+        if (kind == Kind.COUNT_DISTINCT_EVENS) {
+            result.add(sorted.size());
+            return result;
+        }
         for (int value : sorted) result.add(value);
         return result;
     }
@@ -96,7 +129,7 @@ public final class InductiveSkillProposal {
             throw new IllegalArgumentException("No pasó el examen reservado; no hay propuesta.");
         JsonArray program = result.getAsJsonArray("program");
         int correct = 0, baseline = 0;
-        Random novel = new Random(kind == Kind.SORT_UNIQUE_ODDS ? 0x51A1E7 : 0x51A1E8);
+        Random novel = new Random(0x51A1E7L + kind.ordinal());
         for (int i = 0; i < BENCHMARK_CASES; i++) {
             if (cancel.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
             int[] numbers = new int[5 + novel.nextInt(14)];
