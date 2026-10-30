@@ -161,7 +161,9 @@ public final class AgentProgressSupervisor {
                             : "Ejecutándose con puntos de control e idempotencia.", useful, errors);
         if ("BLOCKED".equals(run.status))
             return new Finding(Phase.NEEDS_RESOURCES,
-                    "El bloqueo debe resolverse sin inventar éxitos. Consultar recursos o pedir una acción explícita.", useful, errors);
+                    "NEEDS_REVIEW".equals(run.replanState)
+                        ? "Se agotó el presupuesto de replanificación. Solo el dueño puede autorizar una reanudación; conserva los recibos originales."
+                        : "El bloqueo debe resolverse sin inventar éxitos. Consultar recursos o pedir una acción explícita.", useful, errors);
         if ("PARTIAL".equals(run.status))
             return new Finding(Phase.PARTIAL,
                     "Mostrar qué recibos apoyan la respuesta y qué objetivo sigue sin verificar.", useful, errors);
