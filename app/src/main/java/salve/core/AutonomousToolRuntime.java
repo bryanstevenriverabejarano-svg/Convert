@@ -21,6 +21,7 @@ import java.util.List;
 public final class AutonomousToolRuntime {
     private static volatile AutonomousToolRuntime instance;
     private final File stateFile;
+    private final Context appContext;
     private final File inductiveFile;
     private final File proposedSkillFile;
     private final File suggestionCooldownFile;
@@ -30,11 +31,14 @@ public final class AutonomousToolRuntime {
     private volatile AutonomousToolLab laboratory;
 
     private AutonomousToolRuntime(Context context) {
-        this(new File(context.getApplicationContext().getNoBackupFilesDir(), "autonomy/tools.json"));
+        this(new File(context.getApplicationContext().getNoBackupFilesDir(), "autonomy/tools.json"),
+                context.getApplicationContext());
     }
     /** Test seam using the same real file store and laboratory, without a mocked Android service. */
-    AutonomousToolRuntime(File stateFile) {
+    AutonomousToolRuntime(File stateFile) { this(stateFile, null); }
+    private AutonomousToolRuntime(File stateFile, Context appContext) {
         if (stateFile == null) throw new IllegalArgumentException("Archivo ausente.");
+        this.appContext = appContext;
         this.stateFile = stateFile;
         this.inductiveFile = new File(stateFile.getParentFile(), "inductive-skills.json");
         this.proposedSkillFile = new File(stateFile.getParentFile(), "proposed-inductive-skill.json");
@@ -49,10 +53,60 @@ public final class AutonomousToolRuntime {
         return instance;
     }
     public static boolean handles(String input) {
-        return learningCommand(input) != 0 || inductiveCommand(input) != 0
+        return cloudSkillCommand(input) != 0 || learningCommand(input) != 0 || inductiveCommand(input) != 0
                 || proposalCommand(input) != 0 || experimentCommand(input)
                 || AutonomousToolCommand.parse(input) != null;
     }
+    /** Exact owner-channel commands; never inferred from model or cloud text. */
+    private static int cloudSkillCommand(String input) {
+        if (input == null || input.length() > 100) return 0;
+        String value = java.text.Normalizer.normalize(
+                input.toLowerCase(java.util.Locale.ROOT).trim(),
+                java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "").replaceAll("\\s+", " ");
+        if ("estado habilidades pcloud".equals(value)) return 1;
+        if ("restaura habilidades pcloud".equals(value)) return 2;
+        return 0;
+    }
+
+    private File inbox(String name) {
+        return new File(new File(stateFile.getParentFile(), "cloud-inbox"), name);
+    }
+
+    private String cloudSkillStatus() {
+        int staged = (inbox("tools.json").isFile() ? 1 : 0)
+                + (inbox("inductive-skills.json").isFile() ? 1 : 0);
+        return staged == 0 ? "No hay copias de habilidades pendientes de restauración."
+                : "Hay " + staged + " copia(s) de habilidades de pCloud en cuarentena. "
+                + "Para restaurarlas, pausa el laboratorio y di exactamente: restaura habilidades pcloud. "
+                + "Nunca se instalan automáticamente ni sustituyen los catálogos existentes.";
+    }
+
+    /**
+     * Restore only with explicit verified-owner approval while all existing
+     * tool computations are paused. Never downloads or executes cloud content.
+     */
+    synchronized String restoreStagedForVerifiedOwner(boolean authorized) {
+        if (!authorized) return "Restauración denegada: falta verificar al dueño.";
+        if (!paused.get()) return "Primero pausa el laboratorio para restaurar habilidades de pCloud.";
+        int restored = 0;
+        try {
+            if (salve.data.sync.SkillCloudArchive.installIfApproved(stateFile, inbox("tools.json"),
+                    salve.data.sync.SkillCloudArchive.TOOLS, true)) restored++;
+            if (salve.data.sync.SkillCloudArchive.installIfApproved(inductiveFile, inbox("inductive-skills.json"),
+                    salve.data.sync.SkillCloudArchive.INDUCTIVE, true)) restored++;
+            if (restored > 0) {
+                laboratory = null; inductive = null;
+                return "Restauré " + restored + " catálogo(s) simbólicos verificados. "
+                        + "Los catálogos existentes no se sobrescribieron. "
+                        + "El laboratorio sigue pausado: revisa habilidades aprendidas y reanúdalo explícitamente.";
+            }
+            return "No restauré ningún catálogo: no hay copias válidas pendientes, "
+                    + "o ya existen habilidades locales que debo conservar.";
+        } catch (Exception rejected) {
+            return "No pude restaurar todas las copias. Conservo los archivos y el laboratorio pausado.";
+        }
+    }
+
     /** Exact commands from the user channel, not inferred from quoted documents or memory. */
     private static int learningCommand(String input) {
         if (input == null || input.length() > 160) return 0;
@@ -289,6 +343,16 @@ public final class AutonomousToolRuntime {
         if (current != null) current.pause();
     }
     public String respond(String input, BooleanSupplier stopped) {
+        int cloudSkill = cloudSkillCommand(input);
+        if (cloudSkill != 0) {
+            if (appContext == null || !salve.core.identity.IdentityManager.get(appContext).privateAccess())
+                return "Las habilidades de pCloud son privadas: debes verificar tu identidad.";
+            if (cloudSkill == 1) return cloudSkillStatus();
+            if (!salve.data.sync.CloudSyncManager.isEnabled(appContext)
+                    || !salve.data.sync.CloudSyncManager.isPCloudConfigured(appContext))
+                return "Conecta pCloud y habilita la sincronización antes de restaurar sus habilidades.";
+            return restoreStagedForVerifiedOwner(stopped == null || !stopped.getAsBoolean());
+        }
         if (experimentCommand(input)) {
             if (paused.get()) return "Experimento cancelado: laboratorio pausado.";
             long epoch = cancellationEpoch.get();
@@ -320,7 +384,7 @@ public final class AutonomousToolRuntime {
                     || (stopped != null && stopped.getAsBoolean());
             if (cancelled.getAsBoolean()) return "Solicitud cancelada.";
             try {
-                if (inductiveAction == 1) return skills().catalog();
+                if (inductiveAction == 1) return skills().catalog() + "\n" + cloudSkillStatus();
                 String value = input.trim();
                 JsonObject data = AutonomousToolCommand.parseObject(value.substring(value.indexOf(':') + 1).trim());
                 if (inductiveAction == 2) {
@@ -364,7 +428,7 @@ public final class AutonomousToolRuntime {
         try {
             switch (command.action) {
                 case CATALOG: return salve.core.autonomy.ToolRegistry.summary();
-                case STATUS: return lab().describe() + "\n" + help();
+                case STATUS: return lab().describe() + "\n" + cloudSkillStatus() + "\n" + help();
                 case ROLLBACK:
                     if (!AutonomousToolCommand.isFamily(command.payload))
                         return "Indica una familia: revierte herramienta route, knapsack, schedule o dependencies.";
@@ -457,6 +521,7 @@ public final class AutonomousToolRuntime {
                 + "Comandos: estado aprendizaje experimental; activa aprendizaje experimental; desactiva aprendizaje experimental. " 
                 + "Laboratorio inductivo: habilidades aprendidas; aprende habilidad: {nombre, train, holdout}; usa habilidad: {name, input}. "
                 + "Propuestas locales: propón habilidad: ordenar impares sin repetir; aprueba habilidad ID; descarta habilidad ID. "
+                + "Copias: estado habilidades pcloud; primero pausa el laboratorio y luego restaura habilidades pcloud (solo dueño verificado). "
                 + "Experimento controlado: experimento de aprendizaje (reintentos solo en desarrollo y examen final no reutilizado). " 
                 + "Cada ejemplo de train/holdout usa las claves in y out, con listas numéricas.";
     }
