@@ -31,10 +31,11 @@ public final class InductiveSkillLab {
             "filter_odd", "square", "plus_one", "minus_one",
             // Audited data-only aggregations. Appended to preserve old candidate
             // preference order and compatibility with pCloud program archives.
-            "sum", "count", "prefix_sum"));
+            "sum", "count", "prefix_sum", "adjacent_delta"));
     private static final int MAX_ITEMS = 24;
     private static final int MAX_PROGRAM_LENGTH = 3;
-    public static final int MAX_CANDIDATES = 2379; // 13 + 13² + 13³; finite search.
+    public static final int MAX_CANDIDATES = OPS.size() + OPS.size() * OPS.size()
+            + OPS.size() * OPS.size() * OPS.size(); // 14 + 14² + 14³.
     private static final int MAX_SKILLS = 16;
     private static final int MAX_EXAMPLES = 32;
     private static final int MAX_VALUE = 10000;
@@ -139,6 +140,14 @@ public final class InductiveSkillLab {
                     }
                     break;
                 }
+                case "adjacent_delta":
+                    for (int i = 1; i < data.size(); i++) {
+                        long difference = (long) data.get(i) - data.get(i - 1);
+                        if (Math.abs(difference) > MAX_VALUE)
+                            throw new IllegalArgumentException("Diferencia fuera de rango");
+                        next.add((int) difference);
+                    }
+                    break;
                 default:
                     for (int x : data) {
                         long y = x;
