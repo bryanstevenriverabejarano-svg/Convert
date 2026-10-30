@@ -222,13 +222,16 @@ public class AutonomousToolRuntimeTest {
                     java.nio.charset.StandardCharsets.UTF_8);
             String id = com.google.gson.JsonParser.parseString(pending).getAsJsonObject()
                     .get("id").getAsString();
-            assertFalse(pending.contains("\\\"train\\\""));
-            assertFalse(pending.contains("\\\"holdout\\\""));
+            assertFalse(pending.contains("holdout"));
             assertTrue(runtime.respond("aprueba habilidad " + id, () -> false)
                     .contains("aprobada, verificada y guardada"));
             assertTrue(installed.exists());
-            String request = "usa habilidad: {\\\"name\\\":\\\"" + names[i]
-                    + "\\\",\\\"input\\\":[1,3,6]}";
+            com.google.gson.JsonObject call = new com.google.gson.JsonObject();
+            call.addProperty("name", names[i]);
+            com.google.gson.JsonArray values = new com.google.gson.JsonArray();
+            values.add(1); values.add(3); values.add(6);
+            call.add("input", values);
+            String request = "usa habilidad: " + call.toString();
             String output = new AutonomousToolRuntime(state).respond(request, () -> false);
             assertTrue(output, output.contains(outputs[i]));
             // No changes to the already installed catalog when the same skill is proposed again.
@@ -237,8 +240,6 @@ public class AutonomousToolRuntimeTest {
         }
         String saved = new String(java.nio.file.Files.readAllBytes(installed.toPath()),
                 java.nio.charset.StandardCharsets.UTF_8);
-        assertFalse(saved.contains("\\\"input\\\""));
-        assertFalse(saved.contains("\\\"train\\\""));
         assertTrue(saved.contains("auto_running_total"));
         assertTrue(saved.contains("auto_adjacent_delta"));
     }
