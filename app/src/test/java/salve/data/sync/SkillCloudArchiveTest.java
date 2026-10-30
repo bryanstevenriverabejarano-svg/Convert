@@ -76,7 +76,7 @@ public class SkillCloudArchiveTest {
                 "{\"schema\":1,\"skills\":{}}", 556L);
         assertFalse(SkillCloudArchive.stageIfMissing(active, inbox, changed,
                 SkillCloudArchive.unpack(changed, null).remotePath()));
-        assertEquals(INDUCTIVE, Files.readString(active.toPath(), StandardCharsets.UTF_8));
+        assertEquals(INDUCTIVE, new String(Files.readAllBytes(active.toPath()), StandardCharsets.UTF_8));
     }
 
     @Test public void corruptStagedContentNeverActivatesAndMissingLocalIsNotOverwritten() throws Exception {
