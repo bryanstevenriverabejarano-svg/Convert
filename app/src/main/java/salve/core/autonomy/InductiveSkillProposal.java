@@ -13,7 +13,8 @@ import java.util.function.BooleanSupplier;
  * benchmark pipeline. No LLM-selected permissions or model-generated labels.
  */
 public final class InductiveSkillProposal {
-    public enum Kind { SORT_UNIQUE_ODDS, SORT_UNIQUE_EVENS }
+    public enum Kind { SORT_UNIQUE_ODDS, SORT_UNIQUE_EVENS,
+        RUNNING_TOTAL, ADJACENT_DELTA }
     private static final int[][] TRAIN = {
             {7,3,7,4,1,3,4}, {-1,2,-3,7,-1,7,2}, {9,8,3,9,2,-5,3,8},
             {7,7,-7,4,0,1}, {6,4,3,-9,3,0,1}, {-11,2,-11,5,5,3,3}
@@ -38,22 +39,56 @@ public final class InductiveSkillProposal {
                 || folded.equals("ordena pares sin repetir")
                 || folded.equals("ordena los numeros pares sin repetir"))
             return Kind.SORT_UNIQUE_EVENS;
+        if (folded.equals("sumas acumuladas")
+                || folded.equals("suma acumulada")
+                || folded.equals("calcular sumas acumuladas"))
+            return Kind.RUNNING_TOTAL;
+        if (folded.equals("diferencias consecutivas")
+                || folded.equals("calcular diferencias consecutivas")
+                || folded.equals("diferencias entre valores consecutivos"))
+            return Kind.ADJACENT_DELTA;
         return null;
     }
     public static String skillName(Kind kind) {
-        return kind == Kind.SORT_UNIQUE_ODDS ? "auto_odd_sorted" : "auto_even_sorted";
+        if (kind == null) throw new IllegalArgumentException("Necesidad ausente");
+        switch (kind) {
+            case SORT_UNIQUE_ODDS: return "auto_odd_sorted";
+            case SORT_UNIQUE_EVENS: return "auto_even_sorted";
+            case RUNNING_TOTAL: return "auto_running_total";
+            case ADJACENT_DELTA: return "auto_adjacent_delta";
+            default: throw new IllegalArgumentException("Habilidad no admitida");
+        }
     }
     private static JsonArray vector(int[] data) {
         JsonArray array = new JsonArray();
         for (int value : data) array.add(value);
         return array;
     }
+    /** Independently written reference transformations; never call the DSL to label cases. */
     private static JsonArray expected(Kind kind, int[] data) {
+        JsonArray result = new JsonArray();
+        if (kind == Kind.RUNNING_TOTAL) {
+            long sum = 0;
+            for (int value : data) {
+                sum += value;
+                if (Math.abs(sum) > 10000) throw new IllegalArgumentException("Valor de referencia fuera de rango");
+                result.add((int) sum);
+            }
+            return result;
+        }
+        if (kind == Kind.ADJACENT_DELTA) {
+            for (int i = 1; i < data.length; i++) {
+                long difference = (long) data[i] - data[i - 1];
+                if (Math.abs(difference) > 10000)
+                    throw new IllegalArgumentException("Valor de referencia fuera de rango");
+                result.add((int) difference);
+            }
+            return result;
+        }
         TreeSet<Integer> sorted = new TreeSet<>();
         for (int value : data) {
             if ((value % 2 == 0) == (kind == Kind.SORT_UNIQUE_EVENS)) sorted.add(value);
         }
-        JsonArray result = new JsonArray();
         for (int value : sorted) result.add(value);
         return result;
     }
@@ -96,7 +131,8 @@ public final class InductiveSkillProposal {
             throw new IllegalArgumentException("No pasó el examen reservado; no hay propuesta.");
         JsonArray program = result.getAsJsonArray("program");
         int correct = 0, baseline = 0;
-        Random novel = new Random(kind == Kind.SORT_UNIQUE_ODDS ? 0x51A1E7 : 0x51A1E8);
+        // Stable, distinct seeds for four independent test families.
+        Random novel = new Random(0x51A1E7L + kind.ordinal());
         for (int i = 0; i < BENCHMARK_CASES; i++) {
             if (cancel.getAsBoolean()) throw new IllegalStateException("Aprendizaje cancelado");
             int[] numbers = new int[5 + novel.nextInt(14)];
