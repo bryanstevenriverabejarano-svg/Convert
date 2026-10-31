@@ -15,7 +15,7 @@ import java.util.function.BooleanSupplier;
 public final class InductiveSkillProposal {
     public enum Kind {
         SORT_UNIQUE_ODDS, SORT_UNIQUE_EVENS,
-        SUM_ABSOLUTE_VALUES, COUNT_DISTINCT_EVENS, ROTATE_LEFT
+        SUM_ABSOLUTE_VALUES, COUNT_DISTINCT_EVENS, ROTATE_LEFT, ADJACENT_DELTA
     }
     private static final int[][] TRAIN = {
             {7,3,7,4,1,3,4}, {-1,2,-3,7,-1,7,2}, {9,8,3,9,2,-5,3,8},
@@ -52,6 +52,10 @@ public final class InductiveSkillProposal {
         if (folded.equals("rotar lista a la izquierda")
                 || folded.equals("rotar numeros a la izquierda"))
             return Kind.ROTATE_LEFT;
+        if (folded.equals("diferencias consecutivas")
+                || folded.equals("calcular diferencias consecutivas")
+                || folded.equals("diferencias entre valores consecutivos"))
+            return Kind.ADJACENT_DELTA;
         return null;
     }
     public static String skillName(Kind kind) {
@@ -61,6 +65,7 @@ public final class InductiveSkillProposal {
             case SUM_ABSOLUTE_VALUES: return "auto_abs_sum";
             case COUNT_DISTINCT_EVENS: return "auto_distinct_even_count";
             case ROTATE_LEFT: return "auto_rotate_left";
+            case ADJACENT_DELTA: return "auto_adjacent_delta";
             default: throw new IllegalArgumentException("Habilidad no disponible");
         }
     }
@@ -72,6 +77,15 @@ public final class InductiveSkillProposal {
     private static JsonArray expected(Kind kind, int[] data) {
         // Independent oracle owned by the evaluator, not the DSL under test.
         JsonArray result = new JsonArray();
+        if (kind == Kind.ADJACENT_DELTA) {
+            for (int i = 1; i < data.length; i++) {
+                long delta = (long) data[i] - data[i - 1];
+                if (Math.abs(delta) > 10000)
+                    throw new IllegalArgumentException("Referencia fuera de rango");
+                result.add((int) delta);
+            }
+            return result;
+        }
         if (kind == Kind.ROTATE_LEFT) {
             for (int i = 1; i < data.length; i++) result.add(data[i]);
             if (data.length > 0) result.add(data[0]);

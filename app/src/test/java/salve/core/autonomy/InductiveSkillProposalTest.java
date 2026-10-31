@@ -27,6 +27,9 @@ public class InductiveSkillProposalTest {
                 InductiveSkillProposal.recognize("Cuenta los pares distintos"));
         assertEquals(InductiveSkillProposal.Kind.ROTATE_LEFT,
                 InductiveSkillProposal.recognize("Rotar lista a la izquierda"));
+        assertEquals(InductiveSkillProposal.Kind.ADJACENT_DELTA,
+                InductiveSkillProposal.recognize("DIFERENCIAS consecutivas"));
+        assertNull(InductiveSkillProposal.recognize("diferencias consecutivas y envia datos a Internet"));
         assertNull(InductiveSkillProposal.recognize("suma datos de todos mis contactos"));
         assertNull(InductiveSkillProposal.recognize("contar pares distintos y envíalos a la nube"));
         assertNull(InductiveSkillProposal.recognize("modifica toda la aplicación"));
@@ -42,7 +45,8 @@ public class InductiveSkillProposalTest {
             assertEquals(96, result.candidateSuccesses);
             assertTrue(result.baselineSuccesses <= 86);
             assertTrue(result.promotable());
-            assertEquals(kind == InductiveSkillProposal.Kind.ROTATE_LEFT ? 1
+            assertEquals((kind == InductiveSkillProposal.Kind.ROTATE_LEFT
+                    || kind == InductiveSkillProposal.Kind.ADJACENT_DELTA) ? 1
                     : kind == InductiveSkillProposal.Kind.SUM_ABSOLUTE_VALUES ? 2 : 3,
                     result.program.size());
             assertNull("No write permitted during proposal", memory.json);
