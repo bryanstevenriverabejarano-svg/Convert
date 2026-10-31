@@ -35,7 +35,7 @@ public class InductiveAdjacentDeltaTest {
         InductiveSkillProposal.Kind kind = InductiveSkillProposal.Kind.ADJACENT_DELTA;
         InductiveSkillProposal.Evaluation result = InductiveSkillProposal.evaluate(lab, kind, () -> false);
         assertEquals(InductiveSkillLab.MAX_CANDIDATES, result.candidatesChecked);
-        assertEquals(2954, result.candidatesChecked);
+        assertEquals(3615, result.candidatesChecked);
         assertEquals("[\"adjacent_delta\"]", result.program.toString());
         assertTrue(result.promotable());
         assertEquals(96, result.candidateSuccesses);
