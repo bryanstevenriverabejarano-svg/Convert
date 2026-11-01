@@ -36,7 +36,7 @@ public class VoiceFragmentContinuityTest {
         VoiceConversationLoop loop = new VoiceConversationLoop(true);
         long token = loop.start(0).token;
         assertEquals(Action.CONTINUE, loop.recognized(token, "Quiero saber cómo", 100).action);
-        token = loop.tick(850).token;
+        token = loop.tick(450).token;
         VoiceConversationLoop.Step done = loop.recognitionFailed(token, RecognitionFailure.SILENCE, 1_000);
         assertEquals(Action.SUBMIT, done.action);
         assertEquals("Quiero saber cómo", done.text);
@@ -67,7 +67,7 @@ public class VoiceFragmentContinuityTest {
         assertEquals(Action.CONTINUE, loop.recognized(token, "Me gustaría, ", 100).action);
         token = loop.tick(450).token;
         assertEquals(Action.CONTINUE, loop.recognized(token, "pero", 500).action);
-        token = loop.tick(450).token;
+        token = loop.tick(850).token;
         VoiceConversationLoop.Step done = loop.recognized(token, "con", 900);
         assertEquals(Action.SUBMIT, done.action);
         assertEquals("Me gustaría, pero con", done.text);
