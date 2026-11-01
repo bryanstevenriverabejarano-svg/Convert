@@ -88,6 +88,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     /** Primera petición dicha junto al nombre («Salve, ¿qué hora es?»): se envía sin volver a escuchar. */
     private String initialRequest;
     private static volatile int showing;
+    /** Último estado enviado a la notificación (para no repetirlo en cada refresco). */
+    private String notified;
 
     /** ¿Hay alguna conversación por voz abierta? (La palabra de activación cede el micrófono mientras tanto.) */
     public static boolean isAnyShowing() { return showing > 0; }
@@ -239,13 +241,30 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         } else {
             controls.setKeepScreenOn(true);
             listenToHeadsetButton();
+            // Sigue contigo si sales de la app o apagas la pantalla, con notificación y «Terminar».
+            salve.services.VoiceForegroundService.start(activity, "Te escucho…", this::endFromNotification);
             // Conversation brings her out of the sleeping pose so speech gestures stay visible.
             salve.avatar.AvatarStore.get(activity).change(salve.avatar.AvatarState::wake);
             apply(first);
         }
     }
 
-    /** Called by End, Back, onPause and onDestroy. Never leaves a hidden microphone session. */
+    /** «Terminar» en la notificación: igual que el botón Fin de la pantalla. */
+    private void endFromNotification() {
+        if (dismissed) { salve.services.VoiceForegroundService.stop(activity); return; }
+        apply(loop.stop(VoiceConversationLoop.StopReason.USER));
+        dismiss();
+    }
+
+    /**
+     * La conversación puede seguir con la app en segundo plano: está abierta, el micrófono sigue en
+     * uso y el servicio con notificación visible está activo. Si no, al salir se cierra como siempre.
+     */
+    public boolean runsInBackground() {
+        return started && !dismissed && loop.isActive() && salve.services.VoiceForegroundService.isRunning();
+    }
+
+    /** Called by End, Back, onPause (unless it continues in background) and onDestroy. Never a hidden microphone. */
     public void dismiss() {
         if (dismissed) return;
         apply(loop.stop(VoiceConversationLoop.StopReason.LIFECYCLE));
@@ -567,6 +586,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             headsetButton = null;
         }
         controls.setKeepScreenOn(false);
+        salve.services.VoiceForegroundService.stop(activity);
+        notified = null;
         destroyRecognizer();
         if (!resourcesReleased) {
             resourcesReleased = true;
@@ -623,6 +644,11 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                         ? recognitionErrorText + " He cerrado el micrófono." : stopMessage(loop.stopReason()));
                 break;
             default: break;
+        }
+        String state = status.getText().toString();
+        if (loop.isActive() && !state.equals(notified)) {
+            notified = state;
+            salve.services.VoiceForegroundService.update(activity, state);
         }
         stage.setVoiceDetails(status.getText() + "\n\n" + backend
                 + "\n\nLos fragmentos de una frase incompleta se mantienen temporalmente en memoria"
