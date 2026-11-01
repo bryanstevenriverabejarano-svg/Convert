@@ -41,6 +41,8 @@ final class SalveStageController {
     private final NestedScrollView scroll;
     private final BottomSheetBehavior<View> chatBehavior, optionsBehavior;
     private final ArrayList<String> messages = new ArrayList<>();
+    private final java.util.Map<Long, java.io.File> pdfAttachments = new java.util.HashMap<>();
+    private final java.util.Map<Long, View> pdfCards = new java.util.HashMap<>();
     /** Hora de cada mensaje (0 = desconocida, p. ej. restaurado de una versión anterior). */
     private final ArrayList<Long> times = new ArrayList<>();
     private String active = "";
@@ -594,6 +596,14 @@ final class SalveStageController {
                 desired.add(view);
             }
             flushText(text, desired, textIndex, fromSalve);
+            if (!isDraft && pdfAttachments.containsKey(serial)) {
+                View card = pdfCards.get(serial);
+                if (card == null) {
+                    card = buildPdfCard(pdfAttachments.get(serial));
+                    pdfCards.put(serial, card);
+                }
+                desired.add(card);
+            }
             // La hora va bajo el último bloque de texto del mensaje (como en cualquier app de mensajería).
             if (lastRowOfMessage != null) {
                 long when = isDraft ? 0L : m < times.size() ? times.get(m) : 0L;
@@ -609,6 +619,112 @@ final class SalveStageController {
             View v = desired.get(i);
             if (v.getParent() instanceof ViewGroup) ((ViewGroup) v.getParent()).removeView(v);
             thread.addView(v);
+        }
+    }
+
+    /** Private PDF attachment, shown in chat without writing to Downloads. */
+    void showPdfAttachment(java.io.File pdf) {
+        if (pdf == null || !pdf.isFile()) return;
+        appendMessage(true, "Informe VoiceLab listo. Puedes previsualizarlo y decidir si quieres guardarlo.");
+        pdfAttachments.put(serialCounter, pdf);
+        renderMessages();
+        showChat(false);
+        scrollToEnd();
+    }
+
+    private View buildPdfCard(java.io.File pdf) {
+        LinearLayout card = new LinearLayout(activity);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16), dp(12), dp(16), dp(12));
+        card.setBackgroundResource(R.drawable.salve_chat_bubble_salve);
+        LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        layout.setMargins(dp(12), dp(4), dp(24), dp(8));
+        card.setLayoutParams(layout);
+        TextView heading = new TextView(activity);
+        heading.setText("📄 Informe VoiceLab.pdf");
+        heading.setTextColor(0xFFFFFFFF);
+        heading.setTextSize(16);
+        card.addView(heading);
+        TextView preview = new TextView(activity);
+        preview.setText("Previsualizar PDF");
+        preview.setTextColor(0xFF83DFFF);
+        preview.setPadding(0, dp(14), 0, dp(10));
+        preview.setOnClickListener(v -> previewPdf(pdf));
+        card.addView(preview);
+        TextView save = new TextView(activity);
+        save.setText("Descargar");
+        save.setTextColor(0xFF83DFFF);
+        save.setPadding(0, dp(8), 0, dp(8));
+        save.setOnClickListener(v -> savePdf(pdf));
+        card.addView(save);
+        return card;
+    }
+
+    private void previewPdf(java.io.File pdf) {
+        try {
+            android.os.ParcelFileDescriptor fd = android.os.ParcelFileDescriptor.open(
+                    pdf, android.os.ParcelFileDescriptor.MODE_READ_ONLY);
+            android.graphics.pdf.PdfRenderer renderer = new android.graphics.pdf.PdfRenderer(fd);
+            final int[] index = {0};
+            android.widget.ImageView image = new android.widget.ImageView(activity);
+            image.setAdjustViewBounds(true);
+            image.setBackgroundColor(0xFFFFFFFF);
+            Runnable render = () -> {
+                try (android.graphics.pdf.PdfRenderer.Page page = renderer.openPage(index[0])) {
+                    android.graphics.Bitmap bitmap = android.graphics.Bitmap.createBitmap(
+                            page.getWidth() * 2, page.getHeight() * 2, android.graphics.Bitmap.Config.ARGB_8888);
+                    bitmap.eraseColor(android.graphics.Color.WHITE);
+                    page.render(bitmap, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+                    image.setImageBitmap(bitmap);
+                }
+            };
+            render.run();
+            android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(activity)
+                    .setTitle("Informe VoiceLab")
+                    .setView(image)
+                    .setNegativeButton("Cerrar", (d, w) -> {})
+                    .setNeutralButton("Guardar", (d, w) -> savePdf(pdf))
+                    .setPositiveButton("Siguiente", null)
+                    .create();
+            dialog.setOnShowListener(d -> dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        index[0] = (index[0] + 1) % renderer.getPageCount();
+                        render.run();
+                    }));
+            dialog.setOnDismissListener(d -> {
+                try { renderer.close(); } catch (Exception ignored) {}
+                try { fd.close(); } catch (Exception ignored) {}
+            });
+            dialog.show();
+        } catch (Exception e) {
+            android.widget.Toast.makeText(activity, "No se pudo abrir la vista previa", android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void savePdf(java.io.File pdf) {
+        if (android.os.Build.VERSION.SDK_INT < 29) return;
+        android.net.Uri uri = null;
+        try {
+            android.content.ContentValues values = new android.content.ContentValues();
+            values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME,
+                    "salve-voice-lab-" + System.currentTimeMillis() + ".pdf");
+            values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
+            values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,
+                    android.os.Environment.DIRECTORY_DOWNLOADS + "/Salve");
+            uri = activity.getContentResolver().insert(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+            if (uri == null) throw new java.io.IOException("No destination");
+            try (java.io.InputStream in = new java.io.FileInputStream(pdf);
+                 java.io.OutputStream out = activity.getContentResolver().openOutputStream(uri)) {
+                if (out == null) throw new java.io.IOException("No output");
+                byte[] buffer = new byte[8192]; int n;
+                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+            }
+            android.widget.Toast.makeText(activity, "Guardado en Descargas/Salve", android.widget.Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            if (uri != null) activity.getContentResolver().delete(uri, null, null);
+            android.widget.Toast.makeText(activity, "No se pudo guardar el PDF", android.widget.Toast.LENGTH_LONG).show();
         }
     }
 
