@@ -29,7 +29,7 @@ import salve.core.cognitive.HipocampoSemantico;
 import salve.core.cognitive.ReasoningEngine;
 import salve.core.conversation.ConversationAnalysis;
 import salve.core.conversation.ConversationRequestAnalyzer;
-import salve.core.conversation.TurnObjective;
+import salve.core.cognition.TurnObjective;
 import salve.core.conversation.ConversationSession;
 import salve.core.conversation.ReasoningPlan;
 import salve.core.conversation.ReasoningPlanner;
