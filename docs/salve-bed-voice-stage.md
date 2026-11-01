@@ -81,3 +81,60 @@ La prueba manual de aceptación debe incluir:
 5. Interrumpir durante TTS, salir de la app, denegar micrófono y cambiar
    entre altavoz y auriculares: conservar los controles previos.
 6. Veinte turnos enlazados; medir latencias y errores sin registrar audio.
+
+
+## Interrumpir hablando mientras Salve responde — fase experimental
+
+Se conserva la conversación de voz existente, sin otro reconocedor en paralelo durante
+el diálogo normal. Al recibir **onSpeechStarted** del TTS, `LiveVoiceSession`
+activa `VoiceBargeInMonitor` (solo si el teléfono ofrece AEC):
+`AudioRecord` con fuente `VOICE_COMMUNICATION`, eco cancelado con
+`AcousticEchoCanceler` y reducción de ruido opcional de
+`NoiseSuppressor`. No se incorporan bibliotecas de terceros ni servicios
+permanentes, y los permisos siguen siendo los existentes. Si Android no
+admite o no logra activar AEC, la detección automática **no se inicia**:
+permanece disponible el botón físico/en pantalla de **Interrumpir**.
+
+Una puerta local (`VoiceBargeInDetector`) mide energía, cruces por cero
+y continuidad de frames PCM. Exige una señal compatible con habla sostenida
+después de un tiempo de calibración, no un pico breve. **Esto no es un
+reconocedor de palabras ni un semantic VAD** y puede confundirse con la voz
+que emite el propio TTS, especialmente con altavoz, volumen alto o AEC poco
+eficaz. Se necesita validación real por dispositivo/ruta de salida.
+
+Si supera el umbral, el monitor **no envía texto ni órdenes al LLM**.
+Notifica al hilo principal con el token del turno; `LiveVoiceSession`
+comprueba que sigue siendo suyo y está en `SPEAKING`, cierra el monitor,
+ejecuta el mismo camino de interrupción que el botón, cancela la respuesta
+pendiente y, tras la pausa acústica existente, vuelve a abrir el
+`SpeechRecognizer` habitual para escuchar la pregunta. El monitor también
+se cierra al finalizar TTS, abandonar la actividad, perder audio, cancelar
+o reabrir la escucha. No se guarda, transmite ni conserva audio desde
+`VoiceBargeInMonitor`.
+
+### Límites y aceptación
+
+**Barge-in no equivale a conversación dúplex integral.** Con esta primera
+versión Salve puede detectar una interrupción por actividad de voz mientras
+habla, pero no transcribe simultáneamente las palabras del usuario; podría
+perderse el comienzo de la frase durante el paso del TTS al reconocedor
+de Android. La calidad de AEC varía por fabricante y ruta de salida.
+
+Antes de habilitar esta característica como estable, comprobar **en el S24 Ultra**:
+
+1. Altavoz con TTS largo a volumen bajo/medio/alto: sin interrupciones
+   falsas al escuchar únicamente a Salve.
+2. Con Salve hablando, decir «Espera, Salve» y repetir la nueva pregunta:
+   se cancela la voz anterior y se escucha un turno nuevo.
+3. Auriculares cableados, Bluetooth y altavoz por separado. Un cambio
+   de ruta puede exigir nueva evaluación de AEC.
+4. Cortar a Salve diez veces seguidas y cambiar de app; no dejar dos
+   micrófonos abiertos ni respuestas antiguas ejecutándose.
+5. Sin AEC, denegar micrófono y recibir una llamada: mantener el botón y
+   cerrar la sesión sin grabación oculta.
+6. Verificar latencia de interrupción y tasa de falsos positivos/negativos
+   sin almacenar el audio del usuario.
+
+La unidad `VoiceBargeInDetectorTest` solo comprueba la lógica
+determinista de señal. Un CI verde **no equivale a validación acústica**
+con el micrófono/altavoz reales.
