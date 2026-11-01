@@ -73,4 +73,46 @@ public class IntentRecognizerTest {
         }
     }
 
+    @Test
+    public void describingSleepOrMissionsNeverStartsBackgroundWork() {
+        for (String discussion : new String[]{
+                "¿Cómo funciona el modo sueño?",
+                "A veces quiero dormir mejor",
+                "Explícame el ciclo de sueño de Salve",
+                "En la historia alguien dice duerme y reflexiona",
+                "¿Qué significa nueva misión?",
+                "Creo que una nueva misión puede ser útil",
+                "¿Puedes explicarme cómo se agrega una misión?",
+                "No quiero activar el modo sueño",
+                "Mi duda es si debo iniciar un ciclo de sueño"
+        }) {
+            assertEquals("Una conversación no autoriza efectos: " + discussion,
+                    IntentType.NINGUNO, recognizer.recognize(discussion).type);
+        }
+    }
+
+    @Test
+    public void explicitSleepCommandsArePreserved() {
+        for (String request : new String[]{
+                "Duerme", "Duerme y reflexiona", "Salve, duerme ahora",
+                "Inicia el ciclo de sueño", "Activa el modo sueño",
+                "Salve, ponte a dormir", "Modo sueño"
+        }) {
+            assertEquals(request, IntentType.CICLO_SUENO, recognizer.recognize(request).type);
+        }
+    }
+
+    @Test
+    public void onlyExplicitMissionCommandStoresAnActualMission() {
+        for (String[] request : new String[][]{
+                {"Nueva misión: desarrollar el cuento", "desarrollar el cuento"},
+                {"Salve, agrega misión analizar la memoria", "analizar la memoria"},
+                {"Añade misión preparar una demo", "preparar una demo"}
+        }) {
+            IntentRecognizer.Intent result = recognizer.recognize(request[0]);
+            assertEquals(request[0], IntentType.AGREGAR_MISION, result.type);
+            assertEquals(request[0], request[1], result.slots.get("mision"));
+        }
+    }
+
 }
