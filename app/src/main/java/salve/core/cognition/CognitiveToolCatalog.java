@@ -76,6 +76,13 @@ public final class CognitiveToolCatalog {
             add(tools, salve.core.schema.Abstraction.TOOL, salve.core.schema.Abstraction.toolDescription(), dispatch, "concepto");
         if (verifiedCreator && salve.core.mind.SelfCode.offered(safeInput))
             add(tools, salve.core.mind.SelfCode.TOOL, salve.core.mind.SelfCode.description(), dispatch, "pregunta");
+        // Leer su código real, línea a línea (solo lectura, sin red, la versión instalada).
+        if (verifiedCreator && salve.core.mind.SelfCode.offered(safeInput))
+            add(tools, salve.core.mind.SelfSource.TOOL, salve.core.mind.SelfSource.description(), dispatch, "archivo", "desde");
+        // Guardar un PDF solo cuando Bryan lo pide en este turno; escribe en su propia biblioteca local.
+        if (verifiedCreator && salve.core.reports.SelfReport.requested(safeInput))
+            add(tools, salve.core.reports.SelfReport.TOOL, salve.core.reports.SelfReport.description(),
+                    dispatch, "titulo", "contenido");
         if (verifiedCreator && salve.core.mind.SelfFunctions.offered(safeInput))
             add(tools, salve.core.mind.SelfFunctions.TOOL, salve.core.mind.SelfFunctions.description(), dispatch, "accion");
 

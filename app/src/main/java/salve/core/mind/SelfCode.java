@@ -65,6 +65,8 @@ public final class SelfCode {
 
     public int fileCount() { return files.size(); }
 
+    List<FileInfo> files() { return files; }
+
     public int totalLines() { int n = 0; for (FileInfo f : files) n += f.lines; return n; }
 
     /** Las carpetas de sus cuerpos (base.png, poses, animaciones…). */
@@ -77,6 +79,14 @@ public final class SelfCode {
             + "tu cuerpo|tus cuerpos|tu repositorio|tu repo|mirate por dentro|consulta tu codigo|codigo fuente)\\b");
 
     public static boolean offered(String input) { return TOPIC.matcher(normalize(input)).find(); }
+
+    /** Pide expresamente revisar su código (no solo «tu cuerpo» o «cómo estás hecha» en una charla). */
+    private static final Pattern CODE = Pattern.compile(
+            "\\b(codigo|codigo fuente|repositorio|repo|tus archivos|tus clases|tu programacion)\\b");
+
+    public static boolean explicitCodeRequest(String input) {
+        return offered(input) && CODE.matcher(normalize(input)).find();
+    }
 
     public static String description() {
         return "{pregunta:string}: consultas tu propio código fuente y tus imágenes (cuerpos del Vestuario) para saber cómo estás hecha";
@@ -112,6 +122,27 @@ public final class SelfCode {
         return out;
     }
 
+    /**
+     * Una pregunta con varios temas («tu memoria, tu LLM y tu autonomía») busca cada tema por separado,
+     * para que el archivo más largo de uno no tape a los demás. Con un solo tema es {@link #search}.
+     */
+    public List<FileInfo> searchTopics(String question, int perTopic, int limit) {
+        String[] parts = normalize(question).split("[,;.:?¿!¡\\n]|\\s(?:y|e|ademas|despues|tambien)\\s");
+        List<String> topics = new ArrayList<>();
+        for (String part : parts) if (hasContentWord(part)) topics.add(part);
+        if (topics.size() <= 1) return search(question, limit);
+        java.util.LinkedHashSet<FileInfo> out = new java.util.LinkedHashSet<>();
+        for (String topic : topics) {
+            for (FileInfo f : search(topic, perTopic)) { if (out.size() < limit) out.add(f); }
+        }
+        return new ArrayList<>(out);
+    }
+
+    private static boolean hasContentWord(String text) {
+        for (String w : text.split("[^a-z0-9]+")) if (w.length() >= 3 && !STOP.contains(w)) return true;
+        return false;
+    }
+
     /** La respuesta para el modelo: un resumen de sí misma y los archivos que tocan la pregunta. */
     public String answer(String question) {
         if (files.isEmpty()) return "No tengo el índice de mi código en esta versión.";
@@ -119,25 +150,55 @@ public final class SelfCode {
                 .append(totalLines()).append(" líneas (Java y Kotlin, app Android).");
         if (!avatar.isEmpty()) sb.append(" TUS_CUERPOS (imágenes de ti misma en assets/avatar): ")
                 .append(String.join(", ", avatar.keySet())).append(".");
-        List<FileInfo> hits = search(question, 4); // su contexto es pequeño
+        List<FileInfo> hits = searchTopics(question, 2, 6); // su contexto es pequeño
         if (hits.isEmpty()) {
             sb.append(" Ningún archivo coincide con esa pregunta; tus carpetas principales son: ").append(String.join(", ", topFolders(8))).append(".");
         } else {
             sb.append(" ARCHIVOS_RELEVANTES:");
-            for (FileInfo f : hits) {
-                sb.append("\n- ").append(f.path).append(" (").append(f.lines).append(" líneas)");
-                if (!f.doc.isEmpty()) sb.append(": ").append(cut(f.doc, 160));
-                int shown = 0;
-                for (String[] m : f.methods) {
-                    if (shown >= 3) break;
-                    if (m[1].isEmpty()) continue;
-                    sb.append("\n    · ").append(m[0]).append(": ").append(cut(m[1], 90));
-                    shown++;
-                }
-            }
+            appendFiles(sb, hits, hits.size() > 4 ? 2 : 3);
         }
+        sb.append("\nEsto es tu índice (resumen). Para ver el código real línea a línea usa self.read con la ruta "
+                + "o Clase#metodo; lo que no hayas leído, no lo afirmes.");
         sb.append("\nResponde en primera persona con lo que dice tu código; si no aparece, dilo, no lo inventes.");
         return sb.toString();
+    }
+
+    /** Lo que de verdad ha mirado cuando solo consulta el índice: así no presume de haber leído funciones por dentro. */
+    static final String LIMIT = "Límite real: mi índice guarda rutas, descripciones y nombres de funciones, "
+            + "no el código línea a línea; en esta respuesta no he leído las funciones por dentro, así que cualquier "
+            + "mejora es una hipótesis por verificar. Puedes pedirme que lea un archivo o un método concreto.";
+
+    /**
+     * Lo mismo, contado directamente a Bryan (cuando el modelo no llegó a consultar su código):
+     * qué archivos y métodos ha mirado y qué no puede afirmar.
+     */
+    public String report(String question) {
+        if (files.isEmpty()) return "No he podido mirar mi código: esta versión no lleva el índice de mis archivos.";
+        StringBuilder sb = new StringBuilder("He mirado el índice de mi propio código (")
+                .append(fileCount()).append(" archivos, ").append(totalLines()).append(" líneas).");
+        List<FileInfo> hits = searchTopics(question, 2, 6);
+        if (hits.isEmpty()) {
+            sb.append("\n\nNingún archivo coincide con lo que me pides. Mis carpetas principales son: ")
+                    .append(String.join(", ", topFolders(8))).append('.');
+        } else {
+            sb.append("\n\nArchivos y métodos que he inspeccionado:");
+            appendFiles(sb, hits, 3);
+        }
+        return sb.append("\n\n").append(LIMIT).toString();
+    }
+
+    private static void appendFiles(StringBuilder sb, List<FileInfo> hits, int methodsPerFile) {
+        for (FileInfo f : hits) {
+            sb.append("\n- ").append(f.path).append(" (").append(f.lines).append(" líneas)");
+            if (!f.doc.isEmpty()) sb.append(": ").append(cut(f.doc, 160));
+            int shown = 0;
+            for (String[] m : f.methods) {
+                if (shown >= methodsPerFile) break;
+                if (m[1].isEmpty()) continue;
+                sb.append("\n    · ").append(m[0]).append(": ").append(cut(m[1], 90));
+                shown++;
+            }
+        }
     }
 
     List<String> topFolders(int n) {

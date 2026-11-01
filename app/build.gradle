@@ -72,6 +72,15 @@ def generateSelfCodeIndex = tasks.register('generateSelfCodeIndex') {
         def out = selfCodeDir.get().file('self/codigo.json').asFile
         out.parentFile.mkdirs()
         out.setText(groovy.json.JsonOutput.toJson([version: 1, files: files, avatar: bodies]), 'UTF-8')
+        // Y su código completo, tal cual, para leerlo línea a línea (self.read). «.txt» para que el
+        // empaquetado lo trate como texto normal; ~4 MB sin comprimir, ~1 MB dentro del APK.
+        def srcOut = selfCodeDir.get().dir('self/src').asFile
+        srcOut.deleteDir()
+        sources.files.each { f ->
+            def copy = new File(srcOut, root.relativize(f.toPath()).toString().replace('\\', '/') + '.txt')
+            copy.parentFile.mkdirs()
+            copy.setText(f.getText('UTF-8'), 'UTF-8')
+        }
     }
 }
 tasks.named('preBuild').configure { dependsOn(generateSelfCodeIndex) }

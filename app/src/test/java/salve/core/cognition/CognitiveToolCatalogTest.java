@@ -131,4 +131,26 @@ public class CognitiveToolCatalogTest {
         assertTrue(CognitivePrompt.limitTools(tools).size() <= tools.size());
         assertEquals(0, calls.get());
     }
+
+    /** Regresión 2026-11-01: «memoria» y «busca» subían otras herramientas y el recorte dejaba fuera self.code. */
+    @Test public void selfInspectionSurvivesTheCatalogLimitForBryan() {
+        String bryan = salve.core.reports.SelfReportTest.BRYAN;
+        for (int budget : new int[] {3000, 4000, 6000, 10500}) {
+            Map<String, CognitiveTurn.Tool> offered = CognitivePrompt.limitTools(CognitivePrompt.prioritize(
+                    CognitiveToolCatalog.build(bryan, false, true, false, NO_OP), bryan), budget);
+            assertTrue("self.code con presupuesto " + budget, offered.containsKey(salve.core.mind.SelfCode.TOOL));
+            assertTrue("report.save con presupuesto " + budget, offered.containsKey(salve.core.reports.SelfReport.TOOL));
+        }
+        for (int budget : new int[] {6000, 10500}) {
+            assertTrue("self.read con presupuesto " + budget, CognitivePrompt.limitTools(CognitivePrompt.prioritize(
+                    CognitiveToolCatalog.build(bryan, false, true, false, NO_OP), bryan), budget)
+                    .containsKey(salve.core.mind.SelfSource.TOOL));
+        }
+        Map<String, CognitiveTurn.Tool> guest = CognitiveToolCatalog.build(bryan, false, false, false, NO_OP);
+        assertFalse(guest.containsKey(salve.core.mind.SelfSource.TOOL));
+        assertFalse(guest.containsKey(salve.core.mind.SelfCode.TOOL));
+        assertFalse(guest.containsKey(salve.core.reports.SelfReport.TOOL));
+        assertFalse(CognitiveToolCatalog.build("hola Salve", false, true, false, NO_OP)
+                .containsKey(salve.core.reports.SelfReport.TOOL));
+    }
 }
