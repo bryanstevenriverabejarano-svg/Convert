@@ -144,7 +144,13 @@ public final class SelfCode {
     }
 
     /** La respuesta para el modelo: un resumen de sí misma y los archivos que tocan la pregunta. */
-    public String answer(String question) {
+    public String answer(String question) { return answer(question, null); }
+
+    /**
+     * Igual, añadiendo lo que ya aprendió de cada archivo en sus revisiones nocturnas (su memoria de su
+     * código). {@code notes}: ruta → su nota, o null si aún no lo revisó.
+     */
+    public String answer(String question, java.util.function.Function<String, String> notes) {
         if (files.isEmpty()) return "No tengo el índice de mi código en esta versión.";
         StringBuilder sb = new StringBuilder("TU_CODIGO: ").append(fileCount()).append(" archivos, ")
                 .append(totalLines()).append(" líneas (Java y Kotlin, app Android).");
@@ -156,6 +162,15 @@ public final class SelfCode {
         } else {
             sb.append(" ARCHIVOS_RELEVANTES:");
             appendFiles(sb, hits, hits.size() > 4 ? 2 : 3);
+            if (notes != null) {
+                StringBuilder learned = new StringBuilder();
+                for (FileInfo f : hits) {
+                    String note = notes.apply(f.path);
+                    if (note != null && !note.trim().isEmpty())
+                        learned.append("\n- ").append(f.path).append(": ").append(cut(note.trim(), hits.size() > 3 ? 220 : 400));
+                }
+                if (learned.length() > 0) sb.append("\nLO_QUE_YA_REVISASTE (tus notas de noches anteriores):").append(learned);
+            }
         }
         sb.append("\nEsto es tu índice (resumen). Para ver el código real línea a línea usa self.read con la ruta "
                 + "o Clase#metodo; lo que no hayas leído, no lo afirmes.");

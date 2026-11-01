@@ -181,7 +181,9 @@ final class CognitiveToolExecutor {
                     throw new IllegalArgumentException("Solo para Bryan verificado");
                 String question = CognitiveReply.string(args, "pregunta");
                 m.estado("Mirando mi propio código…");
-                return new CognitiveTurn.Receipt(salve.core.mind.SelfCodeLoader.get(m.context).answer(question == null ? "" : question));
+                salve.core.mind.CodeReviewStore notes = salve.work.CodeReviewWorker.store(m.context);
+                return new CognitiveTurn.Receipt(salve.core.mind.SelfCodeLoader.get(m.context)
+                        .answer(question == null ? "" : question, notes::note));
             }
             case salve.core.mind.SelfSource.TOOL: {
                 if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())

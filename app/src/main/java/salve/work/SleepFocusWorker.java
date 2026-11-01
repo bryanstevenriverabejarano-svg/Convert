@@ -161,12 +161,18 @@ public final class SleepFocusWorker extends Worker {
                                 + SleepImprovementCycle.describe(SleepImprovementRuntime.last(app)));
                 Log.i(TAG, reportSaved ? "Informe PDF de sueño guardado" : "Informe PDF de sueño no guardado");
             }
+            // Cada ciclo de sueño (cada ~2 h con carga) vuelve a mirar si hay parche nuevo.
+            if (!stop.getAsBoolean()) CodeReviewWorker.enqueue(app);
         }
     }
 
     /** Opt in after the avatar was actually laid down. Sessions need charging + sufficient battery. */
-    public static void start(Context context) {
+    public static void start(Context context) { start(context, false); }
+
+    /** @param automatic la acostó el sueño automático (cargando y sin uso), no Bryan. */
+    public static void start(Context context, boolean automatic) {
         Context app = context.getApplicationContext();
+        if (!automatic) AutoSleepWorker.forgetAuto(app);
         String saved = app.getSharedPreferences("salve_avatar", Context.MODE_PRIVATE)
                 .getString("state", null);
         if (!SleepFocusPolicy.active(true, AvatarState.decode(saved))) return;
@@ -190,6 +196,8 @@ public final class SleepFocusWorker extends Worker {
                 charging ? "PROGRAMADO" : "ESPERANDO_CARGA");
         // Existing public research already has its own cooldown, network and privacy safeguards.
         CuriosityWorker.enqueueWhenIdle(app);
+        // Revisa su propio código si hay un parche nuevo o le queda algo por leer (con carga).
+        CodeReviewWorker.enqueue(app);
     }
 
     /** User wake-up disables future concentrated cycles and cancels pending work. */
@@ -201,5 +209,6 @@ public final class SleepFocusWorker extends Worker {
         work.cancelUniqueWork(ONCE);
         work.cancelUniqueWork(PERIODIC);
         if (wasEnabled) scheduledTrace(app, "Se desactivó el modo sueño y se cancelaron los trabajos pendientes.", "DESACTIVADO");
+        CodeReviewWorker.cancel(app);
     }
 }

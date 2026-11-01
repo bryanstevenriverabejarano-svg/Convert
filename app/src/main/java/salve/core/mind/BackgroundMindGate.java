@@ -15,7 +15,7 @@ public final class BackgroundMindGate {
      * CONTINUITY: copia sellada de su memoria. Pasa por la misma puerta para no fotografiar la
      * memoria a mitad de un sueño (base de datos y mente quedarían descuadradas).
      */
-    public enum Task { REFLECTION_AND_GOALS, CURIOSITY, DREAM, PLAY, CONTINUITY }
+    public enum Task { REFLECTION_AND_GOALS, CURIOSITY, DREAM, PLAY, CONTINUITY, SELF_REVIEW }
     public enum Outcome { COMPLETED_CYCLE, INTERRUPTED_OR_FAILED }
 
     public static final class Lease implements AutoCloseable {

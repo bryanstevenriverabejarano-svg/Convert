@@ -1043,6 +1043,7 @@ public class MainActivity extends AppCompatActivity {
         salve.work.DreamWorker.schedule(this);
         salve.work.CuriosityWorker.schedule(this);
         salve.work.PlayWorker.schedule(this);
+        salve.work.AutoSleepWorker.schedule(this);
         // Carga el modelo interno y el índice de recuerdos fuera del hilo principal.
         final android.content.Context mindContext = getApplicationContext();
         new Thread(() -> {
@@ -1091,6 +1092,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        salve.work.AutoSleepWorker.touch(this);
         salve.core.tasks.ResearchTaskRuntime.CONTROLS.execute(() -> {
             try { salve.core.agent.AgentRuntime.get(getApplicationContext()).signal("APP_OPEN"); }
             catch (RuntimeException unavailable) { android.util.Log.w("Salve/Agent", "Planes no disponibles; se conservan sus datos."); }
