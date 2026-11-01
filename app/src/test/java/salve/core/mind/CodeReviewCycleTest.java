@@ -157,7 +157,7 @@ public class CodeReviewCycleTest {
         Fake firstModel = new Fake();
         CodeReviewCycle.Result first = CodeReviewCycle.run(SelfCode.parse(INDEX), files::get, store,
                 prompt -> { clock[0] += 10; return firstModel.generate(prompt); },
-                () -> false, () -> clock[0], 15);
+                () -> false, () -> clock[0], 5); // one page; the rest must resume later
         assertFalse(first.done.contains("salve/core/SalveLLM.java"));
         assertTrue(store.partialLine("salve/core/SalveLLM.java", hash) > 1);
         assertTrue(first.pendingAfter > 0);
