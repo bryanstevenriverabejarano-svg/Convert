@@ -113,16 +113,30 @@ public class ExecutionJournalActivity extends Activity {
             Toast.makeText(this, "Selecciona primero una tarea del registro", Toast.LENGTH_SHORT).show();
             return;
         }
-        final String content = "INFORME DE ACTIVIDAD Y POSIBLES MEJORAS DE SALVE\n\n"
-                + "Origen: Registro de ejecución verificable\n"
-                + "Estado: Documento de análisis; ninguna mejora ha sido implementada ni validada.\n\n"
-                + ExecutionJournal.transcript(chosen)
-                + "\n\nPROPUESTAS Y SIGUIENTES PASOS\n"
-                + "Las notas anteriores pueden contener ideas o hipótesis. Antes de implementar:"
-                + " contrastar con el código real, comprobar duplicados y ejecutar pruebas.\n";
-        Button button = null;
+        final String evidence = ExecutionJournal.transcript(chosen);
+        final String type = chosen.type;
+        Toast.makeText(this, "Salve está preparando el informe…", Toast.LENGTH_SHORT).show();
         worker.execute(() -> {
             try {
+                salve.core.SalveLLM llm = salve.core.SalveLLM.getInstance(getApplicationContext());
+                String analysis = "No se ha generado análisis del modelo: modelo no disponible.";
+                if (!llm.isLoading() && llm.activeModelPath() != null) {
+                    String prompt = "Eres Salve. Redacta TU informe técnico en español sobre mejoras posibles "
+                            + "basándote ÚNICAMENTE en este registro de ejecución. No inventes inspecciones "
+                            + "de código, experimentos, resultados, archivos ni fuentes. Distingue hechos "
+                            + "observados, hipótesis, mejoras sugeridas, riesgos y pruebas necesarias. "
+                            + "Si no hay evidencia de una mejora, dilo. No ejecutes cambios.\n\n"
+                            + evidence.substring(0, Math.min(8500, evidence.length()));
+                    salve.core.ModelResult result = llm.generateResult(prompt, salve.core.SalveLLM.Role.PLANIFICADOR);
+                    if (result != null && result.isSuccess() && result.getText() != null
+                            && !result.getText().trim().isEmpty()) analysis = result.getText();
+                    else analysis = "El modelo no pudo producir un análisis verificable.";
+                }
+                String content = "INFORME DE SALVE: " + type + "\n\n"
+                        + "Fuente: Registro de ejecución local\n"
+                        + "Estado: Propuesta no implementada ni verificada.\n\n"
+                        + "ANÁLISIS Y PROPUESTAS REDACTADAS POR SALVE\n\n" + analysis
+                        + "\n\nEVIDENCIA ORIGINAL (sin modificaciones)\n\n" + evidence;
                 java.io.File generated = new salve.core.PdfGenerator(this)
                         .crearPdfDesdeTexto(content, "informe-salve");
                 java.io.File dest = new java.io.File(reportDirectory(),
@@ -131,10 +145,11 @@ public class ExecutionJournalActivity extends Activity {
                 generated.delete();
                 main.post(() -> {
                     refreshReports();
-                    Toast.makeText(this, "Informe guardado en la biblioteca", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Informe de Salve guardado en la biblioteca", Toast.LENGTH_SHORT).show();
                 });
             } catch (Exception error) {
-                main.post(() -> Toast.makeText(this, "No se pudo crear el informe", Toast.LENGTH_LONG).show());
+                main.post(() -> Toast.makeText(this, "No se pudo crear el informe: "
+                        + error.getClass().getSimpleName(), Toast.LENGTH_LONG).show());
             }
         });
     }
