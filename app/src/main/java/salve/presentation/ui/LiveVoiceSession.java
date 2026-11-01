@@ -142,19 +142,22 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     }
 
     /** Generate privately; the user decides whether to download from the chat. */
-    private void presentVoiceLab() {
+    private boolean presentVoiceLab() {
         File reports = new File(activity.getFilesDir(), "voicelab");
         if (!reports.exists() && !reports.mkdirs()) {
             Toast.makeText(activity, "No se pudo preparar VoiceLab", Toast.LENGTH_LONG).show();
-            return;
+            return false;
         }
         File pdf = new File(reports, "informe-" + System.currentTimeMillis() + ".pdf");
         try {
             voiceLab.writePdf(pdf);
             stage.showPdfAttachment(pdf);
+            return true;
         } catch (Exception error) {
             Log.e("Salve/VoiceLab", "PDF generation failed", error);
+            if (pdf.exists()) pdf.delete();
             Toast.makeText(activity, "No se pudo generar el informe", Toast.LENGTH_LONG).show();
+            return false;
         }
     }
 
@@ -194,8 +197,10 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             }
             voiceLab.event(metrics.token(), "exam", "finished_by_voice");
             voiceLab.stop();
-            presentVoiceLab();
-            caption.setText("Salve: He puesto el informe en el chat para que lo revises.");
+            boolean ready = presentVoiceLab();
+            caption.setText(ready
+                    ? "Salve: He puesto el informe en el chat para que lo revises."
+                    : "Salve: No pude generar el informe de voz.");
             return true;
         }
         return false;
