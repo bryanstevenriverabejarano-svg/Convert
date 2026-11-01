@@ -2128,7 +2128,57 @@ public class MotorConversacional {
                 return CognitiveTurn.Outcome.groundedText(verified);
             }
         }
+        if (!photoAnalysis && toolOverride == null && historyOverride == null && !outcome.handedOff)
+            return selfInspectionFallback(input, tools, outcome);
         return outcome;
+    }
+
+    /**
+     * Bryan le pidió mirar su código o guardar un informe y el modelo contestó sin usar la herramienta
+     * («no tengo acceso a mi código»). Igual que con los informes de sueño: el controlador consulta el
+     * índice real, lo cuenta tal cual y, si pidió PDF, lo guarda en la biblioteca de informes.
+     */
+    private CognitiveTurn.Outcome selfInspectionFallback(String input, Map<String, CognitiveTurn.Tool> tools,
+            CognitiveTurn.Outcome outcome) {
+        boolean codeOffered = tools.containsKey(salve.core.mind.SelfCode.TOOL)
+                && salve.core.mind.SelfCode.explicitCodeRequest(input);
+        boolean reportOffered = tools.containsKey(salve.core.reports.SelfReport.TOOL);
+        if (!codeOffered && !reportOffered) return outcome;
+        com.google.gson.JsonArray receipts = outcome.receipts();
+        boolean codeChecked = completedReceipt(receipts, salve.core.mind.SelfCode.TOOL);
+        boolean reportSaved = completedReceipt(receipts, salve.core.reports.SelfReport.TOOL);
+        String modelText = outcome.result != null && outcome.result.isSuccess() ? outcome.result.getText() : null;
+        String text;
+        if (codeOffered && !codeChecked) {
+            text = salve.core.mind.SelfCodeLoader.get(context).report(input);
+            salve.core.trace.ExecutionTrace.note("RUTA DE AUTOINSPECCIÓN",
+                    "El modelo no consultó self.code; respuesta sustituida por el índice real de su código.");
+        } else if (reportOffered && !reportSaved && modelText != null && !modelText.trim().isEmpty()) {
+            text = modelText.trim();
+        } else {
+            return outcome;
+        }
+        if (reportOffered && !reportSaved) {
+            java.io.File saved = salve.core.reports.AutonomousReportWriter.saveText(context,
+                    salve.core.reports.SelfReport.compose("Revisión de mi propio código", text));
+            text += saved != null
+                    ? "\n\nHe guardado este informe en PDF (" + saved.getName() + ") en Registro de ejecución → Informes."
+                    : "\n\nNo he podido guardar el PDF en mi biblioteca de informes.";
+            salve.core.trace.ExecutionTrace.note("INFORME PDF",
+                    saved != null ? "Guardado por el controlador: " + saved.getName() : "Falló al escribir el PDF.");
+        }
+        return CognitiveTurn.Outcome.groundedText(text);
+    }
+
+    private static boolean completedReceipt(com.google.gson.JsonArray receipts, String name) {
+        for (com.google.gson.JsonElement element : receipts) {
+            if (element == null || !element.isJsonObject()) continue;
+            com.google.gson.JsonObject receipt = element.getAsJsonObject();
+            if (receipt.has("name") && name.equals(receipt.get("name").getAsString())
+                    && receipt.has("status") && "completed".equals(receipt.get("status").getAsString()))
+                return true;
+        }
+        return false;
     }
 
     private static final java.util.regex.Pattern HOW_ARE_YOU = java.util.regex.Pattern.compile(

@@ -48,6 +48,11 @@ public final class CapabilityPlanner {
         // Prioritize the user's explicit action before optional observability.
         // A tool being offered is NOT evidence that it answers this turn:
         // broad/combined catalogs must not turn "diseña ropa" into a log read.
+        // Mirarse por dentro va primero: una petición sobre su código menciona de paso «memoria»,
+        // «busca» o «modelo», y antes eso subía memory.lookup y web.search y el recorte del
+        // catálogo dejaba fuera self.code justo cuando Bryan lo pedía.
+        if (salve.core.mind.SelfCode.offered(input)) prefer(available, first, salve.core.mind.SelfCode.TOOL);
+        if (salve.core.reports.SelfReport.requested(input)) prefer(available, first, salve.core.reports.SelfReport.TOOL);
         if (draw) prefer(available, first, "sketch.draw");
 
         if (wardrobe && !draw) {

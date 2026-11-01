@@ -183,6 +183,19 @@ final class CognitiveToolExecutor {
                 m.estado("Mirando mi propio código…");
                 return new CognitiveTurn.Receipt(salve.core.mind.SelfCodeLoader.get(m.context).answer(question == null ? "" : question));
             }
+            case salve.core.reports.SelfReport.TOOL: {
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Solo para Bryan verificado");
+                if (!salve.core.reports.SelfReport.requested(input))
+                    throw new IllegalArgumentException("Bryan no ha pedido un informe en este turno");
+                String body = salve.core.reports.SelfReport.compose(
+                        CognitiveReply.string(args, "titulo"), CognitiveReply.string(args, "contenido"));
+                m.estado("Guardando mi informe en PDF…");
+                java.io.File saved = salve.core.reports.AutonomousReportWriter.saveText(m.context, body);
+                if (saved == null) throw new IllegalStateException("No se pudo escribir el PDF");
+                return new CognitiveTurn.Receipt("INFORME_GUARDADO: " + saved.getName()
+                        + " en Registro de ejecución → Informes. Díselo a Bryan con ese nombre.");
+            }
             case salve.core.mind.SelfFunctions.TOOL: {
                 if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
                     throw new IllegalArgumentException("Solo para Bryan verificado");
