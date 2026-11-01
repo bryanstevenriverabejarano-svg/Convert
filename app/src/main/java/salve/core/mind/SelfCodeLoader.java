@@ -10,6 +10,18 @@ public final class SelfCodeLoader {
 
     private SelfCodeLoader() { }
 
+    /** El texto real de un archivo de su código (ruta del índice), o null si esta versión no lo lleva. */
+    public static String source(Context context, String path) {
+        try (InputStream in = context.getAssets().open(SelfSource.assetPath(path))) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[16384];
+            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+            return out.toString("UTF-8");
+        } catch (Exception missing) {
+            return null;
+        }
+    }
+
     public static SelfCode get(Context context) {
         SelfCode value = cached;
         if (value != null) return value;

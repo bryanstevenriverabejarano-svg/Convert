@@ -183,6 +183,18 @@ final class CognitiveToolExecutor {
                 m.estado("Mirando mi propio código…");
                 return new CognitiveTurn.Receipt(salve.core.mind.SelfCodeLoader.get(m.context).answer(question == null ? "" : question));
             }
+            case salve.core.mind.SelfSource.TOOL: {
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Solo para Bryan verificado");
+                if (!args.get("desde").isJsonPrimitive() || !args.getAsJsonPrimitive("desde").isNumber())
+                    throw new IllegalArgumentException("desde debe ser un número de línea");
+                int from = args.get("desde").getAsBigDecimal().intValue();
+                String file = CognitiveReply.string(args, "archivo");
+                m.estado("Leyendo mi código: " + (file.length() > 60 ? file.substring(0, 60) + "…" : file));
+                return new CognitiveTurn.Receipt(salve.core.mind.SelfSource.read(
+                        salve.core.mind.SelfCodeLoader.get(m.context), file, from,
+                        path -> salve.core.mind.SelfCodeLoader.source(m.context, path)));
+            }
             case salve.core.reports.SelfReport.TOOL: {
                 if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
                     throw new IllegalArgumentException("Solo para Bryan verificado");

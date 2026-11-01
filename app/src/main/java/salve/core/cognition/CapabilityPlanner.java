@@ -53,6 +53,7 @@ public final class CapabilityPlanner {
         // catálogo dejaba fuera self.code justo cuando Bryan lo pedía.
         if (salve.core.mind.SelfCode.offered(input)) prefer(available, first, salve.core.mind.SelfCode.TOOL);
         if (salve.core.reports.SelfReport.requested(input)) prefer(available, first, salve.core.reports.SelfReport.TOOL);
+        if (salve.core.mind.SelfCode.offered(input)) prefer(available, first, salve.core.mind.SelfSource.TOOL);
         if (draw) prefer(available, first, "sketch.draw");
 
         if (wardrobe && !draw) {

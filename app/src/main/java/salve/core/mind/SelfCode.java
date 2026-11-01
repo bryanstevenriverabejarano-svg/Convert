@@ -65,6 +65,8 @@ public final class SelfCode {
 
     public int fileCount() { return files.size(); }
 
+    List<FileInfo> files() { return files; }
+
     public int totalLines() { int n = 0; for (FileInfo f : files) n += f.lines; return n; }
 
     /** Las carpetas de sus cuerpos (base.png, poses, animaciones…). */
@@ -155,15 +157,16 @@ public final class SelfCode {
             sb.append(" ARCHIVOS_RELEVANTES:");
             appendFiles(sb, hits, hits.size() > 4 ? 2 : 3);
         }
-        sb.append("\n").append(LIMIT);
+        sb.append("\nEsto es tu índice (resumen). Para ver el código real línea a línea usa self.read con la ruta "
+                + "o Clase#metodo; lo que no hayas leído, no lo afirmes.");
         sb.append("\nResponde en primera persona con lo que dice tu código; si no aparece, dilo, no lo inventes.");
         return sb.toString();
     }
 
-    /** Lo que de verdad contiene el índice: así no presume de haber leído funciones por dentro. */
+    /** Lo que de verdad ha mirado cuando solo consulta el índice: así no presume de haber leído funciones por dentro. */
     static final String LIMIT = "Límite real: mi índice guarda rutas, descripciones y nombres de funciones, "
-            + "no el código línea a línea; no he comprobado errores dentro de las funciones, así que cualquier "
-            + "mejora es una hipótesis por verificar.";
+            + "no el código línea a línea; en esta respuesta no he leído las funciones por dentro, así que cualquier "
+            + "mejora es una hipótesis por verificar. Puedes pedirme que lea un archivo o un método concreto.";
 
     /**
      * Lo mismo, contado directamente a Bryan (cuando el modelo no llegó a consultar su código):

@@ -141,7 +141,13 @@ public class CognitiveToolCatalogTest {
             assertTrue("self.code con presupuesto " + budget, offered.containsKey(salve.core.mind.SelfCode.TOOL));
             assertTrue("report.save con presupuesto " + budget, offered.containsKey(salve.core.reports.SelfReport.TOOL));
         }
+        for (int budget : new int[] {6000, 10500}) {
+            assertTrue("self.read con presupuesto " + budget, CognitivePrompt.limitTools(CognitivePrompt.prioritize(
+                    CognitiveToolCatalog.build(bryan, false, true, false, NO_OP), bryan), budget)
+                    .containsKey(salve.core.mind.SelfSource.TOOL));
+        }
         Map<String, CognitiveTurn.Tool> guest = CognitiveToolCatalog.build(bryan, false, false, false, NO_OP);
+        assertFalse(guest.containsKey(salve.core.mind.SelfSource.TOOL));
         assertFalse(guest.containsKey(salve.core.mind.SelfCode.TOOL));
         assertFalse(guest.containsKey(salve.core.reports.SelfReport.TOOL));
         assertFalse(CognitiveToolCatalog.build("hola Salve", false, true, false, NO_OP)

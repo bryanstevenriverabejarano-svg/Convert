@@ -65,7 +65,7 @@ public class SelfCodeTest {
         assertTrue(r.contains("no el código línea a línea"));
         assertFalse(r.contains("Responde en primera persona"));
         assertTrue(SelfCode.parse(null).report("x").startsWith("No he podido mirar mi código"));
-        assertTrue(SelfCode.parse(MULTI).answer("tu memoria").contains("no el código línea a línea"));
+        assertTrue(SelfCode.parse(MULTI).answer("tu memoria").contains("usa self.read"));
     }
 
     @Test public void onlyAnExplicitCodeRequestReplacesTheModelAnswer() {
