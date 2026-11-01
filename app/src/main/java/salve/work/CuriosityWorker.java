@@ -69,6 +69,11 @@ public class CuriosityWorker extends Worker {
             Log.i(TAG, outcome.length() > 160 ? outcome.substring(0, 160) : outcome);
             if (outcome.startsWith("Investigué «")) {
                 notifyFinding(app, outcome);
+                if (!stop.getAsBoolean()) {
+                    boolean reportSaved = salve.core.reports.AutonomousReportWriter.save(app,
+                            "Investigación autónoma", outcome);
+                    Log.i(TAG, reportSaved ? "Informe PDF guardado" : "No se guardó informe PDF");
+                }
                 // Pensar sobre lo que encontró (puede abrir una pregunta nueva o cerrar la que tenía).
                 // Usa el modelo local, así que solo si está cargando y nadie conversa.
                 if (charging(app) && !isStopped() && !salve.core.GoalAutonomyRuntime.get(app).hasActiveConversation()) {
