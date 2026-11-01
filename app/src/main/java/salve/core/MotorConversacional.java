@@ -1304,7 +1304,7 @@ public class MotorConversacional {
 
         if (diario != null) {
             diario.escribirAutoCritica("Turno analizado. Intención operativa: " + intent.type.name()
-                    + "; acto conversacional: " + conversationAnalysis.getAct().name()
+                    + "; acto conversacional: " + objective.act().name()
                     + "; memoria largo plazo: " + reasoningPlan.shouldRetrieveLongTermMemory()
                     + "; verificación: " + reasoningPlan.isVerificationRequired());
         }
