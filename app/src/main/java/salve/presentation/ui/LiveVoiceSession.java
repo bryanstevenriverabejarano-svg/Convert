@@ -17,8 +17,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.widget.Toast;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
@@ -54,7 +52,6 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     private final VoiceConversationLoop loop = new VoiceConversationLoop(true);
     private final VoiceTurnMetrics metrics = new VoiceTurnMetrics();
     private final VoiceLabReport voiceLab = new VoiceLabReport();
-    private final ActivityResultLauncher<String> pdfDestination;
     /** AEC-only one-shot detector; the existing SpeechRecognizer still owns transcribed input. */
     private final VoiceBargeInMonitor bargeIn = new VoiceBargeInMonitor();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -99,25 +96,6 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         this.motor = motor;
         this.stage = stage;
         this.audioManager = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
-        pdfDestination = activity.registerForActivityResult(
-                new ActivityResultContracts.CreateDocument("application/pdf"), uri -> {
-                    if (uri == null) return;
-                    File temporary = new File(activity.getCacheDir(), "salve-voice-lab.pdf");
-                    try {
-                        voiceLab.writePdf(temporary);
-                        try (FileInputStream in = new FileInputStream(temporary);
-                             OutputStream out = activity.getContentResolver().openOutputStream(uri)) {
-                            if (out == null) throw new java.io.IOException("No output stream");
-                            byte[] buffer = new byte[8192];
-                            int n;
-                            while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
-                        }
-                        Toast.makeText(activity, "Informe VoiceLab guardado", Toast.LENGTH_LONG).show();
-                    } catch (Exception error) {
-                        Log.e("Salve/VoiceLab", "PDF export failed", error);
-                        Toast.makeText(activity, "No se pudo exportar el PDF", Toast.LENGTH_LONG).show();
-                    } finally { temporary.delete(); }
-                });
         controls = activity.findViewById(R.id.voiceStageControls);
         caption = activity.findViewById(R.id.salveCaption);
         status = activity.findViewById(R.id.voiceStageStatus);
@@ -132,7 +110,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             } else {
                 voiceLab.event(metrics.token(), "exam", "finished");
                 voiceLab.stop();
-                pdfDestination.launch("salve-voice-lab.pdf");
+                exportVoiceLab();
             }
             return true;
         });
@@ -158,6 +136,40 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         activity.findViewById(R.id.btnVoiceEnd).setOnClickListener(view -> {
             apply(loop.stop(VoiceConversationLoop.StopReason.USER)); dismiss();
         });
+    }
+
+    /** Export through Android Downloads, without a new activity result callback or storage permission. */
+    private void exportVoiceLab() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            Toast.makeText(activity, "VoiceLab requiere Android 10 o superior para exportar", Toast.LENGTH_LONG).show();
+            return;
+        }
+        File temporary = new File(activity.getCacheDir(), "salve-voice-lab.pdf");
+        android.net.Uri uri = null;
+        try {
+            voiceLab.writePdf(temporary);
+            android.content.ContentValues values = new android.content.ContentValues();
+            values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME,
+                    "salve-voice-lab-" + System.currentTimeMillis() + ".pdf");
+            values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
+            values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,
+                    android.os.Environment.DIRECTORY_DOWNLOADS + "/Salve");
+            uri = activity.getContentResolver().insert(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+            if (uri == null) throw new java.io.IOException("No destination");
+            try (FileInputStream in = new FileInputStream(temporary);
+                 OutputStream out = activity.getContentResolver().openOutputStream(uri)) {
+                if (out == null) throw new java.io.IOException("No output stream");
+                byte[] buffer = new byte[8192];
+                int n;
+                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+            }
+            Toast.makeText(activity, "PDF guardado en Descargas/Salve", Toast.LENGTH_LONG).show();
+        } catch (Exception error) {
+            if (uri != null) activity.getContentResolver().delete(uri, null, null);
+            Log.e("Salve/VoiceLab", "PDF export failed", error);
+            Toast.makeText(activity, "No se pudo exportar VoiceLab", Toast.LENGTH_LONG).show();
+        } finally { temporary.delete(); }
     }
 
     public boolean isShowing() { return started && !dismissed; }
