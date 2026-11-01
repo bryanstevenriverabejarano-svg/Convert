@@ -133,8 +133,9 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             if (submit.action == VoiceConversationLoop.Action.SUBMIT) {
                 long at = now();
                 if (metrics.begin(first.token, at)) metrics.recognized(first.token, at);
-                first = submit;
             }
+            if (submit.action == VoiceConversationLoop.Action.SUBMIT
+                    || submit.action == VoiceConversationLoop.Action.CONTINUE) first = submit;
             initialRequest = null;
         }
         if (activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -171,6 +172,13 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         switch (step.action) {
             case LISTEN:
                 beginRecognition(step.token);
+                break;
+            case CONTINUE:
+                // Android finalized an unfinished clause. Keep it only in VoiceConversationLoop,
+                // close this recognizer and rearm the SAME session after a brief delay.
+                destroyRecognizer();
+                if (metrics.complete(step.token, now())) reportMetrics();
+                caption.setText("Tú: " + step.text + " …");
                 break;
             case SUBMIT:
                 destroyRecognizer();
@@ -250,10 +258,21 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 @Override public void onError(int error) {
                     if (!current()) return;
                     long timestamp = now();
+                    VoiceConversationLoop.RecognitionFailure failure = recognitionFailure(error);
+                    // When a previous clause is held, a no-speech result finishes that same
+                    // user turn. Record it as successful ASR, never as a failed/double turn.
+                    boolean flushHeld = failure == VoiceConversationLoop.RecognitionFailure.SILENCE
+                            && loop.hasHeldSpeech();
+                    if (flushHeld) {
+                        if (!metrics.recognized(token, timestamp)) return;
+                        recognitionErrorText = null;
+                        destroyRecognizer();
+                        apply(loop.recognitionFailed(token, failure, timestamp));
+                        return;
+                    }
                     if (!metrics.recognitionFailed(token, timestamp, error)) return;
                     recognitionErrorText = recognitionErrorMessage(error);
                     reportMetrics();
-                    VoiceConversationLoop.RecognitionFailure failure = recognitionFailure(error);
                     if (onDevice && languageMissing(error) && SpeechRecognizer.isRecognitionAvailable(activity)) {
                         // El paquete sin red de ese idioma no está instalado: se pide su descarga para la
                         // próxima vez y, mientras, se reintenta con el reconocimiento normal de Android.
@@ -479,8 +498,10 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 stage.setVoicePresence(SalveStageController.PresenceMode.SPEAKING);
                 status.setText("Salve está hablando…"); break;
             case COOLDOWN:
-                stage.setVoicePresence(null);
-                status.setText(recognitionErrorText == null ? "Enseguida te escucho…"
+                stage.setVoicePresence(loop.hasHeldSpeech()
+                        ? SalveStageController.PresenceMode.LISTENING : null);
+                status.setText(loop.hasHeldSpeech() ? "Te sigo escuchando…"
+                        : recognitionErrorText == null ? "Enseguida te escucho…"
                         : recognitionErrorText + " Volveré a intentarlo…");
                 break;
             case STOPPED:
@@ -493,8 +514,10 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             default: break;
         }
         stage.setVoiceDetails(status.getText() + "\n\n" + backend
-                + "\n\nEl micrófono se cierra mientras Salve habla. Puedes interrumpirla para tomar tu turno."
-                + " La sesión termina al salir de la aplicación o a los 10 minutos.");
+                + "\n\nLos fragmentos de una frase incompleta se mantienen temporalmente en memoria"
+                + " y se reúnen antes de enviarlos al motor."
+                + " El micrófono se cierra mientras Salve habla. Puedes interrumpirla para tomar tu turno."
+                + " La sesión termina al salir de la aplicación o por su límite de seguridad.");
         status.setContentDescription(status.getText() + ". Toca para ver los detalles de voz.");
     }
 
