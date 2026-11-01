@@ -87,7 +87,7 @@ class IllustratedAvatarView extends View {
     private void updateDescription() {
         AvatarState s = store.state();
         setContentDescription("Salve, " + AvatarBodyCue.label(s.getPose())
-                + (immersive ? ". Doble toque para conversar; mantén pulsado para opciones. " : ", avatar ilustrado. ")
+                + (immersive ? ". Doble toque para conversar; mantén pulsado para hablar por voz; opciones en el botón de arriba. " : ", avatar ilustrado. ")
                 + (motion.snapshot().speaking ? "Hablando." : motion.snapshot().listening ? "Escuchando." : ""));
     }
     private void normalizePoseForWardrobe() {
