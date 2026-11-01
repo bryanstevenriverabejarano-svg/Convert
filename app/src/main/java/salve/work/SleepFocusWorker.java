@@ -154,6 +154,13 @@ public final class SleepFocusWorker extends Worker {
         } finally {
             lease.close();
             journal.finish(traceId, verdict);
+            if ("COMPLETADO".equals(verdict) && !stop.getAsBoolean()) {
+                boolean reportSaved = salve.core.reports.AutonomousReportWriter.save(app,
+                        "Sueño y práctica autónoma",
+                        "Ciclo de sueño completado. Resultado de práctica y reflexión: "
+                                + SleepImprovementCycle.describe(SleepImprovementRuntime.last(app)));
+                Log.i(TAG, reportSaved ? "Informe PDF de sueño guardado" : "Informe PDF de sueño no guardado");
+            }
         }
     }
 
