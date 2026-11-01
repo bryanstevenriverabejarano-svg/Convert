@@ -89,6 +89,37 @@ la operación **para confirmarla**, pero no debe confirmarla por sí misma.
    redundancia cognitiva. Separarlas requiere adaptadores y pruebas de navegación
    antes de mover clases.
 
+## Hallazgo arquitectónico adicional: comandos antiguos ANTES de TurnObjective
+
+En `MotorConversacional`, `TurnObjective.understand` aparece cerca de la
+línea 1254, pero varias rutas con `inputLower.contains(...)` se ejecutan
+**antes** de llegar ahí. Un ciclo unificado de interpretación todavía no gobierna
+todas las acciones ni debe reemplazar las rutas específicas sin estudiar sus
+efectos:
+
+- `programa` / `escribe código` / `aprende a programar`: puede iniciar
+  generación de código al *mencionar* programación, incluso si se quería
+  conversar sobre ella.
+- `crea una página web` / `publica en internet`: inicia el flujo de
+  desarrollo y despliegue. El código debe exigir objetivo explícito y mantener
+  aprobación/confirmación de publicación en la frontera real.
+- `analiza instagram` / `analiza x`: abre flujo de redes sociales; la
+  coincidencia `analiza x` es especialmente amplia.
+- `conéctate a la wifi`: abre los ajustes Wi-Fi mediante un `contains`; citar
+  esa frase para explicarla no debería abrir los ajustes.
+- `analiza la pantalla`: lee datos de Accesibilidad; la intención, el permiso
+  y el contexto visual deben tratarse separadamente.
+
+**Estas rutas NO se modifican aquí.** Primero: enumerar los comandos existentes,
+sus permisos, confirmaciones, efectos y tests. Luego: sustituir únicamente la
+*condición de autorización de acción* por un analizador explícito de comandos
+acotados. Conservar lectura, discusión, analogías, emociones, interpretación
+del LLM, rutas de cuentos y respuestas subjetivas.
+
+Esto explica por qué «un solo objetivo» en PR #325 significa el núcleo
+conversacional normal, **no** que todas las rutas especializadas ya pasen por
+`TurnObjective`. No hay que ocultar esa limitación.
+
 ## Siguiente refactorización segura (no realizada en esta PR)
 
 1. Crear **pruebas de comportamiento** por dominio antes de cambiar
