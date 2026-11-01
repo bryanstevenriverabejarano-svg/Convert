@@ -68,6 +68,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     private SpeechRecognizer recognizer;
     private AudioFocusRequest audioFocusRequest;
     private boolean focusHeld;
+    private boolean automaticInterruptDispatch;
     private boolean started;
     private boolean dismissed;
     private boolean resourcesReleased;
@@ -121,7 +122,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 return;
             }
             bargeIn.stop();
-            voiceLab.event(metrics.token(), "interrupt", "manual_button");
+            if (!automaticInterruptDispatch) voiceLab.event(metrics.token(), "interrupt", "manual_button");
             long timestamp = now();
             VoiceConversationLoop.Step step = loop.interrupt(timestamp);
             if (step.action != VoiceConversationLoop.Action.NONE) {
@@ -645,7 +646,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         bargeIn.stop();
         Log.i("Salve/Voice", "voice_barge_in detected=true");
         voiceLab.event(token, "interrupt", "automatic_detector");
-        interrupt.performClick();
+        automaticInterruptDispatch = true;
+        try { interrupt.performClick(); } finally { automaticInterruptDispatch = false; }
     }
 
     @Override public void onSpeechFinished(long token, boolean completed) {
