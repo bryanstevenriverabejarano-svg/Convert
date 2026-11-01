@@ -29,6 +29,8 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.text.Normalizer;
+import java.util.Locale;
 
 import salve.core.MotorConversacional;
 import salve.core.voice.VoiceConversationLoop;
@@ -173,6 +175,49 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         } finally { temporary.delete(); }
     }
 
+    /** Local voice diagnostic intent; reuses the current Android recognizer. */
+    private boolean handleVoiceLabCommand(String utterance) {
+        if (utterance == null) return false;
+        String normalized = Normalizer.normalize(utterance.toLowerCase(Locale.ROOT),
+                Normalizer.Form.NFD).replaceAll("\\p{M}+", "")
+                .replaceAll("[^a-z0-9 ]", " ").replaceAll(" +", " ").trim();
+        boolean exam = normalized.contains("examen de voz")
+                || normalized.contains("prueba de voz")
+                || normalized.contains("voicelab") || normalized.contains("voice lab");
+        boolean report = normalized.contains("informe")
+                && (normalized.contains("voz") || normalized.contains("examen")
+                    || normalized.contains("diagnostico") || normalized.contains("voicelab"));
+        boolean start = normalized.contains("inicia") || normalized.contains("iniciar")
+                || normalized.contains("empieza") || normalized.contains("comienza")
+                || normalized.contains("haz un");
+        boolean finish = normalized.contains("termina") || normalized.contains("finaliza")
+                || normalized.contains("deten") || normalized.contains("acaba")
+                || normalized.contains("dame") || normalized.contains("genera")
+                || normalized.contains("descarga") || normalized.contains("guarda")
+                || normalized.contains("exporta");
+        if (exam && start && !finish) {
+            if (!voiceLab.isEnabled()) {
+                voiceLab.start();
+                voiceLab.event(metrics.token(), "exam", "started_by_voice");
+                Toast.makeText(activity, "VoiceLab iniciado", Toast.LENGTH_LONG).show();
+                caption.setText("Salve: He iniciado el examen de voz.");
+            } else caption.setText("Salve: El examen ya está en marcha.");
+            return true;
+        }
+        if ((report || exam) && finish) {
+            if (!voiceLab.isEnabled()) {
+                caption.setText("Salve: Primero inicia un examen de voz.");
+                return true;
+            }
+            voiceLab.event(metrics.token(), "exam", "finished_by_voice");
+            voiceLab.stop();
+            exportVoiceLab();
+            caption.setText("Salve: He terminado el examen. El PDF está en Descargas/Salve.");
+            return true;
+        }
+        return false;
+    }
+
     public boolean isShowing() { return started && !dismissed; }
 
     public void show() {
@@ -249,6 +294,12 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 stage.closePanels();
                 stage.appendMessage(false, step.text);
                 caption.setText("Tú: " + step.text);
+                if (handleVoiceLabCommand(step.text)) {
+                    long at = now();
+                    metrics.replied(step.token, at);
+                    apply(loop.replied(step.token, false, at));
+                    break;
+                }
                 try {
                     motor.procesarEntradaVoz(step.text, step.token, this);
                 } catch (RuntimeException unavailable) {
