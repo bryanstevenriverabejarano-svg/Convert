@@ -33,8 +33,15 @@ class IntegratedArchitectureContracts(unittest.TestCase):
         turn = source("app/src/main/java/salve/core/MotorConversacional.java")
         self.assertIn("return limitTools(available, 0);", prompt)
         self.assertIn("promptBudgetChars >= 9000 ? 1100", prompt)
-        self.assertIn("CognitivePrompt.prioritize(cognitiveTools(", turn)
-        self.assertIn("catalogPromptBudget);", turn)
+        # The new objective frame may reorder ONLY the authorized catalog.
+        # Preserve the catalog builder, bounded ranking and budget truncation.
+        objective = source("app/src/main/java/salve/core/cognition/TurnObjective.java")
+        self.assertIn("CognitiveToolCatalog.build(", turn)
+        self.assertIn("Map<String, CognitiveTurn.Tool> offered = cognitiveTools(", turn)
+        self.assertIn("CognitivePrompt.prioritize(offered, input)", turn)
+        self.assertIn("objective.rankAuthorized(offered)", turn)
+        self.assertIn("CapabilityPlanner.rank(authorized, input)", objective)
+        self.assertIn("CognitivePrompt.limitTools(ranked, catalogPromptBudget)", turn)
 
 
 if __name__ == "__main__":
