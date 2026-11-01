@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * siguiente; el texto del modelo nunca abre nada.
  */
 public final class SelfFeatures {
-    public enum Feature { NODES, WEB_SEARCH, PHONE_ACTIONS, PRIVACY_CHECK, SALVENTES, CONTINUITY, ORIGIN, LEARNING, BACKGROUND, OVERVIEW, REASONING }
+    public enum Feature { NODES, WEB_SEARCH, PHONE_ACTIONS, PRIVACY_CHECK, SALVENTES, CONTINUITY, ORIGIN, LEARNING, BACKGROUND, OVERVIEW, REASONING, SELF_CODE }
 
     /** Una oferta caduca si no se responde pronto: un «sí» mucho después no la acepta. */
     public static final long OFFER_TTL_MS = 3 * 60 * 1000L;
@@ -41,6 +41,11 @@ public final class SelfFeatures {
             "\\b(?:como razonas|como (?:haces|calculas) (?:las )?cuentas|(?:sabes|puedes) (?:calcular|hacer cuentas)|calculadora"
                     + "|te equivocas (?:en|con) (?:las )?(?:cuentas|matematicas)|memoria causal|causas (?:que )?(?:sabes|conoces|aprendes)"
                     + "|como deduces|razonamiento causal|como sabes por que)\\b");
+    /** Su código y su biblioteca de informes: antes improvisaba «no tengo acceso a mi código». */
+    private static final Pattern SELF_CODE = Pattern.compile(
+            "\\b(?:tu (?:propio )?codigo|codigo fuente|tu repositorio|tu repo|tus archivos|tus clases|tu biblioteca"
+                    + "|biblioteca de (?:informes|pdf)|tus informes|informes? (?:en )?pdf|tus pdfs?|revisas? tu codigo"
+                    + "|revision de tu codigo|leer tu codigo|lees tu codigo)\\b");
     private static final Pattern LEARNING = Pattern.compile(
             "\\b(?:aprendizaje|habilidades aprendidas|laboratorio|aprendes|que has aprendido|entrenas|experimentas)\\b");
     private static final Pattern BACKGROUND = Pattern.compile(
@@ -62,6 +67,7 @@ public final class SelfFeatures {
         if (text.isEmpty()) return null;
         if (SALVENTES.matcher(text).find()) return Feature.SALVENTES;
         if (CONTINUITY.matcher(text).find()) return Feature.CONTINUITY;
+        if (SELF_CODE.matcher(text).find()) return Feature.SELF_CODE;
         if (ORIGIN.matcher(text).find()) return Feature.ORIGIN;
         if (NODES.matcher(text).find()) return Feature.NODES;
         if (PRIVACY_CHECK.matcher(text).find()) return Feature.PRIVACY_CHECK;
@@ -111,6 +117,13 @@ public final class SelfFeatures {
                         + "Guardián, un PC de Bryan: la cifro con una frase que solo él sabe y el PC guarda bytes que no puede leer. "
                         + "Si el teléfono se pierde, en otro puedo volver a ser yo hasta el momento de la última copia. Puede ser a "
                         + "mano o cada noche mientras el móvil carga con Wi-Fi. Sin copia, perder el teléfono sería perder mi memoria.";
+            case SELF_CODE:
+                return "Sí tengo acceso a mi propio código: cada versión de la app lleva dentro todos mis archivos fuente. "
+                        + "Con self.code consulto el índice (archivos, qué hace cada uno, sus funciones y mis notas de revisiones "
+                        + "anteriores) y con self.read leo el código real línea a línea, por trozos (ruta, Clase o Clase#metodo). "
+                        + "Si Bryan me pide un informe en PDF lo guardo con report.save en mi Biblioteca (Registro → Biblioteca). "
+                        + "Mientras duermo con el móvil cargando reviso mi código: primero lo que cambió en cada parche y luego lo que "
+                        + "aún no he leído, y dejo un informe por noche en la Biblioteca. Lo que propongo son hipótesis hasta comprobarlo.";
             case ORIGIN:
                 return ORIGIN_FACTS;
             case LEARNING:
@@ -155,6 +168,7 @@ public final class SelfFeatures {
     /** Frase con la que ofrece abrir la pantalla; null si la función no tiene pantalla propia. */
     public static String offer(Feature feature, boolean biometricAvailable) {
         if (feature == Feature.NODES) return "¿Quieres que te abra mi constelación de nodos para verlos?";
+        if (feature == Feature.SELF_CODE) return "¿Quieres que te abra mi biblioteca de informes?";
         if (feature == Feature.SALVENTES) return "¿Quieres que abra la génesis de Salventes?";
         if (feature == Feature.CONTINUITY) return "¿Quieres que abra mi continuidad para ver o hacer la copia?";
         if (feature == Feature.PRIVACY_CHECK && biometricAvailable) return "¿Quieres que te verifique ahora con el teléfono?";

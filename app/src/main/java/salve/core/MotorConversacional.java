@@ -944,11 +944,16 @@ public class MotorConversacional {
         }
 
         String inputLower = entrada.toLowerCase(Locale.ROOT);
-        String traceCommand = salve.sketch.SketchLibrary.normalize(entrada);
-        if (traceCommand.matches("(?:(?:abre|abrir|ver|muestra|muestrame|ensename) )?(el |tu |las )?(registro de ejecucion|notas de esta tarea|notas de la tarea)")) {
+        // «Abre el registro de ejecución», «registro de ejecución ábrelo», «abre tu biblioteca», «tus informes».
+        String openTab = salve.core.reports.ReportLibrary.openRequest(entrada);
+        if (openTab != null) {
+            boolean library = salve.core.reports.ReportLibrary.TAB_LIBRARY.equals(openTab);
             toolHandler.post(() -> context.startActivity(new android.content.Intent(context,
-                    salve.presentation.ui.ExecutionJournalActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)));
-            hablar("Abro el registro de ejecución con las notas completas de cada tarea.");
+                    salve.presentation.ui.ExecutionJournalActivity.class)
+                    .putExtra(salve.presentation.ui.ExecutionJournalActivity.EXTRA_TAB, openTab)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)));
+            hablar(library ? "Abro mi biblioteca de informes: mis revisiones de código, investigaciones y lo que me pides en PDF."
+                    : "Abro el registro de ejecución con las notas completas de cada tarea.");
             return;
         }
         AvatarMotionProtocol.Result gestureCommand = avatarSession == null ? null : AvatarMotionProtocol.parseCommand(entrada);

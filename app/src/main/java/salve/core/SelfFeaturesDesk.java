@@ -151,6 +151,14 @@ final class SelfFeaturesDesk {
             case REASONING:
                 return "causas aprendidas de Bryan: " + (motor.memoriaCausal == null ? 0 : motor.memoriaCausal.size())
                         + "; calculadora exacta activa en la conversación";
+            case SELF_CODE: {
+                java.io.File dir = new java.io.File(motor.context.getFilesDir(), salve.core.reports.AutonomousReportWriter.DIRECTORY);
+                int reports = salve.core.reports.ReportLibrary.list(dir, null).size();
+                int files = salve.core.mind.SelfCodeLoader.get(motor.context).fileCount();
+                int reviewed = salve.work.CodeReviewWorker.store(motor.context).reviewedCount();
+                return reports + (reports == 1 ? " informe" : " informes") + " en mi biblioteca; mi código: " + files
+                        + " archivos, " + reviewed + " ya revisados en mis noches";
+            }
             default: return "";
         }
     }
@@ -222,6 +230,13 @@ final class SelfFeaturesDesk {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 return "Abro mi constelación. Toca cualquier nodo para ver su ficha.";
             } catch (RuntimeException unavailable) { return "No pude abrir la constelación. Está en Nodos de cómputo → Ver constelación."; }
+        }
+        if (feature == salve.core.mind.SelfFeatures.Feature.SELF_CODE) {
+            try {
+                motor.context.startActivity(salve.presentation.ui.ExecutionJournalActivity.library(motor.context)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return "Abro mi biblioteca. Toca un informe para leerlo o compartirlo.";
+            } catch (RuntimeException unavailable) { return "No pude abrirla. Está en IA y cámara → Registro de ejecución → Biblioteca."; }
         }
         if (feature == salve.core.mind.SelfFeatures.Feature.SALVENTES) {
             try {
