@@ -15,6 +15,33 @@ import java.util.regex.Pattern;
  */
 public class IntentRecognizer {
 
+    /**
+     * Writing private memory is a side effect, not a topic of conversation.
+     * The previous anywhere-match on "guardar" or "=" could persist a question
+     * or hypothesis. Preserve explicit imperative commands and the existing
+     * first-person "aprendí que" shortcut, but do not infer authorization from
+     * an arbitrary mention of saving or a bare equation.
+     */
+    private static final Pattern EXPLICIT_SAVE = Pattern.compile(
+            "^(?:(?:salve|oye|por favor)\\s*[,;:]?\\s+)*"
+            + "(?:guarda|almacena|graba|anota|registra)(?:\\s*:\\s*|\\s+)(\\S[\\s\\S]*)$");
+    private static final Pattern COLON_SAVE = Pattern.compile(
+            "^(?:guardar|anotar|registrar)\\s*:\\s*(\\S[\\s\\S]*)$");
+    private static final Pattern LEARNED_THAT = Pattern.compile(
+            "^aprend[ií] que\\s+(\\S[\\s\\S]*)$");
+
+    private static final Pattern EXPLICIT_MISSION = Pattern.compile(
+            "^(?:(?:salve|oye|por favor)\\s*[,;:]?\\s+)*"
+            + "(?:nueva misi[oó]n|añade misi[oó]n|agrega misi[oó]n)(?:\\s*:\\s*|\\s+)(\\S[\\s\\S]*)$");
+    private static final Pattern EXPLICIT_SLEEP = Pattern.compile(
+            "^(?:(?:salve|oye|por favor)\\s*[,;:]?\\s+)*"
+            + "(?:duerme(?:\\s+(?:ahora|un rato|por favor|y reflexiona))?"
+            + "|ponte a dormir|entra en (?:el )?modo sue[nñ]o"
+            + "|inicia (?:el |un )?ciclo de sue[nñ]o|activa (?:el )?modo sue[nñ]o"
+            + "|(?:el )?modo sue[nñ]o|(?:el )?ciclo de sue[nñ]o)[.!\\s]*$");
+
+
+
     // ============================================================
     //  CONSTRUCTORES
     // ============================================================
@@ -53,21 +80,17 @@ public class IntentRecognizer {
         // --------------------------------------------------------
         // 1) GUARDAR_RECUERDO
         // --------------------------------------------------------
-        if (text.matches(".*\\b(guarda|guardar|almacena|almacenar|graba|grabar|anota|anotar|registra|registrar|aprend[ií] que)\\b.*")
-                || text.contains("=")) {
-
-            Intent i = new Intent(IntentType.GUARDAR_RECUERDO);
-            String frase = text;
-
-            if (frase.contains("=")) {
-                // estilo: "x = y"
-                String[] partes = frase.split("=", 2);
-                i.slots.put("frase", partes[0].trim() + " = " + partes[1].trim());
-            } else {
-                frase = frase.replaceFirst(".*?(?:guarda|guardar|almacena|almacenar|graba|grabar|anota|anotar|registra|registrar|aprend[ií] que)\\s+", "");
-                i.slots.put("frase", frase.trim());
+        Matcher save = EXPLICIT_SAVE.matcher(text);
+        if (!save.matches()) save = COLON_SAVE.matcher(text);
+        if (!save.matches()) save = LEARNED_THAT.matcher(text);
+        if (save.matches()) {
+            // Only the explicit payload is stored, never incidental wording about a command.
+            String phrase = save.group(1).trim();
+            if (!phrase.isEmpty()) {
+                Intent i = new Intent(IntentType.GUARDAR_RECUERDO);
+                i.slots.put("frase", phrase);
+                return i;
             }
-            return i;
         }
 
         // --------------------------------------------------------
@@ -105,19 +128,18 @@ public class IntentRecognizer {
         // --------------------------------------------------------
         // 4) AGREGAR_MISION
         // --------------------------------------------------------
-        if (text.matches(".*\\b(nueva misi[oó]n|añade misi[oó]n|agrega misi[oó]n)\\b.*")) {
-
+        Matcher mission = EXPLICIT_MISSION.matcher(text);
+        if (mission.matches() && !mission.group(1).trim().isEmpty()) {
             Intent i = new Intent(IntentType.AGREGAR_MISION);
-            String mision = text.replaceFirst(".*?(?:nueva misi[oó]n|añade misi[oó]n|agrega misi[oó]n)\\s+", "");
-            i.slots.put("mision", mision.trim());
+            i.slots.put("mision", mission.group(1).trim());
             return i;
         }
 
         // --------------------------------------------------------
         // 5) CICLO_SUENO
         // --------------------------------------------------------
-        if (text.matches(".*\\b(duerme|dormir|ciclo de sue[nñ]o|modo sue[nñ]o)\\b.*")) {
-
+        // A discussion of sleep is NOT consent to schedule DreamWorker or mutate memories.
+        if (EXPLICIT_SLEEP.matcher(text).matches()) {
             return new Intent(IntentType.CICLO_SUENO);
         }
 
