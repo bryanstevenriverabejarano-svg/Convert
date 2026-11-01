@@ -30,6 +30,17 @@ public class IntentRecognizer {
     private static final Pattern LEARNED_THAT = Pattern.compile(
             "^aprend[ií] que\\s+(\\S[\\s\\S]*)$");
 
+    private static final Pattern EXPLICIT_MISSION = Pattern.compile(
+            "^(?:(?:salve|oye|por favor)\\s*[,;:]?\\s+)*"
+            + "(?:nueva misi[oó]n|añade misi[oó]n|agrega misi[oó]n)(?:\\s*:\\s*|\\s+)(\\S[\\s\\S]*)$");
+    private static final Pattern EXPLICIT_SLEEP = Pattern.compile(
+            "^(?:(?:salve|oye|por favor)\\s*[,;:]?\\s+)*"
+            + "(?:duerme(?:\\s+(?:ahora|un rato|por favor|y reflexiona))?"
+            + "|ponte a dormir|entra en (?:el )?modo sue[nñ]o"
+            + "|inicia (?:el |un )?ciclo de sue[nñ]o|activa (?:el )?modo sue[nñ]o"
+            + "|(?:el )?modo sue[nñ]o|(?:el )?ciclo de sue[nñ]o)[.!\\s]*$");
+
+
 
     // ============================================================
     //  CONSTRUCTORES
@@ -117,19 +128,18 @@ public class IntentRecognizer {
         // --------------------------------------------------------
         // 4) AGREGAR_MISION
         // --------------------------------------------------------
-        if (text.matches(".*\\b(nueva misi[oó]n|añade misi[oó]n|agrega misi[oó]n)\\b.*")) {
-
+        Matcher mission = EXPLICIT_MISSION.matcher(text);
+        if (mission.matches() && !mission.group(1).trim().isEmpty()) {
             Intent i = new Intent(IntentType.AGREGAR_MISION);
-            String mision = text.replaceFirst(".*?(?:nueva misi[oó]n|añade misi[oó]n|agrega misi[oó]n)\\s+", "");
-            i.slots.put("mision", mision.trim());
+            i.slots.put("mision", mission.group(1).trim());
             return i;
         }
 
         // --------------------------------------------------------
         // 5) CICLO_SUENO
         // --------------------------------------------------------
-        if (text.matches(".*\\b(duerme|dormir|ciclo de sue[nñ]o|modo sue[nñ]o)\\b.*")) {
-
+        // A discussion of sleep is NOT consent to schedule DreamWorker or mutate memories.
+        if (EXPLICIT_SLEEP.matcher(text).matches()) {
             return new Intent(IntentType.CICLO_SUENO);
         }
 
