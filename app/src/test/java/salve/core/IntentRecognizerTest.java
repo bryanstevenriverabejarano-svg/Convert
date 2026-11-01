@@ -79,7 +79,7 @@ public class IntentRecognizerTest {
                 "¿Cómo funciona el modo sueño?",
                 "A veces quiero dormir mejor",
                 "Explícame el ciclo de sueño de Salve",
-                "En la historia alguien dice duerme y reflexiona",
+                "En la historia alguien dice duerme tranquilamente",
                 "¿Qué significa nueva misión?",
                 "Creo que una nueva misión puede ser útil",
                 "¿Puedes explicarme cómo se agrega una misión?",
