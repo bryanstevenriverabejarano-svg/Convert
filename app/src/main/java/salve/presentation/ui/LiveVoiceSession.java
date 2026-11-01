@@ -109,11 +109,11 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 voiceLab.start();
                 voiceLab.event(loop.state() == VoiceConversationLoop.State.STOPPED ? 0 : metrics.token(),
                         "exam", "started");
-                Toast.makeText(activity, "VoiceLab iniciado: mantén pulsado el estado para exportar", Toast.LENGTH_LONG).show();
+                Toast.makeText(activity, "VoiceLab iniciado: mantén pulsado el estado para ver el informe", Toast.LENGTH_LONG).show();
             } else {
                 voiceLab.event(metrics.token(), "exam", "finished");
                 voiceLab.stop();
-                exportVoiceLab();
+                presentVoiceLab();
             }
             return true;
         });
@@ -141,38 +141,21 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         });
     }
 
-    /** Export through Android Downloads, without a new activity result callback or storage permission. */
-    private void exportVoiceLab() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            Toast.makeText(activity, "VoiceLab requiere Android 10 o superior para exportar", Toast.LENGTH_LONG).show();
+    /** Generate privately; the user decides whether to download from the chat. */
+    private void presentVoiceLab() {
+        File reports = new File(activity.getFilesDir(), "voicelab");
+        if (!reports.exists() && !reports.mkdirs()) {
+            Toast.makeText(activity, "No se pudo preparar VoiceLab", Toast.LENGTH_LONG).show();
             return;
         }
-        File temporary = new File(activity.getCacheDir(), "salve-voice-lab.pdf");
-        android.net.Uri uri = null;
+        File pdf = new File(reports, "informe-" + System.currentTimeMillis() + ".pdf");
         try {
-            voiceLab.writePdf(temporary);
-            android.content.ContentValues values = new android.content.ContentValues();
-            values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME,
-                    "salve-voice-lab-" + System.currentTimeMillis() + ".pdf");
-            values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
-            values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,
-                    android.os.Environment.DIRECTORY_DOWNLOADS + "/Salve");
-            uri = activity.getContentResolver().insert(
-                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-            if (uri == null) throw new java.io.IOException("No destination");
-            try (FileInputStream in = new FileInputStream(temporary);
-                 OutputStream out = activity.getContentResolver().openOutputStream(uri)) {
-                if (out == null) throw new java.io.IOException("No output stream");
-                byte[] buffer = new byte[8192];
-                int n;
-                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
-            }
-            Toast.makeText(activity, "PDF guardado en Descargas/Salve", Toast.LENGTH_LONG).show();
+            voiceLab.writePdf(pdf);
+            stage.showPdfAttachment(pdf);
         } catch (Exception error) {
-            if (uri != null) activity.getContentResolver().delete(uri, null, null);
-            Log.e("Salve/VoiceLab", "PDF export failed", error);
-            Toast.makeText(activity, "No se pudo exportar VoiceLab", Toast.LENGTH_LONG).show();
-        } finally { temporary.delete(); }
+            Log.e("Salve/VoiceLab", "PDF generation failed", error);
+            Toast.makeText(activity, "No se pudo generar el informe", Toast.LENGTH_LONG).show();
+        }
     }
 
     /** Local voice diagnostic intent; reuses the current Android recognizer. */
@@ -211,8 +194,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             }
             voiceLab.event(metrics.token(), "exam", "finished_by_voice");
             voiceLab.stop();
-            exportVoiceLab();
-            caption.setText("Salve: He terminado el examen. El PDF está en Descargas/Salve.");
+            presentVoiceLab();
+            caption.setText("Salve: He puesto el informe en el chat para que lo revises.");
             return true;
         }
         return false;
