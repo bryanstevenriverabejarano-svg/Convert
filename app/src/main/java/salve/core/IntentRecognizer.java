@@ -15,6 +15,22 @@ import java.util.regex.Pattern;
  */
 public class IntentRecognizer {
 
+    /**
+     * Writing private memory is a side effect, not a topic of conversation.
+     * The previous anywhere-match on "guardar" or "=" could persist a question
+     * or hypothesis. Preserve explicit imperative commands and the existing
+     * first-person "aprendí que" shortcut, but do not infer authorization from
+     * an arbitrary mention of saving or a bare equation.
+     */
+    private static final Pattern EXPLICIT_SAVE = Pattern.compile(
+            "^(?:(?:salve|oye|por favor)\\s*[,;:]?\\s+)*"
+            + "(?:guarda|almacena|graba|anota|registra)(?:\\s*:\\s*|\\s+)(\\S[\\s\\S]*)$");
+    private static final Pattern COLON_SAVE = Pattern.compile(
+            "^(?:guardar|anotar|registrar)\\s*:\\s*(\\S[\\s\\S]*)$");
+    private static final Pattern LEARNED_THAT = Pattern.compile(
+            "^aprend[ií] que\\s+(\\S[\\s\\S]*)$");
+
+
     // ============================================================
     //  CONSTRUCTORES
     // ============================================================
@@ -53,21 +69,17 @@ public class IntentRecognizer {
         // --------------------------------------------------------
         // 1) GUARDAR_RECUERDO
         // --------------------------------------------------------
-        if (text.matches(".*\\b(guarda|guardar|almacena|almacenar|graba|grabar|anota|anotar|registra|registrar|aprend[ií] que)\\b.*")
-                || text.contains("=")) {
-
-            Intent i = new Intent(IntentType.GUARDAR_RECUERDO);
-            String frase = text;
-
-            if (frase.contains("=")) {
-                // estilo: "x = y"
-                String[] partes = frase.split("=", 2);
-                i.slots.put("frase", partes[0].trim() + " = " + partes[1].trim());
-            } else {
-                frase = frase.replaceFirst(".*?(?:guarda|guardar|almacena|almacenar|graba|grabar|anota|anotar|registra|registrar|aprend[ií] que)\\s+", "");
-                i.slots.put("frase", frase.trim());
+        Matcher save = EXPLICIT_SAVE.matcher(text);
+        if (!save.matches()) save = COLON_SAVE.matcher(text);
+        if (!save.matches()) save = LEARNED_THAT.matcher(text);
+        if (save.matches()) {
+            // Only the explicit payload is stored, never incidental wording about a command.
+            String phrase = save.group(1).trim();
+            if (!phrase.isEmpty()) {
+                Intent i = new Intent(IntentType.GUARDAR_RECUERDO);
+                i.slots.put("frase", phrase);
+                return i;
             }
-            return i;
         }
 
         // --------------------------------------------------------
