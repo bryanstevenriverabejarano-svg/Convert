@@ -27,9 +27,10 @@ import java.util.ArrayList;
 
 import salve.core.MotorConversacional;
 import salve.core.voice.VoiceConversationLoop;
+import salve.core.voice.VoiceBargeInMonitor;
 import salve.core.voice.VoiceTurnMetrics;
 
-/** Foreground, automatic voice turns. The microphone stays closed during synthesis. */
+/** Foreground voice turns, with guarded echo-cancelled interruption during TTS. */
 public final class LiveVoiceSession implements MotorConversacional.VoiceConversationListener {
     private final AppCompatActivity activity;
     private final SalveStageController stage;
@@ -45,6 +46,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     /** Manos libres: tras cada respuesta vuelve a escuchar sola hasta «adiós, Salve» o 3 minutos de silencio. */
     private final VoiceConversationLoop loop = new VoiceConversationLoop(true);
     private final VoiceTurnMetrics metrics = new VoiceTurnMetrics();
+    /** AEC-only one-shot detector; the existing SpeechRecognizer still owns transcribed input. */
+    private final VoiceBargeInMonitor bargeIn = new VoiceBargeInMonitor();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable watchdog = () -> apply(loop.tick(now()));
     private final AudioManager audioManager;
@@ -98,6 +101,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 activity.findViewById(R.id.btnHablar).performClick();
                 return;
             }
+            bargeIn.stop();
             long timestamp = now();
             VoiceConversationLoop.Step step = loop.interrupt(timestamp);
             if (step.action != VoiceConversationLoop.Action.NONE) {
@@ -171,9 +175,11 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         if (dismissed || step.action == VoiceConversationLoop.Action.NONE) return;
         switch (step.action) {
             case LISTEN:
+                bargeIn.stop();
                 beginRecognition(step.token);
                 break;
             case CONTINUE:
+                bargeIn.stop();
                 // Android finalized an unfinished clause. Keep it only in VoiceConversationLoop,
                 // close this recognizer and rearm the SAME session after a brief delay.
                 destroyRecognizer();
@@ -181,6 +187,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 caption.setText("Tú: " + step.text + " …");
                 break;
             case SUBMIT:
+                bargeIn.stop();
                 destroyRecognizer();
                 metrics.submitted(step.token, now());
                 stage.closePanels();
@@ -193,6 +200,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 }
                 break;
             case WAIT:
+                if (loop.state() != VoiceConversationLoop.State.SPEAKING) bargeIn.stop();
                 destroyRecognizer();
                 if (loop.state() == VoiceConversationLoop.State.COOLDOWN && metrics.isActive()
                         && !metrics.hasSubmitted()) {
@@ -202,6 +210,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 }
                 break;
             case STOP:
+                bargeIn.stop();
                 metrics.stop(metrics.token(), now(), loop.stopReason());
                 reportMetrics();
                 releaseResources();
@@ -213,6 +222,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     }
 
     private void beginRecognition(long token) {
+        bargeIn.stop();
         destroyRecognizer();
         if (!loop.owns(token)) return;
         if (!metrics.begin(token, now())) return;
@@ -452,6 +462,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     }
 
     private void releaseResources() {
+        bargeIn.stop();
         handler.removeCallbacks(watchdog);
         if (headsetButton != null) {
             try { headsetButton.setActive(false); headsetButton.release(); } catch (RuntimeException ignored) { }
@@ -496,7 +507,9 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 status.setText("Preparando respuesta…"); break;
             case SPEAKING:
                 stage.setVoicePresence(SalveStageController.PresenceMode.SPEAKING);
-                status.setText("Salve está hablando…"); break;
+                status.setText(VoiceBargeInMonitor.isSupported()
+                        ? "Salve está hablando… Puedes interrumpirla hablando."
+                        : "Salve está hablando… Usa Interrumpir para tomar tu turno."); break;
             case COOLDOWN:
                 stage.setVoicePresence(loop.hasHeldSpeech()
                         ? SalveStageController.PresenceMode.LISTENING : null);
@@ -516,7 +529,11 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         stage.setVoiceDetails(status.getText() + "\n\n" + backend
                 + "\n\nLos fragmentos de una frase incompleta se mantienen temporalmente en memoria"
                 + " y se reúnen antes de enviarlos al motor."
-                + " El micrófono se cierra mientras Salve habla. Puedes interrumpirla para tomar tu turno."
+                + " Durante el TTS puede funcionar la detección experimental de interrupción:"
+                + " únicamente si Android permite cancelación de eco."
+                + " Esta detección no transcribe ni guarda audio; puede fallar o confundir eco con habla."
+                + " El reconocimiento normal vuelve tras cortar la voz de Salve."
+                + " Puedes usar el botón Interrumpir en cualquier caso."
                 + " La sesión termina al salir de la aplicación o por su límite de seguridad.");
         status.setContentDescription(status.getText() + ". Toca para ver los detalles de voz.");
     }
@@ -552,12 +569,27 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
 
     @Override public void onSpeechStarted(long token) {
         long timestamp = now();
-        if (!dismissed && loop.owns(token) && metrics.speechStarted(token, timestamp))
+        if (!dismissed && loop.owns(token) && metrics.speechStarted(token, timestamp)) {
             apply(loop.speechStarted(token, timestamp));
+            if (!dismissed && loop.owns(token)
+                    && loop.state() == VoiceConversationLoop.State.SPEAKING) {
+                bargeIn.start(token, this::onBargeInDetected);
+            }
+        }
+    }
+
+    /** Runs on the main thread. Uses the SAME revocable token and interrupt path as the button. */
+    private void onBargeInDetected(long token) {
+        if (dismissed || !loop.owns(token)
+                || loop.state() != VoiceConversationLoop.State.SPEAKING) return;
+        bargeIn.stop();
+        Log.i("Salve/Voice", "voice_barge_in detected=true");
+        interrupt.performClick();
     }
 
     @Override public void onSpeechFinished(long token, boolean completed) {
         if (dismissed || !loop.owns(token)) return;
+        bargeIn.stop();
         long timestamp = now();
         if (!metrics.speechFinished(token, timestamp)) return;
         VoiceConversationLoop.Step step = loop.speechFinished(token, completed, timestamp);
