@@ -14,7 +14,7 @@ public final class VoiceConversationLoop {
     public static final int MAX_SILENCE_RETRIES = 2;
     public static final int MAX_TRANSIENT_RETRIES = 1;
     /** Quick restart when Android finalizes an unfinished clause; no concurrent recognizers. */
-    public static final long FRAGMENT_REARM_MS = 150L;
+    public static final long FRAGMENT_REARM_MS = 350L;
     public static final int MAX_HELD_FRAGMENTS = 2;
     public static final int MAX_HELD_CHARACTERS = 360;
     /** Manos libres: sesión larga y paciencia con el silencio, para hablar sin mirar ni tocar la pantalla. */
@@ -151,7 +151,7 @@ public final class VoiceConversationLoop {
                 .replaceAll("\\p{M}+", "").replaceAll("[¿¡]", "").trim();
         return normalized.matches("(?s).*(?:^|\\s)(?:y|o|pero|porque|aunque|que|como|cuando|si|"
                 + "para|por|con|sin|de|del|a|en|el|la|los|las|un|una|al|mi|tu|su|"
-                + "quiero|necesito)"); 
+                + "quiero|necesito)");
     }
 
     public Step recognitionFailed(long token, RecognitionFailure failure, long now) {
