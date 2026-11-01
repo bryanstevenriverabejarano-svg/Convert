@@ -89,7 +89,11 @@ final class SalveStageController {
         AvatarView avatar = activity.findViewById(R.id.imagenSalve);
         avatar.setImmersiveMode(true);
         avatar.setOnClickListener(v -> showChat(true));
-        avatar.setOnLongClickListener(v -> { showOptions(); return true; });
+        // Mantener pulsada a Salve abre directamente la conversación por voz (el mismo camino que la
+        // tarjeta «Conversar» del chat). El menú de opciones queda en los tres puntos de arriba.
+        avatar.setOnLongClickListener(v -> {
+            closePanels(); activity.findViewById(R.id.btnHablar).performClick(); return true;
+        });
         caption.setOnClickListener(v -> showChat(true));
         caption.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         activity.findViewById(R.id.btnStageOptions).setOnClickListener(v -> showOptions());
