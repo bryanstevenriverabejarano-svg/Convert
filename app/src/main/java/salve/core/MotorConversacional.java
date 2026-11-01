@@ -29,6 +29,7 @@ import salve.core.cognitive.HipocampoSemantico;
 import salve.core.cognitive.ReasoningEngine;
 import salve.core.conversation.ConversationAnalysis;
 import salve.core.conversation.ConversationRequestAnalyzer;
+import salve.core.cognition.TurnObjective;
 import salve.core.conversation.ConversationSession;
 import salve.core.conversation.ReasoningPlan;
 import salve.core.conversation.ReasoningPlanner;
@@ -1248,26 +1249,23 @@ public class MotorConversacional {
             return;
         }
 
-        ConversationAnalysis conversationAnalysis = ConversationRequestAnalyzer.analyze(entrada, hasPriorContext);
-        if (!storyTurn && conversationAnalysis.needsClarification()) {
+        // One immutable interpretation for the whole turn: reuse existing detectors and planners.
+        IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
+        TurnObjective objective = TurnObjective.understand(
+                entrada, hasPriorContext, intent.type == IntentType.BUSCAR_WEB);
+        if (!storyTurn && objective.needsClarification()) {
             if (avatarSession != null) AvatarMotionController.get().clarification(avatarSession, currentAvatarTurn());
             hablar("¿Puedes concretar a qué te refieres? No tengo un turno anterior que me permita interpretarlo con seguridad.");
             return;
         }
 
-        IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
         // Legacy explicit search aliases also produce a completed tool reply, never a promise.
         if (!storyTurn && intent.type == IntentType.BUSCAR_WEB) {
             deliverResponse(mesaInvestigacion.manejarBuscarWeb(intent), AvatarMotionProtocol.parse(""), true);
             return;
         }
-        ReasoningPlan reasoningPlan = ReasoningPlanner.plan(
-                entrada,
-                conversationAnalysis,
-                intent.type == IntentType.BUSCAR_WEB
-        );
-        String responseContext = intent.type.name() + " | ACTO_CONVERSACIONAL: "
-                + conversationAnalysis.getAct().name() + " | " + reasoningPlan.toPromptContext()
+        ReasoningPlan reasoningPlan = objective.plan();
+        String responseContext = intent.type.name() + " | " + objective.toPromptContext()
                 + salve.core.reasoning.MathGrounding.promptBlock(entrada) + sketchContext;
         if (!storyTurn && memoriaCausal != null) responseContext += memoriaCausal.promptBlock(entrada);
         if (!storyTurn) responseContext += salve.core.reasoning.AnalogyReasoner.promptBlock(entrada, memoriaCausal);
@@ -1306,7 +1304,7 @@ public class MotorConversacional {
 
         if (diario != null) {
             diario.escribirAutoCritica("Turno analizado. Intención operativa: " + intent.type.name()
-                    + "; acto conversacional: " + conversationAnalysis.getAct().name()
+                    + "; acto conversacional: " + objective.act().name()
                     + "; memoria largo plazo: " + reasoningPlan.shouldRetrieveLongTermMemory()
                     + "; verificación: " + reasoningPlan.isVerificationRequired());
         }
@@ -1414,7 +1412,7 @@ public class MotorConversacional {
         CognitiveTurn.Outcome cognitive;
         try {
         cognitive = creativeOk ? null : runCognitiveTurn(entrada, responseContext, resumenAccion,
-                entradaPorVoz, evidence, false);
+                entradaPorVoz, evidence, false, objective);
         } finally { LiteRTLlm.setThinking(false); }
         if (cognitive != null && cognitive.handedOff) return;
         // Red de seguridad: «Aquí tienes uno corto…» sin el texto detrás → lo escribe en texto libre.
@@ -1456,7 +1454,7 @@ public class MotorConversacional {
             if (review.needsRewrite()) {
                 estado("Releo mi borrador: no servía así, lo reescribo…");
                 CognitiveTurn.Outcome retry = runCognitiveTurn(entrada, responseContext + review.instruction(),
-                        resumenAccion, entradaPorVoz, evidence, false);
+                        resumenAccion, entradaPorVoz, evidence, false, objective);
                 if (retry.handedOff) return;
                 if (retry.result.isSuccess() && salve.core.conversation.ReplyReviewer.better(
                         salve.core.conversation.ReplyReviewer.review(retry.result.getText(), entrada, recientes, lastReading, !storyTurn,
@@ -2043,6 +2041,14 @@ public class MotorConversacional {
         return runCognitiveTurn(input, contextInfo, action, voice, evidence, photoAnalysis, null, null);
     }
 
+    /** Keep the same interpreted objective when reviewing or retrying the response. */
+    private CognitiveTurn.Outcome runCognitiveTurn(String input, String contextInfo, String action,
+            boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis,
+            TurnObjective objective) {
+        return runCognitiveTurn(input, contextInfo, action, voice, evidence, photoAnalysis,
+                null, null, objective);
+    }
+
     /**
      * Igual que un turno normal, pero el examen puede darle su propio historial y cambiar las
      * herramientas por otras simuladas (sin red, sin dibujar, sin tocar recuerdos).
@@ -2051,6 +2057,15 @@ public class MotorConversacional {
             boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis,
             List<salve.core.conversation.ChatMessage> historyOverride,
             java.util.function.UnaryOperator<Map<String, CognitiveTurn.Tool>> toolOverride) {
+        return runCognitiveTurn(input, contextInfo, action, voice, evidence, photoAnalysis,
+                historyOverride, toolOverride, null);
+    }
+
+    private CognitiveTurn.Outcome runCognitiveTurn(String input, String contextInfo, String action,
+            boolean voice, ConversationMemoryGrounding.Result evidence, boolean photoAnalysis,
+            List<salve.core.conversation.ChatMessage> historyOverride,
+            java.util.function.UnaryOperator<Map<String, CognitiveTurn.Tool>> toolOverride,
+            TurnObjective objective) {
         List<salve.core.conversation.ChatMessage> evidenceHistory = historyOverride != null
                 ? historyOverride : conversationSession.snapshot();
         salve.core.cognition.ConversationEvidenceIntent.Scope evidenceScope =
@@ -2062,9 +2077,11 @@ public class MotorConversacional {
             catalogPromptBudget = Math.min(catalogPromptBudget, turnPromptBudget);
         if (activePhoto != null && mesaFotos.canAnalyzePhoto(activePhoto))
             catalogPromptBudget = Math.min(catalogPromptBudget, 6000);
-        Map<String, CognitiveTurn.Tool> catalog = CognitivePrompt.limitTools(
-                CognitivePrompt.prioritize(cognitiveTools(input, photoAnalysis, evidenceHistory), input),
-                catalogPromptBudget);
+        Map<String, CognitiveTurn.Tool> offered = cognitiveTools(input, photoAnalysis, evidenceHistory);
+        Map<String, CognitiveTurn.Tool> ranked = objective == null
+                ? CognitivePrompt.prioritize(offered, input)
+                : objective.rankAuthorized(offered);
+        Map<String, CognitiveTurn.Tool> catalog = CognitivePrompt.limitTools(ranked, catalogPromptBudget);
         Map<String, CognitiveTurn.Tool> tools = toolOverride == null ? catalog : toolOverride.apply(catalog);
         List<salve.core.conversation.ChatMessage> turnHistory = historyOverride;
         // Sin la herramienta (Bryan aún no verificado) no se le puede decir «usa memory.lookup»: acababa

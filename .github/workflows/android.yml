@@ -61,6 +61,8 @@ jobs:
         run: |
           python3 -m pip install -r scripts/requirements-family.txt
           python3 -m unittest discover -s scripts -p 'test_*.py' -v
+          # Reproducible, non-blocking-by-policy inventory: actual script/test failures still fail CI.
+          python3 scripts/audit_cognitive_dependencies.py --json build/cognitive-dependencies.json
           bash scripts/test-research-kernel.sh
           bash scripts/test-compute-router.sh
 

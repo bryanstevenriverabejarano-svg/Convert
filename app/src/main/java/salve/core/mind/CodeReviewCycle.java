@@ -90,7 +90,7 @@ public final class CodeReviewCycle {
         Result result = new Result();
         Plan plan = plan(index, source, store);
         result.patchDetected = plan.patchDetected();
-        store.save();
+        if (!store.save()) throw new IllegalStateException("No se pudo guardar el estado de revisión");
         long start = clock.getAsLong();
         List<Object[]> queue = new ArrayList<>();
         for (String p : plan.changed) queue.add(new Object[]{p, Kind.PATCH});
@@ -107,14 +107,14 @@ public final class CodeReviewCycle {
                 finished = reviewPatch(path, text, hash, store, model, stop, clock, start, budgetMs, result);
             else
                 finished = readWhole(path, text, hash, kind, store, model, stop, clock, start, budgetMs, result);
-            store.save();
+            if (!store.save()) throw new IllegalStateException("No se pudo guardar el progreso de revisión");
             if (!finished) break;
         }
         int left = 0;
         for (int i = index0; i < queue.size(); i++) left++;
         result.pendingAfter = left;
         store.addSpent(clock.getAsLong() - start);
-        store.save();
+        if (!store.save()) throw new IllegalStateException("No se pudo guardar el tiempo de revisión");
         return result;
     }
 
@@ -130,28 +130,26 @@ public final class CodeReviewCycle {
         List<CodeDiff.Hunk> hunks = CodeDiff.diff(store.reviewedSource(path), text, 2);
         String old = store.note(path);
         if (hunks.isEmpty()) { store.complete(path, hash, old == null ? "" : old, text, clock.getAsLong()); return true; }
-        // Trozos del diff que caben en su contexto, en orden.
-        List<String> pieces = new ArrayList<>();
-        List<CodeDiff.Hunk> group = new ArrayList<>();
-        for (CodeDiff.Hunk h : hunks) {
-            group.add(h);
-            if (CodeDiff.render(group, Integer.MAX_VALUE).length() > DIFF_CHARS && group.size() > 1) {
-                group.remove(group.size() - 1);
-                pieces.add(CodeDiff.render(group, DIFF_CHARS));
-                group = new ArrayList<>(); group.add(h);
-            }
-        }
-        if (!group.isEmpty()) pieces.add(CodeDiff.render(group, DIFF_CHARS));
+        // All changed lines MUST reach the model. A single oversized hunk is
+        // split into numbered pages; unread tails never count as reviewed.
+        List<String> pieces;
+        try { pieces = CodeDiff.reviewPages(hunks, DIFF_CHARS); }
+        catch (IllegalArgumentException oversized) { r.modelFailed = true; return false; }
         int added = 0, removed = 0;
         for (CodeDiff.Hunk h : hunks) { added += h.added(); removed += h.removed(); }
-        StringBuilder notes = new StringBuilder();
-        for (int i = 0; i < pieces.size(); i++) {
+        // The patch cursor, like the full-file cursor, is persisted per source
+        // hash so the next charging window resumes instead of rereading a patch.
+        int next = Math.max(0, store.partialLine(path, hash) - 1);
+        StringBuilder notes = new StringBuilder(store.partialNotes(path, hash));
+        for (int i = next; i < pieces.size(); i++) {
             if (!timeLeft(stop, clock, start, budgetMs, r)) return false;
             String answer = model.generate(patchPrompt(path, old, pieces.get(i), i + 1, pieces.size()));
             if (answer == null || answer.trim().isEmpty()) { r.modelFailed = true; return false; }
             r.chunks++;
             if (notes.length() > 0) notes.append('\n');
-            notes.append(answer.trim());
+            notes.append("[").append(i + 1).append("/").append(pieces.size()).append("] ").append(answer.trim());
+            store.setPartial(path, hash, i + 2, CodeReviewStore.cut(notes.toString(), 6000));
+            if (!store.save()) throw new IllegalStateException("No se pudo guardar el parche parcial");
         }
         String note = "Último parche (+" + added + " / -" + removed + " líneas): " + notes
                 + (old == null || old.isEmpty() ? "" : "\nAntes sabía: " + CodeReviewStore.cut(old, 500));
@@ -183,7 +181,7 @@ public final class CodeReviewCycle {
             if (notes.length() > 0) notes.append('\n');
             notes.append("[").append(from).append('–').append(line - 1).append("] ").append(answer.trim());
             store.setPartial(path, hash, line, CodeReviewStore.cut(notes.toString(), 6000));
-            store.save();
+            if (!store.save()) throw new IllegalStateException("No se pudo guardar la lectura parcial");
         }
         String note = notes.toString();
         if (note.length() > CodeReviewStore.MAX_NOTE) {

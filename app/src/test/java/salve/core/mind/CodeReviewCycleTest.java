@@ -142,4 +142,35 @@ public class CodeReviewCycleTest {
         assertTrue(a.contains("carga Gemma"));
         assertFalse(SelfCode.parse(index).answer("tu LLM", p -> null).contains("LO_QUE_YA_REVISASTE"));
     }
+
+    @Test public void aHugePatchResumesWithoutClaimingAnUnreadTail() throws Exception {
+        CodeReviewStore store = new CodeReviewStore(tempDir());
+        Map<String, String> files = sources();
+        run(store, files, new Fake(), 1_000_000);
+        StringBuilder replacement = new StringBuilder("class SalveLLM {\n");
+        for (int i = 0; i < 250; i++)
+            replacement.append("  int numero").append(i).append(" = ").append(i + 10).append(";\n");
+        replacement.append("}\n");
+        files.put("salve/core/SalveLLM.java", replacement.toString());
+        String hash = CodeReviewStore.hash(replacement.toString());
+        long[] clock = {0};
+        Fake firstModel = new Fake();
+        CodeReviewCycle.Result first = CodeReviewCycle.run(SelfCode.parse(INDEX), files::get, store,
+                prompt -> { clock[0] += 10; return firstModel.generate(prompt); },
+                () -> false, () -> clock[0], 5); // one page; the rest must resume later
+        assertFalse(first.done.contains("salve/core/SalveLLM.java"));
+        assertTrue(store.partialLine("salve/core/SalveLLM.java", hash) > 1);
+        assertTrue(first.pendingAfter > 0);
+        assertNotEquals(hash, store.reviewed("salve/core/SalveLLM.java"));
+
+        Fake secondModel = new Fake();
+        CodeReviewCycle.Result second = CodeReviewCycle.run(SelfCode.parse(INDEX), files::get, store,
+                secondModel, () -> false, () -> 0L, 1_000_000);
+        assertTrue(second.done.contains("salve/core/SalveLLM.java"));
+        assertEquals(hash, store.reviewed("salve/core/SalveLLM.java"));
+        assertTrue("El final del parche nunca llegó al modelo",
+                secondModel.prompts.stream().anyMatch(p -> p.contains("+  int numero249 = 259;")));
+        assertTrue(secondModel.prompts.stream().noneMatch(p -> p.contains("…(más cambios)")));
+    }
+
 }
