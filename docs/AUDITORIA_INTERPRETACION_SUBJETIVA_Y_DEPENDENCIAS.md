@@ -48,6 +48,14 @@ Se requiere una petición explícita al principio («guarda», «anota»,
 Una fórmula suelta `x = y` deja de activar guardado; para almacenar,
 «guarda x = y» lo expresa inequívocamente.
 
+## Dos efectos adicionales descubiertos en la revisión de rutas
+
+La misma debilidad léxica también afectaba a:
+- **Misiones:** `IntentRecognizer` reconocía «nueva misión» o «añade misión» en cualquier parte; `MotorConversacional.manejarAgregarMision` termina llamando a `MemoriaEmocional.agregarMision` y guarda un recuerdo. Ahora solo se aceptan peticiones explícitas que comiencen por esos verbos y tengan contenido.
+- **Sueño:** `IntentRecognizer` reconocía «dormir», «duerme», «modo sueño» y «ciclo de sueño» en cualquier contexto. `MotorConversacional.procesarIntencion` llama entonces a `MemoriaEmocional.cicloDeSueno`, que reorganiza recuerdos, inicia tareas y programa `DreamWorker`. Ahora se exige una orden directa como «duerme», «inicia el ciclo de sueño», «activa el modo sueño» o la orden aislada «modo sueño»; preguntar cómo funciona no inicia nada.
+
+No se cambia el sueño automático programado desde los controladores existentes ni se quitan las misiones que ya están guardadas. Las verificaciones se realizan sobre el reconocedor de comandos: las clases Android que realizan los efectos permanecen intactas.
+
 Esto **no elimina opiniones, hipótesis ni recuerdos**: siguen entrando al
 diálogo, historial y recuperación según sus políticas. Sólo evita que una
 *referencia léxica* a guardar sea tomada como consentimiento para persistir.
