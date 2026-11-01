@@ -16,6 +16,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.widget.Toast;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.OutputStream;
+import salve.core.voice.VoiceLabReport;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -46,6 +51,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     /** Manos libres: tras cada respuesta vuelve a escuchar sola hasta «adiós, Salve» o 3 minutos de silencio. */
     private final VoiceConversationLoop loop = new VoiceConversationLoop(true);
     private final VoiceTurnMetrics metrics = new VoiceTurnMetrics();
+    private final VoiceLabReport voiceLab = new VoiceLabReport();
     /** AEC-only one-shot detector; the existing SpeechRecognizer still owns transcribed input. */
     private final VoiceBargeInMonitor bargeIn = new VoiceBargeInMonitor();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -62,6 +68,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     private SpeechRecognizer recognizer;
     private AudioFocusRequest audioFocusRequest;
     private boolean focusHeld;
+    private boolean automaticInterruptDispatch;
     private boolean started;
     private boolean dismissed;
     private boolean resourcesReleased;
@@ -95,6 +102,19 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         status = activity.findViewById(R.id.voiceStageStatus);
         interrupt = activity.findViewById(R.id.btnVoiceInterrupt);
         status.setOnClickListener(view -> stage.showVoiceDetails());
+        status.setOnLongClickListener(view -> {
+            if (!voiceLab.isEnabled()) {
+                voiceLab.start();
+                voiceLab.event(loop.state() == VoiceConversationLoop.State.STOPPED ? 0 : metrics.token(),
+                        "exam", "started");
+                Toast.makeText(activity, "VoiceLab iniciado: mantén pulsado el estado para exportar", Toast.LENGTH_LONG).show();
+            } else {
+                voiceLab.event(metrics.token(), "exam", "finished");
+                voiceLab.stop();
+                exportVoiceLab();
+            }
+            return true;
+        });
         interrupt.setOnClickListener(view -> {
             if (!loop.isActive()) {
                 dismiss();
@@ -102,6 +122,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 return;
             }
             bargeIn.stop();
+            if (!automaticInterruptDispatch) voiceLab.event(metrics.token(), "interrupt", "manual_button");
             long timestamp = now();
             VoiceConversationLoop.Step step = loop.interrupt(timestamp);
             if (step.action != VoiceConversationLoop.Action.NONE) {
@@ -116,6 +137,40 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         activity.findViewById(R.id.btnVoiceEnd).setOnClickListener(view -> {
             apply(loop.stop(VoiceConversationLoop.StopReason.USER)); dismiss();
         });
+    }
+
+    /** Export through Android Downloads, without a new activity result callback or storage permission. */
+    private void exportVoiceLab() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            Toast.makeText(activity, "VoiceLab requiere Android 10 o superior para exportar", Toast.LENGTH_LONG).show();
+            return;
+        }
+        File temporary = new File(activity.getCacheDir(), "salve-voice-lab.pdf");
+        android.net.Uri uri = null;
+        try {
+            voiceLab.writePdf(temporary);
+            android.content.ContentValues values = new android.content.ContentValues();
+            values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME,
+                    "salve-voice-lab-" + System.currentTimeMillis() + ".pdf");
+            values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
+            values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,
+                    android.os.Environment.DIRECTORY_DOWNLOADS + "/Salve");
+            uri = activity.getContentResolver().insert(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+            if (uri == null) throw new java.io.IOException("No destination");
+            try (FileInputStream in = new FileInputStream(temporary);
+                 OutputStream out = activity.getContentResolver().openOutputStream(uri)) {
+                if (out == null) throw new java.io.IOException("No output stream");
+                byte[] buffer = new byte[8192];
+                int n;
+                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+            }
+            Toast.makeText(activity, "PDF guardado en Descargas/Salve", Toast.LENGTH_LONG).show();
+        } catch (Exception error) {
+            if (uri != null) activity.getContentResolver().delete(uri, null, null);
+            Log.e("Salve/VoiceLab", "PDF export failed", error);
+            Toast.makeText(activity, "No se pudo exportar VoiceLab", Toast.LENGTH_LONG).show();
+        } finally { temporary.delete(); }
     }
 
     public boolean isShowing() { return started && !dismissed; }
@@ -173,6 +228,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
 
     private void apply(VoiceConversationLoop.Step step) {
         if (dismissed || step.action == VoiceConversationLoop.Action.NONE) return;
+        voiceLab.event(step.token, "loop", step.action.name() + " state=" + loop.state().name());
         switch (step.action) {
             case LISTEN:
                 bargeIn.stop();
@@ -226,6 +282,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         destroyRecognizer();
         if (!loop.owns(token)) return;
         if (!metrics.begin(token, now())) return;
+        voiceLab.event(token, "asr", "capture_started");
         recognitionErrorText = null;
         if (activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             apply(loop.stop(VoiceConversationLoop.StopReason.MICROPHONE_PERMISSION));
@@ -268,6 +325,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 @Override public void onError(int error) {
                     if (!current()) return;
                     long timestamp = now();
+                    voiceLab.event(token, "asr", "error=" + error);
                     VoiceConversationLoop.RecognitionFailure failure = recognitionFailure(error);
                     // When a previous clause is held, a no-speech result finishes that same
                     // user turn. Record it as successful ASR, never as a failed/double turn.
@@ -302,6 +360,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                     ArrayList<String> matches = results == null ? null
                             : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     String text = matches == null || matches.isEmpty() ? "" : matches.get(0);
+                    voiceLab.event(token, "asr", "final_chars=" + text.length());
                     destroyRecognizer();
                     apply(loop.recognized(token, text, timestamp));
                 }
@@ -561,6 +620,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         long timestamp = now();
         // A very short utterance can finish before its reply callback; still show its text once.
         metrics.replied(token, timestamp);
+        voiceLab.event(token, "llm", "reply_chars=" + (text == null ? 0 : text.length()) + " audio=" + audioQueued);
         // The engine already publishes the final reply to the shared chat listener.
         // Keep the on-stage subtitle current without adding a duplicate chat message.
         if (text != null && !text.isEmpty()) caption.setText(text);
@@ -570,6 +630,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     @Override public void onSpeechStarted(long token) {
         long timestamp = now();
         if (!dismissed && loop.owns(token) && metrics.speechStarted(token, timestamp)) {
+            voiceLab.event(token, "tts", "started");
             apply(loop.speechStarted(token, timestamp));
             if (!dismissed && loop.owns(token)
                     && loop.state() == VoiceConversationLoop.State.SPEAKING) {
@@ -584,7 +645,9 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 || loop.state() != VoiceConversationLoop.State.SPEAKING) return;
         bargeIn.stop();
         Log.i("Salve/Voice", "voice_barge_in detected=true");
-        interrupt.performClick();
+        voiceLab.event(token, "interrupt", "automatic_detector");
+        automaticInterruptDispatch = true;
+        try { interrupt.performClick(); } finally { automaticInterruptDispatch = false; }
     }
 
     @Override public void onSpeechFinished(long token, boolean completed) {
@@ -592,6 +655,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         bargeIn.stop();
         long timestamp = now();
         if (!metrics.speechFinished(token, timestamp)) return;
+        voiceLab.event(token, "tts", "finished completed=" + completed);
         VoiceConversationLoop.Step step = loop.speechFinished(token, completed, timestamp);
         if (step.action == VoiceConversationLoop.Action.WAIT && completed) {
             metrics.complete(token, timestamp);
@@ -602,7 +666,10 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
 
     private void reportMetrics() {
         String line = metrics.takeLogLine();
-        if (line != null) Log.i("Salve/Voice", line);
+        if (line != null) {
+            Log.i("Salve/Voice", line);
+            voiceLab.event(metrics.token(), "metrics", line);
+        }
     }
 
     private static long now() { return SystemClock.elapsedRealtime(); }
