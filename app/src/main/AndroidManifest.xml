@@ -23,6 +23,7 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" android:maxSdkVersion="33" />
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FLASHLIGHT" />
@@ -161,6 +162,12 @@
         <!-- Palabra de activación «Salve»: la activa Bryan, escucha solo sin Internet, notificación fija. -->
         <service
             android:name="salve.services.WakeWordService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Conversación por voz que sigue fuera de la app: solo mientras Bryan la tiene abierta, con notificación y «Terminar». -->
+        <service
+            android:name="salve.services.VoiceForegroundService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
 

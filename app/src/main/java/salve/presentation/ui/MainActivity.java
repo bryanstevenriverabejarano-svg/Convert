@@ -1695,13 +1695,15 @@ public class MainActivity extends AppCompatActivity {
         modelStatusHandler.removeCallbacks(refreshModelStatus);
         pendingLiveVoiceStart = false;
         if (imagenSalve != null) imagenSalve.setAnimationEnabled(false);
-        if (liveVoiceSession != null) {
+        // Con una conversación por voz abierta (y su notificación), sigue al salir o apagar la pantalla.
+        boolean voiceContinues = liveVoiceSession != null && liveVoiceSession.runsInBackground();
+        if (liveVoiceSession != null && !voiceContinues) {
             liveVoiceSession.dismiss();
             liveVoiceSession = null;
         }
         finalizarEscucha();
         if (motorConversacional != null) {
-            motorConversacional.cancelarTurnoVoz();
+            if (!voiceContinues) motorConversacional.cancelarTurnoVoz();
             motorConversacional.setConversationForeground(false);
         }
         super.onPause();
