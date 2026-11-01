@@ -113,6 +113,47 @@ public final class CodeDiff {
         return out;
     }
 
+    /**
+     * Lossless, budgeted pages for code review. Unlike render(), this method
+     * NEVER inserts an omission marker and NEVER skips the tail of a large hunk.
+     * Each page retains the old/new line positions of its first displayed line.
+     * An individual line too long to fit fails closed instead of being silently
+     * treated as reviewed.
+     */
+    public static List<String> reviewPages(List<Hunk> hunks, int maxChars) {
+        if (maxChars < 100) throw new IllegalArgumentException("Presupuesto de revisión insuficiente");
+        List<String> pages = new ArrayList<>();
+        StringBuilder page = new StringBuilder();
+        for (Hunk h : hunks) {
+            int oldLine = h.oldStart, newLine = h.newStart, i = 0;
+            while (i < h.lines.size()) {
+                String header = "@@ antes línea " + oldLine + ", ahora línea " + newLine + "\n";
+                String next = h.lines.get(i);
+                if (header.length() + next.length() + 1 > maxChars)
+                    throw new IllegalArgumentException("Línea de parche demasiado larga para analizar");
+                if (page.length() + header.length() + next.length() + 1 > maxChars) {
+                    pages.add(page.toString());
+                    page.setLength(0);
+                }
+                page.append(header);
+                while (i < h.lines.size()) {
+                    String line = h.lines.get(i);
+                    if (page.length() + line.length() + 1 > maxChars) break;
+                    page.append(line).append('\n');
+                    if (!line.startsWith("+")) oldLine++;
+                    if (!line.startsWith("-")) newLine++;
+                    i++;
+                }
+                if (i < h.lines.size()) {
+                    pages.add(page.toString());
+                    page.setLength(0);
+                }
+            }
+        }
+        if (page.length() > 0) pages.add(page.toString());
+        return pages;
+    }
+
     /** Los trozos como texto para el modelo, cortado a {@code maxChars}. */
     public static String render(List<Hunk> hunks, int maxChars) {
         StringBuilder sb = new StringBuilder();
