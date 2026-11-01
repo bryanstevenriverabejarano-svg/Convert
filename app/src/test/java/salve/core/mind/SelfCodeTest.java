@@ -73,4 +73,21 @@ public class SelfCodeTest {
         assertFalse(SelfCode.explicitCodeRequest("¿te gusta tu cuerpo?"));
         assertFalse(SelfCode.explicitCodeRequest("¿cómo estás hecha?"));
     }
+
+    /** Regresión 2026-11-01: «real» encontraba RealisticSpriteRenderer y «LLM» archivos secundarios. */
+    @Test public void requestWordsDoNotPickRandomFilesAndEachTopicGetsItsFile() {
+        String index = "{\"files\":["
+                + "{\"p\":\"salve/avatar/RealisticSpriteRenderer.java\",\"l\":1,\"d\":\"Sprites.\",\"m\":[]},"
+                + "{\"p\":\"salve/core/AutoModelUpgrade.java\",\"l\":1,\"d\":\"Cambia de modelo Gemma.\",\"m\":[]},"
+                + "{\"p\":\"salve/core/SalveLLM.java\",\"l\":1,\"d\":\"Motor del modelo local.\",\"m\":[]},"
+                + "{\"p\":\"salve/core/MemoriaEmocional.java\",\"l\":1,\"d\":\"Recuerdos con emoción.\",\"m\":[]},"
+                + "{\"p\":\"salve/core/GoalAutonomyRuntime.java\",\"l\":1,\"d\":\"Metas y autonomía.\",\"m\":[]}]}";
+        SelfCode code = SelfCode.parse(index);
+        java.util.List<String> paths = new java.util.ArrayList<>();
+        for (SelfCode.FileInfo f : code.searchTopics(salve.core.reports.SelfReportTest.BRYAN, 2, 6)) paths.add(f.path);
+        assertFalse(paths.contains("salve/avatar/RealisticSpriteRenderer.java"));
+        assertTrue(paths.containsAll(java.util.Arrays.asList(
+                "salve/core/SalveLLM.java", "salve/core/MemoriaEmocional.java", "salve/core/GoalAutonomyRuntime.java")));
+        assertEquals("salve/core/SalveLLM.java", code.search("tu LLM", 1).get(0).path);
+    }
 }

@@ -95,16 +95,61 @@ public final class SelfCode {
     private static final Set<String> STOP = new HashSet<>(java.util.Arrays.asList(
             "el", "la", "los", "las", "de", "del", "un", "una", "y", "o", "en", "que", "como", "tu", "tus", "te", "me",
             "mi", "se", "es", "lo", "al", "por", "para", "con", "codigo", "propio", "archivo", "archivos", "donde",
-            "esta", "estas", "hecha", "funciona", "funcionas", "cual", "cuales", "salve", "haces", "hace", "sobre", "ti"));
+            "esta", "estas", "hecha", "funciona", "funcionas", "cual", "cuales", "salve", "haces", "hace", "sobre", "ti",
+            "has", "sin", "son", "hay", "mas", "muy", "pero", "algo", "solo", "eso", "esto", "este", "ese", "sus", "nos",
+            "les", "yes", "the", "and", "cada", "otro", "otra", "tambien", "luego", "aqui", "alli", "asi"));
+
+    /**
+     * Palabras de la petición que no dicen nada del código («quiero que examines…», «redacta un informe»):
+     * antes «real» encontraba «RealisticSpriteRenderer» y «examina» un ciclo cualquiera. Raíces de 5 letras.
+     */
+    private static final Set<String> REQUEST_STEMS = new HashSet<>(java.util.Arrays.asList(
+            "quier", "exami", "prime", "ident", "tiene", "tengo", "acced", "acces", "despu", "revis", "revisa", "busca",
+            "posib", "mejor", "dupli", "funci", "exist", "indic", "metod", "inspe", "probl", "compr", "cambi", "propo",
+            "propon", "final", "redac", "infor", "pdf", "guard", "bibli", "puede", "dimel", "clara", "inven", "resul",
+            "real", "fuent", "siste", "algun", "algún", "mira", "mirar", "dime", "cuent", "expli", "anali", "estud",
+            "parte", "cosas", "todo", "toda", "todos", "bien", "favor", "ahora", "hazlo", "haz", "haga", "crea", "escri"));
+
+    /** Lo que Bryan llama de una forma y el código de otra (inglés, nombres de clase). */
+    private static final java.util.Map<String, String[]> CONCEPTS = new java.util.HashMap<>();
+    static {
+        CONCEPTS.put("memor", new String[]{"memor", "recue", "recuerd", "remember"});
+        CONCEPTS.put("recue", new String[]{"memor", "recue", "recuerd"});
+        CONCEPTS.put("llm", new String[]{"llm", "gemma", "model", "infer"});
+        CONCEPTS.put("model", new String[]{"model", "llm", "gemma"});
+        CONCEPTS.put("auton", new String[]{"auton", "goal", "agent"});
+        CONCEPTS.put("herra", new String[]{"tool", "herra"});
+        // «Tu repositorio» es su propio código: las herramientas que lo leen y lo revisan.
+        CONCEPTS.put("repos", new String[]{"selfcode", "selfsource", "codereview"});
+        CONCEPTS.put("dibuj", new String[]{"dibuj", "sketch", "draw"});
+        CONCEPTS.put("sueno", new String[]{"sleep", "dream", "sueno"});
+        CONCEPTS.put("voz", new String[]{"voice", "voz", "speech"});
+        CONCEPTS.put("cuerp", new String[]{"avatar", "body", "cuerp"});
+    }
+
+    /** Lo que de verdad pregunta: raíces con contenido; {@code exact} recibe las que dijo tal cual. */
+    private static List<String> terms(String question, List<String> exact) {
+        List<String> words = new ArrayList<>();
+        for (String w : normalize(question).split("[^a-z0-9]+")) {
+            if (w.length() < 3 || STOP.contains(w)) continue;
+            String st = stem(w);
+            if (REQUEST_STEMS.contains(st) || REQUEST_STEMS.contains(w)) continue;
+            if (exact != null && !exact.contains(st)) exact.add(st);
+            String[] alias = CONCEPTS.get(st);
+            if (alias == null) { if (!words.contains(st)) words.add(st); }
+            else for (String a : alias) if (!words.contains(a)) words.add(a);
+        }
+        return words;
+    }
 
     /** Los archivos que mejor responden a la pregunta, por coincidencia de palabras en ruta, comentario y funciones. */
     public List<FileInfo> search(String question, int limit) {
-        List<String> words = new ArrayList<>();
-        for (String w : normalize(question).split("[^a-z0-9]+"))
-            if (w.length() >= 3 && !STOP.contains(w)) words.add(stem(w));
+        List<String> exact = new ArrayList<>();
+        List<String> words = terms(question, exact);
         List<Object[]> scored = new ArrayList<>();
         if (!words.isEmpty()) for (FileInfo f : files) {
             String path = normalize(f.path), doc = normalize(f.doc);
+            String name = path.substring(path.lastIndexOf('/') + 1);
             StringBuilder ms = new StringBuilder();
             for (String[] m : f.methods) ms.append(' ').append(normalize(splitCamel(m[0]))).append(' ').append(normalize(m[1]));
             String methods = ms.toString(), pathWords = normalize(splitCamel(f.path));
@@ -114,6 +159,8 @@ public final class SelfCode {
                 if (doc.contains(w)) score += 2;
                 if (methods.contains(w)) score += 1;
             }
+            // La palabra que dijo Bryan en el nombre de la clase pesa más que un sinónimo en la carpeta.
+            for (String w : exact) if (name.contains(w)) score += 4;
             if (score > 0) scored.add(new Object[]{f, score});
         }
         scored.sort((a, b) -> Double.compare((Double) b[1], (Double) a[1]));
@@ -124,23 +171,20 @@ public final class SelfCode {
 
     /**
      * Una pregunta con varios temas («tu memoria, tu LLM y tu autonomía») busca cada tema por separado,
-     * para que el archivo más largo de uno no tape a los demás. Con un solo tema es {@link #search}.
+     * para que el archivo más largo de uno no tape a los demás: primero uno por tema y luego, si cabe, el
+     * segundo de cada uno. Con un solo tema es {@link #search}.
      */
     public List<FileInfo> searchTopics(String question, int perTopic, int limit) {
         String[] parts = normalize(question).split("[,;.:?¿!¡\\n]|\\s(?:y|e|ademas|despues|tambien)\\s");
         List<String> topics = new ArrayList<>();
-        for (String part : parts) if (hasContentWord(part)) topics.add(part);
-        if (topics.size() <= 1) return search(question, limit);
+        for (String part : parts) if (!terms(part, null).isEmpty()) topics.add(part);
+        if (topics.size() <= 1) return search(topics.isEmpty() ? question : topics.get(0), limit);
+        List<List<FileInfo>> hits = new ArrayList<>();
+        for (String topic : topics) hits.add(search(topic, perTopic));
         java.util.LinkedHashSet<FileInfo> out = new java.util.LinkedHashSet<>();
-        for (String topic : topics) {
-            for (FileInfo f : search(topic, perTopic)) { if (out.size() < limit) out.add(f); }
-        }
+        for (int round = 0; round < perTopic; round++)
+            for (List<FileInfo> h : hits) if (round < h.size() && out.size() < limit) out.add(h.get(round));
         return new ArrayList<>(out);
-    }
-
-    private static boolean hasContentWord(String text) {
-        for (String w : text.split("[^a-z0-9]+")) if (w.length() >= 3 && !STOP.contains(w)) return true;
-        return false;
     }
 
     /** La respuesta para el modelo: un resumen de sí misma y los archivos que tocan la pregunta. */

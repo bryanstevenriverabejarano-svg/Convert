@@ -58,6 +58,8 @@ public final class AutonomousReportWriter {
             File destination = new File(directory, "informe-" + System.currentTimeMillis() + ".pdf");
             Files.copy(generated.toPath(), destination.toPath());
             generated.delete();
+            // Su ficha en la biblioteca: título, tipo y resumen (si falla, el PDF sigue ahí).
+            ReportLibrary.writeMeta(ReportLibrary.describe(destination, body, System.currentTimeMillis()));
             return destination;
         } catch (Exception failed) {
             android.util.Log.w("Salve/Reports", "No se guardó el informe: "

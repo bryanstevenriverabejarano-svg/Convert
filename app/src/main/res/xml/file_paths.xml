@@ -4,4 +4,6 @@
     <external-files-path name="docs" path="Documents/" />
     <!-- Scripts del nodo que el dueño envía a su PC (NodeSetupShare) -->
     <cache-path name="nodo" path="nodo/" />
+    <!-- Biblioteca de informes PDF de Salve (para «Compartir») -->
+    <files-path name="informes" path="salve-improvement-reports/" />
 </paths>

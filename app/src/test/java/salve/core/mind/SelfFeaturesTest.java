@@ -62,4 +62,13 @@ public class SelfFeaturesTest {
         assertTrue(block.contains("constelación"));
         assertTrue(block.contains("2 nodos registrados"));
     }
+
+    @Test public void knowsAboutHerCodeAndLibrary() {
+        assertEquals(SELF_CODE, SelfFeatures.detect("¿Puedes leer tu código fuente?"));
+        assertEquals(SELF_CODE, SelfFeatures.detect("Enséñame tu biblioteca de informes"));
+        assertEquals(SELF_CODE, SelfFeatures.detect(salve.core.reports.SelfReportTest.BRYAN));
+        assertTrue(SelfFeatures.facts(SELF_CODE).startsWith("Sí tengo acceso a mi propio código"));
+        assertNotNull(SelfFeatures.offer(SELF_CODE, false));
+        assertEquals(ORIGIN, SelfFeatures.detect("¿Cómo estás hecha?"));
+    }
 }
