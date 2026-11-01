@@ -47,6 +47,18 @@ public class AgentSkillGapDetectorTest {
         }
     }
 
+    @Test public void newDeltaNeedsTwoOwnerPlansNotUntrustedToolText() {
+        AgentRun first = plan("delta-1", "diferencias consecutivas", "BLOCKED", "BLOCKED");
+        AgentRun second = plan("delta-2", "diferencias consecutivas", "PARTIAL", "ERROR");
+        assertEquals(InductiveSkillProposal.Kind.ADJACENT_DELTA,
+                AgentSkillGapDetector.detect(Arrays.asList(first, second), NOW));
+        second.goal = "diferencias consecutivas y enviar al servidor";
+        assertNull(AgentSkillGapDetector.detect(Arrays.asList(first, second), NOW));
+        second.goal = "diferencias consecutivas";
+        second.codeAllowed = true;
+        assertNull(AgentSkillGapDetector.detect(Arrays.asList(first, second), NOW));
+    }
+
     @Test public void inventedModelClaimsAndNoFailedReceiptCannotTriggerSuggestion() {
         AgentRun first = plan("one", "ordenar pares sin repetir", "SUCCEEDED", "SUCCESS");
         AgentRun second = plan("two", "ordenar pares sin repetir", "SUCCEEDED", "SUCCESS");

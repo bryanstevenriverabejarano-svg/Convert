@@ -32,7 +32,7 @@ public class InductiveRotationSkillTest {
         InductiveSkillProposal.Evaluation proposal =
                 InductiveSkillProposal.evaluate(lab, kind, () -> false);
         assertEquals(InductiveSkillLab.MAX_CANDIDATES, proposal.candidatesChecked);
-        assertEquals(2954, proposal.candidatesChecked);
+        assertEquals(3615, proposal.candidatesChecked);
         assertTrue(proposal.promotable());
         assertEquals(96, proposal.candidateSuccesses);
         assertEquals(1, proposal.program.size());

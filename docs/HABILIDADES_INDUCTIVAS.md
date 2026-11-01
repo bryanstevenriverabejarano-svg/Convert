@@ -4,13 +4,13 @@
 
 Esta extensión añade un tipo de aprendizaje **distinto del laboratorio de rutas/mochila**. Un usuario puede proporcionar una habilidad NUEVA mediante ejemplos entrada/salida y Salve sintetiza un pequeño programa declarativo **sin conocer de antemano qué combinación de operaciones corresponde a la habilidad**.
 
-NO es programación arbitraria, entrenamiento de pesos, demostración de AGI ni evidencia de generalización fuera del dominio. El vocabulario básico sí está diseñado por desarrolladores: catorce primitivas puras sobre listas de números enteros. Salve descubre combinaciones de longitud 1–3 (**2.954 candidatos máximo**), seleccionadas exclusivamente sobre entrenamiento; tres pasos permiten operaciones que antes no eran representables. Una capacidad fuera de esta gramática se rechaza con NO_CANDIDATE, no se inventa.
+NO es programación arbitraria, entrenamiento de pesos, demostración de AGI ni evidencia de generalización fuera del dominio. El vocabulario básico sí está diseñado por desarrolladores: quince primitivas puras sobre listas de números enteros. Salve descubre combinaciones de longitud 1–3 (**3.615 candidatos máximo**), seleccionadas exclusivamente sobre entrenamiento; tres pasos permiten operaciones que antes no eran representables. Una capacidad fuera de esta gramática se rechaza con NO_CANDIDATE, no se inventa.
 
 ## Frontera de aprendizaje y examen reservado
 
 1. Tres a treinta y dos ejemplos de entrenamiento definen la transformación.
 2. El sintetizador enumera composiciones deterministas y observa **solo train**.
-3. Compara el catálogo finito de 2.954 candidatos **solo sobre los datos de entrenamiento**, cuenta cuántos encajan y selecciona el programa más corto (desempate por orden fijo). Después congela ese programa.
+3. Compara el catálogo finito de 3.615 candidatos **solo sobre los datos de entrenamiento**, cuenta cuántos encajan y selecciona el programa más corto (desempate por orden fijo). Después congela ese programa.
 4. Un verificador independiente del sintetizador aplica el programa fijo a 3–32 casos `holdout`, con entradas distintas de train.
 5. Si falla uno, el resultado es HOLDOUT_FAILED y **no se reintenta** usando el examen reservado. Si pasa, el estado pasa a CERTIFIED_ON_PROVIDED_HOLDOUT.
 6. Solo después de persistir atómicamente se devuelve éxito. Se guarda el programa, nombre, número de casos train/holdout; no se guardan ejemplos ni información autobiográfica.
@@ -59,7 +59,7 @@ solo `rotate_left`, una nueva transformación de secuencia que rota una
 posición sin perder el orden ni la longitud. Entradas `[]` y `[7]`
 se conservan sin cambios; una entrada `[1,2,3]` produce `[2,3,1]`.
 
-La gramática contiene ahora **14 operaciones y 2.954 programas** de
+La gramática contiene ahora **15 operaciones y 3.615 programas** de
 longitud máxima 3, enumerados exclusivamente sobre ejemplos de entrenamiento
 y sujetos a cancelación. El nuevo comando directo
 `propón habilidad: rotar lista a la izquierda` reutiliza el generador
@@ -80,3 +80,13 @@ vacíos, longitudes, rechazo de herramientas desconocidas y copia
 requiere revisión para evitar que `running_total` replique el
 `prefix_sum` ya fusionado en #307. Esta implementación no introduce
 ningún alias ni segundo acumulador.
+
+
+## Integración de PR #310 sin conflicto con #309
+
+El PR #309 ya integró `rotate_left`; el PR #310 añade solamente
+`adjacent_delta` al **mismo** catálogo y conserva ambas capacidades.
+La gramática final consta de **15 operaciones y 3.615 programas** (1–3 pasos).
+El presupuesto de síntesis se calcula desde el catálogo, y los tests de
+rotación y diferencias verifican ese presupuesto, además de conservar
+la aprobación por UUID y la compatibilidad de habilidades guardadas en pCloud.
