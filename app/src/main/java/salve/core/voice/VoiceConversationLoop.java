@@ -13,12 +13,16 @@ public final class VoiceConversationLoop {
     public static final long ECHO_GUARD_MS = 300L;
     public static final int MAX_SILENCE_RETRIES = 2;
     public static final int MAX_TRANSIENT_RETRIES = 1;
+    /** Quick restart when Android finalizes an unfinished clause; no concurrent recognizers. */
+    public static final long FRAGMENT_REARM_MS = 150L;
+    public static final int MAX_HELD_FRAGMENTS = 2;
+    public static final int MAX_HELD_CHARACTERS = 360;
     /** Manos libres: sesión larga y paciencia con el silencio, para hablar sin mirar ni tocar la pantalla. */
     public static final long HANDS_FREE_SESSION_LIMIT_MS = 30 * 60 * 1000L;
     public static final long HANDS_FREE_SILENCE_PATIENCE_MS = 3 * 60 * 1000L;
 
     public enum State { STOPPED, LISTENING, THINKING, SPEAKING, COOLDOWN }
-    public enum Action { NONE, LISTEN, SUBMIT, WAIT, STOP }
+    public enum Action { NONE, LISTEN, SUBMIT, CONTINUE, WAIT, STOP }
     public enum RecognitionFailure { SILENCE, TRANSIENT, PERMISSION, UNAVAILABLE }
     public enum StopReason {
         USER, SESSION_LIMIT, NO_SPEECH, RECOGNIZER_ERROR, MICROPHONE_PERMISSION,
@@ -63,12 +67,16 @@ public final class VoiceConversationLoop {
     private int silenceRetries;
     private int transientRetries;
     private StopReason stopReason = StopReason.USER;
+    /** Only one foreground conversation owns these provisional words. Never persisted to memory. */
+    private String heldSpeech = "";
+    private int heldFragments;
 
     public State state() { return state; }
     public long token() { return activeToken; }
     public StopReason stopReason() { return stopReason; }
     public boolean isActive() { return state != State.STOPPED; }
     public boolean owns(long token) { return isActive() && activeToken == token; }
+    public boolean hasHeldSpeech() { return !heldSpeech.isEmpty(); }
 
     /** The adapter uses one timer for the nearest phase/session deadline. */
     public long nextDeadlineMillis() {
@@ -80,6 +88,7 @@ public final class VoiceConversationLoop {
         sessionDeadline = now + (handsFree ? HANDS_FREE_SESSION_LIMIT_MS : SESSION_LIMIT_MS);
         silenceRetries = transientRetries = 0;
         silentSince = -1L;
+        clearHeldSpeech();
         return listen(now);
     }
 
@@ -89,12 +98,60 @@ public final class VoiceConversationLoop {
         if (now >= phaseDeadline) return recognitionFailed(token, RecognitionFailure.SILENCE, now);
         String text = transcript == null ? "" : transcript.trim();
         if (text.isEmpty()) return recognitionFailed(token, RecognitionFailure.SILENCE, now);
+        // "Adiós, Salve" must stop even when a preceding clause was held.
         if (isStopCommand(text)) return stop(StopReason.USER);
         silenceRetries = transientRetries = 0;
         silentSince = -1L;
+        String combined = heldSpeech.isEmpty() ? text : heldSpeech + " " + text;
+        if (heldFragments < MAX_HELD_FRAGMENTS
+                && combined.length() <= MAX_HELD_CHARACTERS
+                && looksIncomplete(combined)) {
+            heldSpeech = combined;
+            heldFragments++;
+            state = State.COOLDOWN;
+            phaseDeadline = now + FRAGMENT_REARM_MS;
+            return step(Action.CONTINUE, combined, null);
+        }
+        clearHeldSpeech();
+        return submit(combined, now);
+    }
+
+    /** Explicitly restart the existing Android recognizer after an unfinished fragment. */
+    private Step submit(String text, long now) {
         state = State.THINKING;
         phaseDeadline = now + RESPONSE_TIMEOUT_MS;
         return step(Action.SUBMIT, text, null);
+    }
+
+    private Step submitHeldSpeech(long now) {
+        String text = heldSpeech;
+        clearHeldSpeech();
+        silenceRetries = transientRetries = 0;
+        silentSince = -1L;
+        return submit(text, now);
+    }
+
+    private void clearHeldSpeech() {
+        heldSpeech = "";
+        heldFragments = 0;
+    }
+
+    /**
+     * Conservative local heuristic, not semantic VAD. Only likely dangling phrases are
+     * rearmed; other sentences are immediately submitted through the existing motor.
+     */
+    static boolean looksIncomplete(String transcript) {
+        if (transcript == null) return false;
+        String t = transcript.trim();
+        if (t.isEmpty()) return false;
+        if (t.endsWith("…") || t.endsWith("...") || t.endsWith(",") || t.endsWith(":")
+                || t.endsWith(";") || t.endsWith("—") || t.endsWith("-")) return true;
+        if (t.endsWith(".") || t.endsWith("?") || t.endsWith("!") || t.endsWith("؟")) return false;
+        String normalized = Normalizer.normalize(t.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replaceAll("[¿¡]", "").trim();
+        return normalized.matches("(?s).*(?:^|\\s)(?:y|o|pero|porque|aunque|que|como|cuando|si|"
+                + "para|por|con|sin|de|del|a|en|el|la|los|las|un|una|al|mi|tu|su|"
+                + "quiero|necesito)"); 
     }
 
     public Step recognitionFailed(long token, RecognitionFailure failure, long now) {
@@ -102,6 +159,8 @@ public final class VoiceConversationLoop {
         if (now >= sessionDeadline) return stop(StopReason.SESSION_LIMIT);
         switch (failure) {
             case SILENCE:
+                // The recognizer found no following words: do not discard the last clause.
+                if (hasHeldSpeech()) return submitHeldSpeech(now);
                 if (handsFree) {
                     if (silentSince < 0) silentSince = now;
                     if (now - silentSince >= HANDS_FREE_SILENCE_PATIENCE_MS) return stop(StopReason.NO_SPEECH);
@@ -150,6 +209,7 @@ public final class VoiceConversationLoop {
         if (!isActive() || state == State.LISTENING) return none();
         if (now >= sessionDeadline) return stop(StopReason.SESSION_LIMIT);
         silenceRetries = transientRetries = 0;
+        clearHeldSpeech();
         activeToken = ++tokenSequence;
         return waitUntil(now + ECHO_GUARD_MS);
     }
@@ -170,6 +230,7 @@ public final class VoiceConversationLoop {
     public Step stop(StopReason reason) {
         if (!isActive()) return none();
         state = State.STOPPED;
+        clearHeldSpeech();
         activeToken = ++tokenSequence;
         stopReason = reason;
         return step(Action.STOP, "", reason);
