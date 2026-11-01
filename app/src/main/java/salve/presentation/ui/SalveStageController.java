@@ -114,11 +114,16 @@ final class SalveStageController {
         scrim.setOnClickListener(v -> closePanels());
         if (saved != null) {
             ArrayList<String> restored = saved.getStringArrayList("stage_messages");
+            ArrayList<String> restoredPdfs = saved.getStringArrayList("stage_pdf_paths");
             long[] restoredTimes = saved.getLongArray("stage_times");
             if (restored != null) {
                 for (int i = 0; i < restored.size(); i++) {
                     messages.add(restored.get(i)); serials.add(++serialCounter);
                     times.add(restoredTimes != null && i < restoredTimes.length ? restoredTimes[i] : 0L);
+                    if (restoredPdfs != null && i < restoredPdfs.size()) {
+                        java.io.File pdf = privateVoiceLabPdf(restoredPdfs.get(i));
+                        if (pdf != null) pdfAttachments.put(serialCounter, pdf);
+                    }
                 }
                 restoring = true; trimMessages(); renderMessages(); restoring = false;
                 updateChatExtras();
@@ -523,6 +528,8 @@ final class SalveStageController {
             if (!times.isEmpty()) times.remove(0);
             long gone = serials.remove(0);
             reveal.remove(gone);
+            pdfAttachments.remove(gone);
+            pdfCards.remove(gone);
             String prefix = gone + ":";
             sketchViews.keySet().removeIf(id -> id.startsWith(prefix));
         }
@@ -619,6 +626,18 @@ final class SalveStageController {
             View v = desired.get(i);
             if (v.getParent() instanceof ViewGroup) ((ViewGroup) v.getParent()).removeView(v);
             thread.addView(v);
+        }
+    }
+
+    /** Only restore reports belonging to this application's private VoiceLab directory. */
+    private java.io.File privateVoiceLabPdf(String path) {
+        if (path == null || path.isEmpty()) return null;
+        try {
+            java.io.File root = new java.io.File(activity.getFilesDir(), "voicelab").getCanonicalFile();
+            java.io.File pdf = new java.io.File(path).getCanonicalFile();
+            return pdf.isFile() && root.equals(pdf.getParentFile()) ? pdf : null;
+        } catch (java.io.IOException invalidPath) {
+            return null;
         }
     }
 
@@ -901,6 +920,12 @@ final class SalveStageController {
         long[] stamps = new long[times.size()];
         for (int i = 0; i < stamps.length; i++) stamps[i] = times.get(i);
         state.putLongArray("stage_times", stamps);
+        ArrayList<String> pdfPaths = new ArrayList<>(serials.size());
+        for (long id : serials) {
+            java.io.File pdf = pdfAttachments.get(id);
+            pdfPaths.add(pdf != null && pdf.isFile() ? pdf.getAbsolutePath() : "");
+        }
+        state.putStringArrayList("stage_pdf_paths", pdfPaths);
         state.putCharSequence("stage_caption", caption.getText());
         state.putString("stage_panel", active);
         state.putBoolean("stage_chat_expanded", chatFullScreen);
