@@ -18,7 +18,7 @@ import java.util.Locale;
 public final class VoiceLabReport {
     private static final int MAX_EVENTS = 500;
     private final List<Event> events = new ArrayList<>();
-    private final long start = SystemClock.elapsedRealtime();
+    private long start;
     private boolean enabled;
     private int dropped;
 
@@ -34,6 +34,7 @@ public final class VoiceLabReport {
     }
 
     public synchronized void start() {
+        start = SystemClock.elapsedRealtime();
         events.clear();
         dropped = 0;
         enabled = true;
