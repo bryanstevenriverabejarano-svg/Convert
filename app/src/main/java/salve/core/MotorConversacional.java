@@ -1443,7 +1443,8 @@ public class MotorConversacional {
 
         // Se lee antes de hablar: idioma, repetición y si hace lo pedido, todo a la vez. Si falla
         // algo, UNA sola reescritura con todas las correcciones; se queda la versión con menos fallos.
-        java.util.List<String> recientes = recentAssistantReplies(3);
+        // 6 y no 3: en voz repetía casi palabra por palabra lo que dijo 4 respuestas antes (2/11/2026).
+        java.util.List<String> recientes = recentAssistantReplies(6);
         if (inference.isSuccess() && !creativeOk) {
             salve.core.conversation.ReplyReviewer.Review review = salve.core.conversation.ReplyReviewer.review(
                     respuesta, entrada, recientes, lastReading, !storyTurn,
