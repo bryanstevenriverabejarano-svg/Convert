@@ -23,10 +23,10 @@ public class LiteRtContextGuardTest {
 
     @Test public void s24UltraWithCachedAppsGetsMoreThan4096() {
         // Lo que de verdad marca su móvil: 2,71–3,09 GiB «disponibles» de 10,82.
-        assertEquals(ModelMemoryPolicy.LITERT_8K, ModelMemoryPolicy.admitLiteRt(E4B, ram(2.71, 10.82), false, false));
-        assertEquals(ModelMemoryPolicy.LITERT_8K, ModelMemoryPolicy.admitLiteRt(E4B, ram(3.09, 10.82), false, false));
-        assertEquals("16.384 retirado: con 16k Android cerró la app al responder en el S24 Ultra",
-                ModelMemoryPolicy.LITERT_8K, ModelMemoryPolicy.selectLiteRtContext(E4B, ram(7.0, 10.82), false, false));
+        assertEquals(ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(E4B, ram(2.71, 10.82), false, false));
+        assertEquals(ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(E4B, ram(3.09, 10.82), false, false));
+        assertEquals("máximo 7k: 16k cerraba la app y 8k calentaba el móvil y tardaba demasiado",
+                ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.selectLiteRtContext(E4B, ram(7.0, 10.82), false, false));
     }
 
     @Test public void smallerPhonesAndOtherModelsKeepTheOldLimits() {
