@@ -298,7 +298,11 @@ public class SalveLLM {
             // tokens), así que el margen extra es para responder sin cortarse, no para llenar más texto.
             liteRtTokens = DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, liteRtVision);
             requestedTokens = liteRtTokens;
-            liteRtTokens = contextGuard().admit(liteRtTokens);
+            LiteRtContextGuard admission = contextGuard();
+            // Cada versión nueva vuelve a probar desde arriba: un tope aprendido en una versión antigua
+            // (o un «cierre» que en realidad fue instalar la actualización) no se arrastra para siempre.
+            admission.newInstall(installStamp());
+            liteRtTokens = admission.admit(liteRtTokens);
         } else DeviceModelMemory.require(appContext, modelPath, false);
         publishStatus("cargando");
         if (isGguf) {
@@ -328,8 +332,10 @@ public class SalveLLM {
             engineInitialized = LiteRTLlm.isInitialized();
             // El intento sigue apuntado hasta la PRIMERA respuesta completa: Android puede cerrar la
             // app al pensar con mucho contexto, no solo al cargarlo (pasó con 16.384 el 2/11/2026).
-            if (LiteRTLlm.getContextTokens() <= ModelMemoryPolicy.LITERT_STANDARD) guard.loaded();
-            else contextUnconfirmed = true;
+            // Cargó: el intento se borra y se vuelve a apuntar SOLO mientras piensa la primera respuesta.
+            // Así, cerrar la app, actualizarla o que Android la duerma mientras espera no cuenta como cierre.
+            guard.loaded();
+            contextUnconfirmed = LiteRTLlm.getContextTokens() > ModelMemoryPolicy.LITERT_STANDARD;
             // Constancia de qué contexto se pidió y cuál cargó de verdad (y con cuánta RAM): sin esto
             // no se sabe si un «4k» viene de la regla de memoria, del tope aprendido o de un fallo.
             try {
@@ -405,8 +411,10 @@ public class SalveLLM {
         }
         if (!modelAvailable) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
                 "No hay un modelo local configurado y válido", 0L);
+        boolean confirming = false;
         try {
             initEngineIfNeeded();
+            if (contextUnconfirmed && isLiteRT) { contextGuard().loading(LiteRTLlm.getContextTokens()); confirming = true; }
             String decorated = decoratePrompt(prompt, role);
             String identity = role == Role.SALVENTE ? ModelRuntimeInfo.neutralContext(modelPath) : ModelRuntimeInfo.context(modelPath);
             String text;
@@ -444,19 +452,22 @@ public class SalveLLM {
                 throw new IllegalStateException("El modelo local no devolvió texto");
             }
             recordInference(ModelCatalog.Capability.TEXT, true);
-            if (contextUnconfirmed) { contextUnconfirmed = false; contextGuard().loaded(); }
+            if (confirming) { contextUnconfirmed = false; contextGuard().loaded(); }
             lastErrorMessage = null;
             Log.i(TAG, "provider=local runtime=" + (isGguf ? "llama.cpp CPU" : isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
             publishStatus(activationInProgress ? "comprobando activación" : "activo");
             return ModelResult.success(text, latency).withProvider(ModelRuntimeInfo.name(modelPath));
         } catch (java.util.concurrent.CancellationException e) {
+            if (confirming) contextGuard().loaded();
             return ModelResult.failure(ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
         } catch (IllegalArgumentException e) {
+            if (confirming) contextGuard().loaded();
             // Invalid/oversized input is not a broken model and must not download a fallback.
             lastErrorMessage = e.getMessage();
             publishStatus("entrada rechazada; revisa el tamaño del mensaje");
             return ModelResult.failure(ModelResult.Status.ERROR, e.getMessage(), 0L);
         } catch (Exception | LinkageError | OutOfMemoryError e) {
+            if (confirming) contextGuard().loaded();
             recordInference(ModelCatalog.Capability.TEXT, false);
             lastErrorMessage = e.getMessage();
             Log.e(TAG, "Falló la inferencia local", e);
@@ -816,6 +827,14 @@ public class SalveLLM {
 
     /** Contexto ampliado cargado que aún no ha completado ninguna respuesta. */
     private volatile boolean contextUnconfirmed;
+
+    /** Cambia con cada instalación o actualización de la app. */
+    private int installStamp() {
+        try {
+            long t = appContext.getPackageManager().getPackageInfo(appContext.getPackageName(), 0).lastUpdateTime;
+            return (int) (t ^ (t >>> 32));
+        } catch (Exception unknown) { return 0; }
+    }
 
     private LiteRtContextGuard contextGuard() {
         android.content.SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

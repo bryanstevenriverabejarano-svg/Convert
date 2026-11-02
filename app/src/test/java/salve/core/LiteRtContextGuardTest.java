@@ -104,4 +104,24 @@ public class LiteRtContextGuardTest {
         assertEquals(12500, LiteRtContextGuard.promptBudget(6144));
         assertEquals(14000, LiteRtContextGuard.promptBudget(7000));
     }
+
+    /** 2/11/2026: seguía en 4k tras actualizar. Un tope viejo no debe sobrevivir a una versión nueva. */
+    @Test public void aNewInstallForgetsTheOldCap() {
+        Prefs prefs = new Prefs();
+        LiteRtContextGuard guard = new LiteRtContextGuard(prefs);
+        guard.newInstall(111);
+        guard.loading(8192);
+        assertEquals(7000, new LiteRtContextGuard(prefs).admit(8192));
+        new LiteRtContextGuard(prefs).loading(7000);
+        assertEquals(6144, new LiteRtContextGuard(prefs).admit(8192));
+        LiteRtContextGuard same = new LiteRtContextGuard(prefs);
+        same.newInstall(111);
+        assertEquals("misma versión: el tope sigue", 6144, same.admit(8192));
+        LiteRtContextGuard updated = new LiteRtContextGuard(prefs);
+        updated.newInstall(222);
+        assertEquals("versión nueva: vuelve a probar 8k", 8192, updated.admit(8192));
+        assertEquals(0, updated.cap());
+        updated.newInstall(0); // sin dato de instalación: no toca nada
+        assertEquals(8192, updated.admit(8192));
+    }
 }
