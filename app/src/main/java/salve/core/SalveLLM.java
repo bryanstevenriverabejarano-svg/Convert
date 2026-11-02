@@ -336,7 +336,8 @@ public class SalveLLM {
                 salve.core.trace.ExecutionTrace.note("CONTEXTO DEL MODELO", "Pedido " + requestedTokens
                         + (liteRtTokens != requestedTokens ? ", limitado a " + liteRtTokens + " por cierres anteriores" : "")
                         + "; cargado " + LiteRTLlm.getContextTokens() + " tokens"
-                        + (LiteRTLlm.getContextTokens() < liteRtTokens ? " (el motor no admitió " + liteRtTokens + " y volvió a 4.096)" : "")
+                        + (LiteRTLlm.getContextTokens() < liteRtTokens ? " (el motor no admitió " + liteRtTokens + ": "
+                                + LiteRTLlm.getLastContextError() + ")" : "")
                         + ". " + DeviceModelMemory.describe(DeviceModelMemory.read(appContext)) + ".");
             } catch (RuntimeException ignored) { }
         } else {
