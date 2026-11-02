@@ -322,8 +322,12 @@ public class SalveLLM {
             LiteRtContextGuard guard = contextGuard();
             guard.loading(liteRtTokens);
             try { LiteRTLlm.init(appContext, modelPath, liteRtVision, liteRtTokens); }
-            finally { guard.loaded(); } // un error normal ya reintentó con 4.096; solo un cierre deja el intento apuntado
+            catch (Exception | LinkageError failed) { guard.loaded(); throw failed; } // error normal: nada que recordar
             engineInitialized = LiteRTLlm.isInitialized();
+            // El intento sigue apuntado hasta la PRIMERA respuesta completa: Android puede cerrar la
+            // app al pensar con mucho contexto, no solo al cargarlo (pasó con 16.384 el 2/11/2026).
+            if (LiteRTLlm.getContextTokens() <= ModelMemoryPolicy.LITERT_STANDARD) guard.loaded();
+            else contextUnconfirmed = true;
         } else {
             if (modelLib == null) {
                 throw new IllegalStateException("initEngineIfNeeded MLC sin modelLib.");
@@ -428,6 +432,7 @@ public class SalveLLM {
                 throw new IllegalStateException("El modelo local no devolvió texto");
             }
             recordInference(ModelCatalog.Capability.TEXT, true);
+            if (contextUnconfirmed) { contextUnconfirmed = false; contextGuard().loaded(); }
             lastErrorMessage = null;
             Log.i(TAG, "provider=local runtime=" + (isGguf ? "llama.cpp CPU" : isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
             publishStatus(activationInProgress ? "comprobando activación" : "activo");
@@ -796,6 +801,9 @@ public class SalveLLM {
     public int loadedContextTokens() {
         return isLiteRT && LiteRTLlm.isLoaded(modelPath) ? LiteRTLlm.getContextTokens() : 0;
     }
+
+    /** Contexto ampliado cargado que aún no ha completado ninguna respuesta. */
+    private volatile boolean contextUnconfirmed;
 
     private LiteRtContextGuard contextGuard() {
         android.content.SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

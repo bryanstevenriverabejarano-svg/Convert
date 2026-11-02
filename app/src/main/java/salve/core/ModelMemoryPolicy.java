@@ -47,8 +47,9 @@ public final class ModelMemoryPolicy {
     public static final int LITERT_8K = 8192, LITERT_16K = 16384;
     /** Escalones de LiteRT-LM del mayor al menor; los ampliados solo para modelos que los admiten. */
     static int[] liteRtTiers(String id) {
+        // 16.384 se retiró (2/11/2026): en el S24 Ultra cargó, pero Android cerró la app al responder.
         return LocalModelPolicy.GEMMA_E4B.equals(id)
-                ? new int[]{LITERT_16K, LITERT_8K, LITERT_LONG, LITERT_STANDARD}
+                ? new int[]{LITERT_8K, LITERT_LONG, LITERT_STANDARD}
                 : new int[]{LITERT_LONG, LITERT_STANDARD};
     }
     /** Móvil grande (10 GiB o más): Android puede liberar las apps en caché para el modelo. */

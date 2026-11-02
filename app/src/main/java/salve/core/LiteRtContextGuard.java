@@ -3,7 +3,7 @@ package salve.core;
 /**
  * Protección para el contexto ampliado. Android puede cerrar la app de golpe si al cargar el motor
  * con mucho contexto se queda sin memoria, y eso no deja ninguna excepción que capturar. Por eso,
- * antes de cargar con más de 4.096 tokens se apunta el intento; al terminar bien se borra. Si en la
+ * antes de cargar con más de 4.096 tokens se apunta el intento y se borra tras la primera respuesta completa. Si en la
  * siguiente carga el intento sigue apuntado, la app murió a mitad: se baja un escalón y se recuerda.
  * Lógica pura sobre un pequeño almacén (SharedPreferences en la app, un mapa en las pruebas).
  */
@@ -40,7 +40,7 @@ public final class LiteRtContextGuard {
         store.put(TRYING, tokens > ModelMemoryPolicy.LITERT_STANDARD ? tokens : 0);
     }
 
-    /** La carga terminó (bien, o con un error normal que ya reintentó con menos): nada que recordar. */
+    /** La primera respuesta con este contexto terminó (o la carga dio un error normal): nada que recordar. */
     public void loaded() { store.put(TRYING, 0); }
 
     /** Tope aprendido (0 = ninguno). */
