@@ -3,7 +3,8 @@ package salve.core;
 /**
  * Protección para el contexto ampliado. Android puede cerrar la app de golpe si al cargar el motor
  * con mucho contexto se queda sin memoria, y eso no deja ninguna excepción que capturar. Por eso,
- * antes de cargar con más de 4.096 tokens se apunta el intento y se borra tras la primera respuesta completa. Si en la
+ * se apunta el intento al cargar con más de 4.096 tokens y mientras piensa la primera respuesta (no mientras
+ * espera). Si en la
  * siguiente carga el intento sigue apuntado, la app murió a mitad: se baja un escalón y se recuerda.
  * Lógica pura sobre un pequeño almacén (SharedPreferences en la app, un mapa en las pruebas).
  */
@@ -13,7 +14,7 @@ public final class LiteRtContextGuard {
         void put(String key, int value); // 0 = borrar
     }
 
-    static final String TRYING = "litert_ctx_trying", CAP = "litert_ctx_cap";
+    static final String TRYING = "litert_ctx_trying", CAP = "litert_ctx_cap", INSTALL = "litert_ctx_install";
 
     private final Store store;
 
@@ -45,6 +46,16 @@ public final class LiteRtContextGuard {
 
     /** Tope aprendido (0 = ninguno). */
     public int cap() { return store.get(CAP); }
+
+    /**
+     * Una instalación o actualización nueva olvida el tope y el intento pendiente: el código del
+     * modelo puede haber cambiado, y actualizar la app mata el proceso igual que un cierre por memoria.
+     */
+    public void newInstall(int stamp) {
+        if (stamp == 0 || store.get(INSTALL) == stamp) return;
+        reset();
+        store.put(INSTALL, stamp);
+    }
 
     /** Bryan puede volver a probar el máximo (p. ej. tras liberar RAM o cambiar de móvil). */
     public void reset() { store.put(CAP, 0); store.put(TRYING, 0); }
