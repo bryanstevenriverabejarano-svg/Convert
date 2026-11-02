@@ -296,6 +296,7 @@ public class SalveLLM {
             // 7.000 tokens si caben (si no, 4.096): el prompt sigue en ~10.500 caracteres (unos 3.500
             // tokens), así que el margen extra es para responder sin cortarse, no para llenar más texto.
             liteRtTokens = DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, liteRtVision);
+            liteRtTokens = contextGuard().admit(liteRtTokens);
         } else DeviceModelMemory.require(appContext, modelPath, false);
         publishStatus("cargando");
         if (isGguf) {
@@ -318,7 +319,10 @@ public class SalveLLM {
             }
         } else if (isLiteRT) {
             Log.d(TAG, "Inicializando LiteRTLlm con modelPath=" + modelPath);
-            LiteRTLlm.init(appContext, modelPath, liteRtVision, liteRtTokens);
+            LiteRtContextGuard guard = contextGuard();
+            guard.loading(liteRtTokens);
+            try { LiteRTLlm.init(appContext, modelPath, liteRtVision, liteRtTokens); }
+            finally { guard.loaded(); } // un error normal ya reintentó con 4.096; solo un cierre deja el intento apuntado
             engineInitialized = LiteRTLlm.isInitialized();
         } else {
             if (modelLib == null) {
@@ -562,7 +566,9 @@ public class SalveLLM {
     /** Cabecera: modelo y estado, si usa MTP y la velocidad de la última respuesta, medida en el móvil. */
     public String getCompactStatus() {
         GenerationSpeed.Sample last = GenerationSpeed.last();
+        int ctx = loadedContextTokens();
         return runtimeStatus + (isLiteRT && LiteRTLlm.getSpeculativeActive() ? " · MTP" : "")
+                + (ctx > ModelMemoryPolicy.LITERT_STANDARD ? " · " + (ctx / 1024) + "k" : "")
                 + (last == null ? "" : " · " + last.compact());
     }
     public String getMemoryDescription() { return DeviceModelMemory.describe(DeviceModelMemory.read(appContext)); }
@@ -779,7 +785,27 @@ public class SalveLLM {
         // El motor se carga con hasta 7.000 tokens para tener holgura (foto + respuesta larga), pero el
         // prompt de conversación se mantiene en ~10.500 caracteres: con el doble, Gemma 4 E2B
         // perdía el hilo, repetía respuestas antiguas y llegaba a cortar palabras.
+        // Con Gemma 4 E4B y contexto ampliado cargado, el prompt crece con él (historial, recuerdos y
+        // herramientas dejan de pelearse por 4.096 tokens). E2B se queda en 10.500: con más se perdía.
+        if (isLiteRT && LocalModelPolicy.GEMMA_E4B.equals(LocalModelPolicy.idForPath(path)) && LiteRTLlm.isLoaded(path))
+            return LiteRtContextGuard.promptBudget(LiteRTLlm.getContextTokens());
         return 10500;
+    }
+
+    /** Contexto con el que está cargado el motor local (0 si no hay motor LiteRT cargado). */
+    public int loadedContextTokens() {
+        return isLiteRT && LiteRTLlm.isLoaded(modelPath) ? LiteRTLlm.getContextTokens() : 0;
+    }
+
+    private LiteRtContextGuard contextGuard() {
+        android.content.SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return new LiteRtContextGuard(new LiteRtContextGuard.Store() {
+            @Override public int get(String key) { return prefs.getInt(key, 0); }
+            // commit(): el intento tiene que estar en disco ANTES de cargar, por si Android cierra la app.
+            @Override public void put(String key, int value) {
+                if (value == 0) prefs.edit().remove(key).commit(); else prefs.edit().putInt(key, value).commit();
+            }
+        });
     }
 
     /**

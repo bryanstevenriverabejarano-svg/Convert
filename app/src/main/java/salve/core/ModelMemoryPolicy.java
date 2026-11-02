@@ -40,6 +40,30 @@ public final class ModelMemoryPolicy {
     public static final long LITERT_RUNTIME_OVERHEAD = 384 * MIB;
     public static final int LITERT_STANDARD = 4096;
     public static final int LITERT_LONG = 7000;
+    /**
+     * Contexto ampliado para Gemma 4 E4B, que admite hasta 32.768 tokens. Con 4.096 solo le cabían unos
+     * dos mensajes de historial; estos escalones dejan sitio al historial, las herramientas y la respuesta.
+     */
+    public static final int LITERT_8K = 8192, LITERT_16K = 16384;
+    /** Escalones de LiteRT-LM del mayor al menor; los ampliados solo para modelos que los admiten. */
+    static int[] liteRtTiers(String id) {
+        return LocalModelPolicy.GEMMA_E4B.equals(id)
+                ? new int[]{LITERT_16K, LITERT_8K, LITERT_LONG, LITERT_STANDARD}
+                : new int[]{LITERT_LONG, LITERT_STANDARD};
+    }
+    /** Móvil grande (10 GiB o más): Android puede liberar las apps en caché para el modelo. */
+    static final long LARGE_PHONE_TOTAL = 10L * 1024 * MIB;
+    /** Margen de RAM total que se deja al resto del sistema en un móvil grande. */
+    static final long LARGE_PHONE_HEADROOM = 3L * 1024 * MIB;
+
+    /**
+     * Caché KV extra sobre 4.096 tokens. Se escala a partir de la estimación ya usada para 7.000
+     * (384 MiB por 2.904 tokens más, unos 135 KB por token).
+     */
+    static long contextOverhead(int contextTokens) {
+        if (contextTokens <= LITERT_STANDARD) return 0;
+        return LONG_CONTEXT_OVERHEAD * (contextTokens - LITERT_STANDARD) / (LITERT_LONG - LITERT_STANDARD);
+    }
 
     /**
      * Memoria necesaria para LiteRT-LM. Si los pesos ya están residentes (mismo modelo cargado),
@@ -50,14 +74,14 @@ public final class ModelMemoryPolicy {
         long weights = LocalModelPolicy.LIGHT.equals(id) ? 2019382400L
                 : LocalModelPolicy.GEMMA_E4B.equals(id) ? 3659530240L : 2588147712L;
         return (weightsResident ? 0 : weights) + LITERT_RUNTIME_OVERHEAD + (vision ? VISION_OVERHEAD : 0)
-                + (contextTokens > LITERT_STANDARD ? LONG_CONTEXT_OVERHEAD : 0) + Math.max(LITERT_RESERVE, threshold);
+                + contextOverhead(contextTokens) + Math.max(LITERT_RESERVE, threshold);
     }
 
-    /** Mayor contexto que cabe (7.000 o 4.096), o 0 si ni el estándar cabe. */
+    /** Mayor contexto que cabe con la RAM «disponible» medida (16.384 … 4.096), o 0 si ni el estándar cabe. */
     public static int selectLiteRtContext(String id, Snapshot ram, boolean weightsResident, boolean vision) {
         if (!ram.known() || ram.low) return 0;
-        if (ram.available >= requiredLiteRt(id, weightsResident, ram.threshold, vision, LITERT_LONG)) return LITERT_LONG;
-        if (ram.available >= requiredLiteRt(id, weightsResident, ram.threshold, vision, LITERT_STANDARD)) return LITERT_STANDARD;
+        for (int tokens : liteRtTiers(id))
+            if (ram.available >= requiredLiteRt(id, weightsResident, ram.threshold, vision, tokens)) return tokens;
         return 0;
     }
 
@@ -76,8 +100,28 @@ public final class ModelMemoryPolicy {
      */
     public static int admitLiteRt(String id, Snapshot ram, boolean weightsResident, boolean vision) {
         int strict = selectLiteRtContext(id, ram, weightsResident, vision);
-        if (strict != 0) return strict;
+        int large = largePhoneContext(id, ram, weightsResident, vision);
+        if (Math.max(strict, large) != 0) return Math.max(strict, large);
         return roomyDevice(id, ram, weightsResident, vision) ? LITERT_STANDARD : 0;
+    }
+
+    /**
+     * En un móvil de 10 GiB o más (el Galaxy S24 Ultra de Bryan: 10,82 GiB, con 2,7–3,1 GiB
+     * «disponibles» por las apps en caché), el contexto ampliado cabe si queda libre todo lo que NO
+     * son pesos (motor, caché KV, visión y reserva de Android) y la RAM total cubre el modelo entero
+     * con 3 GiB de margen. Android libera la caché cuando el motor la pide. Si aun así la carga
+     * fallara, {@link LiteRtContextGuard} baja un escalón la próxima vez.
+     */
+    static int largePhoneContext(String id, Snapshot ram, boolean weightsResident, boolean vision) {
+        if (!ram.known() || ram.low || weightsResident || ram.total < LARGE_PHONE_TOTAL
+                || !LocalModelPolicy.GEMMA_E4B.equals(id)) return 0; // otros modelos: como siempre
+        for (int tokens : liteRtTiers(id)) {
+            if (tokens <= LITERT_STANDARD) break; // el estándar ya lo cubre roomyDevice
+            if (ram.available >= requiredLiteRt(id, true, ram.threshold, vision, tokens)
+                    && ram.total >= requiredLiteRt(id, false, ram.threshold, vision, tokens) + LARGE_PHONE_HEADROOM)
+                return tokens;
+        }
+        return 0;
     }
 
     /** ¿RAM total de sobra (el doble de lo necesario) y libre al menos lo que no son pesos? */
