@@ -24,9 +24,9 @@ public class LiteRtContextGuardTest {
     @Test public void s24UltraWithCachedAppsGetsMoreThan4096() {
         // Lo que de verdad marca su móvil: 2,71–3,09 GiB «disponibles» de 10,82.
         assertEquals(ModelMemoryPolicy.LITERT_8K, ModelMemoryPolicy.admitLiteRt(E4B, ram(2.71, 10.82), false, false));
-        assertEquals(ModelMemoryPolicy.LITERT_16K, ModelMemoryPolicy.admitLiteRt(E4B, ram(3.09, 10.82), false, false));
-        assertEquals("con RAM de sobra, el máximo",
-                ModelMemoryPolicy.LITERT_16K, ModelMemoryPolicy.selectLiteRtContext(E4B, ram(7.0, 10.82), false, false));
+        assertEquals(ModelMemoryPolicy.LITERT_8K, ModelMemoryPolicy.admitLiteRt(E4B, ram(3.09, 10.82), false, false));
+        assertEquals("16.384 retirado: con 16k Android cerró la app al responder en el S24 Ultra",
+                ModelMemoryPolicy.LITERT_8K, ModelMemoryPolicy.selectLiteRtContext(E4B, ram(7.0, 10.82), false, false));
     }
 
     @Test public void smallerPhonesAndOtherModelsKeepTheOldLimits() {
@@ -41,6 +41,15 @@ public class LiteRtContextGuardTest {
         assertEquals("7.000 cuesta lo de siempre", ModelMemoryPolicy.LONG_CONTEXT_OVERHEAD,
                 ModelMemoryPolicy.contextOverhead(ModelMemoryPolicy.LITERT_LONG));
         assertTrue(ModelMemoryPolicy.contextOverhead(ModelMemoryPolicy.LITERT_16K) > ModelMemoryPolicy.contextOverhead(ModelMemoryPolicy.LITERT_8K));
+    }
+
+    /** 2/11/2026: cargó con 16k, mostró la cabecera y Android cerró la app al responder. */
+    @Test public void aCrashBeforeTheFirstAnswerAlsoStepsDown() {
+        Prefs prefs = new Prefs();
+        LiteRtContextGuard guard = new LiteRtContextGuard(prefs);
+        guard.loading(8192);
+        // carga bien, pero la app muere antes de la primera respuesta: nadie llama a loaded()
+        assertEquals(7000, new LiteRtContextGuard(prefs).admit(8192));
     }
 
     @Test public void aCrashDuringLoadStepsDownAndIsRemembered() {
