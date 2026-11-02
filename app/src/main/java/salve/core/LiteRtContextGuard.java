@@ -50,8 +50,8 @@ public final class LiteRtContextGuard {
     public void reset() { store.put(CAP, 0); store.put(TRYING, 0); }
 
     static int below(int tokens) {
-        int[] tiers = {ModelMemoryPolicy.LITERT_16K, ModelMemoryPolicy.LITERT_8K,
-                ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.LITERT_STANDARD};
+        int[] tiers = {ModelMemoryPolicy.LITERT_16K, ModelMemoryPolicy.LITERT_8K, ModelMemoryPolicy.LITERT_LONG,
+                ModelMemoryPolicy.LITERT_6K, ModelMemoryPolicy.LITERT_5K, ModelMemoryPolicy.LITERT_STANDARD};
         for (int t : tiers) if (t < tokens) return t;
         return ModelMemoryPolicy.LITERT_STANDARD;
     }
@@ -59,11 +59,14 @@ public final class LiteRtContextGuard {
     /**
      * Caracteres de prompt de conversación según el contexto realmente cargado. Con 4.096 se mantiene
      * el tope de siempre; con más, crece por escalones dejando sitio a pensar y responder (unos 3,5
-     * caracteres por token en español): 8.192 → 16.000 caracteres, 16.384 → 22.000.
+     * caracteres por token en español): 5.120 → 11.500, 6.144 → 12.500, 7.000 → 14.000, 8.192 → 16.000.
      */
     public static int promptBudget(int loadedTokens) {
         if (loadedTokens >= ModelMemoryPolicy.LITERT_16K) return 22000;
         if (loadedTokens >= ModelMemoryPolicy.LITERT_8K) return 16000;
+        if (loadedTokens >= ModelMemoryPolicy.LITERT_LONG) return 14000;
+        if (loadedTokens >= ModelMemoryPolicy.LITERT_6K) return 12500;
+        if (loadedTokens >= ModelMemoryPolicy.LITERT_5K) return 11500;
         return 10500;
     }
 }

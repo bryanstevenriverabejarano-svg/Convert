@@ -31,6 +31,9 @@ object LiteRTLlm {
     @Volatile private var initialized = false
     @Volatile private var backendName = "sin cargar"
     @Volatile private var contextTokens = 4096
+    /** Por qué no se cargó el contexto pedido en la última carga (null si se cargó tal cual). */
+    @Volatile @JvmStatic var lastContextError: String? = null
+        private set
     /**
      * Decodificación especulativa activa. Con ella NO se usa el formato JSON forzado: LiteRT-LM 0.17/0.18
      * rompe la salida cuando se combinan (issue google-ai-edge/LiteRT-LM#3944). El JSON se pide en el
@@ -94,6 +97,7 @@ object LiteRTLlm {
             backendName = "MediaPipe (.task)"
         } else {
             require(modelPath.endsWith(".litertlm", ignoreCase = true)) { "Formato local no compatible" }
+            lastContextError = null
             var tokens = maxTokens
             fun load(backend: Backend, vision: Backend?): Engine {
                 val candidate = Engine(EngineConfig(modelPath = modelPath, backend = backend,
@@ -110,37 +114,32 @@ object LiteRTLlm {
             if (withVision) attempts += Triple("LiteRT-LM GPU · visión CPU", { Backend.GPU() }, { Backend.CPU(threadCount = 4) })
             attempts += Triple("LiteRT-LM CPU", { Backend.CPU(threadCount = 4) },
                 if (withVision) ({ Backend.CPU(threadCount = 4) }) else null)
-            fun loadAll(): Throwable? {
-                tokens = maxTokens
+            // Contextos a probar, del pedido hacia abajo (8.192 → 7.000 → 6.144 → 5.120 → 4.096). Antes, si
+            // el pedido fallaba, se caía directo a 4.096. Se prefiere GPU con menos contexto antes que
+            // CPU con más: la CPU es varias veces más lenta.
+            val tiers = (listOf(maxTokens) + listOf(7000, 6144, 5120, 4096).filter { it < maxTokens }).distinct()
+            fun tryAll(candidates: List<Triple<String, () -> Backend, (() -> Backend)?>>): Throwable? {
                 var lastError: Throwable? = null
-                for ((name, text, vision) in attempts) {
-                    try {
-                        engine = load(text(), vision?.invoke())
-                        backendName = name
-                        lastError = null
-                        break
-                    } catch (error: Exception) {
-                        Log.w(TAG, "$name no disponible", error)
-                        lastError = error
-                    }
-                }
-                if (lastError != null && tokens > 4096) {
-                    // Si el contexto ampliado no cabe o el modelo no lo admite, se vuelve a 4.096.
-                    Log.w(TAG, "Contexto de $tokens tokens no disponible; reintentando con 4096")
-                    tokens = 4096
-                    for ((name, text, vision) in attempts) {
+                for (size in tiers) {
+                    tokens = size
+                    for ((name, text, vision) in candidates) {
                         try {
                             engine = load(text(), vision?.invoke())
                             backendName = name
-                            lastError = null
-                            break
+                            return null
                         } catch (error: Exception) {
-                            Log.w(TAG, "$name no disponible", error)
+                            Log.w(TAG, "$name con $size tokens no disponible", error)
                             lastError = error
+                            if (size == maxTokens && lastContextError == null)
+                                lastContextError = "$name rechazó $size tokens: " + (error.message ?: error.javaClass.simpleName)
                         }
                     }
                 }
                 return lastError
+            }
+            fun loadAll(): Throwable? {
+                val accelerated = attempts.filter { !it.first.startsWith("LiteRT-LM CPU") }
+                return tryAll(accelerated)?.let { tryAll(attempts.filter { it.first.startsWith("LiteRT-LM CPU") }) }
             }
             // Decodificación especulativa (MTP de Gemma 4): ~1,6× en E2B y ~2,2× en E4B según Google.
             // Si el motor no la admite con este modelo o dispositivo, se carga igual que antes sin ella.

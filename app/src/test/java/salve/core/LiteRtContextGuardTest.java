@@ -32,8 +32,8 @@ public class LiteRtContextGuardTest {
     @Test public void smallerPhonesAndOtherModelsKeepTheOldLimits() {
         assertEquals("móvil de 7,5 GiB con poca RAM libre: igual que antes, no carga",
                 0, ModelMemoryPolicy.admitLiteRt(E4B, ram(2.71, 7.5), false, false));
-        assertEquals("y con RAM libre de verdad, solo lo que cabe medido",
-                ModelMemoryPolicy.LITERT_STANDARD, ModelMemoryPolicy.admitLiteRt(E4B, ram(4.7, 7.5), false, false));
+        assertEquals("y con RAM libre de verdad, solo lo que cabe medido (5k, no 4k)",
+                ModelMemoryPolicy.LITERT_5K, ModelMemoryPolicy.admitLiteRt(E4B, ram(4.7, 7.5), false, false));
         assertEquals("E2B nunca pasa de 7.000",
                 ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.selectLiteRtContext(LocalModelPolicy.FALLBACK, ram(9.0, 12), false, false));
         assertEquals("memoria baja: nada", 0, ModelMemoryPolicy.admitLiteRt(E4B,
@@ -81,11 +81,27 @@ public class LiteRtContextGuardTest {
 
     @Test public void promptGrowsWithTheLoadedContext() {
         assertEquals(10500, LiteRtContextGuard.promptBudget(4096));
-        assertEquals(10500, LiteRtContextGuard.promptBudget(7000));
         assertEquals(16000, LiteRtContextGuard.promptBudget(8192));
         assertEquals(22000, LiteRtContextGuard.promptBudget(16384));
         // ~3,5 caracteres por token: el prompt deja sitio para pensar y responder.
         assertTrue(22000 / 3.0 < 16384 - 2048);
         assertTrue(16000 / 3.0 < 8192 - 1536);
+    }
+
+    /** 2/11/2026: en el móvil se quedaba en 4k. Si 8k no cabe, antes de 4k se prueban 7k, 6k y 5k. */
+    @Test public void intermediateStepsBefore4096() {
+        long gib = GIB;
+        // RAM justa para 6k pero no para 8k (móvil grande, pesos sin contar).
+        long need6 = ModelMemoryPolicy.requiredLiteRt(E4B, true, 768 * ModelMemoryPolicy.MIB, false, ModelMemoryPolicy.LITERT_6K);
+        long need7 = ModelMemoryPolicy.requiredLiteRt(E4B, true, 768 * ModelMemoryPolicy.MIB, false, ModelMemoryPolicy.LITERT_LONG);
+        ModelMemoryPolicy.Snapshot tight = new ModelMemoryPolicy.Snapshot(need6 + (need7 - need6) / 2, (long) (10.82 * gib), 768 * ModelMemoryPolicy.MIB, false);
+        assertEquals(ModelMemoryPolicy.LITERT_6K, ModelMemoryPolicy.admitLiteRt(E4B, tight, false, false));
+        assertEquals(7000, LiteRtContextGuard.below(8192));
+        assertEquals(6144, LiteRtContextGuard.below(7000));
+        assertEquals(5120, LiteRtContextGuard.below(6144));
+        assertEquals(4096, LiteRtContextGuard.below(5120));
+        assertEquals(11500, LiteRtContextGuard.promptBudget(5120));
+        assertEquals(12500, LiteRtContextGuard.promptBudget(6144));
+        assertEquals(14000, LiteRtContextGuard.promptBudget(7000));
     }
 }
