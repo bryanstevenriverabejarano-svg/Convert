@@ -289,6 +289,7 @@ public class SalveLLM {
             return;
         }
         int liteRtTokens = ModelMemoryPolicy.LITERT_STANDARD;
+        int requestedTokens = ModelMemoryPolicy.LITERT_STANDARD;
         boolean liteRtVision = withVision;
         if (isGguf) ggufContextTokens = DeviceModelMemory.contextFor(appContext, modelPath, false);
         else if (isLiteRT && !modelPath.toLowerCase(java.util.Locale.ROOT).endsWith(".task")) {
@@ -296,6 +297,7 @@ public class SalveLLM {
             // 7.000 tokens si caben (si no, 4.096): el prompt sigue en ~10.500 caracteres (unos 3.500
             // tokens), así que el margen extra es para responder sin cortarse, no para llenar más texto.
             liteRtTokens = DeviceModelMemory.liteRtContextFor(appContext, modelPath, resident, liteRtVision);
+            requestedTokens = liteRtTokens;
             liteRtTokens = contextGuard().admit(liteRtTokens);
         } else DeviceModelMemory.require(appContext, modelPath, false);
         publishStatus("cargando");
@@ -328,6 +330,15 @@ public class SalveLLM {
             // app al pensar con mucho contexto, no solo al cargarlo (pasó con 16.384 el 2/11/2026).
             if (LiteRTLlm.getContextTokens() <= ModelMemoryPolicy.LITERT_STANDARD) guard.loaded();
             else contextUnconfirmed = true;
+            // Constancia de qué contexto se pidió y cuál cargó de verdad (y con cuánta RAM): sin esto
+            // no se sabe si un «4k» viene de la regla de memoria, del tope aprendido o de un fallo.
+            try {
+                salve.core.trace.ExecutionTrace.note("CONTEXTO DEL MODELO", "Pedido " + requestedTokens
+                        + (liteRtTokens != requestedTokens ? ", limitado a " + liteRtTokens + " por cierres anteriores" : "")
+                        + "; cargado " + LiteRTLlm.getContextTokens() + " tokens"
+                        + (LiteRTLlm.getContextTokens() < liteRtTokens ? " (el motor no admitió " + liteRtTokens + " y volvió a 4.096)" : "")
+                        + ". " + DeviceModelMemory.describe(DeviceModelMemory.read(appContext)) + ".");
+            } catch (RuntimeException ignored) { }
         } else {
             if (modelLib == null) {
                 throw new IllegalStateException("initEngineIfNeeded MLC sin modelLib.");
@@ -573,7 +584,7 @@ public class SalveLLM {
         GenerationSpeed.Sample last = GenerationSpeed.last();
         int ctx = loadedContextTokens();
         return runtimeStatus + (isLiteRT && LiteRTLlm.getSpeculativeActive() ? " · MTP" : "")
-                + (ctx > ModelMemoryPolicy.LITERT_STANDARD ? " · " + (ctx / 1024) + "k" : "")
+                + (ctx > 0 ? " · " + Math.round(ctx / 1024f) + "k" : "")
                 + (last == null ? "" : " · " + last.compact());
     }
     public String getMemoryDescription() { return DeviceModelMemory.describe(DeviceModelMemory.read(appContext)); }
