@@ -116,6 +116,8 @@ final class PhoneActionsDesk {
             postConversationTask(() -> {
                 if (m.closed) return;
                 Intent panel = new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (mobile.type == salve.core.devicecontrol.MobileCommand.Type.WHATSAPP)
+                    panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_DIRECT_DRAFT, true);
                 if (mobile.type == salve.core.devicecontrol.MobileCommand.Type.WHATSAPP && mobile.draft == null) {
                     panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_WHATSAPP_CONTACT, mobile.contact)
                             .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_MESSAGE, mobile.message);
