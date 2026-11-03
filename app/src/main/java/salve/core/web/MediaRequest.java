@@ -29,6 +29,8 @@ public final class MediaRequest {
     public static MediaRequest parse(String input) {
         String text = normalize(input);
         if (text.isEmpty()) return null;
+        // El dictado a veces junta «pon te arrepentirás» en «ponte arrepentirás»: con YouTube es un título.
+        if (text.startsWith("ponte ") && text.contains("youtube")) text = "pon te " + text.substring(6);
         Matcher search = YOUTUBE_SEARCH.matcher(text);
         if (search.matches()) {
             String q = clean(search.group(1) != null ? search.group(1) : search.group(2));
@@ -40,7 +42,11 @@ public final class MediaRequest {
         boolean music = play.group(1) != null || text.startsWith("reproduce") || text.startsWith("quiero escuchar")
                 || text.startsWith("escuchemos") || text.startsWith("toca ");
         String q = clean(play.group(2));
-        if ((!youtube && !music) || q.isEmpty() || q.matches("(?:la |el |mi |tu |tus |te )?(?:alarma|huella|temporizador|recordatorio|cara|voz|mente|camara)\\b.*") || q.matches("(?:tu|tus|te|mi) .*")) return null;
+        // «te/tu/mi …» suele ser otra cosa («ponte guapa», «pon tu voz»), salvo que pida YouTube o diga
+        // «canción/música…»: entonces es un título («Te arrepentirás», «Tu falta de querer», «Mi gente»).
+        boolean explicitMedia = youtube || play.group(1) != null;
+        if ((!youtube && !music) || q.isEmpty() || q.matches("(?:la |el |mi |tu |tus |te )?(?:alarma|huella|temporizador|recordatorio|cara|voz|mente|camara)\\b.*")
+                || (!explicitMedia && q.matches("(?:tu|tus|te|mi) .*"))) return null;
         if (play.group(1) != null && play.group(1).startsWith("musica") && !q.isEmpty()) q = "música " + q;
         return new MediaRequest(q, true);
     }
