@@ -171,6 +171,18 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!-- «Acceso a notificaciones» solo para ver y controlar la música de otras apps (Spotify):
+             no lee ninguna notificación. -->
+        <service
+            android:name="salve.services.SalveMusicListener"
+            android:exported="true"
+            android:label="Salve · música"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <service
             android:name="salve.services.MobileWorkspaceService"
             android:exported="false"
