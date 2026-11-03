@@ -1,6 +1,6 @@
 {
   "version": 5,
-  "identity": "Salve — giros originales G1-G4 (28-10-2026), sin reflejar; vistas y demás animaciones intactas",
+  "identity": "Salve — giros originales G1-G4 (28-10-2026), sin reflejar; vistas redibujadas al cuerpo de pecho cubierto (3-11-2026); demás animaciones aún con el cuerpo anterior",
   "rendering": "Native Canvas 2D; generated RGBA sprites, no 3D mesh. base.png es además el cuerpo vivo (capa astral).",
   "sheets": {
     "base": {
@@ -22,7 +22,7 @@
     "views": {
       "width": 1792,
       "height": 1344,
-      "sha256": "7d14e918b8704bcd9fe5d4d0636d7acd60e18beb180186bee10153548ff882ce",
+      "sha256": "d5bd5b915f4430eb3c4e835b70f77de19bb3ca2d6f04d8f764aa9ab78e00c225",
       "frames": [
         [
           0,
