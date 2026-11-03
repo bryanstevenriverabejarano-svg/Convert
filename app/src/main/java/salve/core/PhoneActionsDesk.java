@@ -95,6 +95,28 @@ final class PhoneActionsDesk {
                         m.hablar(salve.devices.PhoneActions.playMusic(m.context, action.target)
                                 ? "Pongo " + action.target + "." : "No encontré Spotify ni otra app de música que acepte búsquedas.");
                         break;
+                    case PLAYLIST:
+                        m.hablar(salve.devices.PhoneActions.playPlaylist(m.context, action.target)
+                                ? "Pongo tu lista «" + action.target + "» en Spotify."
+                                : "No encontré Spotify para poner la lista «" + action.target + "».");
+                        break;
+                    case LIKED:
+                        m.hablar(salve.devices.PhoneActions.playLiked(m.context)
+                                ? "Pongo tus me gusta de Spotify." : "No encontré Spotify para poner tus me gusta.");
+                        break;
+                    case MUSIC_SEARCH: {
+                        boolean driving;
+                        try { driving = salve.core.driving.DrivingModeManager.get(m.context).isActive(); }
+                        catch (RuntimeException unavailable) { driving = false; }
+                        // Conduciendo no se mira una lista de resultados: se pone el primero.
+                        if (driving) m.hablar(salve.devices.PhoneActions.playMusic(m.context, action.target)
+                                ? "Conduciendo no te enseño resultados: pongo «" + action.target + "»."
+                                : "No encontré Spotify ni otra app de música que acepte búsquedas.");
+                        else m.hablar(salve.devices.PhoneActions.searchMusic(m.context, action.target)
+                                ? "Te abro Spotify con lo que hay de «" + action.target + "»."
+                                : "No encontré Spotify para buscar «" + action.target + "».");
+                        break;
+                    }
                     case CALL:
                         try {
                             m.context.startActivity(new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class)

@@ -41,6 +41,35 @@ public final class PhoneActions {
         return start(context, spotify) || start(context, spotifySearch) || start(context, playFromSearch(query));
     }
 
+    /**
+     * Pone una lista por su nombre. Se pide como «lista» (no como canción) para que Spotify busque entre
+     * las listas, y las tuyas suelen salir las primeras; si no lo acepta, abre la búsqueda con ese nombre.
+     */
+    public static boolean playPlaylist(Context context, String name) {
+        Intent playlist = new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+                .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE)
+                .putExtra(MediaStore.EXTRA_MEDIA_PLAYLIST, name)
+                .putExtra(SearchManager.QUERY, name)
+                .setPackage(SPOTIFY);
+        return start(context, playlist) || searchMusic(context, name) || start(context, playFromSearch(name));
+    }
+
+    /** «Tus me gusta» de Spotify; si no se puede poner sola, abre la lista para darle a reproducir. */
+    public static boolean playLiked(Context context) {
+        Intent liked = new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+                .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE)
+                .putExtra(MediaStore.EXTRA_MEDIA_PLAYLIST, "Tus me gusta")
+                .putExtra(SearchManager.QUERY, "Tus me gusta")
+                .setPackage(SPOTIFY);
+        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse("spotify:collection:tracks")).setPackage(SPOTIFY);
+        return start(context, liked) || start(context, open);
+    }
+
+    /** Abre la búsqueda de Spotify con esos resultados, sin poner nada. */
+    public static boolean searchMusic(Context context, String query) {
+        return start(context, new Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:" + Uri.encode(query))).setPackage(SPOTIFY));
+    }
+
     private static Intent playFromSearch(String query) {
         return new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
                 .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")

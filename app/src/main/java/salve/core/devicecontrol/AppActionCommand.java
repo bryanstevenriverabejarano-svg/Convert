@@ -11,7 +11,8 @@ import java.util.regex.Pattern;
  * llamar siempre pasa por una confirmación en pantalla con el nombre y el número.</p>
  */
 public final class AppActionCommand {
-    public enum Type { NAVIGATE, MUSIC, CALL, OPEN_APP }
+    /** PLAYLIST: una lista de Spotify; LIKED: «Tus me gusta»; MUSIC_SEARCH: abrir la búsqueda de Spotify. */
+    public enum Type { NAVIGATE, MUSIC, PLAYLIST, LIKED, MUSIC_SEARCH, CALL, OPEN_APP }
 
     private static final int FLAGS = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
     private static final Pattern NAVIGATE = Pattern.compile(
@@ -26,6 +27,18 @@ public final class AppActionCommand {
             "^(?:pon|ponme|reproduce|toca)\\s+(.+?)\\s+en spotify$", FLAGS);
     private static final Pattern MUSIC_PLAIN = Pattern.compile(
             "^(?:reproduce|quiero escuchar)\\s+(.+)$", FLAGS);
+    /** «pon mi lista Gym», «ponme la playlist Para correr en Spotify», «reproduce mi lista de reproducción Relax». */
+    private static final Pattern PLAYLIST = Pattern.compile(
+            "^(?:pon|ponme|reproduce|toca|quiero escuchar|abre|dale a)\\s+(?:mi|la|una de mis|mis?)\\s+"
+                    + "(?:listas?(?: de reproducci[oó]n| de m[uú]sica)?|playlists?)\\s+(?:(?:de|que se llama|llamada)\\s+)?(.+?)"
+                    + "(?:\\s+(?:en|de) spotify)?$", FLAGS);
+    /** «pon mis me gusta», «pon las canciones que me gustan», «pon mis favoritas». */
+    private static final Pattern LIKED = Pattern.compile(
+            "^(?:pon|ponme|reproduce|toca|quiero escuchar)\\s+(mis me gusta|tus me gusta|mis favoritas|mis canciones favoritas|"
+                    + "mis canciones guardadas|(?:mis|las) canciones que me gustan)(?:\\s+(?:en|de) spotify)?$", FLAGS);
+    /** «busca Rosalía en Spotify»: enseñar resultados sin poner nada. */
+    private static final Pattern MUSIC_SEARCH = Pattern.compile(
+            "^(?:busca|b[uú]scame|encuentra)\\s+(.+?)\\s+en spotify$", FLAGS);
     private static final Pattern CALL = Pattern.compile(
             "^(?:ll[aá]ma(?:le)?|llamar|telefonea)\\s+a\\s+(.+?)(?:\\s+(?:por tel[eé]fono|con (?:el )?altavoz|en altavoz|ahora))?$", FLAGS);
     /** «abre la cámara», «abre WhatsApp», «lanza Spotify». Solo un nombre corto, sin encadenar acciones. */
@@ -45,6 +58,9 @@ public final class AppActionCommand {
         if (text.isEmpty()) return null;
         AppActionCommand found = match(Type.NAVIGATE, NAVIGATE, text);
         if (found == null) found = match(Type.NAVIGATE, NAVIGATE_MAPS, text);
+        if (found == null) found = match(Type.LIKED, LIKED, text);
+        if (found == null) found = match(Type.PLAYLIST, PLAYLIST, text);
+        if (found == null) found = match(Type.MUSIC_SEARCH, MUSIC_SEARCH, text);
         if (found == null) found = match(Type.MUSIC, MUSIC_CUE, text);
         if (found == null) found = match(Type.MUSIC, MUSIC_SPOTIFY, text);
         if (found == null) found = match(Type.MUSIC, MUSIC_PLAIN, text);
@@ -69,6 +85,9 @@ public final class AppActionCommand {
         if (!m.matches()) return null;
         String target = m.group(1).trim().replaceFirst("(?iu)^(?:el|la|los|las)\\s+(?=\\S)", type == Type.MUSIC ? "" : "$0");
         if (target.isEmpty() || target.length() > (type == Type.CALL ? 60 : 160)) return null;
+        // «pon la lista de la compra / de tareas» no es música.
+        if (type == Type.PLAYLIST && target.matches(
+                "(?iu)(?:(?:la|las|los|el|mis)\\s+)?(?:compra|tareas|pendientes|deberes|cosas|invitados|contactos|regalos)\\b.*")) return null;
         if (type == Type.OPEN_APP && (target.length() > 40 || target.split("\\s+").length > 4
                 || target.matches("(?iu).*\\b(?:y|luego|despu[eé]s|que|para)\\b.*"))) return null;
         return new AppActionCommand(type, target);
