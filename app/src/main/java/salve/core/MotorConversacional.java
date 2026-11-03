@@ -794,6 +794,9 @@ public class MotorConversacional {
         }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
+        // Antes que vídeos/música: «pon la canción anterior» es la anterior, no buscar «anterior».
+        String music = controlMusica(entrada);
+        if (music != null) { hablar(music); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
         if (salve.core.mind.MindMapCommand.matches(entrada)) { hablar(abrirMapaMente()); return; }
@@ -1845,6 +1848,51 @@ public class MotorConversacional {
             return "Cambiando a Gemma 4 E2B… tardo unos segundos en cargarlo.";
         }
         return null;
+    }
+
+    /**
+     * «Dale play», «pausa la música», «siguiente», «¿qué suena?», «léeme mis listas»: la música de otra
+     * app (Spotify). Ver qué suena exige «Acceso a notificaciones»; conduciendo nunca abre ajustes.
+     */
+    private String controlMusica(String input) {
+        salve.core.voice.MusicControlCommand.Action action = salve.core.voice.MusicControlCommand.parse(input);
+        if (action == null) return null;
+        boolean driving;
+        try { driving = salve.core.driving.DrivingModeManager.get(context).isActive(); }
+        catch (RuntimeException unavailable) { driving = false; }
+        switch (action) {
+            case PLAY:
+                return salve.devices.MusicController.play(context) ? "Le doy al play." : "No encontré qué música reanudar.";
+            case PAUSE:
+                return salve.devices.MusicController.pause(context) ? "En pausa." : "No encontré música sonando.";
+            case NEXT:
+                return salve.devices.MusicController.next(context) ? "Siguiente." : "No encontré música sonando.";
+            case PREVIOUS:
+                return salve.devices.MusicController.previous(context) ? "La anterior." : "No encontré música sonando.";
+            case NOW_PLAYING: {
+                if (!salve.devices.MusicController.hasAccess(context)) return musicAccessHint(driving, "decirte qué suena");
+                String now = salve.devices.MusicController.nowPlaying(context);
+                return now == null ? "Ahora mismo no suena nada que pueda leer." : "Suena " + now + ".";
+            }
+            case LIST_PLAYLISTS:
+                return "Spotify no deja que otras apps lean tus listas desde el móvil, así que todavía no puedo leértelas. "
+                        + "Sí puedo ponerlas: dime «pon mi lista» y su nombre, o «pon mis me gusta». "
+                        + "Para leértelas habría que conectar tu cuenta de Spotify; pídemelo cuando estés parado.";
+            case GRANT_ACCESS:
+                return musicAccessHint(driving, "ver y controlar la música");
+            default:
+                return null;
+        }
+    }
+
+    private String musicAccessHint(boolean driving, String what) {
+        if (salve.devices.MusicController.hasAccess(context)) return "Ya tengo acceso a la música.";
+        if (driving) return "Para " + what + " necesito «Acceso a notificaciones». Cuando estés parado, dime "
+                + "«dale acceso a la música» y te abro el ajuste.";
+        return salve.devices.MusicController.openAccessSettings(context)
+                ? "Te abro el ajuste: activa Salve en «Acceso a notificaciones». Solo lo uso para ver y controlar la música; "
+                        + "no leo tus mensajes."
+                : "No pude abrir el ajuste. Ve a Ajustes → Notificaciones → Acceso a notificaciones y activa Salve.";
     }
 
     private static boolean pideFotoEnLaNube(String input) {

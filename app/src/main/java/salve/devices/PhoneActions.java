@@ -36,9 +36,37 @@ public final class PhoneActions {
 
     /** Busca y reproduce en Spotify; si no está, en la app de música que lo admita. */
     public static boolean playMusic(Context context, String query) {
+        // Con su reproductor a mano, Spotify lo pone de verdad (abrirlo por intent solo enseña resultados).
+        if (MusicController.playFromSearch(context, query, null)) return true;
         Intent spotify = playFromSearch(query).setPackage(SPOTIFY);
         Intent spotifySearch = new Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:" + Uri.encode(query))).setPackage(SPOTIFY);
-        return start(context, spotify) || start(context, spotifySearch) || start(context, playFromSearch(query));
+        boolean opened = start(context, spotify) || start(context, spotifySearch) || start(context, playFromSearch(query));
+        if (opened) playWhenSpotifyIsReady(context, query, null);
+        return opened;
+    }
+
+    /**
+     * Spotify recién abierto todavía no tiene reproductor: en cuanto aparece, se le pide que lo ponga
+     * (si Salve tiene «Acceso a notificaciones»). Si no, se queda en la búsqueda, como antes.
+     */
+    private static void playWhenSpotifyIsReady(Context context, String query, android.os.Bundle extras) {
+        if (!MusicController.hasAccess(context)) return;
+        Context app = context.getApplicationContext();
+        android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        java.util.concurrent.atomic.AtomicBoolean done = new java.util.concurrent.atomic.AtomicBoolean();
+        long[] delays = {1500, 3000, 5000};
+        for (long delay : delays) {
+            main.postDelayed(() -> {
+                // Una sola vez, en cuanto el reproductor de Spotify exista.
+                if (!done.get() && MusicController.playFromSearch(app, query, extras)) done.set(true);
+            }, delay);
+        }
+    }
+
+    /** ¿Está instalada esta app? (Spotify y Maps están declarados en las consultas del manifest). */
+    public static boolean isInstalled(Context context, String packageName) {
+        try { context.getPackageManager().getPackageInfo(packageName, 0); return true; }
+        catch (PackageManager.NameNotFoundException absent) { return false; }
     }
 
     /**
@@ -46,23 +74,37 @@ public final class PhoneActions {
      * las listas, y las tuyas suelen salir las primeras; si no lo acepta, abre la búsqueda con ese nombre.
      */
     public static boolean playPlaylist(Context context, String name) {
+        android.os.Bundle focus = playlistExtras(name);
+        if (MusicController.playFromSearch(context, name, focus)) return true;
         Intent playlist = new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
                 .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE)
                 .putExtra(MediaStore.EXTRA_MEDIA_PLAYLIST, name)
                 .putExtra(SearchManager.QUERY, name)
                 .setPackage(SPOTIFY);
-        return start(context, playlist) || searchMusic(context, name) || start(context, playFromSearch(name));
+        boolean opened = start(context, playlist) || searchMusic(context, name) || start(context, playFromSearch(name));
+        if (opened) playWhenSpotifyIsReady(context, name, focus);
+        return opened;
+    }
+
+    private static android.os.Bundle playlistExtras(String name) {
+        android.os.Bundle b = new android.os.Bundle();
+        b.putString(MediaStore.EXTRA_MEDIA_FOCUS, MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE);
+        b.putString(MediaStore.EXTRA_MEDIA_PLAYLIST, name);
+        return b;
     }
 
     /** «Tus me gusta» de Spotify; si no se puede poner sola, abre la lista para darle a reproducir. */
     public static boolean playLiked(Context context) {
+        if (MusicController.playFromSearch(context, "Tus me gusta", playlistExtras("Tus me gusta"))) return true;
         Intent liked = new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
                 .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE)
                 .putExtra(MediaStore.EXTRA_MEDIA_PLAYLIST, "Tus me gusta")
                 .putExtra(SearchManager.QUERY, "Tus me gusta")
                 .setPackage(SPOTIFY);
         Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse("spotify:collection:tracks")).setPackage(SPOTIFY);
-        return start(context, liked) || start(context, open);
+        boolean opened = start(context, liked) || start(context, open);
+        if (opened) playWhenSpotifyIsReady(context, "Tus me gusta", playlistExtras("Tus me gusta"));
+        return opened;
     }
 
     /** Abre la búsqueda de Spotify con esos resultados, sin poner nada. */
