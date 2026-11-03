@@ -33,6 +33,17 @@ public class ModelSwitchCommandTest {
         assertNull(ModelSwitchCommand.parse("usa el modelo gemma 4 e2b para escribir un cuento muy largo sobre dragones que vuelan por la noche en el bosque"));
     }
 
+    @Test public void understandsQwenHoweverItIsDictated() {
+        assertEquals(QWEN35, ModelSwitchCommand.parse("descarga Qwen 3.5"));
+        assertEquals(QWEN35, ModelSwitchCommand.parse("usa el modelo cuen"));
+        assertEquals(QWEN35, ModelSwitchCommand.parse("Salve, cámbiate a kuen tres punto cinco"));
+        assertEquals(QWEN35, ModelSwitchCommand.parse("usa el modelo sin censura"));
+        assertEquals(QWEN35, ModelSwitchCommand.parse("instala el modelo qwen"));
+        assertNull("una pregunta no cambia nada", ModelSwitchCommand.parse("qué tal es qwen"));
+        assertNull("«cuenta» no es Qwen", ModelSwitchCommand.parse("usa la cuenta de gmail"));
+        assertEquals("Qwen 3.5 9B sin censura", ModelSwitchCommand.label(QWEN35));
+    }
+
     @Test public void labels() {
         assertEquals("Gemma 4 E2B", ModelSwitchCommand.label(E2B));
         assertEquals("Gemma 4 E4B", ModelSwitchCommand.label(E4B));
