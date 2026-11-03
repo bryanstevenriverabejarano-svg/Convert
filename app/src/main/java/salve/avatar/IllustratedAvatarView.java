@@ -9,6 +9,7 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.GestureDetector;
 import android.view.View;
+import android.view.ViewConfiguration;
 
 /** Shared room/overlay host for the approved illustrated character and its local motion rig. */
 class IllustratedAvatarView extends View {
@@ -24,6 +25,8 @@ class IllustratedAvatarView extends View {
     private final GestureDetector stageGestures;
     private boolean immersive;
     private boolean overlay, animationEnabled = true, attached;
+    private boolean rotating;
+    private final int touchSlop;
     private Runnable frameListener;
     private float phase;
     private final Runnable changed = () -> { normalizePoseForWardrobe(); updateDescription(); invalidate(); };
@@ -51,10 +54,29 @@ class IllustratedAvatarView extends View {
         bed = new IllustratedBedRenderer(context);
         poses = new CorePoseRenderer(context, changed);
         realistic = new RealisticSpriteRenderer(context);
+        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         stageGestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent event) { return true; }
             @Override public boolean onDoubleTap(MotionEvent event) { performClick(); return true; }
-            @Override public void onLongPress(MotionEvent event) { performLongClick(); }
+            @Override public void onLongPress(MotionEvent event) { if (!rotating) performLongClick(); }
+            @Override public boolean onScroll(MotionEvent down, MotionEvent now, float dx, float dy) {
+                // Agarrar y girar a Salve con el dedo (solo cuerpo realista, de pie, en la sala).
+                if (down == null || now == null || !RealisticSpriteRenderer.supports(wardrobe.selected())) return false;
+                float moved = now.getX() - down.getX();
+                if (!rotating && (Math.abs(moved) < touchSlop || Math.abs(moved) <= Math.abs(now.getY() - down.getY())))
+                    return false;                       // aún no es un giro claramente horizontal
+                rotating = true;
+                // Un arrastre de ~1,4 anchos del avatar = una vuelta completa; a la derecha, gira hacia su perfil derecho.
+                realistic.grabRotate(moved / Math.max(1f, getWidth() * 1.4f));
+                invalidate();
+                return true;
+            }
+            @Override public boolean onSingleTapConfirmed(MotionEvent event) {
+                // Tocar un lado: se orienta y va hacia ahí (si nadie usa el avatar como botón de entrada).
+                if (hasOnClickListeners()) { performClick(); return true; }
+                orientToward(event.getX());
+                return true;
+            }
         });
         setFocusable(true);
         setClickable(true);
@@ -98,18 +120,31 @@ class IllustratedAvatarView extends View {
         if (overlay) return super.onTouchEvent(event);
         if (immersive) {
             stageGestures.onTouchEvent(event);
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                if (rotating) { realistic.releaseRotate(); rotating = false; invalidate(); }
+            }
             return true;
         }
         if (event.getActionMasked() == MotionEvent.ACTION_UP) {
             // A host screen may use the character as the entry point to the room.
             if (hasOnClickListeners()) { performClick(); return true; }
-            float scale = Math.min(getWidth() / 320f, getHeight() / 280f);
-            float left = (getWidth() - 320f * scale) / 2f;
-            float target = ((event.getX() - left) / Math.max(.001f, scale) - 88f) / 144f;
-            store.change(s -> s.walkTo(target));
+            orientToward(event.getX());
             performClick(); return true;
         }
         return true;
+    }
+    /** Se orienta (y camina) hacia el punto tocado, de modo que gira para mirar hacia ahí. */
+    private void orientToward(float x) {
+        float target;
+        if (immersive) {
+            target = -0.6f + (x / Math.max(1f, getWidth())) * 2.2f;
+        } else {
+            float scale = Math.min(getWidth() / 320f, getHeight() / 280f);
+            float left = (getWidth() - 320f * scale) / 2f;
+            target = ((x - left) / Math.max(.001f, scale) - 88f) / 144f;
+        }
+        store.change(s -> s.walkTo(target));
     }
     @Override public boolean performClick() { super.performClick(); return true; }
 

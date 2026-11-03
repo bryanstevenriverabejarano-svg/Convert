@@ -52,6 +52,33 @@ public class AvatarTurnTest {
         assertEquals(3, AvatarTurn.fallback(3));
     }
 
+    @Test public void grabbingWithTheFingerShowsTheDraggedViewAndGlidesBackToFront() {
+        AvatarTurn turn = new AvatarTurn();
+        assertEquals("en reposo manda la lógica automática", -1, turn.view(true, false, true, -1, 0f));
+        // Agarrar y girar: media vuelta -> espalda(4), un cuarto -> perfil derecho(2).
+        turn.grab(0.5f);
+        assertTrue(turn.grabbed());
+        assertEquals("media vuelta es la espalda", 4, turn.view(true, false, true, -1, 1f));
+        turn.grab(0.25f);
+        assertEquals("un cuarto es el perfil derecho", 2, turn.view(true, false, true, -1, 1.1f));
+        turn.grab(-0.25f);
+        assertEquals("girar al otro lado es el perfil izquierdo", 6, turn.view(true, false, true, -1, 1.2f));
+        // El giro con el dedo manda aunque esté hablando (no solo en reposo).
+        turn.grab(0.5f);
+        assertEquals("el dedo manda aunque hable", 4, turn.view(true, false, false, -1, 1.3f));
+        // Soltar desde la espalda: glisa (vista válida intermedia) y acaba volviendo al frente (auto).
+        turn.release();
+        assertFalse(turn.grabbed());
+        int mid = turn.view(true, false, true, -1, 1.3f + .2f);
+        assertTrue("glisado intermedio es una vista válida", mid >= 0 && mid <= 7);
+        assertEquals("tras el glisado vuelve a la lógica automática", -1, turn.view(true, false, true, -1, 1.3f + .5f));
+        // Soltar ya de frente: sin glisado, auto directo.
+        turn.grab(0f);
+        turn.view(true, false, true, -1, 2f);
+        turn.release();
+        assertEquals("soltar de frente no glisa", -1, turn.view(true, false, true, -1, 2.01f));
+    }
+
     @Test public void restAndSpinAreBodyCommands() {
         assertEquals(AvatarMotion.Gesture.REST, AvatarMotionProtocol.parseCommand("Cierra los ojos").gesture);
         assertEquals(AvatarMotion.Gesture.REST, AvatarMotionProtocol.parseCommand("medita").gesture);

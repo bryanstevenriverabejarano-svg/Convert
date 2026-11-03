@@ -24,6 +24,11 @@ public final class AvatarTurn {
     private int[] sequence;
     private float start, step, nextLook = -1;
     private int looks;
+    // Rotación manual: Bryan la agarra y la gira con el dedo. manual ∈ [0,8) en unidades de vista
+    // (0 frente, 2 perfil derecho, 4 espalda, 6 perfil izquierdo). Al soltar, vuelve sola al frente.
+    private static final float GLIDE = .45f;
+    private boolean grabbing, gliding;
+    private float manual, glideFrom, glideStart, lastTime;
 
     /** Ida por el camino hasta la posición {@code reach}, se queda {@code hold} pasos y vuelve al frente. */
     private static int[] there(int[] path, int reach, int hold) {
@@ -41,6 +46,17 @@ public final class AvatarTurn {
      */
     public int view(boolean facingRight, boolean walking, boolean idle, float spin, float time) {
         if (!Float.isFinite(time)) return -1;
+        lastTime = time;
+        // El dedo manda: mientras la agarra, muestra la vista girada; al soltar, glisa de vuelta al frente.
+        if (grabbing) { sequence = null; return Math.round(manual) & 7; }
+        if (gliding) {
+            float t = (time - glideStart) / GLIDE;
+            // t<0 solo ocurre si el reloj dio la vuelta (cada 60 s): termina el glisado sin saltos.
+            if (!Float.isFinite(t) || t < 0f || t >= 1f) { gliding = false; return -1; }
+            int d = Math.round(-glideFrom) & 7;        // paso más corto hasta 0 (frente) en el anillo de 8
+            if (d > 4) d -= 8;
+            return Math.round(glideFrom + d * t) & 7;
+        }
         if (spin >= 0) { sequence = null; return spin >= 1 ? 0 : SPIN[Math.min(SPIN.length - 1, (int) (spin * SPIN.length))]; }
         if (lastRight == null) lastRight = facingRight;
         if (nextLook < 0 || time < start) { nextLook = time + 22f; start = time; }
@@ -61,6 +77,32 @@ public final class AvatarTurn {
         if (i >= sequence.length || (!idle && step == LOOK_STEP)) { sequence = null; return -1; }
         return sequence[i];
     }
+
+    /**
+     * Girarla con el dedo. {@code turns} es el desplazamiento acumulado del arrastre en vueltas
+     * completas (1 = 360°); se traduce a las ocho vistas. Cancela cualquier giro o mirada en curso.
+     */
+    public void grab(float turns) {
+        if (!Float.isFinite(turns)) return;
+        grabbing = true;
+        gliding = false;
+        sequence = null;
+        float v = (turns * 8f) % 8f;
+        manual = v < 0 ? v + 8f : v;
+    }
+
+    /** Suelta: vuelve sola al frente por el camino más corto (≈0,45 s). */
+    public void release() {
+        if (!grabbing) return;
+        grabbing = false;
+        glideFrom = Math.round(manual) & 7;
+        if (glideFrom == 0) return;           // ya está de frente: nada que glisar
+        gliding = true;
+        glideStart = lastTime;
+    }
+
+    /** ¿La está girando con el dedo ahora mismo? */
+    public boolean grabbed() { return grabbing; }
 
     /** Vista más parecida de la hoja views (0–7) para cuerpos sin hoja turn. */
     public static int fallback(int view) {
