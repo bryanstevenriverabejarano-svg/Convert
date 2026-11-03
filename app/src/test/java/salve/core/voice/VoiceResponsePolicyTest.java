@@ -21,4 +21,14 @@ public class VoiceResponsePolicyTest {
         assertFalse(VoiceResponsePolicy.promptInstruction(true).isEmpty());
         assertTrue(VoiceResponsePolicy.promptInstruction(false).isEmpty());
     }
+
+    @Test
+    public void drivingAffectsOnlySpokenLengthAndAddsSafetyInstruction() {
+        assertEquals(220, VoiceResponsePolicy.maxResponseChars(true, true));
+        assertEquals(420, VoiceResponsePolicy.maxResponseChars(true, false));
+        assertEquals(900, VoiceResponsePolicy.maxResponseChars(false, true));
+        assertTrue(VoiceResponsePolicy.promptInstruction(true, true).contains("CONDUCCIÓN"));
+        assertTrue(VoiceResponsePolicy.promptInstruction(true, true).contains("estacionado"));
+        assertTrue(VoiceResponsePolicy.promptInstruction(false, true).isEmpty());
+    }
 }
