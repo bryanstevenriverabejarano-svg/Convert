@@ -225,6 +225,12 @@ final class RealisticSpriteRenderer {
     }
     void addListener(Runnable listener) { if (!LISTENERS.contains(listener)) LISTENERS.add(listener); }
     void removeListener(Runnable listener) { LISTENERS.remove(listener); }
+    /** Girarla con el dedo: {@code turns} = vueltas acumuladas del arrastre (1 = 360°). */
+    void grabRotate(float turns) { turn.grab(turns); }
+    /** Soltar: vuelve sola al frente. */
+    void releaseRotate() { turn.release(); }
+    /** ¿Se la está girando con el dedo ahora mismo? */
+    boolean grabbed() { return turn.grabbed(); }
     boolean drawView(Canvas canvas, int index, float width, float height) {
         Map<String, Sheet> sheets = assets().sheets;
         if (sheets == null || width <= 0 || height <= 0) return false;
