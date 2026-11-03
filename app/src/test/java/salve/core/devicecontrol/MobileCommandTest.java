@@ -22,6 +22,30 @@ public class MobileCommandTest {
         assertEquals("Llego en 10 minutos", command.message);
         assertNull(MobileCommand.parse("escribe un whatsapp a Ana:"));
     }
+
+    @Test public void chainedChatRequestPreparesDraftWithoutSending() {
+        MobileCommand command = MobileCommand.parse(
+                "Salve, abre el chat de Mami y escribirle que la quiero mucho");
+        assertNotNull(command);
+        assertEquals(MobileCommand.Type.WHATSAPP, command.type);
+        assertNull(command.draft);
+        assertEquals("Mami", command.contact);
+        assertEquals("Te quiero mucho", command.message);
+
+        MobileCommand withWhatsApp = MobileCommand.parse(
+                "abre WhatsApp y abre el chat de mamá y escribe Llegaré a las ocho");
+        assertNotNull(withWhatsApp);
+        assertEquals("mamá", withWhatsApp.contact);
+        assertEquals("Llegaré a las ocho", withWhatsApp.message);
+    }
+
+    @Test public void chainedRequestDoesNotImplicitlySendOrGuessRecipient() {
+        assertNull(MobileCommand.parse("abre el chat de Mami y envía que la quiero mucho"));
+        assertNull(MobileCommand.parse("abre el chat de Mami y escribe"));
+        assertNull(MobileCommand.parse("abre el chat de y escribe hola"));
+        assertNull(MobileCommand.parse("no abras el chat de Mami y escribe hola"));
+    }
+
     @Test public void discussionNegationAndSendAreNotDraftCommands() {
         for (String value : new String[]{"no abre el panel flotante", "¿Puedes abrir ventanas?", "envía un whatsapp a +34612345678: hola", "no prepara un whatsapp a +34612345678: hola", "busca en mini ventana:"})
             assertNull(value, MobileCommand.parse(value));
