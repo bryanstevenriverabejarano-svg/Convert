@@ -65,9 +65,12 @@ public final class DeviceControlActivity extends Activity {
     private boolean visible;
     private boolean waitingOverlay;
     private String pendingSearch = "";
+    /** Orden de voz explícita: abrir el borrador sin un segundo diálogo de aprobación. */
+    private boolean autoOpenRequestedDraft;
     public static final String EXTRA_PANEL = "open_mobile_panel";
     public static final String EXTRA_PHONE = "whatsapp_phone";
     public static final String EXTRA_MESSAGE = "whatsapp_message";
+    public static final String EXTRA_DIRECT_DRAFT = "whatsapp_direct_draft";
     /** Nombre o número que el usuario pidió llamar; siempre se confirma en pantalla. */
     public static final String EXTRA_CALL = "call_target";
     /** Contacto nombrado para un borrador de WhatsApp; se elige y se revisa en pantalla. */
@@ -159,7 +162,9 @@ public final class DeviceControlActivity extends Activity {
                 }
             }
         });
+        autoOpenRequestedDraft = getIntent().getBooleanExtra(EXTRA_DIRECT_DRAFT, false);
         if (state != null) {
+            autoOpenRequestedDraft = state.getBoolean("auto_open_requested_draft", autoOpenRequestedDraft);
             waitingOverlay = state.getBoolean("waiting_overlay");
             pendingSearch = state.getString("pending_search", "");
             pendingCallName = state.getString("pending_call_name");
@@ -179,6 +184,7 @@ public final class DeviceControlActivity extends Activity {
 
     @Override protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
+        state.putBoolean("auto_open_requested_draft", autoOpenRequestedDraft);
         state.putBoolean("waiting_overlay", waitingOverlay); state.putString("pending_search", pendingSearch); state.putString("pending_call_name", pendingCallName);
         state.putString("pending_draft_name", pendingDraftName); state.putString("pending_draft_message", pendingDraftMessage);
     }
@@ -242,6 +248,8 @@ public final class DeviceControlActivity extends Activity {
     }
 
     private void composeWhatsApp() {
+        // Los borradores iniciados manualmente siguen teniendo su revisión habitual.
+        autoOpenRequestedDraft = false;
         LinearLayout form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
         form.setPadding(dp(20), dp(8), dp(20), 0);
@@ -286,15 +294,28 @@ public final class DeviceControlActivity extends Activity {
     }
 
     private void reviewDraft(WhatsAppDraft draft, String packageName, String appName) {
+        if (autoOpenRequestedDraft) {
+            // Ya lo pidió expresamente el usuario. Elegir un contacto o una app si hay empate
+            // no equivale a aprobar dos veces la misma acción; el mensaje NO se envía aquí.
+            autoOpenRequestedDraft = false;
+            openDraft(draft, packageName, appName);
+            return;
+        }
         new AlertDialog.Builder(this).setTitle("Revisar borrador")
                 .setMessage("Abrir en " + appName + "\nDestinatario: " + draft.getPhone() + "\n\n"
                         + draft.getMessage() + "\n\nComprueba el contacto en WhatsApp antes de pulsar Enviar.")
-                .setPositiveButton("Abrir borrador", (dialog, which) -> {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(draft.getUrl())).setPackage(packageName));
-                        appStatus.setText("Apertura del borrador solicitada a " + appName + ". El envío queda pendiente en esa aplicación.");
-                    } catch (RuntimeException error) { appStatus.setText("No se pudo abrir el borrador en " + appName + "."); }
-                }).setNegativeButton("Cancelar", null).show();
+                .setPositiveButton("Abrir borrador", (dialog, which) -> openDraft(draft, packageName, appName))
+                .setNegativeButton("Cancelar", null).show();
+    }
+
+    private void openDraft(WhatsAppDraft draft, String packageName, String appName) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(draft.getUrl())).setPackage(packageName));
+            appStatus.setText("Apertura del borrador solicitada a " + appName
+                    + ". Comprueba destinatario y contenido en WhatsApp. No se ha enviado.");
+        } catch (RuntimeException error) {
+            appStatus.setText("No se pudo abrir el borrador en " + appName + ".");
+        }
     }
 
     private void updateScreenStatus() {

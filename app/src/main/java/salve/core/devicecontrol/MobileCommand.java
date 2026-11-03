@@ -26,6 +26,22 @@ public final class MobileCommand {
         Matcher search = Pattern.compile("(?isu)^(?:busca|buscar) en (?:una |la )?(?:mini ?ventana|ventana flotante)[: ]+(.+)$").matcher(text);
         if (search.matches() && !search.group(1).trim().isEmpty() && search.group(1).length() <= 1000)
             return new MobileCommand(Type.SEARCH, search.group(1).trim(), null);
+        // Una sola intención del usuario: abrir el chat de un contacto y dejar un texto preparado.
+        // El borrador se abre con la API pública de WhatsApp: no se pulsa «Enviar».
+        Matcher chat = Pattern.compile(
+                "(?isu)^(?:abre|abrir|[aá]breme)\\s+"
+                + "(?:(?:el\\s+)?(?:whatsapp|wasap|guasap)\\s+y\\s+(?:abre|abrir|busca)\\s+)?"
+                + "(?:el\\s+)?(?:chat|conversaci[oó]n)\\s+(?:de|con)\\s+(.+?)\\s+y\\s+"
+                + "(?:escr[ií]be(?:le)?|escribir(?:le)?|redacta(?:le)?|dile)\\s+(.+)$").matcher(text);
+        if (chat.matches()) {
+            String name = chat.group(1).trim();
+            String body = chat.group(2).trim();
+            if (name.isEmpty() || name.length() > 60 || body.isEmpty() || body.length() > 4_000) return null;
+            // «Escríbele que la quiero mucho» se expresa en segunda persona en el borrador.
+            // No se cambia el resto de mensajes: nunca se modifica una orden de envío.
+            body = body.replaceFirst("(?iu)^que\\s+(?:la|lo)\\s+quiero\\b", "Te quiero");
+            return new MobileCommand(Type.WHATSAPP, "", null, name, body);
+        }
         Matcher message = Pattern.compile("(?isu)^(?:prepara|escribe|redacta) (?:un )?(?:whatsapp|wasap|mensaje de whatsapp) a (\\+[0-9 ()-]+):[ ]?(.+)$").matcher(text);
         if (message.matches()) {
             try { return new MobileCommand(Type.WHATSAPP, "", WhatsAppDraft.create(message.group(1), message.group(2))); }
