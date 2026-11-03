@@ -23,6 +23,8 @@ public class SalveApplication extends Application {
         super.onCreate();
         CloudLogger.initialize(this);
         ttsManager = new TTSManager(this);
+        // Sólo escucha el estado de proyección mientras el proceso vive; nunca enciende el micrófono.
+        salve.core.driving.DrivingModeManager.get(this).start();
         salve.core.tasks.ResearchTaskRuntime.CONTROLS.execute(() -> {
             try {
                 salve.core.tasks.ResearchTaskRuntime.get(this).recover();
