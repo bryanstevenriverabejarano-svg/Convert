@@ -18,6 +18,19 @@ public class MediaAndLiveSearchTest {
         assertNull(MediaRequest.parse("quiero ver tu mente"));
     }
 
+    @Test public void titlesStartingWithTeTuMiPlayWhenTheRequestIsClearlyMedia() {
+        // Lo que dijo Bryan en el coche y Salve no entendía.
+        MediaRequest song = MediaRequest.parse("pon te arrepentirás en Youtube");
+        assertNotNull(song); assertTrue(song.autoplay); assertEquals("te arrepentiras", song.query);
+        assertEquals("te arrepentiras", MediaRequest.parse("Ponte arrepentirás en YouTube").query);
+        assertEquals("mi gente", MediaRequest.parse("pon la canción mi gente").query);
+        assertEquals("tu falta de querer", MediaRequest.parse("ponme tu falta de querer en youtube").query);
+        // Sin señal de música/YouTube sigue sin ser una canción.
+        assertNull(MediaRequest.parse("quiero escuchar tu voz"));
+        assertNull(MediaRequest.parse("pon tu cara en youtube"));
+        assertNull(MediaRequest.parse("ponte guapa"));
+    }
+
     @Test public void youtubeSearchShowsResultsWithoutPlaying() {
         MediaRequest search = MediaRequest.parse("busca tutoriales de java en youtube");
         assertNotNull(search); assertFalse(search.autoplay); assertEquals("tutoriales de java", search.query);

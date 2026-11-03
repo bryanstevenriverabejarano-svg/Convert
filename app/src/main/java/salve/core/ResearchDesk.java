@@ -188,6 +188,13 @@ final class ResearchDesk {
         salve.core.web.MediaRequest media = salve.core.web.MediaRequest.parse(entrada);
         if (media == null) return null;
         if (!m.hayInternet()) return "No tengo conexión a internet ahora mismo, así que no puedo poner «" + media.query + "».";
+        // En el coche un vídeo no se puede mirar: la canción va a la app de música, que Android Auto
+        // enseña y controla desde el volante. Si no hay ninguna que la acepte, sigue como siempre.
+        boolean driving;
+        try { driving = salve.core.driving.DrivingModeManager.get(m.context).isActive(); }
+        catch (RuntimeException unavailable) { driving = false; }
+        if (driving && media.autoplay && salve.devices.PhoneActions.playMusic(m.context, media.query))
+            return "Pongo «" + media.query + "» en tu app de música, que se ve en el coche.";
         if (salve.core.web.SearchLive.canShow(m.context) && !salve.core.web.SearchLive.lowMemory(m.context)
                 && salve.services.MobileWorkspaceService.openMedia(m.context, media.query, media.autoplay))
             return media.autoplay ? "Pongo «" + media.query + "» en la mini ventana. Puedes moverla, minimizarla o cerrarla con ×."
