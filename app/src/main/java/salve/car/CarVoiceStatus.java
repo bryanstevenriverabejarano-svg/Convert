@@ -26,6 +26,32 @@ public final class CarVoiceStatus {
         }
     }
 
+    private static volatile String reply;
+    /** Máximo que se enseña en el coche: una frase corta, no un texto para leer conduciendo. */
+    static final int REPLY_MAX = 120;
+
+    /** Lo último que dijo Salve, recortado para la pantalla del coche. */
+    public static void reply(String text) {
+        String next = shorten(text);
+        if (next == null ? reply == null : next.equals(reply)) return;
+        reply = next;
+        for (Listener l : LISTENERS) {
+            try { l.onChanged(); } catch (RuntimeException ignored) { }
+        }
+    }
+
+    /** Última respuesta (o {@code null}). */
+    public static String lastReply() { return reply; }
+
+    static String shorten(String text) {
+        if (text == null) return null;
+        String clean = text.replaceAll("\\s+", " ").trim();
+        if (clean.isEmpty()) return null;
+        if (clean.length() <= REPLY_MAX) return clean;
+        int cut = clean.lastIndexOf(' ', REPLY_MAX - 1);
+        return clean.substring(0, cut > REPLY_MAX / 2 ? cut : REPLY_MAX - 1).trim() + "…";
+    }
+
     public static boolean active() { return state != null; }
 
     /** Línea principal de la pantalla del coche. */

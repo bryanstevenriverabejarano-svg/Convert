@@ -7,7 +7,33 @@ import org.junit.Test;
 
 /** La pantalla del coche sigue el estado de la voz y solo se redibuja cuando cambia. */
 public class CarVoiceStatusTest {
-    @After public void reset() { CarVoiceStatus.set(null); }
+    @After public void reset() { CarVoiceStatus.set(null); CarVoiceStatus.reply(null); }
+
+    @Test public void lastReplyIsShortAndCleanForTheCarScreen() {
+        CarVoiceStatus.reply("  Hola,\n  Bryan.  ");
+        assertEquals("Hola, Bryan.", CarVoiceStatus.lastReply());
+        StringBuilder longText = new StringBuilder();
+        for (int i = 0; i < 60; i++) longText.append("palabra ");
+        CarVoiceStatus.reply(longText.toString());
+        String shown = CarVoiceStatus.lastReply();
+        assertTrue("no pasa del máximo", shown.length() <= CarVoiceStatus.REPLY_MAX + 1);
+        assertTrue("se nota que sigue", shown.endsWith("…"));
+        assertFalse("corta entre palabras", shown.contains("palab…"));
+        CarVoiceStatus.reply("   ");
+        assertNull(CarVoiceStatus.lastReply());
+    }
+
+    @Test public void aNewReplyRefreshesTheScreen() {
+        AtomicInteger calls = new AtomicInteger();
+        CarVoiceStatus.Listener l = calls::incrementAndGet;
+        CarVoiceStatus.addListener(l);
+        try {
+            CarVoiceStatus.reply("Vale.");
+            CarVoiceStatus.reply("Vale.");
+            CarVoiceStatus.reply("Hecho.");
+            assertEquals(2, calls.get());
+        } finally { CarVoiceStatus.removeListener(l); }
+    }
 
     @Test public void withoutConversationOffersToTalk() {
         CarVoiceStatus.set(null);

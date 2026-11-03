@@ -1,9 +1,7 @@
 package salve.car;
 
-import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.car.app.CarContext;
 import androidx.car.app.Screen;
@@ -18,8 +16,6 @@ import androidx.car.app.versioning.CarAppApiLevels;
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
-import salve.presentation.ui.MainActivity;
-import salve.core.voice.AssistantLaunch;
 
 /**
  * La pantalla de Salve en el coche: su imagen, cómo va la voz («Te escucho…», «Pensando…»,
@@ -27,7 +23,6 @@ import salve.core.voice.AssistantLaunch;
  * que cada cambio de estado sea un refresco y no un paso nuevo (Android Auto limita los pasos).
  */
 final class SalveCarScreen extends Screen {
-    private static final String TAG = "Salve/Coche";
     private static final long START_CHECK_MS = 5000;
 
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -76,16 +71,8 @@ final class SalveCarScreen extends Screen {
 
     /** Abre la conversación por voz de Salve (la misma que «Toca para hablar» de la notificación). */
     private void talk() {
-        Intent voice = new Intent(getCarContext(), MainActivity.class)
-                .setAction(AssistantLaunch.ACTION_VOICE_COMMAND)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        try {
-            getCarContext().getApplicationContext().startActivity(voice);
-            notice = "Abriendo la conversación…";
-        } catch (RuntimeException refused) {
-            Log.w(TAG, "Android no dejó abrir la voz desde el coche: " + refused.getClass().getSimpleName());
-            notice = "Ábrela con la notificación «Modo conducción» del móvil.";
-        }
+        notice = CarVoiceControl.talk(getCarContext())
+                ? "Abriendo la conversación…" : "Ábrela con la notificación «Modo conducción» del móvil.";
         invalidate();
         // Android puede bloquear abrir la app desde segundo plano sin avisar: si no empieza, decirlo.
         main.postDelayed(() -> {
@@ -97,7 +84,7 @@ final class SalveCarScreen extends Screen {
     }
 
     private void end() {
-        salve.services.VoiceForegroundService.end();
+        CarVoiceControl.end();
         notice = null;
         invalidate();
     }
