@@ -33,7 +33,7 @@ public final class DrivingModeManager {
 
     private final Context app;
     private final SharedPreferences preferences;
-    private final CarConnection connection;
+    private CarConnection connection;
     private final Observer<Integer> observer;
     private volatile int type = -1;
     private boolean started;
@@ -41,7 +41,6 @@ public final class DrivingModeManager {
     private DrivingModeManager(Context context) {
         app = context.getApplicationContext();
         preferences = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        connection = new CarConnection(app);
         observer = value -> {
             int next = value == null ? -1 : value;
             int previous = type;
@@ -63,6 +62,7 @@ public final class DrivingModeManager {
         if (started) return;
         started = true;
         try {
+            connection = new CarConnection(app);
             connection.getType().observeForever(observer);
         } catch (RuntimeException unsupported) {
             type = -1;
