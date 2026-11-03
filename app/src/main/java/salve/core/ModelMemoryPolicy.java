@@ -8,6 +8,8 @@ public final class ModelMemoryPolicy {
     /** Margen para Android con Gemma (LiteRT-LM), además de su propio umbral de memoria baja. */
     public static final long LITERT_RESERVE = 512 * MIB;
     public static final long LARGE_WEIGHTS = 4920749472L;
+    /** Qwen 3.5 9B Q4_K_M (archivo fijado, bytes exactos). Se mapea del archivo (mmap), no se copia. */
+    public static final long QWEN35_WEIGHTS = 5627044224L;
     private ModelMemoryPolicy() { }
     public static final class Snapshot {
         public final long available, total, threshold;
@@ -24,6 +26,7 @@ public final class ModelMemoryPolicy {
         if (!GgufContextPolicy.supported(contextTokens)) throw new IllegalArgumentException("Contexto no admitido");
         long weights = LocalModelPolicy.PRIMARY.equals(id) ? LARGE_WEIGHTS
                 : LocalModelPolicy.LIGHT.equals(id) ? 2019382400L
+                : LocalModelPolicy.QWEN35_9B.equals(id) ? QWEN35_WEIGHTS
                 : LocalModelPolicy.GEMMA_E4B.equals(id) ? 3659530240L : 2588147712L;
         long overhead = LocalModelPolicy.PRIMARY.equals(id) ? 1024 * MIB : 512 * MIB;
         if (contextTokens == GgufContextPolicy.COMPACT) {
@@ -142,13 +145,36 @@ public final class ModelMemoryPolicy {
     /** Choose the largest budget that fits. Reducing context never removes the weight/reserve cost. */
     public static int selectContext(String id, Snapshot ram, boolean loaded) {
         if (canLoad(id, ram, loaded)) return GgufContextPolicy.STANDARD;
+        if (largePhoneGguf(id, ram, loaded)) return GgufContextPolicy.STANDARD;
         if ((LocalModelPolicy.PRIMARY.equals(id) || LocalModelPolicy.LIGHT.equals(id)) && ram.known() && !ram.low
                 && ram.available >= required(id, loaded, ram.threshold, GgufContextPolicy.COMPACT)) return GgufContextPolicy.COMPACT;
+        // Qwen 3.5 9B: si no cabe ni con la regla de móvil grande, se intenta con contexto compacto antes de rendirse.
+        if (LocalModelPolicy.QWEN35_9B.equals(id) && ram.known() && ram.total >= LARGE_PHONE_TOTAL
+                && ram.available >= required(id, true, ram.threshold, GgufContextPolicy.COMPACT)
+                && ram.total >= required(id, false, ram.threshold, GgufContextPolicy.COMPACT) + LARGE_PHONE_HEADROOM)
+            return GgufContextPolicy.COMPACT;
         return 0;
     }
+    /**
+     * Qwen 3.5 9B en un móvil de 10 GiB o más (el S24 Ultra: 10,82 GiB, con solo 2,7–3,1 GiB
+     * «disponibles» por las apps en caché): como con Gemma E4B, sus pesos se leen del archivo y Android
+     * libera la caché cuando hacen falta. Basta con que quede libre lo que NO son pesos (contexto y
+     * reserva) y que la RAM total cubra el modelo entero con 3 GiB de margen. Si aun así no carga,
+     * la activación falla y SalveLLM vuelve al modelo anterior.
+     */
+    static boolean largePhoneGguf(String id, Snapshot ram, boolean loaded) {
+        if (!LocalModelPolicy.QWEN35_9B.equals(id) || !ram.known() || ram.low || ram.total < LARGE_PHONE_TOTAL) return false;
+        return ram.available >= required(id, true, ram.threshold)
+                && ram.total >= required(id, false, ram.threshold) + LARGE_PHONE_HEADROOM;
+    }
+
     /** An already resident engine will be released on activation; do not charge both models here. */
     public static boolean canPrepare(String id, Snapshot ram, boolean residentEngine) {
         if (residentEngine || selectContext(id, ram, false) != 0) return true;
+        // Descargar no gasta RAM: el Qwen grande solo se frena si el móvil, con toda su RAM, no podría con él.
+        if (LocalModelPolicy.QWEN35_9B.equals(id))
+            return ram.known() && ram.total >= LARGE_PHONE_TOTAL
+                    && ram.total >= required(id, false, ram.threshold) + LARGE_PHONE_HEADROOM;
         // Descargar Gemma no gasta RAM y la carga vuelve a medir: solo se frena si el móvil, aun
         // con toda su RAM libre, no podría con ella. Antes bastaban unas apps en caché para no descargar.
         return isLiteRt(id) && ram.known() && ram.total >= requiredLiteRt(id, false, ram.threshold, false, LITERT_STANDARD);

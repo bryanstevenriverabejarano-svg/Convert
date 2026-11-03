@@ -1820,10 +1820,12 @@ public class MotorConversacional {
         salve.core.voice.ModelSwitchCommand.Target target = salve.core.voice.ModelSwitchCommand.parse(input);
         if (target != null) {
             String active = LocalModelPolicy.idForPath(SalveLLM.getInstance(context).activeModelPath());
-            String wanted = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? LocalModelPolicy.FALLBACK : LocalModelPolicy.GEMMA_E4B;
+            String wanted = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? LocalModelPolicy.FALLBACK
+                    : target == salve.core.voice.ModelSwitchCommand.Target.E4B ? LocalModelPolicy.GEMMA_E4B : LocalModelPolicy.QWEN35_9B;
             if (wanted.equals(active))
                 return "Ya estoy usando " + salve.core.voice.ModelSwitchCommand.label(target)
                         + ". Me quedo con él hasta que me pidas otro.";
+            if (target == salve.core.voice.ModelSwitchCommand.Target.QWEN35) return cambioAQwen();
             // El mismo camino que la frase exacta de siempre.
             t = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? "usa gemma 4 e2b" : "usa gemma 4 e4b";
         }
@@ -1893,6 +1895,31 @@ public class MotorConversacional {
                 ? "Te abro el ajuste: activa Salve en «Acceso a notificaciones». Solo lo uso para ver y controlar la música; "
                         + "no leo tus mensajes."
                 : "No pude abrir el ajuste. Ve a Ajustes → Notificaciones → Acceso a notificaciones y activa Salve.";
+    }
+
+    /**
+     * Qwen 3.5 9B sin censura (GGUF, motor llama.cpp en CPU). Si ya está descargado se carga «sí o sí»:
+     * varios intentos dejando que Android libere memoria; si aun así no entra, se queda el modelo
+     * anterior. Si no, se descarga con Wi-Fi (archivo fijado y verificado por SHA-256) y se activa.
+     */
+    private String cambioAQwen() {
+        java.io.File qwen = new java.io.File(ModelStore.dir(context), "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M-0a41c68.gguf");
+        if (!qwen.isFile()) {
+            salve.work.ModelDownloadWorker.enqueueOptional(context, LocalModelPolicy.QWEN35_9B);
+            return "Descargo Qwen 3.5 9B sin censura (5,6 GB) en cuanto haya Wi-Fi, compruebo que es el archivo exacto y lo activo; "
+                    + "verás el progreso en la notificación. Va por el procesador, así que contestará más despacio que Gemma. "
+                    + "Para volver: «usa el modelo Gemma 4 E2B».";
+        }
+        new Thread(() -> {
+            ModelResult result = ModelActivationRetry.run(
+                    () -> SalveLLM.getInstance(context).activateDownloadedModel(qwen.getAbsolutePath(), false, () -> false),
+                    () -> closed);
+            hablar(result.isSuccess()
+                    ? "Ya uso Qwen 3.5 9B. Va por el procesador: contesto más despacio que con Gemma. Me quedo con él aunque cierres la app; "
+                        + "para volver, dime «usa el modelo Gemma 4 E2B»."
+                    : "No pude cargar Qwen 3.5 ni tras varios intentos (" + result.getError() + "). Sigo con el modelo anterior.");
+        }, "salve-model-switch").start();
+        return "Cargando Qwen 3.5 9B… tarda un poco; si le falta memoria, espero a que el móvil la libere y lo reintento.";
     }
 
     private static boolean pideFotoEnLaNube(String input) {

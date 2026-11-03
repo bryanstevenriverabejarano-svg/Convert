@@ -95,8 +95,13 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
             val file = completed ?: throw java.io.IOException("No se confirmó el archivo de $id")
             updateProgress(99, "Cargando $id y comprobando una respuesta…")
             val result = withContext(Dispatchers.IO) {
-                salve.core.SalveLLM.getInstance(applicationContext)
-                    .activateDownloadedModel(file.file.absolutePath, file.supportsVision) { isStopped }
+                val llm = salve.core.SalveLLM.getInstance(applicationContext)
+                // El Qwen grande se carga «sí o sí»: si falta memoria, espera a que Android la libere y reintenta.
+                if (id == salve.core.LocalModelPolicy.QWEN35_9B)
+                    salve.core.ModelActivationRetry.run(
+                        { llm.activateDownloadedModel(file.file.absolutePath, file.supportsVision) { isStopped } },
+                        { isStopped })
+                else llm.activateDownloadedModel(file.file.absolutePath, file.supportsVision) { isStopped }
             }
             if (result.isSuccess) Result.success(workDataOf(KEY_STATUS to "ready",
                 KEY_MESSAGE to "$id activo. " + salve.core.SalveLLM.getInstance(applicationContext).statusDescription))
