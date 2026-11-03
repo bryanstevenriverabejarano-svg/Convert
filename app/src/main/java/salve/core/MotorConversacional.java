@@ -1806,10 +1806,24 @@ public class MotorConversacional {
         return null;
     }
 
-    /** «Descarga Gemma 4 E4B» / «vuelve a Gemma 4 E2B»: cambio explícito de modelo local. */
+    /**
+     * «Descarga Gemma 4 E4B» / «usa el modelo Gemma 4 E2B» / «usa el modelo rápido»: cambio explícito de
+     * modelo local. Se guarda (activateDownloadedModel) y sigue al volver a abrir la app hasta que Bryan
+     * pida otro; elegir E2B a mano además apaga la mejora automática a E4B.
+     */
     private String cambioDeModelo(String input) {
         String t = java.text.Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+        salve.core.voice.ModelSwitchCommand.Target target = salve.core.voice.ModelSwitchCommand.parse(input);
+        if (target != null) {
+            String active = LocalModelPolicy.idForPath(SalveLLM.getInstance(context).activeModelPath());
+            String wanted = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? LocalModelPolicy.FALLBACK : LocalModelPolicy.GEMMA_E4B;
+            if (wanted.equals(active))
+                return "Ya estoy usando " + salve.core.voice.ModelSwitchCommand.label(target)
+                        + ". Me quedo con él hasta que me pidas otro.";
+            // El mismo camino que la frase exacta de siempre.
+            t = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? "usa gemma 4 e2b" : "usa gemma 4 e4b";
+        }
         if (t.matches("(salve )?(descarga|instala|cambia a|usa|pasa a|activa) (el modelo )?gemma 4 e4b( por favor)?")) {
             java.io.File existing = new java.io.File(ModelStore.dir(context), "gemma-4-E4B-it-2eee7ac.litertlm");
             salve.work.ModelDownloadWorker.enqueueOptional(context, LocalModelPolicy.GEMMA_E4B);
@@ -1824,9 +1838,11 @@ public class MotorConversacional {
             AutoModelUpgrade.declined(context);
             new Thread(() -> {
                 ModelResult result = SalveLLM.getInstance(context).activateDownloadedModel(e2b.getAbsolutePath(), true, () -> false);
-                hablar(result.isSuccess() ? "Vuelvo a usar Gemma 4 E2B." : "No pude activar Gemma 4 E2B: " + result.getError());
+                hablar(result.isSuccess()
+                        ? "Ya uso Gemma 4 E2B: respondo más rápido. Me quedo con él aunque cierres la app, hasta que me digas «usa el modelo grande»."
+                        : "No pude activar Gemma 4 E2B: " + result.getError());
             }, "salve-model-switch").start();
-            return "Cambiando a Gemma 4 E2B…";
+            return "Cambiando a Gemma 4 E2B… tardo unos segundos en cargarlo.";
         }
         return null;
     }
