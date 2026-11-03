@@ -60,7 +60,15 @@ public final class VoiceForegroundService extends Service {
 
     public static void stop(Context context) {
         listener = null;
+        salve.car.CarVoiceStatus.set(null);
         context.stopService(new Intent(context, VoiceForegroundService.class));
+    }
+
+    /** «Terminar» desde la pantalla del coche: lo mismo que el botón de la notificación. */
+    public static void end() {
+        if (!running) return;
+        EndListener l = listener;
+        if (l != null) new android.os.Handler(android.os.Looper.getMainLooper()).post(l::endFromNotification);
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -81,6 +89,7 @@ public final class VoiceForegroundService extends Service {
             return START_NOT_STICKY;
         }
         running = true;
+        salve.car.CarVoiceStatus.set(text == null ? "Conversación por voz abierta" : text);
         holdCpu();
         return START_NOT_STICKY; // si Android lo mata, no vuelve a abrir el micrófono por su cuenta
     }
@@ -129,6 +138,7 @@ public final class VoiceForegroundService extends Service {
 
     @Override public void onDestroy() {
         running = false;
+        salve.car.CarVoiceStatus.set(null);
         try { if (wakeLock != null && wakeLock.isHeld()) wakeLock.release(); } catch (RuntimeException ignored) { }
         super.onDestroy();
     }
