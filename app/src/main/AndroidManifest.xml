@@ -216,6 +216,22 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Salve en la pantalla del coche (Android Auto): imagen, estado de la voz y Hablar/Terminar -->
+        <service
+            android:name="salve.car.SalveCarAppService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.IOT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+        <meta-data
+            android:name="androidx.car.app.minCarApiLevel"
+            android:value="1" />
+
     </application>
 
 </manifest>

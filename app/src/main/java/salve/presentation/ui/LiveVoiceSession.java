@@ -532,9 +532,11 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     private boolean requestAudioFocus() {
         if (audioManager == null) return false;
         try {
+            // En Android Auto el foco va con el mismo uso que la voz, para que suene por el coche.
+            boolean driving = salve.core.driving.DrivingModeManager.get(activity).isActive();
             AudioAttributes attributes = new AudioAttributes.Builder()
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .setUsage(AudioAttributes.USAGE_ASSISTANT).build();
+                    .setUsage(salve.core.voice.SpeechAudioPolicy.focusUsage(driving)).build();
             audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                     .setAudioAttributes(attributes).setWillPauseWhenDucked(true)
                     .setAcceptsDelayedFocusGain(false)

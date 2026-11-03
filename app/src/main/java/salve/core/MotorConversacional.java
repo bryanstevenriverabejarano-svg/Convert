@@ -1996,6 +1996,7 @@ public class MotorConversacional {
         if (liveVoiceChannel.isActive() || !voiceTurnGate.maySpeak(generation)) return false;
         String id = "salve_stream_" + (++utteranceSequence);
         streamUtterances.put(id, turn);
+        routeSpeech();
         int result;
         try { result = tts.speak(text, TextToSpeech.QUEUE_ADD, null, id); }
         catch (RuntimeException unavailable) { result = TextToSpeech.ERROR; }
@@ -2582,6 +2583,7 @@ public class MotorConversacional {
             activeUtteranceOwner = owner;
             if (session != null) AvatarMotionController.get().speechPending(session, turn, utteranceId);
             int speechResult;
+            routeSpeech();
             try { speechResult = tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, utteranceId); }
             catch (RuntimeException unavailable) { speechResult = TextToSpeech.ERROR; }
             if (speechResult == TextToSpeech.ERROR) {
@@ -2672,6 +2674,7 @@ public class MotorConversacional {
         if (l != null) l.onHablar("Te lo leo: «" + salve.core.ReadingDesk.cleanTitle(title) + "»\n\n" + String.join("\n\n", paras));
         if (tts == null || !ttsReady || listening) return;
         leyendoTexto = true;
+        routeSpeech();
         int max = Math.min(3500, TextToSpeech.getMaxSpeechInputLength());
         for (String p : paras)
             for (String piece : salve.core.reading.DocumentReading.speechPieces(p, max)) {
@@ -2740,7 +2743,80 @@ public class MotorConversacional {
         return generation;
     }
 
+    // ── Voz por el coche (Android Auto) ─────────────────────────────────────────────────────────
+    private volatile Boolean speechRouteDriving;
+    private final Object carFocusLock = new Object();
+    private android.media.AudioFocusRequest carSpeechFocus;
+    private final android.os.Handler speechRouteHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable carFocusCheck = new Runnable() {
+        @Override public void run() {
+            TextToSpeech t = tts;
+            boolean speaking = false;
+            try { speaking = t != null && t.isSpeaking(); } catch (RuntimeException ignored) { }
+            if (speaking) { speechRouteHandler.postDelayed(this, 600); return; }
+            releaseCarSpeechFocus();
+        }
+    };
+
+    /**
+     * Antes de cada frase. En Android Auto la voz sale con el mismo uso que el foco (guía) para que
+     * el coche la ponga por sus altavoces; sin conversación por voz abierta pide un foco breve propio.
+     * Fuera del coche no toca nada (la voz sigue como multimedia, igual que siempre).
+     */
+    private void routeSpeech() {
+        TextToSpeech t = tts;
+        if (t == null) return;
+        boolean driving;
+        try { driving = salve.core.driving.DrivingModeManager.get(context).isActive(); }
+        catch (RuntimeException unavailable) { driving = false; }
+        Boolean previous = speechRouteDriving;
+        if ((driving || Boolean.TRUE.equals(previous)) && (previous == null || previous != driving)) {
+            try {
+                t.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .setUsage(salve.core.voice.SpeechAudioPolicy.speechUsage(driving)).build());
+            } catch (RuntimeException ignored) { /* sigue con la ruta anterior */ }
+        }
+        speechRouteDriving = driving;
+        if (salve.core.voice.SpeechAudioPolicy.needsOwnFocus(driving, liveVoiceChannel.isActive())) holdCarSpeechFocus();
+    }
+
+    private void holdCarSpeechFocus() {
+        if (android.os.Build.VERSION.SDK_INT < 26) return;
+        android.media.AudioManager am = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        if (am == null) return;
+        speechRouteHandler.removeCallbacks(carFocusCheck);
+        synchronized (carFocusLock) {
+            if (carSpeechFocus != null) return;
+            try {
+                android.media.AudioFocusRequest request = new android.media.AudioFocusRequest.Builder(
+                        android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                        .setAudioAttributes(new android.media.AudioAttributes.Builder()
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .setUsage(salve.core.voice.SpeechAudioPolicy.USAGE_GUIDANCE).build())
+                        .setOnAudioFocusChangeListener(change -> { }, speechRouteHandler).build();
+                if (am.requestAudioFocus(request) == android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+                    carSpeechFocus = request;
+            } catch (RuntimeException ignored) { /* sin foco: suena como antes */ }
+        }
+    }
+
+    private void scheduleCarFocusRelease() {
+        synchronized (carFocusLock) { if (carSpeechFocus == null) return; }
+        speechRouteHandler.removeCallbacks(carFocusCheck);
+        speechRouteHandler.postDelayed(carFocusCheck, 600);
+    }
+
+    private void releaseCarSpeechFocus() {
+        android.media.AudioFocusRequest request;
+        synchronized (carFocusLock) { request = carSpeechFocus; carSpeechFocus = null; }
+        if (request == null || android.os.Build.VERSION.SDK_INT < 26) return;
+        android.media.AudioManager am = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        try { if (am != null) am.abandonAudioFocusRequest(request); } catch (RuntimeException ignored) { }
+    }
+
     private void finishSpeech(String utteranceId, boolean completed) {
+        scheduleCarFocusRelease();
         dispatchSpeechEvent(utteranceId,
                 () -> AvatarMotionController.get().speechEnd(avatarSession, utteranceId), completed ? 2 : 3);
     }
@@ -2867,6 +2943,8 @@ public class MotorConversacional {
         cancelarPasoRutina();
         conversationExecutor.shutdownNow();
         cloudExecutor.shutdownNow();
+        speechRouteHandler.removeCallbacks(carFocusCheck);
+        releaseCarSpeechFocus();
         if (tts != null) {
             tts.stop();
             tts.shutdown();
