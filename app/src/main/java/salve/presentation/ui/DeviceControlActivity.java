@@ -56,6 +56,7 @@ public final class DeviceControlActivity extends Activity {
     private LinearLayout localServices;
     private TextView screenStatus;
     private TextView appStatus;
+    private TextView drivingStatus;
     private TextView bluetoothStatus;
     private TextView wifiStatus;
     private TextView networkStatus;
@@ -97,6 +98,21 @@ public final class DeviceControlActivity extends Activity {
         button("Abrir una aplicación", this::chooseApp);
         button("Preparar borrador en WhatsApp", this::composeWhatsApp);
         appStatus = text("WhatsApp abrirá el destinatario y el texto que revises. El envío se realiza dentro de WhatsApp.");
+
+        section("Modo conducción · Android Auto");
+        text("La conexión activa un perfil de voz breve y muestra un acceso para hablar. No abre el micrófono en segundo plano ni crea un icono en la pantalla del coche.");
+        drivingStatus = text(salve.core.driving.DrivingModeManager.get(this).description());
+        button("Activar o desactivar modo conducción", () -> {
+            salve.core.driving.DrivingModeManager mode = salve.core.driving.DrivingModeManager.get(this);
+            mode.setEnabled(!mode.isEnabled());
+            drivingStatus.setText(mode.description());
+        });
+        button("Hablar con Salve", () -> {
+            Intent voice = new Intent(this, MainActivity.class)
+                    .setAction(salve.core.voice.AssistantLaunch.ACTION_VOICE_COMMAND)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(voice);
+        });
 
         section("Controles de pantalla");
         screenStatus = text("");
@@ -208,6 +224,7 @@ public final class DeviceControlActivity extends Activity {
         super.onResume();
         visible = true;
         updateScreenStatus();
+        if (drivingStatus != null) drivingStatus.setText(salve.core.driving.DrivingModeManager.get(this).description());
         networkStatus.setText(new GestorConectividad(this).analizarEntorno());
         if (waitingOverlay && Settings.canDrawOverlays(this)) openWorkspace(pendingSearch);
     }
