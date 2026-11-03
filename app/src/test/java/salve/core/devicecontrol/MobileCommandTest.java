@@ -37,6 +37,10 @@ public class MobileCommandTest {
         assertNotNull(withWhatsApp);
         assertEquals("mamá", withWhatsApp.contact);
         assertEquals("Llegaré a las ocho", withWhatsApp.message);
+
+        MobileCommand accented = MobileCommand.parse("abre el chat de Mami y escríbele que la quiero mucho");
+        assertNotNull(accented);
+        assertEquals("Te quiero mucho", accented.message);
     }
 
     @Test public void chainedRequestDoesNotImplicitlySendOrGuessRecipient() {
