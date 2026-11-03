@@ -68,7 +68,8 @@ Fuentes técnicas: [Android MemoryInfo](https://developer.android.com/reference/
 
 ## Motor y alcance
 
-- llama.cpp `b6000`, commit `4762ad7316dcdec20016ab5985fb46a27902204d`, como submódulo.
+- llama.cpp `b12050` (2 nov 2026), commit `07ec7c8af09b576792063411d7dc2ec60b2f3a6f`, como submódulo: admite Qwen 3.5 (`qwen35`, `qwen35moe`). Los modelos que piensan (plantilla con `enable_thinking`) contestan sin pensamiento y `ThinkingFilter` quita cualquier `<think>`.
+  Antes: `b6000`, commit `4762ad7316dcdec20016ab5985fb46a27902204d` (julio 2025).
 - JNI CPU, cuatro hilos, contexto de 4096 tokens, hasta 512 tokens de respuesta.
 - Plantilla de chat declarada en el GGUF (ChatML para Dolphin), identidad de Salve.
 - Cancelación durante carga y evaluación, límite de 120 segundos por operación.
