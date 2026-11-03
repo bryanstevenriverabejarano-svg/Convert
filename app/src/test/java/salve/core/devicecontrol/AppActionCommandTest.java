@@ -31,6 +31,23 @@ public class AppActionCommandTest {
         assertNull(AppActionCommand.parse("pon la luz"));
     }
 
+    @Test public void spotifyPlaylistsLikedSongsAndSearch() {
+        expect("pon mi lista Gym", PLAYLIST, "Gym");
+        expect("Salve, ponme la playlist Para correr en Spotify", PLAYLIST, "Para correr");
+        expect("reproduce mi lista de reproducción Relax", PLAYLIST, "Relax");
+        expect("pon mi lista de música que se llama Verano 2026", PLAYLIST, "Verano 2026");
+        expect("pon una de mis listas llamada Coche", PLAYLIST, "Coche");
+        expect("pon mis me gusta", LIKED, "mis me gusta");
+        expect("ponme las canciones que me gustan en Spotify", LIKED, "las canciones que me gustan");
+        expect("busca Rosalía en Spotify", MUSIC_SEARCH, "Rosalía");
+        // Las listas que no son de música no se tocan.
+        assertNull(AppActionCommand.parse("pon la lista de la compra"));
+        // «abre …» sigue siendo «abrir app» (solo actúa si hay una app con ese nombre), nunca música.
+        assertEquals(OPEN_APP, AppActionCommand.parse("abre mi lista de tareas").type);
+        // Lo que ya funcionaba sigue igual.
+        expect("pon Bad Bunny en spotify", MUSIC, "Bad Bunny");
+    }
+
     @Test public void callsCarryANameOrNumberAndNothingElse() {
         expect("Llama a mamá", CALL, "mamá");
         expect("llámale a Ana García con altavoz", CALL, "Ana García");

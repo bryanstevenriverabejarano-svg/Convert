@@ -31,6 +31,16 @@ public class MediaAndLiveSearchTest {
         assertNull(MediaRequest.parse("ponte guapa"));
     }
 
+    @Test public void spotifyListsAreNotYoutubeUnlessAsked() {
+        assertNull("lista sin YouTube → Spotify", MediaRequest.parse("pon la lista Gym"));
+        assertNull(MediaRequest.parse("reproduce la playlist Para correr"));
+        assertNull("«mis …» no es un título", MediaRequest.parse("quiero escuchar mis me gusta"));
+        assertNull(MediaRequest.parse("pon la lista de la compra"));
+        MediaRequest yt = MediaRequest.parse("pon la playlist de reggaeton en youtube");
+        assertNotNull("con YouTube sigue siendo YouTube", yt);
+        assertEquals("reggaeton", yt.query);
+    }
+
     @Test public void youtubeSearchShowsResultsWithoutPlaying() {
         MediaRequest search = MediaRequest.parse("busca tutoriales de java en youtube");
         assertNotNull(search); assertFalse(search.autoplay); assertEquals("tutoriales de java", search.query);

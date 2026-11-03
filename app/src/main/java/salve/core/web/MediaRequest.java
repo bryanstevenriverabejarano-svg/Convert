@@ -46,7 +46,9 @@ public final class MediaRequest {
         // «canción/música…»: entonces es un título («Te arrepentirás», «Tu falta de querer», «Mi gente»).
         boolean explicitMedia = youtube || play.group(1) != null;
         if ((!youtube && !music) || q.isEmpty() || q.matches("(?:la |el |mi |tu |tus |te )?(?:alarma|huella|temporizador|recordatorio|cara|voz|mente|camara)\\b.*")
-                || (!explicitMedia && q.matches("(?:tu|tus|te|mi) .*"))) return null;
+                || (!explicitMedia && q.matches("(?:tu|tus|te|mi|mis) .*"))) return null;
+        // «pon la lista/playlist X» sin YouTube es una lista de Spotify (AppActionCommand.PLAYLIST).
+        if (!youtube && play.group(1) != null && (play.group(1).equals("lista") || play.group(1).equals("playlist"))) return null;
         if (play.group(1) != null && play.group(1).startsWith("musica") && !q.isEmpty()) q = "música " + q;
         return new MediaRequest(q, true);
     }
