@@ -188,6 +188,8 @@ public class MainActivity extends AppCompatActivity {
         @Override public void run() {
             if (!activityResumed || isFinishing() || isDestroyed()) return;
             String status = motorConversacional == null ? "Modelo: preparando" : motorConversacional.getCompactModelStatus();
+            if (salve.core.driving.DrivingModeManager.get(MainActivity.this).isActive())
+                status += " · modo coche";
             TextView stageStatus = findViewById(R.id.activeModelStatus);
             TextView chatStatus = findViewById(R.id.chatModelStatus);
             if (stageStatus != null) stageStatus.setText(status);
