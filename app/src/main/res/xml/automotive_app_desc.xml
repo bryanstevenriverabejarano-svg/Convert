@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Salve en Android Auto: solo plantillas del sistema (sin dibujar en la pantalla del coche). -->
+<!-- Salve en Android Auto: como reproductor (media, lo que acepta con Fuentes desconocidas) y plantillas. -->
 <automotiveApp>
+    <uses name="media" />
     <uses name="template" />
 </automotiveApp>

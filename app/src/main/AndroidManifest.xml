@@ -227,6 +227,16 @@
                 <category android:name="androidx.car.app.category.IOT" />
             </intent-filter>
         </service>
+        <!-- Salve en el coche como reproductor: Android Auto 17.7+ solo deja pasar apps multimedia
+             instaladas fuera de la Play Store («Fuentes desconocidas» no cubre las de plantillas). -->
+        <service
+            android:name="salve.car.SalveMediaService"
+            android:exported="true"
+            android:label="Salve">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
         <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />

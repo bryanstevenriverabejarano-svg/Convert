@@ -2595,6 +2595,9 @@ public class MotorConversacional {
             }
         }
         if (publishUi && listener != null) listener.onHablar(withSketches(visibleText + sourcesNote));
+        // En Android Auto, la frase que acaba de decir sale (recortada) en la pantalla del coche.
+        try { if (salve.core.driving.DrivingModeManager.get(context).isActive()) salve.car.CarVoiceStatus.reply(texto); }
+        catch (RuntimeException ignored) { }
         if (standaloneResponse) AvatarMotionController.get().endTurn(session, turn);
     }
 
