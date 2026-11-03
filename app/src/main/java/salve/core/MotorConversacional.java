@@ -1370,7 +1370,8 @@ public class MotorConversacional {
         if (directAnswer != null) {
             if (evidence != null && evidence.getDirectAnswer() != null)
                 attachDeliveryEvidence(salve.core.conversation.ConversationOutcomeEvidence.memory(evidence));
-            String answer = ResponseLimiter.limit(directAnswer, VoiceResponsePolicy.maxResponseChars(entradaPorVoz));
+            String answer = ResponseLimiter.limit(directAnswer, VoiceResponsePolicy.maxResponseChars(entradaPorVoz,
+                    salve.core.driving.DrivingModeManager.get(context).isActive()));
             TurnQualityAssessment quality = ConversationQualityEvaluator.evaluate(answer, false,
                     !answer.equals(directAnswer), false, false,
                     (System.nanoTime() - turnStartedAtNanos) / 1_000_000L);
@@ -1503,7 +1504,8 @@ public class MotorConversacional {
 
         // 🟡 4. GOBERNADOR DE LONGITUD
         int maxResponseChars = creativeOk ? salve.core.conversation.CreativeRequest.maxCharsFor(creativeParts)
-                : VoiceResponsePolicy.maxResponseChars(entradaPorVoz);
+                : VoiceResponsePolicy.maxResponseChars(entradaPorVoz,
+                    salve.core.driving.DrivingModeManager.get(context).isActive());
         if (respuesta.length() > maxResponseChars) {
             truncated = true;
             Log.w(TAG, "Respuesta extensa; aplicando límite por frase.");
@@ -2098,7 +2100,8 @@ public class MotorConversacional {
         String details = contextInfo
                 + (llm != null && llm.getConversationPromptBudgetChars() >= 6000
                     ? "\n" + salve.core.synergy.SynergyRuntime.get(context).summary() : "")
-                + "\n" + VoiceResponsePolicy.promptInstruction(voice)
+                + "\n" + VoiceResponsePolicy.promptInstruction(voice,
+                        salve.core.driving.DrivingModeManager.get(context).isActive())
                 + "\n" + deviceClock.promptContext()
                 + "\n" + salve.avatar.AstralBodySense.promptContext(salve.avatar.AstralBody.get().snapshot(),
                         salve.avatar.AstralBody.get().drawingNow(), android.os.SystemClock.uptimeMillis(), aboutHerself)
