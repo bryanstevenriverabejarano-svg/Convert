@@ -222,6 +222,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
+                <!-- Android Auto (móvil) no lista apps solo IOT: POI hace que aparezca. Ambas en el MISMO filtro. -->
+                <category android:name="androidx.car.app.category.POI" />
                 <category android:name="androidx.car.app.category.IOT" />
             </intent-filter>
         </service>
