@@ -1,0 +1,14 @@
+# Temporal: lee tamaño y SHA-256 de un GGUF en Hugging Face (solo cabeceras, sin descargarlo).
+name: tmp hash modelo
+on:
+  push:
+    branches: [tmp/hash-modelo-qwen35]
+permissions: {}
+jobs:
+  hash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cabeceras del archivo fijado
+        run: |
+          URL="https://huggingface.co/HauhauCS/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive/resolve/0a41c68809d375475f954be12ba7c40efa56c2a9/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf"
+          curl -sSI "$URL" | grep -iE "^(HTTP|x-linked-size|x-linked-etag|etag|x-repo-commit|location|content-length):" || true
