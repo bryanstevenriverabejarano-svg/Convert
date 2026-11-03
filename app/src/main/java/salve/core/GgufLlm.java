@@ -38,8 +38,8 @@ public final class GgufLlm {
                 ? salve.core.cognition.CognitiveOutputConstraints.gbnf().getBytes(StandardCharsets.UTF_8) : new byte[0];
         GgufContextPolicy.Generation result = GgufContextPolicy.generate(requestedContext, selected -> {
             contextTokens = selected;
-            return new String(infer(model, input, identity, grammar, selected,
-                    salve.core.cognition.CognitivePrompt.isFormatRepair(prompt), stop), StandardCharsets.UTF_8).trim();
+            return ThinkingFilter.strip(new String(infer(model, input, identity, grammar, selected,
+                    salve.core.cognition.CognitivePrompt.isFormatRepair(prompt), stop), StandardCharsets.UTF_8).trim());
         }, stop);
         return result.text;
     }

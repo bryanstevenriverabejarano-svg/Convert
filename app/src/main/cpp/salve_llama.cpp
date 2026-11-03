@@ -84,7 +84,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
         request.check();
         auto params = llama_model_default_params();
         params.n_gpu_layers = 0;
-        params.use_mmap = true;
+        params.load_mode = LLAMA_LOAD_MODE_MMAP; // antes use_mmap = true: el modelo se lee del archivo, no se copia a RAM
         params.progress_callback = Request::progress;
         params.progress_callback_user_data = &request;
         std::unique_ptr<llama_model, decltype(&llama_model_free)> model(
@@ -119,13 +119,19 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         if (length <= 0) throw std::invalid_argument("Plantilla GGUF no compatible");
         std::vector<char> formatted(length + 1);
         length = llama_chat_apply_template(chatTemplate, messages, 2, true, formatted.data(), formatted.size());
-        int count = -llama_tokenize(vocab, formatted.data(), length, nullptr, 0, true, true);
+        std::string prompt(formatted.data(), length);
+        // Modelos que «piensan» (Qwen 3 / 3.5…): su propia plantilla, con enable_thinking=false, abre y
+        // cierra un pensamiento vacío. Así contestan directo, antes, y sin gastar los tokens de respuesta.
+        if (std::string(chatTemplate).find("enable_thinking") != std::string::npos)
+            prompt += "<think>\n\n</think>\n\n";
+        length = static_cast<int>(prompt.size());
+        int count = -llama_tokenize(vocab, prompt.data(), length, nullptr, 0, true, true);
         const int outputTokens = repair ? 256 : 512;
         const int batchSize = contextSize == 2048 ? 128 : 256;
         if (count <= 0 || count > contextSize - outputTokens)
             throw std::invalid_argument("El mensaje supera el contexto local; acórtalo e inténtalo de nuevo");
         std::vector<llama_token> tokens(count);
-        if (llama_tokenize(vocab, formatted.data(), length, tokens.data(), count, true, true) != count)
+        if (llama_tokenize(vocab, prompt.data(), length, tokens.data(), count, true, true) != count)
             throw std::runtime_error("No se pudo tokenizar el mensaje");
         auto params = llama_context_default_params();
         params.n_ctx = contextSize;
@@ -138,9 +144,13 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         std::unique_ptr<llama_context, decltype(&llama_free)> ctx(llama_init_from_model(model, params), llama_free);
         request.check();
         if (!ctx) throw ContextAllocationFailure();
-        if (active_adapter && active_scale > 0.0f
-                && llama_set_adapter_lora(ctx.get(), active_adapter, active_scale) != 0)
-            throw std::runtime_error("No se pudo aplicar el adaptador LoRA personal");
+        if (active_adapter && active_scale > 0.0f) {
+            // llama.cpp ≥ 2026 aplica una lista de adaptadores; Salve usa uno.
+            llama_adapter_lora *adapters[] = {active_adapter};
+            float scales[] = {active_scale};
+            if (llama_set_adapters_lora(ctx.get(), adapters, 1, scales) != 0)
+                throw std::runtime_error("No se pudo aplicar el adaptador LoRA personal");
+        }
         auto decode = [&](llama_token *data, int size) {
             request.check();
             int status = llama_decode(ctx.get(), llama_batch_get_one(data, size));
