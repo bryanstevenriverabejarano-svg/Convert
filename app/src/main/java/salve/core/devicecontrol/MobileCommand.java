@@ -32,7 +32,7 @@ public final class MobileCommand {
                 "(?isu)^(?:abre|abrir|[aá]breme)\\s+"
                 + "(?:(?:el\\s+)?(?:whatsapp|wasap|guasap)\\s+y\\s+(?:abre|abrir|busca)\\s+)?"
                 + "(?:el\\s+)?(?:chat|conversaci[oó]n)\\s+(?:de|con)\\s+(.+?)\\s+y\\s+"
-                + "(?:escribe(?:le)?|escribir(?:le)?|redacta(?:le)?)\\s+(.+)$").matcher(text);
+                + "(?:escr[ií]be(?:le)?|escribir(?:le)?|redacta(?:le)?|dile)\\s+(.+)$").matcher(text);
         if (chat.matches()) {
             String name = chat.group(1).trim();
             String body = chat.group(2).trim();
