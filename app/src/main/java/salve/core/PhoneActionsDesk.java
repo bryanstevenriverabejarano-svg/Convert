@@ -130,10 +130,10 @@ final class PhoneActionsDesk {
                 }
                 try {
                     m.context.startActivity(panel);
-                    if (mobile.contact != null) m.hablar("Busco a " + mobile.contact
-                            + " en tus contactos y te enseño el borrador. Revísalo; todavía no se ha enviado.");
+                    if (mobile.contact != null) m.hablar("Busco el contacto " + mobile.contact
+                            + " para abrir su chat con el mensaje preparado. Comprueba el destinatario antes de enviarlo.");
                     else m.hablar(mobile.draft == null ? "Abro el panel flotante de Salve. Si Android lo pide, activa Mostrar sobre otras apps."
-                            : "He preparado el borrador. Revisa el número y el texto antes de abrirlo en WhatsApp; todavía no se ha enviado.");
+                            : "Abro WhatsApp con el mensaje preparado. Comprueba destinatario y texto antes de enviarlo.");
                 } catch (RuntimeException unavailable) { m.hablar("No pude abrir el panel móvil. Puedes abrirlo desde Mi móvil."); }
             });
             return true;
