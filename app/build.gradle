@@ -4,6 +4,39 @@ plugins {
 }
 
 // Keep multi-GB language model weights out of APKs, including future accidental additions.
+// The Qualcomm toolchain builds the two Hexagon libraries from the *pinned* llama.cpp
+// submodule. Gradle packages those prebuilt artifacts; it does not need proprietary
+// Hexagon compilers in the normal Android SDK or on every pull request.
+def enableHexagon = System.getenv('SALVE_ENABLE_HEXAGON') == '1'
+def hexagonSkel = System.getenv('SALVE_HEXAGON_SKEL_V75')
+def hexagonHost = System.getenv('SALVE_HEXAGON_ARM64_LIB')
+def hexagonAssets = layout.buildDirectory.dir('generated/hexagon-assets')
+def hexagonJni = layout.buildDirectory.dir('generated/hexagon-jni')
+if (enableHexagon) {
+    def stageHexagonLibraries = tasks.register('stageHexagonLibraries') {
+        inputs.property('hexagon-variant', 'v75')
+        outputs.dir(hexagonAssets)
+        outputs.dir(hexagonJni)
+        doLast {
+            if (!hexagonSkel || !file(hexagonSkel).isFile() || !hexagonHost || !file(hexagonHost).isFile()) {
+                throw new GradleException('Hexagon requiere SALVE_HEXAGON_SKEL_V75 y SALVE_HEXAGON_ARM64_LIB, ambos compilados del submódulo fijado')
+            }
+            def hostFile = file(hexagonHost)
+            def skelFile = file(hexagonSkel)
+            if (hostFile.length() < 4096L || skelFile.length() < 4096L) {
+                throw new GradleException('Bibliotecas Hexagon ausentes o incompletas')
+            }
+            def hostDest = hexagonJni.get().file('arm64-v8a/libggml-hexagon.so').asFile
+            def dspDest = hexagonAssets.get().file('hexagon/libggml-htp-v75.so').asFile
+            hostDest.parentFile.mkdirs()
+            dspDest.parentFile.mkdirs()
+            java.nio.file.Files.copy(hostFile.toPath(), hostDest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            java.nio.file.Files.copy(skelFile.toPath(), dspDest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+    tasks.named('preBuild').configure { dependsOn(stageHexagonLibraries) }
+}
+
 def verifyExternalLlmWeights = tasks.register('verifyExternalLlmWeights') {
     doLast {
         def bundled = fileTree('src/main/assets') {
@@ -179,6 +212,10 @@ android {
     sourceSets {
         test.resources.srcDir("$projectDir/schemas")
         main.assets.srcDir(selfCodeDir.get().asFile)
+        if (enableHexagon) {
+            main.assets.srcDir(hexagonAssets.get().asFile)
+            main.jniLibs.srcDir(hexagonJni.get().asFile)
+        }
     }
 
     packagingOptions {
