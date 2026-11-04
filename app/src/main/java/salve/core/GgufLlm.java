@@ -3,14 +3,16 @@ package salve.core;
 import java.nio.charset.StandardCharsets;
 import java.util.function.BooleanSupplier;
 
-/** llama.cpp: gráfica (OpenCL) si se permite y funciona; si no, procesador. Todo bajo este monitor. */
+/** llama.cpp: Hexagon NPU (when packaged and supported), Adreno OpenCL, then CPU. */
 public final class GgufLlm {
     private static boolean libraryLoaded;
     private static long model;
     private static String loadedPath;
     private static boolean loadedWithGpu;
+    private static boolean loadedWithNpu;
     // volatile y sin monitor: la cabecera lo lee mientras otro hilo está generando.
     private static volatile boolean gpuActive;
+    private static volatile boolean npuActive;
     private static int contextTokens = GgufContextPolicy.STANDARD;
     private GgufLlm() { }
 
@@ -23,18 +25,51 @@ public final class GgufLlm {
      * @param kernelCache carpeta para guardar los kernels OpenCL compilados (la 1.ª carga tarda más)
      */
     public static synchronized void init(String path, boolean allowGpu, String kernelCache, BooleanSupplier cancelled) {
-        if (model != 0 && path.equals(loadedPath) && (allowGpu || !loadedWithGpu)) return;
+        init(path, false, allowGpu, kernelCache, null, cancelled);
+    }
+
+    /** NPU first, GPU second, CPU last; native library directory is also used to find HTP skels. */
+    public static synchronized void init(String path, boolean allowNpu, boolean allowGpu,
+                                         String kernelCache, String nativeLibDir, BooleanSupplier cancelled) {
+        if (model != 0 && path.equals(loadedPath)
+                && (allowNpu || !loadedWithNpu) && (allowGpu || !loadedWithGpu)) return;
         reset();
         if (!libraryLoaded) {
             System.loadLibrary("salve_llama");
             libraryLoaded = true;
         }
-        model = load(path.getBytes(StandardCharsets.UTF_8), allowGpu,
-                kernelCache == null ? null : kernelCache.getBytes(StandardCharsets.UTF_8), cancellation(cancelled));
+        model = load(path.getBytes(StandardCharsets.UTF_8), allowNpu, allowGpu,
+                kernelCache == null ? null : kernelCache.getBytes(StandardCharsets.UTF_8),
+                nativeLibDir == null ? null : nativeLibDir.getBytes(StandardCharsets.UTF_8), false, cancellation(cancelled));
         if (model == 0) throw new IllegalStateException("No se pudo cargar el modelo GGUF");
         loadedPath = path;
         loadedWithGpu = allowGpu;
+        loadedWithNpu = allowNpu;
         gpuActive = gpuActive();
+        npuActive = npuActive();
+    }
+
+    /**
+     * Solo Hexagon: carga y calienta el modelo en la NPU; si no puede, devuelve false SIN cargar nada
+     * en la gráfica ni en el procesador. Así cada guardia (NPU / gráfica) se apunta solo mientras de
+     * verdad se prueba su acelerador, y un cierre en la NPU no apaga también la gráfica.
+     */
+    public static synchronized boolean tryInitNpu(String path, String dspDir, BooleanSupplier cancelled) {
+        reset();
+        if (!libraryLoaded) {
+            System.loadLibrary("salve_llama");
+            libraryLoaded = true;
+        }
+        long handle = load(path.getBytes(StandardCharsets.UTF_8), true, false, null,
+                dspDir == null ? null : dspDir.getBytes(StandardCharsets.UTF_8), true, cancellation(cancelled));
+        if (handle == 0) return false;
+        model = handle;
+        loadedPath = path;
+        loadedWithNpu = true;
+        loadedWithGpu = false;
+        gpuActive = false;
+        npuActive = npuActive();
+        return true;
     }
 
     public static synchronized String generate(String prompt, BooleanSupplier cancelled) {
@@ -82,6 +117,9 @@ public final class GgufLlm {
     public static synchronized boolean isInitialized() { return model != 0; }
     /** ¿El modelo cargado piensa en la gráfica? */
     public static boolean usesGpu() { return gpuActive; }
+    /** True only if the GGUF model actually offloaded to Hexagon, never merely because a chip exists. */
+    public static boolean usesNpu() { return npuActive; }
+    public static String backendName() { return npuActive ? "NPU Hexagon" : gpuActive ? "GPU OpenCL" : "CPU"; }
     public static synchronized int getContextTokens() { return contextTokens; }
     /** Carga (una vez) la visión del modelo actual. La visión depende del modelo: se libera antes que él. */
     public static synchronized void ensureVision(String mmprojPath) {
@@ -105,11 +143,15 @@ public final class GgufLlm {
         model = 0;
         loadedPath = null;
         loadedWithGpu = false;
+        loadedWithNpu = false;
         gpuActive = false;
+        npuActive = false;
         adapterPath = null;
         contextTokens = GgufContextPolicy.STANDARD;
     }
-    private static native long load(byte[] path, boolean allowGpu, byte[] kernelCache, BooleanSupplier cancelled);
+    private static native long load(byte[] path, boolean allowNpu, boolean allowGpu,
+                                    byte[] kernelCache, byte[] nativeLibDir, boolean acceleratorOnly, BooleanSupplier cancelled);
+    private static native boolean npuActive();
     private static native boolean gpuActive();
     private static native String lastStats();
     private static volatile String stats = "";

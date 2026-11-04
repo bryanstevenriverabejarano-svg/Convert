@@ -84,6 +84,8 @@ public class SalveLLM {
     private volatile boolean engineInitialized = false;
     /** El GGUF cargó en la gráfica y aún no ha completado ninguna respuesta allí. */
     private volatile boolean ggufGpuUnconfirmed = false;
+    /** The first confirmed Hexagon generation also has crash recovery. */
+    private volatile boolean ggufNpuUnconfirmed = false;
     private volatile boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
     private volatile String lastErrorMessage   = null;
     private volatile ModelCatalog.RuntimeSnapshot modelSnapshot = new ModelCatalog.RuntimeSnapshot(
@@ -312,14 +314,33 @@ public class SalveLLM {
             DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
             if (large) markLargeOperation(true);
             GgufGpuGuard gpuGuard = gpuGuard();
+            GgufGpuGuard npuGuard = npuGuard();
             boolean gpu = gpuGuard.allowed(installStamp());
-            // Apuntado en disco ANTES de cargar: si el driver de la GPU tumba la app, el próximo arranque usa el procesador.
-            if (gpu) gpuGuard.trying();
+            // Hexagon only on SM8650 with quantizations its HTP kernels support (Q4_0, Q8_0, Q4_K, Q6_K).
+            String soc = android.os.Build.VERSION.SDK_INT >= 31 ? android.os.Build.SOC_MODEL : null;
+            String dspDir = GgufNpuPolicy.eligible(soc, modelPath) ? HexagonDspAssets.prepare(appContext) : null;
+            boolean npu = dspDir != null && npuGuard.allowed(installStamp());
             try {
-                // Una excepción no es un cierre de la app: no hay nada que recordar (el motor ya cae solo al procesador).
-                try { GgufLlm.init(modelPath, gpu, kernelCacheDir(), watch); }
-                finally { if (gpu) gpuGuard.fine(); }
+                boolean onNpu = false;
+                if (npu) {
+                    // Only the NPU guard is armed while Hexagon is being tried: a DSP crash must not disable Adreno.
+                    npuGuard.trying();
+                    try { onNpu = GgufLlm.tryInitNpu(modelPath, dspDir, watch); }
+                    finally { npuGuard.fine(); }
+                    if (!onNpu) {
+                        // Do not repeatedly spend time on an HTP backend that could not even warm up here.
+                        npuGuard.disable();
+                        Log.w(TAG, "Hexagon v75 no superó la carga/calibración; se prueba la gráfica o el procesador");
+                    }
+                }
+                if (!onNpu) {
+                    // Apuntado en disco ANTES de cargar: si el driver de la GPU tumba la app, el próximo arranque usa el procesador.
+                    if (gpu) gpuGuard.trying();
+                    try { GgufLlm.init(modelPath, false, gpu, kernelCacheDir(), null, watch); }
+                    finally { if (gpu) gpuGuard.fine(); }
+                }
                 ggufGpuUnconfirmed = GgufLlm.usesGpu();
+                ggufNpuUnconfirmed = GgufLlm.usesNpu();
             }
             catch (java.util.concurrent.CancellationException e) {
                 if (watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
@@ -437,14 +458,20 @@ public class SalveLLM {
                 DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
                 if (large) markLargeOperation(true);
                 boolean onGpu = GgufLlm.usesGpu();
-                // La primera respuesta en la gráfica también se apunta: el driver puede caer al pensar, no solo al cargar.
+                boolean onNpu = GgufLlm.usesNpu();
+                // A native crash during first generation must not create a boot loop.
                 if (onGpu && ggufGpuUnconfirmed) gpuGuard().trying();
+                if (onNpu && ggufNpuUnconfirmed) npuGuard().trying();
                 try {
                     try {
                         text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
                                 ggufContextTokens, watch);
-                    } finally { if (onGpu && ggufGpuUnconfirmed) gpuGuard().fine(); }
+                    } finally {
+                        if (onGpu && ggufGpuUnconfirmed) gpuGuard().fine();
+                        if (onNpu && ggufNpuUnconfirmed) npuGuard().fine();
+                    }
                     if (onGpu) ggufGpuUnconfirmed = false;
+                    if (onNpu) ggufNpuUnconfirmed = false;
                     if (onChunk != null && text != null) onChunk.accept(text);
                 }
                 catch (java.util.concurrent.CancellationException e) {
@@ -453,15 +480,16 @@ public class SalveLLM {
                                 + ". " + getMemoryDescription());
                     throw e;
                 }
-                catch (IllegalStateException gpuFailure) {
-                    if (!onGpu) throw gpuFailure;
-                    // Falló en la gráfica: se apaga y Salve sigue con el procesador.
-                    Log.w(TAG, "La gráfica falló; el motor GGUF vuelve al procesador", gpuFailure);
-                    gpuGuard().disable();
+                catch (IllegalStateException acceleratorFailure) {
+                    if (!onGpu && !onNpu) throw acceleratorFailure;
+                    // NPU failure retries via the existing GPU/CPU path; GPU failure retries via CPU.
+                    Log.w(TAG, "Falló " + (onNpu ? "Hexagon" : "OpenCL") + "; usando respaldo local", acceleratorFailure);
+                    if (onNpu) npuGuard().disable();
+                    else gpuGuard().disable();
                     GgufLlm.reset();
                     engineInitialized = false;
-                    String why = gpuFailure.getMessage() == null ? "" : gpuFailure.getMessage();
-                    if (why.contains("tiempo")) throw gpuFailure; // tras 2 minutos no se hace esperar otros 2
+                    String why = acceleratorFailure.getMessage() == null ? "" : acceleratorFailure.getMessage();
+                    if (why.contains("tiempo")) throw acceleratorFailure;
                     return generateLocalResult(prompt, role, onChunk);
                 }
                 finally {
@@ -483,7 +511,7 @@ public class SalveLLM {
             recordInference(ModelCatalog.Capability.TEXT, true);
             if (confirming) { contextUnconfirmed = false; contextGuard().loaded(); }
             lastErrorMessage = null;
-            Log.i(TAG, "provider=local runtime=" + (isGguf ? (GgufLlm.usesGpu() ? "llama.cpp GPU OpenCL" : "llama.cpp CPU") : isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
+            Log.i(TAG, "provider=local runtime=" + (isGguf ? "llama.cpp " + GgufLlm.backendName() : isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
             publishStatus(activationInProgress ? "comprobando activación" : "activo");
             return ModelResult.success(text, latency).withProvider(ModelRuntimeInfo.name(modelPath));
         } catch (java.util.concurrent.CancellationException e) {
@@ -588,7 +616,7 @@ public class SalveLLM {
     private void publishStatus(String phase) {
         runtimeStatus = ModelRuntimeInfo.name(modelPath) + " · " + phase
                 + (isGguf && engineInitialized ? " · contexto " + ggufContextTokens + " tokens"
-                        + (GgufLlm.usesGpu() ? " · gráfica (OpenCL)" : " · procesador") : "");
+                        + " · " + GgufLlm.backendName() : "");
     }
     /**
      * Borra del almacenamiento los Dolphin retirados (hasta 6,9 GB) si el motor activo no es uno de
@@ -632,7 +660,6 @@ public class SalveLLM {
         GenerationSpeed.Sample last = GenerationSpeed.last();
         int ctx = loadedContextTokens();
         return runtimeStatus + (isLiteRT && LiteRTLlm.getSpeculativeActive() ? " · MTP" : "")
-                + (isGguf && GgufLlm.usesGpu() ? " · gráfica" : "")
                 + (ctx > 0 ? " · " + Math.round(ctx / 1024f) + "k" : "")
                 + (last == null ? "" : " · " + last.compact());
     }
@@ -657,7 +684,22 @@ public class SalveLLM {
         String error = lastErrorMessage;
         if (error != null && !error.isEmpty()) report.append("\nÚltimo fallo: ").append(error);
         if (isGguf && !GgufLlm.getLastStats().isEmpty()) report.append("\nÚltima respuesta GGUF (").append(GgufLlm.getLastStats()).append(").");
-        if (isGguf && engineInitialized) report.append(GgufLlm.usesGpu() ? "\nMotor GGUF: gráfica (OpenCL)." : "\nMotor GGUF: procesador.");
+        if (isGguf && engineInitialized) report.append("\nMotor GGUF real: ").append(GgufLlm.backendName()).append(".");
+        if (isGguf) {
+            String soc = android.os.Build.VERSION.SDK_INT >= 31 ? android.os.Build.SOC_MODEL : null;
+            report.append("\nNPU Hexagon (experimental): ");
+            if (!GgufNpuPolicy.eligible(soc, modelPath)) {
+                report.append("requiere SM8650 y un GGUF Q4_0, Q8_0, Q4_K o Q6_K; el modelo actual continúa con OpenCL/CPU.");
+            } else if (!HexagonDspAssets.isPackaged(appContext)) {
+                report.append("esta APK no incluye el binario HTP v75; no se intentará la NPU.");
+            } else if (npuGuard().disabled()) {
+                report.append("desactivada tras un fallo anterior; usa GPU/CPU.");
+            } else if (GgufLlm.usesNpu()) {
+                report.append("ACTIVA: backend HTP confirmado tras cargar y generar.");
+            } else {
+                report.append("disponible para probar; el backend real actual es ").append(GgufLlm.backendName()).append(".");
+            }
+        }
         return report.append("\nEl tamaño del archivo y el contexto en tokens no son la RAM disponible.").toString();
     }
 
@@ -928,14 +970,17 @@ public class SalveLLM {
         } catch (Exception unknown) { return 0; }
     }
 
-    private GgufGpuGuard gpuGuard() {
+    private GgufGpuGuard gpuGuard() { return new GgufGpuGuard(acceleratorStore()); }
+    private GgufGpuGuard npuGuard() { return GgufGpuGuard.forNpu(acceleratorStore()); }
+
+    private LiteRtContextGuard.Store acceleratorStore() {
         android.content.SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return new GgufGpuGuard(new LiteRtContextGuard.Store() {
+        return new LiteRtContextGuard.Store() {
             @Override public int get(String key) { return prefs.getInt(key, 0); }
             @Override public void put(String key, int value) {
                 if (value == 0) prefs.edit().remove(key).commit(); else prefs.edit().putInt(key, value).commit();
             }
-        });
+        };
     }
 
     private String kernelCacheDir() {

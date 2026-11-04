@@ -2204,22 +2204,21 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage("Copiando el archivo seleccionado…").setPositiveButton("Cerrar", null).show();
         inferenceChecks.execute(() -> {
             File imported = null;
+            File staging = null;
             boolean stored = false;
             String report;
             try {
-                String name = "";
+                String name = null;
                 try (android.database.Cursor cursor = getContentResolver().query(uri,
                         new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
-                    if (cursor != null && cursor.moveToFirst()) name = cursor.getString(0).toLowerCase(Locale.ROOT);
+                    if (cursor != null && cursor.moveToFirst()) name = cursor.getString(0);
                 }
-                String extension;
-                if (name.endsWith(".task")) extension = ".task";
-                else if (name.endsWith(".litertlm")) extension = ".litertlm";
-                else if (name.endsWith(".gguf")) extension = ".gguf";
-                else throw new IllegalArgumentException("Selecciona un modelo .gguf, .litertlm o .task.");
-                imported = File.createTempFile("imported-", extension, getModelsRoot());
+                String safeName = salve.core.LocalModelImportName.forDisplayName(
+                        name, java.util.UUID.randomUUID());
+                // A .partial file must not appear in the model scanner if Android stops mid-copy.
+                staging = File.createTempFile("importing-", ".partial", getModelsRoot());
                 try (InputStream source = getContentResolver().openInputStream(uri);
-                     FileOutputStream target = new FileOutputStream(imported)) {
+                     FileOutputStream target = new FileOutputStream(staging)) {
                     if (source == null) throw new java.io.IOException("No se pudo leer el archivo");
                     byte[] buffer = new byte[64 * 1024];
                     int count;
@@ -2228,7 +2227,11 @@ public class MainActivity extends AppCompatActivity {
                         target.write(buffer, 0, count);
                     }
                 }
-                if (imported.length() == 0) throw new java.io.IOException("Archivo vacío");
+                if (staging.length() == 0) throw new java.io.IOException("Archivo vacío");
+                File complete = new File(getModelsRoot(), safeName);
+                if (!staging.renameTo(complete)) throw new java.io.IOException("No se pudo completar la importación");
+                imported = complete;
+                staging = null;
                 SalveLLM engine = SalveLLM.getInstance(getApplicationContext());
                 ModelResult activation = engine.activateDownloadedModel(imported.getAbsolutePath(), false,
                         () -> Thread.currentThread().isInterrupted());
@@ -2238,7 +2241,10 @@ public class MainActivity extends AppCompatActivity {
                         : "No se activó el archivo importado: " + activation.getError();
             } catch (IllegalArgumentException e) { report = e.getMessage(); }
             catch (Exception e) { report = "No se pudo importar el modelo. Revisa el archivo y el espacio disponible."; }
-            finally { if (!stored && imported != null) imported.delete(); }
+            finally {
+                if (staging != null) staging.delete();
+                if (!stored && imported != null) imported.delete();
+            }
             final String message = report;
             runOnUiThread(() -> { if (!isFinishing() && !isDestroyed() && status.isShowing()) status.setMessage(message); });
         });

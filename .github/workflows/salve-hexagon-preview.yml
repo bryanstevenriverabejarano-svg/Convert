@@ -1,0 +1,154 @@
+name: Salve Hexagon V75 experimental APK
+
+# Isolated preview: never overwrites the normal Salve release or signing key.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/salve-hexagon-preview.yml'
+      - 'app/**'
+      - 'third_party/llama.cpp'
+      - 'docs/HEXAGON_S24_ULTRA.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hexagon-v75-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapdragon:
+    name: Build Hexagon v75 and preview APK
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/salve-hexagon-npu-s24'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    permissions:
+      contents: write # solo para publicar la descarga directa de prueba (nunca toca salve-ultima)
+    steps:
+      - name: Checkout pinned source and submodules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install Java 21 for the unchanged Android application
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-read-only: true
+
+      - name: Install Android SDK and NDK
+        timeout-minutes: 10
+        run: bash scripts/setup-android-sdk.sh
+
+      - name: Build the two matching Qualcomm libraries in the official SDK image
+        timeout-minutes: 30
+        run: |
+          set -euo pipefail
+          mkdir -p build/qualcomm-dist
+          docker run --rm --platform linux/amd64 \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace/third_party/llama.cpp \
+            ghcr.io/snapdragon-toolchain/arm64-android:v0.8@sha256:e39e5e9c0957550a92c0de756b7556d81196c7c7f7328ed80de252bfb4878adf \
+            bash -euc '
+              cp docs/backend/snapdragon/CMakeUserPresets.json .
+              cmake --preset arm64-android-snapdragon-release \
+                -B /workspace/build/qualcomm-llama \
+                -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+                -DGGML_BACKEND_DL=ON -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384" \
+                -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
+                -DLLAMA_BUILD_SERVER=OFF -DLLAMA_BUILD_TOOLS=OFF
+              cmake --build /workspace/build/qualcomm-llama \
+                --target ggml-hexagon htp-v75 --parallel 2
+              cp /workspace/build/qualcomm-llama/bin/libggml-hexagon.so \
+                /workspace/build/qualcomm-dist/libggml-hexagon.so
+              cp /workspace/build/qualcomm-llama/ggml/src/ggml-hexagon/libggml-htp-v75.so \
+                /workspace/build/qualcomm-dist/libggml-htp-v75.so
+            '
+          test -s build/qualcomm-dist/libggml-hexagon.so
+          test -s build/qualcomm-dist/libggml-htp-v75.so
+          file build/qualcomm-dist/*.so
+          readelf -h build/qualcomm-dist/libggml-hexagon.so | grep -E 'Machine:.*AArch64'
+          # The host module is built apart (Qualcomm preset, its own STL/LTO) but binds at runtime to
+          # Salve's libggml-base.so: it must need nothing the APK does not ship or the system lacks.
+          readelf -d build/qualcomm-dist/libggml-hexagon.so | grep NEEDED
+          readelf -d build/qualcomm-dist/libggml-hexagon.so | grep NEEDED | grep -oE '\[[^]]+\]' | tr -d '[]' | while read -r lib; do
+            case "$lib" in
+              libggml-base.so|libggml.so|libc++_shared.so|libc.so|libm.so|libdl.so|liblog.so|libandroid.so|libcdsprpc.so) ;;
+              *) echo "Unexpected dependency of libggml-hexagon.so: $lib"; exit 1 ;;
+            esac
+          done
+          # Module MUST export the GGML entry point for ggml_backend_load() in Salve.
+          readelf --wide --dyn-syms build/qualcomm-dist/libggml-hexagon.so \
+            | grep -E '[[:space:]]ggml_backend_init$'
+
+      - name: Build Salve preview APK with the matching host + DSP libraries
+        timeout-minutes: 30
+        env:
+          SALVE_ENABLE_HEXAGON: '1'
+          SALVE_HEXAGON_ARM64_LIB: ${{ github.workspace }}/build/qualcomm-dist/libggml-hexagon.so
+          SALVE_HEXAGON_SKEL_V75: ${{ github.workspace }}/build/qualcomm-dist/libggml-htp-v75.so
+        run: |
+          bash ./gradlew --no-daemon --console=plain --max-workers=2 \
+            --init-script scripts/android-arm64.init.gradle \
+            :app:testPreviewUnitTest :app:assemblePreview
+
+      - name: Verify NPU packaging and standard Android runtime are both present
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          p = Path("app/build/outputs/apk/preview/app-preview.apk")
+          assert p.is_file(), "Missing preview APK"
+          with zipfile.ZipFile(p) as z:
+              names = set(z.namelist())
+              for name in (
+                  "lib/arm64-v8a/libggml-hexagon.so",
+                  "lib/arm64-v8a/libggml-opencl.so",
+                  "lib/arm64-v8a/libggml-cpu.so",
+                  "lib/arm64-v8a/libsalve_llama.so",
+                  "assets/hexagon/libggml-htp-v75.so",
+              ):
+                  assert name in names, f"Missing Hexagon/backup component: {name}"
+              assert "lib/arm64-v8a/libOpenCL.so" not in names, "Do not ship the OpenCL ICD stub"
+          print("Hexagon host, DSP and local fallbacks packaged")
+          PY
+          python3 scripts/check_android_native_alignment.py \
+            app/build/outputs/apk/preview/app-preview.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify \
+            app/build/outputs/apk/preview/app-preview.apk
+          sha256sum app/build/outputs/apk/preview/app-preview.apk \
+            > app/build/outputs/apk/preview/app-preview.apk.sha256
+
+      - name: Share an isolated short-lived APK for physical S24 Ultra validation
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: salve-hexagon-v75-preview-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/preview/app-preview.apk
+            app/build/outputs/apk/preview/app-preview.apk.sha256
+          if-no-files-found: error
+          retention-days: 2
+
+      # Desde el móvil no se pueden bajar los artefactos de Actions (y llegan en .zip): se publica
+      # también como prerelease con enlace fijo. No es «latest» y no pisa la release normal.
+      - name: Publish direct download for the phone
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/preview/app-preview.apk dist/salve-hexagon-arm64.apk
+          (cd dist && sha256sum salve-hexagon-arm64.apk > SHA256SUMS.txt)
+          short="${GITHUB_SHA::7}"
+          gh release delete salve-hexagon-prueba --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes 2>/dev/null || true
+          gh release create salve-hexagon-prueba dist/salve-hexagon-arm64.apk dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "Salve · prueba NPU Hexagon (${short})" \
+            --notes "APK experimental con NPU Hexagon v75 para el Galaxy S24 Ultra. Se instala como app aparte (.preview). No es la versión normal: esa sigue en salve-ultima."
+          echo "Publicada: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/salve-hexagon-prueba/salve-hexagon-arm64.apk"
