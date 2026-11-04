@@ -13,6 +13,8 @@ object LocalModelPolicy {
     const val GEMMA_E4B = "Gemma 4 E4B"
     /** Opcional (Bryan): Qwen 3.5 9B sin censura en GGUF Q4_K_M (5,63 GB), motor llama.cpp en CPU. */
     const val QWEN35_9B = "Qwen 3.5 9B sin censura"
+    /** Opcional: Qwen 3.5 4B sin censura (2,71 GB). Cabe entero en la RAM del S24 Ultra: el 9B no. */
+    const val QWEN35_4B = "Qwen 3.5 4B sin censura"
     const val FAILURE_KEY = "dolphin_failure" // preserved for upgrades from the 3B-only app
     const val LARGE_FAILURE_KEY = "dolphin_8b_failure"
     const val PENDING_KEY = "local_fallback_from"
@@ -28,6 +30,7 @@ object LocalModelPolicy {
             "gemma-4-E2B-it-6e5c4f1.litertlm" -> FALLBACK
             "gemma-4-E4B-it-2eee7ac.litertlm" -> GEMMA_E4B
             "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M-0a41c68.gguf" -> QWEN35_9B
+            "Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M-c09cdbc.gguf" -> QWEN35_4B
             else -> null
         }
     }

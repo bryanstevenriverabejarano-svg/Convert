@@ -10,6 +10,13 @@ public final class ModelMemoryPolicy {
     public static final long LARGE_WEIGHTS = 4920749472L;
     /** Qwen 3.5 9B Q4_K_M (archivo fijado, bytes exactos). Se mapea del archivo (mmap), no se copia. */
     public static final long QWEN35_WEIGHTS = 5627044224L;
+    /** Qwen 3.5 4B Q4_K_M (archivo fijado). Cabe entero en RAM: no hay que leerlo del almacenamiento a cada palabra. */
+    public static final long QWEN35_4B_WEIGHTS = 2707513696L;
+
+    /** Los Qwen 3.5 que Salve descarga (GGUF, pesos por mmap). */
+    static boolean isQwen(String id) {
+        return LocalModelPolicy.QWEN35_9B.equals(id) || LocalModelPolicy.QWEN35_4B.equals(id);
+    }
     private ModelMemoryPolicy() { }
     public static final class Snapshot {
         public final long available, total, threshold;
@@ -27,6 +34,7 @@ public final class ModelMemoryPolicy {
         long weights = LocalModelPolicy.PRIMARY.equals(id) ? LARGE_WEIGHTS
                 : LocalModelPolicy.LIGHT.equals(id) ? 2019382400L
                 : LocalModelPolicy.QWEN35_9B.equals(id) ? QWEN35_WEIGHTS
+                : LocalModelPolicy.QWEN35_4B.equals(id) ? QWEN35_4B_WEIGHTS
                 : LocalModelPolicy.GEMMA_E4B.equals(id) ? 3659530240L : 2588147712L;
         long overhead = LocalModelPolicy.PRIMARY.equals(id) ? 1024 * MIB : 512 * MIB;
         if (contextTokens == GgufContextPolicy.COMPACT) {
@@ -149,7 +157,7 @@ public final class ModelMemoryPolicy {
         if ((LocalModelPolicy.PRIMARY.equals(id) || LocalModelPolicy.LIGHT.equals(id)) && ram.known() && !ram.low
                 && ram.available >= required(id, loaded, ram.threshold, GgufContextPolicy.COMPACT)) return GgufContextPolicy.COMPACT;
         // Qwen 3.5 9B: si no cabe ni con la regla de móvil grande, se intenta con contexto compacto antes de rendirse.
-        if (LocalModelPolicy.QWEN35_9B.equals(id) && ram.known() && ram.total >= LARGE_PHONE_TOTAL
+        if (isQwen(id) && ram.known() && ram.total >= LARGE_PHONE_TOTAL
                 && ram.available >= required(id, true, ram.threshold, GgufContextPolicy.COMPACT)
                 && ram.total >= required(id, false, ram.threshold, GgufContextPolicy.COMPACT) + LARGE_PHONE_HEADROOM)
             return GgufContextPolicy.COMPACT;
@@ -163,7 +171,7 @@ public final class ModelMemoryPolicy {
      * la activación falla y SalveLLM vuelve al modelo anterior.
      */
     static boolean largePhoneGguf(String id, Snapshot ram, boolean loaded) {
-        if (!LocalModelPolicy.QWEN35_9B.equals(id) || !ram.known() || ram.low || ram.total < LARGE_PHONE_TOTAL) return false;
+        if (!isQwen(id) || !ram.known() || ram.low || ram.total < LARGE_PHONE_TOTAL) return false;
         return ram.available >= required(id, true, ram.threshold)
                 && ram.total >= required(id, false, ram.threshold) + LARGE_PHONE_HEADROOM;
     }
@@ -172,7 +180,7 @@ public final class ModelMemoryPolicy {
     public static boolean canPrepare(String id, Snapshot ram, boolean residentEngine) {
         if (residentEngine || selectContext(id, ram, false) != 0) return true;
         // Descargar no gasta RAM: el Qwen grande solo se frena si el móvil, con toda su RAM, no podría con él.
-        if (LocalModelPolicy.QWEN35_9B.equals(id))
+        if (isQwen(id))
             return ram.known() && ram.total >= LARGE_PHONE_TOTAL
                     && ram.total >= required(id, false, ram.threshold) + LARGE_PHONE_HEADROOM;
         // Descargar Gemma no gasta RAM y la carga vuelve a medir: solo se frena si el móvil, aun

@@ -11,7 +11,8 @@ import java.util.regex.Pattern;
  * confundirlo con una pregunta («¿qué tal funciona gemma 4 e2b?»). Lógica pura para pruebas JVM.
  */
 public final class ModelSwitchCommand {
-    public enum Target { E2B, E4B, QWEN35 }
+    /** QWEN35 = el de 4B (cabe entero en RAM); QWEN35_9B solo si se pide expresamente. */
+    public enum Target { E2B, E4B, QWEN35, QWEN35_9B }
 
     private static final Pattern VERB = Pattern.compile(
             "^(?:quiero que |a partir de ahora |de ahora en adelante )?(?:usa|uses|utiliza|utilices|cambia|cambiate|"
@@ -25,6 +26,7 @@ public final class ModelSwitchCommand {
             "\\bmodelo (?:mas )?(?:grande|potente|listo|inteligente|completo)\\b");
     /** «Qwen» casi nunca sale escrito así en el dictado: «cuen», «kuen», «quen», «güen»… */
     private static final Pattern QWEN = Pattern.compile("\\b(?:qwen|quen|kwen|kuen|cuen|guen|qwen3|qwen35)\\b");
+    private static final Pattern QWEN_BIG = Pattern.compile("\\b(?:9 ?b|nueve(?: b)?|grande)\\b");
     private static final Pattern UNCENSORED = Pattern.compile("\\bmodelo (?:sin censura|sin censurar|sin filtros?)\\b");
     private static final int MAX_WORDS = 14;
 
@@ -33,7 +35,8 @@ public final class ModelSwitchCommand {
     public static Target parse(String input) {
         String text = normalize(input);
         if (text.isEmpty() || text.split(" ").length > MAX_WORDS || !VERB.matcher(text).matches()) return null;
-        if (QWEN.matcher(text).find() || UNCENSORED.matcher(text).find()) return Target.QWEN35;
+        if (QWEN.matcher(text).find() || UNCENSORED.matcher(text).find())
+            return QWEN_BIG.matcher(text).find() ? Target.QWEN35_9B : Target.QWEN35;
         if (LIGHT.matcher(text).find()) return Target.E2B;
         if (LARGE.matcher(text).find()) return Target.E4B;
         String compact = text.replace("cuatro", "4").replace(" dos ", " 2 ").replaceAll(" dos$", " 2")
@@ -45,7 +48,12 @@ public final class ModelSwitchCommand {
     }
 
     public static String label(Target target) {
-        return target == Target.E2B ? "Gemma 4 E2B" : target == Target.E4B ? "Gemma 4 E4B" : "Qwen 3.5 9B sin censura";
+        switch (target) {
+            case E2B: return "Gemma 4 E2B";
+            case E4B: return "Gemma 4 E4B";
+            case QWEN35_9B: return "Qwen 3.5 9B sin censura";
+            default: return "Qwen 3.5 4B sin censura";
+        }
     }
 
     static String normalize(String value) {

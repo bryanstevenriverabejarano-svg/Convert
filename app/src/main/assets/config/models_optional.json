@@ -19,6 +19,16 @@
       "supportsVision": false,
       "license": "Apache-2.0",
       "modelCard": "https://huggingface.co/HauhauCS/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive"
+    },
+    {
+      "id": "Qwen 3.5 4B sin censura",
+      "url": "https://huggingface.co/HauhauCS/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive/resolve/c09cdbcdb1fefad6d335809d445621b5f5ba0c6e/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf?download=true",
+      "filename": "Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M-c09cdbc.gguf",
+      "sizeBytes": 2707513696,
+      "sha256": "79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741",
+      "supportsVision": false,
+      "license": "Apache-2.0",
+      "modelCard": "https://huggingface.co/HauhauCS/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive"
     }
   ]
 }
