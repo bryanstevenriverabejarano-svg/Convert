@@ -18,6 +18,14 @@ final class HexagonDspAssets {
     private static final String NAME = "libggml-htp-v75.so";
     private HexagonDspAssets() { }
 
+    static boolean isPackaged(Context context) {
+        try (InputStream ignored = context.getAssets().open("hexagon/" + NAME)) {
+            return true;
+        } catch (IOException notPackaged) {
+            return false;
+        }
+    }
+
     static synchronized String prepare(Context context) {
         File dir = new File(context.getNoBackupFilesDir(), "hexagon-v75");
         File finalFile = new File(dir, NAME);
