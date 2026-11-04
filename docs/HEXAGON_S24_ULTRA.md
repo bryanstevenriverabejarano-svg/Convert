@@ -53,10 +53,11 @@ docker run --rm --platform linux/amd64 -v "$PWD:/workspace" \
     cmake --preset arm64-android-snapdragon-release \
       -B /workspace/build/qualcomm-llama \
       -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+      -DGGML_BACKEND_DL=ON -DBUILD_SHARED_LIBS=ON \
       -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
     cmake --build /workspace/build/qualcomm-llama \
       --target ggml-hexagon htp-v75 --parallel 2
-    cp /workspace/build/qualcomm-llama/ggml/src/ggml-hexagon/libggml-hexagon.so \
+    cp /workspace/build/qualcomm-llama/bin/libggml-hexagon.so \
        /workspace/build/qualcomm-dist/
     cp /workspace/build/qualcomm-llama/ggml/src/ggml-hexagon/libggml-htp-v75.so \
        /workspace/build/qualcomm-dist/
@@ -73,8 +74,11 @@ Comprueba el contenido:
 unzip -l app/build/outputs/apk/preview/app-preview.apk \
   | grep -E 'lib/arm64-v8a/libggml-hexagon.so|assets/hexagon/libggml-htp-v75.so'
 ```
-Ambos archivos son necesarios para intentar la NPU. Si falta uno, no afirmar
-que la APK la utiliza. En el primer intento compatible, `HexagonDspAssets`
+Ambos archivos son necesarios para intentar la NPU. Además el `libggml-hexagon.so`
+**debe exportar `ggml_backend_init`**: si fue compilado sin
+`GGML_BACKEND_DL=ON`, se puede empaquetar pero `ggml_backend_load()`
+no podrá cargarlo. Si falta una biblioteca o el símbolo, no afirmar
+que la APK utiliza Hexagon. En el primer intento compatible, `HexagonDspAssets`
 extrae el binario DSP y configura `ADSP_LIBRARY_PATH` para FastRPC.
 La integración de controladores con el firmware Samsung sigue requiriendo una
 prueba en un S24 Ultra real.
