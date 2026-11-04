@@ -50,7 +50,7 @@ struct Request {
     bool expired() const { return Clock::now() >= deadline; }
     void check() {
         if (cancelled()) throw Cancelled();
-        if (expired()) throw std::runtime_error("Dolphin agotó el tiempo de respuesta local");
+        if (expired()) throw std::runtime_error("El modelo local agotó el tiempo de respuesta");
     }
     static bool abort(void *data) {
         auto *request = static_cast<Request *>(data);

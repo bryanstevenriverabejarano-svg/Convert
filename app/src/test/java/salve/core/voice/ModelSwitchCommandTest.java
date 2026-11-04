@@ -41,7 +41,11 @@ public class ModelSwitchCommandTest {
         assertEquals(QWEN35, ModelSwitchCommand.parse("instala el modelo qwen"));
         assertNull("una pregunta no cambia nada", ModelSwitchCommand.parse("qué tal es qwen"));
         assertNull("«cuenta» no es Qwen", ModelSwitchCommand.parse("usa la cuenta de gmail"));
-        assertEquals("Qwen 3.5 9B sin censura", ModelSwitchCommand.label(QWEN35));
+        assertEquals("por defecto el de 4B, que cabe en RAM", "Qwen 3.5 4B sin censura", ModelSwitchCommand.label(QWEN35));
+        assertEquals(QWEN35_9B, ModelSwitchCommand.parse("usa el modelo qwen 9b"));
+        assertEquals(QWEN35_9B, ModelSwitchCommand.parse("descarga el qwen grande"));
+        assertEquals(QWEN35_9B, ModelSwitchCommand.parse("usa cuen nueve b"));
+        assertEquals("Qwen 3.5 9B sin censura", ModelSwitchCommand.label(QWEN35_9B));
     }
 
     @Test public void labels() {

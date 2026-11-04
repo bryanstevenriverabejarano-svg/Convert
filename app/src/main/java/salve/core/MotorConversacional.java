@@ -1821,11 +1821,13 @@ public class MotorConversacional {
         if (target != null) {
             String active = LocalModelPolicy.idForPath(SalveLLM.getInstance(context).activeModelPath());
             String wanted = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? LocalModelPolicy.FALLBACK
-                    : target == salve.core.voice.ModelSwitchCommand.Target.E4B ? LocalModelPolicy.GEMMA_E4B : LocalModelPolicy.QWEN35_9B;
+                    : target == salve.core.voice.ModelSwitchCommand.Target.E4B ? LocalModelPolicy.GEMMA_E4B
+                    : target == salve.core.voice.ModelSwitchCommand.Target.QWEN35_9B ? LocalModelPolicy.QWEN35_9B : LocalModelPolicy.QWEN35_4B;
             if (wanted.equals(active))
                 return "Ya estoy usando " + salve.core.voice.ModelSwitchCommand.label(target)
                         + ". Me quedo con él hasta que me pidas otro.";
-            if (target == salve.core.voice.ModelSwitchCommand.Target.QWEN35) return cambioAQwen();
+            if (target == salve.core.voice.ModelSwitchCommand.Target.QWEN35) return cambioAQwen(false);
+            if (target == salve.core.voice.ModelSwitchCommand.Target.QWEN35_9B) return cambioAQwen(true);
             // El mismo camino que la frase exacta de siempre.
             t = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? "usa gemma 4 e2b" : "usa gemma 4 e4b";
         }
@@ -1902,24 +1904,30 @@ public class MotorConversacional {
      * varios intentos dejando que Android libere memoria; si aun así no entra, se queda el modelo
      * anterior. Si no, se descarga con Wi-Fi (archivo fijado y verificado por SHA-256) y se activa.
      */
-    private String cambioAQwen() {
-        java.io.File qwen = new java.io.File(ModelStore.dir(context), "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M-0a41c68.gguf");
+    private String cambioAQwen(boolean big) {
+        String id = big ? LocalModelPolicy.QWEN35_9B : LocalModelPolicy.QWEN35_4B;
+        String name = big ? "Qwen 3.5 9B" : "Qwen 3.5 4B";
+        java.io.File qwen = new java.io.File(ModelStore.dir(context), big
+                ? "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M-0a41c68.gguf"
+                : "Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M-c09cdbc.gguf");
+        String slow = big
+                ? " Ojo: el de 9B (5,6 GB) no cabe entero en tu RAM y puede ir muy lento; si pasa, prueba «usa el modelo Qwen» (4B)."
+                : " Va por el procesador, así que contesta algo más despacio que Gemma.";
         if (!qwen.isFile()) {
-            salve.work.ModelDownloadWorker.enqueueOptional(context, LocalModelPolicy.QWEN35_9B);
-            return "Descargo Qwen 3.5 9B sin censura (5,6 GB) en cuanto haya Wi-Fi, compruebo que es el archivo exacto y lo activo; "
-                    + "verás el progreso en la notificación. Va por el procesador, así que contestará más despacio que Gemma. "
-                    + "Para volver: «usa el modelo Gemma 4 E2B».";
+            salve.work.ModelDownloadWorker.enqueueOptional(context, id);
+            return "Descargo " + name + " sin censura (" + (big ? "5,6" : "2,7") + " GB) en cuanto haya Wi-Fi, compruebo que es el archivo "
+                    + "exacto y lo activo; verás el progreso en la notificación." + slow + " Para volver: «usa el modelo Gemma 4 E2B».";
         }
         new Thread(() -> {
             ModelResult result = ModelActivationRetry.run(
                     () -> SalveLLM.getInstance(context).activateDownloadedModel(qwen.getAbsolutePath(), false, () -> false),
                     () -> closed);
             hablar(result.isSuccess()
-                    ? "Ya uso Qwen 3.5 9B. Va por el procesador: contesto más despacio que con Gemma. Me quedo con él aunque cierres la app; "
-                        + "para volver, dime «usa el modelo Gemma 4 E2B»."
-                    : "No pude cargar Qwen 3.5 ni tras varios intentos (" + result.getError() + "). Sigo con el modelo anterior.");
+                    ? "Ya uso " + name + "." + slow + " Me quedo con él aunque cierres la app; para volver, dime «usa el modelo Gemma 4 E2B»."
+                    : "No pude cargar " + name + " (" + result.getError() + "). Sigo con el modelo anterior."
+                        + (big ? " El de 4B cabe mejor: dime «usa el modelo Qwen»." : ""));
         }, "salve-model-switch").start();
-        return "Cargando Qwen 3.5 9B… tarda un poco; si le falta memoria, espero a que el móvil la libere y lo reintento.";
+        return "Cargando " + name + "… tarda un poco; si le falta memoria, espero a que el móvil la libere y lo reintento.";
     }
 
     private static boolean pideFotoEnLaNube(String input) {

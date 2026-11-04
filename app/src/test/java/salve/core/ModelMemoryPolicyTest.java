@@ -28,6 +28,10 @@ public class ModelMemoryPolicyTest {
         ModelMemoryPolicy.Snapshot small = new ModelMemoryPolicy.Snapshot(3 * gib, 8 * gib, 0, false);
         assertEquals(0, ModelMemoryPolicy.selectContext(LocalModelPolicy.QWEN35_9B, small, false));
         assertFalse(ModelMemoryPolicy.canPrepare(LocalModelPolicy.QWEN35_9B, small, false));
+        // El de 4B también entra con la regla de móvil grande (y le sobra margen).
+        assertEquals(GgufContextPolicy.STANDARD, ModelMemoryPolicy.selectContext(LocalModelPolicy.QWEN35_4B, s24, false));
+        assertTrue(ModelMemoryPolicy.required(LocalModelPolicy.QWEN35_4B, false, 0)
+                < ModelMemoryPolicy.required(LocalModelPolicy.QWEN35_9B, false, 0));
         // Los demás modelos siguen con su regla de siempre.
         assertEquals(0, ModelMemoryPolicy.selectContext(LocalModelPolicy.PRIMARY, s24, false));
     }

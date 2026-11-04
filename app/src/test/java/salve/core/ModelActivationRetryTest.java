@@ -30,6 +30,20 @@ public class ModelActivationRetryTest {
         assertEquals("sin memoria", r.getError());
     }
 
+    @Test public void aSlowModelIsNotRetried() {
+        // Lo que pasó con el Qwen 9B: «comprobando una respuesta» varios minutos, reintento tras reintento.
+        AtomicInteger tries = new AtomicInteger();
+        ModelResult r = ModelActivationRetry.run(() -> { tries.incrementAndGet();
+                return ModelResult.failure(ModelResult.Status.ERROR, "El modelo local agotó el tiempo de respuesta", 0L); },
+                4, 1, () -> false, ms -> { });
+        assertEquals("un fallo que no es de memoria no se repite", 1, tries.get());
+        assertFalse(r.isSuccess());
+        assertTrue(ModelActivationRetry.memoryProblem(ModelResult.failure(ModelResult.Status.ERROR,
+                "RAM insuficiente para Qwen 3.5 4B sin censura.", 0L)));
+        assertTrue(ModelActivationRetry.memoryProblem(ModelResult.failure(ModelResult.Status.ERROR,
+                "No se pudo reservar memoria para el contexto GGUF", 0L)));
+    }
+
     @Test public void neverRetriesWhatBryanCancelled() {
         AtomicInteger tries = new AtomicInteger();
         ModelResult r = ModelActivationRetry.run(() -> { tries.incrementAndGet();
