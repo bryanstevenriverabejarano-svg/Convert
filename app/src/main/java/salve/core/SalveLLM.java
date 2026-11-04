@@ -332,6 +332,12 @@ public class SalveLLM {
                 }
                 ggufGpuUnconfirmed = GgufLlm.usesGpu();
                 ggufNpuUnconfirmed = GgufLlm.usesNpu();
+                // Do not repeatedly spend time on an HTP backend that could not even
+                // warm up on this phone/firmware. Keep the proven OpenCL/CPU route.
+                if (npu && !ggufNpuUnconfirmed) {
+                    npuGuard.disable();
+                    Log.w(TAG, "Hexagon v75 no superó la carga/calibración; respaldo " + GgufLlm.backendName());
+                }
             }
             catch (java.util.concurrent.CancellationException e) {
                 if (watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
