@@ -12,9 +12,12 @@ public class LocalModelImportNameTest {
         assertTrue(saved.endsWith("-Q4_0.gguf"));
         assertTrue(GgufNpuPolicy.eligible("SM8650", "/files/" + saved));
     }
-    @Test public void importDoesNotMisclassifyOtherQuantizationsAsNpu() {
-        String saved = LocalModelImportName.forDisplayName("Dolphin-8B-Q4_K_M.gguf", ID);
-        assertFalse(GgufNpuPolicy.eligible("SM8650", "/files/" + saved));
+    @Test public void importKeepsTheQuantizationThatDecidesNpuAdmission() {
+        // Q4_K has HTP kernels: an imported Q4_K_M may try the NPU (the warm-up confirms it).
+        assertTrue(GgufNpuPolicy.eligible("SM8650", "/files/" + LocalModelImportName.forDisplayName("Dolphin-8B-Q4_K_M.gguf", ID)));
+        // Without HTP kernels it never tries.
+        assertFalse(GgufNpuPolicy.eligible("SM8650", "/files/" + LocalModelImportName.forDisplayName("Dolphin-8B-IQ3_M.gguf", ID)));
+        assertFalse(GgufNpuPolicy.eligible("SM8650", "/files/" + LocalModelImportName.forDisplayName("Dolphin-8B-Q5_K_M.gguf", ID)));
     }
     @Test public void unsafeProviderNameCannotLeaveModelsFolder() {
         String saved = LocalModelImportName.forDisplayName("../../other\\evil-Q4_0.gguf", ID);
