@@ -319,13 +319,13 @@ public class SalveLLM {
             // Deliberately restrict early Hexagon experiments to SM8650 + Q4_0:
             // the existing Q4_K_M / Q4_K_P downloads must keep working on Adreno/CPU.
             String soc = android.os.Build.VERSION.SDK_INT >= 31 ? android.os.Build.SOC_MODEL : null;
-            boolean npu = GgufNpuPolicy.eligible(soc, modelPath) && npuGuard.allowed(installStamp());
+            String dspDir = GgufNpuPolicy.eligible(soc, modelPath) ? HexagonDspAssets.prepare(appContext) : null;
+            boolean npu = dspDir != null && npuGuard.allowed(installStamp());
             // Persist both guards: a hard native crash can occur during either backend's warm-up.
             if (npu) npuGuard.trying();
             if (gpu) gpuGuard.trying();
             try {
-                try { GgufLlm.init(modelPath, npu, gpu, kernelCacheDir(),
-                        appContext.getApplicationInfo().nativeLibraryDir, watch); }
+                try { GgufLlm.init(modelPath, npu, gpu, kernelCacheDir(), dspDir, watch); }
                 finally {
                     if (npu) npuGuard.fine();
                     if (gpu) gpuGuard.fine();
