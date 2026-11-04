@@ -165,7 +165,7 @@ jobs:
           assert abis == {"arm64-v8a"}, f"Unexpected APK ABIs: {abis}"
           assert "lib/arm64-v8a/libsalve_llama.so" in names, "Missing GGUF runtime"
           assert "lib/arm64-v8a/libsalve_sentencepiece.so" in names, "Missing multilingual tokenizer"
-          for module in ("libllama.so", "libggml.so", "libggml-base.so", "libggml-cpu.so", "libggml-opencl.so", "libc++_shared.so"):
+          for module in ("libllama.so", "libggml.so", "libggml-base.so", "libggml-cpu.so", "libggml-opencl.so", "libmtmd.so", "libc++_shared.so"):
               assert "lib/arm64-v8a/" + module in names, "Missing GGUF engine module " + module
           assert "lib/arm64-v8a/libOpenCL.so" not in names, "The vendor OpenCL driver must not be shadowed by the ICD stub"
           assert not any(name.startswith("assets/embeddings/") for name in names), "Embedding weights must download separately"

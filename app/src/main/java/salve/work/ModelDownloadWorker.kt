@@ -93,6 +93,9 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
                 }
             }
             val file = completed ?: throw java.io.IOException("No se confirmó el archivo de $id")
+            // La visión (mmproj) no se activa: queda junto a su modelo y se carga cuando llegue una foto.
+            if (salve.core.LocalModelPolicy.isVisionCompanion(id))
+                return Result.success(workDataOf(KEY_STATUS to "ready", KEY_MESSAGE to "$id lista: ya puedo ver fotos con este modelo."))
             updateProgress(99, "Cargando $id y comprobando una respuesta…")
             val result = withContext(Dispatchers.IO) {
                 val llm = salve.core.SalveLLM.getInstance(applicationContext)
@@ -103,8 +106,15 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
                         { isStopped })
                 else llm.activateDownloadedModel(file.file.absolutePath, file.supportsVision) { isStopped }
             }
-            if (result.isSuccess) Result.success(workDataOf(KEY_STATUS to "ready",
-                KEY_MESSAGE to "$id activo. " + salve.core.SalveLLM.getInstance(applicationContext).statusDescription))
+            if (result.isSuccess) {
+                // Activo: ahora sus ojos (~1 GB, también solo con Wi-Fi), si aún no están.
+                salve.core.LocalModelPolicy.visionFor(id)?.let { vision ->
+                    val visionFile = java.io.File(salve.core.ModelStore.dir(applicationContext), salve.core.LocalModelPolicy.visionFileFor(id)!!)
+                    if (!visionFile.isFile) enqueueOptionalAfterCurrent(applicationContext, vision)
+                }
+                Result.success(workDataOf(KEY_STATUS to "ready",
+                    KEY_MESSAGE to "$id activo. " + salve.core.SalveLLM.getInstance(applicationContext).statusDescription))
+            }
             else Result.failure(workDataOf(KEY_STATUS to "error",
                 KEY_MESSAGE to "$id descargado pero no se pudo activar; se conserva el modelo anterior. ${result.error ?: ""}"))
         } catch (cancelled: CancellationException) {

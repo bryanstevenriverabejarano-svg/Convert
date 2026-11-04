@@ -23,6 +23,18 @@ object LocalModelPolicy {
     const val UNCENSORED_E2B_FILE = "Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-Q4_K_P-da8593c.gguf"
     @JvmStatic fun isUncensored(id: String?): Boolean = id == UNCENSORED || id == UNCENSORED_E2B
     @JvmStatic fun uncensoredFile(id: String): String = if (id == UNCENSORED_E2B) UNCENSORED_E2B_FILE else UNCENSORED_FILE
+    /** Visión (y audio) de cada uno: el «mmproj» que se descarga aparte (~1 GB) y se carga al llegar una foto. */
+    const val UNCENSORED_VISION = "Gemma 4 E4B sin censura · visión"
+    const val UNCENSORED_E2B_VISION = "Gemma 4 E2B sin censura · visión"
+    const val UNCENSORED_VISION_FILE = "mmproj-Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-f16-45b6a33.gguf"
+    const val UNCENSORED_E2B_VISION_FILE = "mmproj-Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-f16-da8593c.gguf"
+    /** Id de la visión de un modelo sin censura, o null si el modelo no la tiene. */
+    @JvmStatic fun visionFor(id: String?): String? = when (id) {
+        UNCENSORED -> UNCENSORED_VISION; UNCENSORED_E2B -> UNCENSORED_E2B_VISION; else -> null }
+    @JvmStatic fun visionFileFor(id: String?): String? = when (id) {
+        UNCENSORED -> UNCENSORED_VISION_FILE; UNCENSORED_E2B -> UNCENSORED_E2B_VISION_FILE; else -> null }
+    /** Una descarga de visión no es un modelo que activar: solo se descarga y se verifica. */
+    @JvmStatic fun isVisionCompanion(id: String?): Boolean = id == UNCENSORED_VISION || id == UNCENSORED_E2B_VISION
     const val FAILURE_KEY = "dolphin_failure" // preserved for upgrades from the 3B-only app
     const val LARGE_FAILURE_KEY = "dolphin_8b_failure"
     const val PENDING_KEY = "local_fallback_from"
