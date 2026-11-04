@@ -813,6 +813,10 @@ public class MotorConversacional {
         }
         String modelSwitch = cambioDeModelo(entrada);
         if (modelSwitch != null) { hablar(modelSwitch); return; }
+        if (salve.core.voice.ModelSwitchCommand.asksDownloadStatus(entrada)) {
+            hablar(salve.work.ModelDownloadWorker.describe(context) + "\nModelo en uso: " + llm.getStatusDescription());
+            return;
+        }
         if (creatorSide() && salve.core.voice.WakeWord.asksToEnable(entrada)) {
             hablar(salve.services.WakeWordService.enable(context));
             return;

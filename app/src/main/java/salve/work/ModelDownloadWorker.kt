@@ -181,7 +181,8 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
                 .setInputData(workDataOf(KEY_OPTIONAL_ID to id))
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED)
                     .setRequiresStorageNotLow(true).build()).build()
-            WorkManager.getInstance(context).enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.KEEP, work)
+            // Detrás de lo que esté descargando (antes, KEEP descartaba en silencio el modelo pedido).
+            WorkManager.getInstance(context).enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, work)
         }
         private const val CHANNEL_ID = "model_download_channel"
         private const val NOTIFICATION_ID = 2001
@@ -199,6 +200,27 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED)
                     .setRequiresStorageNotLow(true).build()).build()
             WorkManager.getInstance(context).enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.KEEP, work)
+        }
+
+        /** «¿Cómo va la descarga?»: lo que está bajando, lo que espera y cómo acabó la última, en palabras. */
+        @JvmStatic fun describe(context: Context): String {
+            val infos = try {
+                WorkManager.getInstance(context).getWorkInfosForUniqueWork(UNIQUE_WORK_NAME).get(3, java.util.concurrent.TimeUnit.SECONDS)
+            } catch (error: Exception) { return "No pude consultar las descargas." }
+            if (infos.isEmpty()) return "No hay ninguna descarga de modelos en marcha ni pendiente."
+            val lines = infos.map { info ->
+                val message = info.progress.getString(KEY_MESSAGE) ?: info.outputData.getString(KEY_MESSAGE)
+                when (info.state) {
+                    androidx.work.WorkInfo.State.RUNNING -> "Descargando: " + (message ?: "empezando…") +
+                        (info.progress.getInt(KEY_PROGRESS, -1).takeIf { it >= 0 }?.let { " ($it %)" } ?: "")
+                    androidx.work.WorkInfo.State.ENQUEUED, androidx.work.WorkInfo.State.BLOCKED ->
+                        "En cola: espera Wi-Fi, espacio libre o a que termine la descarga anterior."
+                    androidx.work.WorkInfo.State.SUCCEEDED -> "Terminada: " + (message ?: "bien.")
+                    androidx.work.WorkInfo.State.FAILED -> "Falló: " + (message ?: "sin motivo registrado.")
+                    androidx.work.WorkInfo.State.CANCELLED -> "Cancelada."
+                }
+            }
+            return lines.takeLast(3).joinToString("\n")
         }
 
         @JvmStatic @JvmOverloads
