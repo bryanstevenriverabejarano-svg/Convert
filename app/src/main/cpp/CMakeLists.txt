@@ -27,7 +27,36 @@ endif()
 if(SALVE_EMBEDDINGS_ONLY)
     return()
 endif()
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+if(ANDROID)
+    # 16 KB en TODAS las .so (llama, ggml y sus módulos), no solo en las de Salve.
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
+    string(APPEND CMAKE_MODULE_LINKER_FLAGS " -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
+endif()
+# En el móvil, siempre; en un PC se puede activar con -DSALVE_GPU=ON para comprobar la compilación.
+if(NOT DEFINED SALVE_GPU)
+    set(SALVE_GPU ${ANDROID})
+endif()
+if(SALVE_GPU)
+    # Gráfica: el motor OpenCL de ggml (optimizado para Adreno, p. ej. el Snapdragon 8 Gen 3 del S24 Ultra).
+    # Solo para ENLAZAR se compila el cargador ICD de Khronos; en el móvil se usa el libOpenCL.so del
+    # fabricante (no se empaqueta: ver build.gradle y <uses-native-library> en el manifiesto).
+    set(OPENCL_ICD_LOADER_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../third_party/OpenCL-Headers CACHE PATH "" FORCE)
+    set(OPENCL_ICD_LOADER_BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+    set(ENABLE_OPENCL_LAYERS OFF CACHE BOOL "" FORCE)
+    set(OPENCL_ICD_LOADER_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    add_subdirectory(../../../../third_party/OpenCL-ICD-Loader opencl-icd EXCLUDE_FROM_ALL)
+    set(OpenCL_INCLUDE_DIR ${OPENCL_ICD_LOADER_HEADERS_DIR} CACHE PATH "" FORCE)
+    set(OpenCL_LIBRARY OpenCL CACHE STRING "" FORCE)
+    set(GGML_OPENCL ON CACHE BOOL "" FORCE)
+    set(GGML_OPENCL_EMBED_KERNELS ON CACHE BOOL "" FORCE)
+    set(GGML_OPENCL_USE_ADRENO_KERNELS ON CACHE BOOL "" FORCE)
+    # Cada motor (procesador, gráfica) es un módulo que se carga en tiempo de ejecución: si el de la
+    # gráfica no puede abrirse en un móvil, el del procesador sigue funcionando igual.
+    set(GGML_BACKEND_DL ON CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+else()
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+endif()
 set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
 set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
