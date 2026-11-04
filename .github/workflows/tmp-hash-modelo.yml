@@ -1,4 +1,4 @@
-# Temporal: lee la cabecera GGUF (arquitectura y plantilla de chat) del Qwen 3.5 sin descargarlo entero.
+# Temporal: tamaño, commit y SHA-256 del Qwen 3.5 4B (solo cabeceras) y su cabecera GGUF.
 name: tmp hash modelo
 on:
   push:
@@ -8,37 +8,35 @@ jobs:
   hash:
     runs-on: ubuntu-latest
     steps:
-      - name: Cabecera GGUF
+      - name: Cabeceras
         run: |
-          URL="https://huggingface.co/HauhauCS/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive/resolve/0a41c68809d375475f954be12ba7c40efa56c2a9/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf"
+          for Q in Q4_K_M Q6_K; do
+            URL="https://huggingface.co/HauhauCS/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive/resolve/main/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-$Q.gguf"
+            echo "== $Q"; curl -sSI "$URL" | grep -iE "^(HTTP|x-linked-size|x-linked-etag|x-repo-commit):" || true
+          done
+          URL="https://huggingface.co/HauhauCS/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive/resolve/main/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf"
           curl -sSL -r 0-41943039 -o head.gguf "$URL"
-          ls -l head.gguf
-          cat > read.py <<'PY'
-          import struct, sys
-          f = open("head.gguf", "rb"); data = f.read()
-          off = 0
+          python3 - <<'PY'
+          import struct
+          data = open("head.gguf","rb").read(); off = 4
           def rd(fmt):
               global off
-              v = struct.unpack_from("<" + fmt, data, off); off += struct.calcsize("<" + fmt); return v[0]
+              v = struct.unpack_from("<"+fmt, data, off)[0]; off += struct.calcsize("<"+fmt); return v
           def rstr():
               global off
-              n = rd("Q"); s = data[off:off+n].decode("utf-8", "replace"); off += n; return s
-          assert data[:4] == b"GGUF"; off = 4
-          ver = rd("I"); nt = rd("Q"); nkv = rd("Q")
-          print("version", ver, "tensors", nt, "kv", nkv)
+              n = rd("Q"); s = data[off:off+n].decode("utf-8","replace"); off += n; return s
+          rd("I"); rd("Q"); nkv = rd("Q")
           sizes = {0:"B",1:"b",2:"H",3:"h",4:"I",5:"i",6:"f",7:"?",10:"Q",11:"q",12:"d"}
           def val(t):
               if t == 8: return rstr()
               if t == 9:
-                  at = rd("I"); n = rd("Q")
-                  items = [val(at) for _ in range(n)]
-                  return f"[array {n}]" if n > 8 else items
+                  at = rd("I"); n = rd("Q"); items = [val(at) for _ in range(n)]
+                  return f"[array {n}]"
               return rd(sizes[t])
           for _ in range(nkv):
               k = rstr(); t = rd("I"); v = val(t)
+              if k in ("general.architecture","general.name","general.size_label") or k.endswith(".block_count") or k.endswith(".context_length"):
+                  print(k, "=", v)
               if k == "tokenizer.chat_template":
-                  print("=== CHAT TEMPLATE ===\n" + v + "\n=== FIN ===")
-              elif not k.startswith("tokenizer.ggml.") or k in ("tokenizer.ggml.model", "tokenizer.ggml.pre"):
-                  print(k, "=", v if not isinstance(v, str) or len(v) < 200 else v[:200] + "…")
+                  print("enable_thinking en plantilla:", "enable_thinking" in v)
           PY
-          python3 read.py
