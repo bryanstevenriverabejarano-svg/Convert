@@ -4,6 +4,24 @@ plugins {
 }
 
 // Keep multi-GB language model weights out of APKs, including future accidental additions.
+def enableHexagon = System.getenv('SALVE_ENABLE_HEXAGON') == '1'
+def hexagonSkel = System.getenv('SALVE_HEXAGON_SKEL_V75')
+def hexagonAssets = layout.buildDirectory.dir('generated/hexagon-assets')
+if (enableHexagon) {
+    // A DSP .so is not an ARM64 JNI library. Package it as an asset for FastRPC.
+    def stageHexagonSkel = tasks.register('stageHexagonSkel', Copy) {
+        doFirst {
+            if (!hexagonSkel || !file(hexagonSkel).isFile()) {
+                throw new GradleException('SALVE_HEXAGON_SKEL_V75 debe apuntar al libggml-htp-v75.so compilado del mismo commit de llama.cpp')
+            }
+        }
+        from({ hexagonSkel ? file(hexagonSkel) : files() })
+        into(hexagonAssets.get().dir('hexagon').asFile)
+        rename { 'libggml-htp-v75.so' }
+    }
+    tasks.named('preBuild').configure { dependsOn(stageHexagonSkel) }
+}
+
 def verifyExternalLlmWeights = tasks.register('verifyExternalLlmWeights') {
     doLast {
         def bundled = fileTree('src/main/assets') {
@@ -106,9 +124,16 @@ android {
             cmake {
                 // c++_shared: llama.cpp y ggml son ahora varias .so (motor de procesador y de gráfica por separado).
                 arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+                if (enableHexagon) {
+                    def sdk = System.getenv('HEXAGON_SDK_ROOT')
+                    if (!sdk) throw new GradleException('HEXAGON_SDK_ROOT es obligatorio en builds Hexagon')
+                    arguments "-DSALVE_HEXAGON=ON", "-DHEXAGON_SDK_ROOT=${sdk}"
+                }
                 // Build only app JNI libraries, not SentencePiece's desktop training/CLI tools.
                 // ggml-cpu y ggml-opencl se abren en tiempo de ejecución, así que hay que pedirlos aquí.
-                targets "salve_llama", "salve_sentencepiece", "llama", "ggml", "ggml-base", "ggml-cpu", "ggml-opencl", "mtmd"
+                def nativeTargets = ["salve_llama", "salve_sentencepiece", "llama", "ggml", "ggml-base", "ggml-cpu", "ggml-opencl", "mtmd"]
+                if (enableHexagon) nativeTargets.add("ggml-hexagon")
+                targets(*nativeTargets)
             }
         }
 
@@ -179,6 +204,7 @@ android {
     sourceSets {
         test.resources.srcDir("$projectDir/schemas")
         main.assets.srcDir(selfCodeDir.get().asFile)
+        if (enableHexagon) main.assets.srcDir(hexagonAssets.get().asFile)
     }
 
     packagingOptions {
