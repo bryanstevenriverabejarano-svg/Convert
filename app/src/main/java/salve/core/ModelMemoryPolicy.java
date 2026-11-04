@@ -10,10 +10,12 @@ public final class ModelMemoryPolicy {
     public static final long LARGE_WEIGHTS = 4920749472L;
     /** Gemma 4 E4B sin censura Q4_K_M (archivo fijado, bytes exactos). Se mapea del archivo (mmap), no se copia. */
     public static final long UNCENSORED_WEIGHTS = 5335285728L;
+    /** Gemma 4 E2B sin censura Q4_K_P (archivo fijado). */
+    public static final long UNCENSORED_E2B_WEIGHTS = 3450277824L;
 
     /** El GGUF sin censura que Salve descarga (pesos por mmap): regla de móvil grande. */
     static boolean isUncensored(String id) {
-        return LocalModelPolicy.UNCENSORED.equals(id);
+        return LocalModelPolicy.isUncensored(id);
     }
     private ModelMemoryPolicy() { }
     public static final class Snapshot {
@@ -32,6 +34,7 @@ public final class ModelMemoryPolicy {
         long weights = LocalModelPolicy.PRIMARY.equals(id) ? LARGE_WEIGHTS
                 : LocalModelPolicy.LIGHT.equals(id) ? 2019382400L
                 : LocalModelPolicy.UNCENSORED.equals(id) ? UNCENSORED_WEIGHTS
+                : LocalModelPolicy.UNCENSORED_E2B.equals(id) ? UNCENSORED_E2B_WEIGHTS
                 : LocalModelPolicy.GEMMA_E4B.equals(id) ? 3659530240L : 2588147712L;
         long overhead = LocalModelPolicy.PRIMARY.equals(id) ? 1024 * MIB : 512 * MIB;
         if (contextTokens == GgufContextPolicy.COMPACT) {

@@ -18,6 +18,11 @@ object LocalModelPolicy {
      */
     const val UNCENSORED = "Gemma 4 E4B sin censura"
     const val UNCENSORED_FILE = "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_M-45b6a33.gguf"
+    /** El pequeño sin censura: Gemma 4 E2B (GGUF Q4_K_P, 3,45 GB). Los dos únicos modelos que se descargan. */
+    const val UNCENSORED_E2B = "Gemma 4 E2B sin censura"
+    const val UNCENSORED_E2B_FILE = "Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-Q4_K_P-da8593c.gguf"
+    @JvmStatic fun isUncensored(id: String?): Boolean = id == UNCENSORED || id == UNCENSORED_E2B
+    @JvmStatic fun uncensoredFile(id: String): String = if (id == UNCENSORED_E2B) UNCENSORED_E2B_FILE else UNCENSORED_FILE
     const val FAILURE_KEY = "dolphin_failure" // preserved for upgrades from the 3B-only app
     const val LARGE_FAILURE_KEY = "dolphin_8b_failure"
     const val PENDING_KEY = "local_fallback_from"
@@ -33,11 +38,14 @@ object LocalModelPolicy {
             "gemma-4-E2B-it-6e5c4f1.litertlm" -> FALLBACK
             "gemma-4-E4B-it-2eee7ac.litertlm" -> GEMMA_E4B
             UNCENSORED_FILE -> UNCENSORED
+            UNCENSORED_E2B_FILE -> UNCENSORED_E2B
             else -> null
         }
     }
     @JvmStatic fun isDolphin(path: String?): Boolean = idForPath(path) in listOf(PRIMARY, LIGHT)
     /** Los Qwen 3.5 que se descargaban antes: sustituidos por Gemma 4 E4B sin censura, se borran. */
+    /** El Gemma 4 E4B normal (LiteRT, 3,66 GB): sustituido por el sin censura, se borra si no está en uso. */
+    @JvmStatic fun isRetiredNormalE4b(name: String?): Boolean = name != null && name.startsWith("gemma-4-E4B-it-")
     @JvmStatic fun isRetiredQwen(name: String?): Boolean =
         name != null && name.startsWith("Qwen3.5-") && name.contains("Uncensored-HauhauCS")
     @JvmStatic fun isLarge(path: String?): Boolean = idForPath(path) == PRIMARY

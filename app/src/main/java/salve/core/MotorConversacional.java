@@ -1815,42 +1815,14 @@ public class MotorConversacional {
      * pida otro; elegir E2B a mano además apaga la mejora automática a E4B.
      */
     private String cambioDeModelo(String input) {
-        String t = java.text.Normalizer.normalize(input == null ? "" : input.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "").replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
         salve.core.voice.ModelSwitchCommand.Target target = salve.core.voice.ModelSwitchCommand.parse(input);
-        if (target != null) {
-            String active = LocalModelPolicy.idForPath(SalveLLM.getInstance(context).activeModelPath());
-            String wanted = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? LocalModelPolicy.FALLBACK
-                    : target == salve.core.voice.ModelSwitchCommand.Target.E4B ? LocalModelPolicy.GEMMA_E4B
-                    : LocalModelPolicy.UNCENSORED;
-            if (wanted.equals(active))
-                return "Ya estoy usando " + salve.core.voice.ModelSwitchCommand.label(target)
-                        + ". Me quedo con él hasta que me pidas otro.";
-            if (target == salve.core.voice.ModelSwitchCommand.Target.UNCENSORED) return cambioASinCensura();
-            // El mismo camino que la frase exacta de siempre.
-            t = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? "usa gemma 4 e2b" : "usa gemma 4 e4b";
-        }
-        if (t.matches("(salve )?(descarga|instala|cambia a|usa|pasa a|activa) (el modelo )?gemma 4 e4b( por favor)?")) {
-            java.io.File existing = new java.io.File(ModelStore.dir(context), "gemma-4-E4B-it-2eee7ac.litertlm");
-            salve.work.ModelDownloadWorker.enqueueOptional(context, LocalModelPolicy.GEMMA_E4B);
-            return existing.isFile()
-                    ? "Voy a activar Gemma 4 E4B y comprobar que responde. Si no cabe en la RAM, vuelvo al modelo actual."
-                    : "Descargaré Gemma 4 E4B (3,4 GiB) cuando haya Wi-Fi, lo verificaré y lo activaré. Razona y ve mejor que E2B, "
-                    + "pero necesita más RAM: si no cabe al cargarlo, conservo el modelo actual. Verás el progreso en la notificación.";
-        }
-        if (t.matches("(salve )?(vuelve a|cambia a|usa|pasa a|activa) (el modelo )?gemma 4 e2b( por favor)?")) {
-            java.io.File e2b = new java.io.File(ModelStore.dir(context), "gemma-4-E2B-it-6e5c4f1.litertlm");
-            if (!e2b.isFile()) return "No tengo Gemma 4 E2B descargado en esta instalación.";
-            AutoModelUpgrade.declined(context);
-            new Thread(() -> {
-                ModelResult result = SalveLLM.getInstance(context).activateDownloadedModel(e2b.getAbsolutePath(), true, () -> false);
-                hablar(result.isSuccess()
-                        ? "Ya uso Gemma 4 E2B: respondo más rápido. Me quedo con él aunque cierres la app, hasta que me digas «usa el modelo grande»."
-                        : "No pude activar Gemma 4 E2B: " + result.getError());
-            }, "salve-model-switch").start();
-            return "Cambiando a Gemma 4 E2B… tardo unos segundos en cargarlo.";
-        }
-        return null;
+        if (target == null) return null;
+        String wanted = target == salve.core.voice.ModelSwitchCommand.Target.E2B
+                ? LocalModelPolicy.UNCENSORED_E2B : LocalModelPolicy.UNCENSORED;
+        String active = LocalModelPolicy.idForPath(SalveLLM.getInstance(context).activeModelPath());
+        if (wanted.equals(active))
+            return "Ya estoy usando " + wanted + ". Me quedo con él hasta que me pidas otro.";
+        return cambioASinCensura(wanted);
     }
 
     /**
@@ -1899,27 +1871,29 @@ public class MotorConversacional {
     }
 
     /**
-     * Gemma 4 E4B sin censura (GGUF, motor llama.cpp; por la gráfica si puede). Si ya está descargado se
-     * carga «sí o sí»: varios intentos dejando que Android libere memoria; si aun así no entra, se queda
-     * el modelo anterior. Si no, se descarga con Wi-Fi (archivo fijado y verificado por SHA-256) y se activa.
+     * Gemma 4 E2B o E4B sin censura (GGUF, motor llama.cpp; por la gráfica si puede). Si ya está
+     * descargado se carga «sí o sí»: varios intentos dejando que Android libere memoria; si aun así no
+     * entra, se queda el modelo anterior. Si no, se descarga con Wi-Fi (archivo fijado y verificado por
+     * SHA-256) y se activa. La elección se guarda y sigue al volver a abrir la app.
      */
-    private String cambioASinCensura() {
-        String name = LocalModelPolicy.UNCENSORED;
-        java.io.File model = new java.io.File(ModelStore.dir(context), LocalModelPolicy.UNCENSORED_FILE);
+    private String cambioASinCensura(String id) {
+        boolean small = LocalModelPolicy.UNCENSORED_E2B.equals(id);
+        String other = small ? "«usa el modelo Gemma 4 E4B»" : "«usa el modelo Gemma 4 E2B»";
+        java.io.File model = new java.io.File(ModelStore.dir(context), LocalModelPolicy.uncensoredFile(id));
         if (!model.isFile()) {
-            salve.work.ModelDownloadWorker.enqueueOptional(context, LocalModelPolicy.UNCENSORED);
-            return "Descargo " + name + " (5,3 GB) en cuanto haya Wi-Fi, compruebo que es el archivo exacto y lo activo; "
-                    + "verás el progreso en la notificación. Para volver: «usa el modelo Gemma 4 E2B».";
+            salve.work.ModelDownloadWorker.enqueueOptional(context, id);
+            return "Descargo " + id + " (" + (small ? "3,5" : "5,3") + " GB) en cuanto haya Wi-Fi, compruebo que es el archivo exacto y lo activo; "
+                    + "verás el progreso en la notificación. Para cambiar al otro: " + other + ".";
         }
         new Thread(() -> {
             ModelResult result = ModelActivationRetry.run(
                     () -> SalveLLM.getInstance(context).activateDownloadedModel(model.getAbsolutePath(), false, () -> false),
                     () -> closed);
             hablar(result.isSuccess()
-                    ? "Ya uso " + name + ". Me quedo con él aunque cierres la app; para volver, dime «usa el modelo Gemma 4 E2B»."
-                    : "No pude cargar " + name + " (" + result.getError() + "). Sigo con el modelo anterior.");
+                    ? "Ya uso " + id + ". Me quedo con él aunque cierres la app; para cambiar al otro: " + other + "."
+                    : "No pude cargar " + id + " (" + result.getError() + "). Sigo con el modelo anterior.");
         }, "salve-model-switch").start();
-        return "Cargando " + name + "… la primera vez tarda más porque prepara la gráfica.";
+        return "Cargando " + id + "… la primera vez tarda más porque prepara la gráfica.";
     }
 
     private static boolean pideFotoEnLaNube(String input) {

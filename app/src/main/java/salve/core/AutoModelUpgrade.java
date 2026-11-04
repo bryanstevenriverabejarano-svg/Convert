@@ -5,10 +5,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 /**
- * En móviles con RAM de sobra (10 GiB o más, p. ej. Galaxy S24 Ultra), Salve pasa sola de Gemma 4 E2B
- * a Gemma 4 E4B: entiende mejor, ve mejor y usa herramientas mejor. Se hace una sola vez, solo con
- * Wi-Fi, y con la misma red de seguridad que el cambio manual: si E4B no carga o no responde, se
- * conserva el modelo anterior. Si Bryan pide volver a E2B, se respeta y no se vuelve a intentar.
+ * En móviles con RAM de sobra (10 GiB o más, p. ej. Galaxy S24 Ultra), Salve descarga y activa sola,
+ * una vez y con Wi-Fi, Gemma 4 E4B sin censura. Si no carga o no responde, se conserva el modelo
+ * anterior. El Gemma 4 E4B normal ya no se descarga: solo los dos sin censura (E2B y E4B).
  */
 public final class AutoModelUpgrade {
     static final long GIB = 1024L * 1024L * 1024L;
@@ -22,14 +21,9 @@ public final class AutoModelUpgrade {
 
     private AutoModelUpgrade() { }
 
-    /** Decisión pura (testable): ¿toca pasar a E4B automáticamente? */
-    static boolean shouldUpgrade(long totalRamBytes, String activeModelId, boolean attempted, boolean declined) {
-        return totalRamBytes >= MIN_TOTAL_RAM && LocalModelPolicy.FALLBACK.equals(activeModelId) && !attempted && !declined;
-    }
-
     /** ¿Toca descargar y activar Gemma 4 E4B sin censura sola? Una vez, en móviles con RAM de sobra. */
     static boolean shouldGetUncensored(long totalRamBytes, String activeModelId, boolean attempted) {
-        return totalRamBytes >= MIN_TOTAL_RAM && !LocalModelPolicy.UNCENSORED.equals(activeModelId) && !attempted;
+        return totalRamBytes >= MIN_TOTAL_RAM && !LocalModelPolicy.isUncensored(activeModelId) && !attempted;
     }
 
     /** Llamar al arrancar y tras preparar el modelo por defecto. No hace nada si no procede. */
@@ -40,12 +34,8 @@ public final class AutoModelUpgrade {
             if (shouldGetUncensored(totalRam(context), active, prefs.getBoolean(UNCENSORED_KEY, false))) {
                 prefs.edit().putBoolean(UNCENSORED_KEY, true).putBoolean(ATTEMPTED_KEY, true).apply();
                 salve.work.ModelDownloadWorker.enqueueOptionalAfterCurrent(context, LocalModelPolicy.UNCENSORED);
-                return;
             }
-            if (!shouldUpgrade(totalRam(context), active, prefs.getBoolean(ATTEMPTED_KEY, false), prefs.getBoolean(DECLINED_KEY, false)))
-                return;
-            prefs.edit().putBoolean(ATTEMPTED_KEY, true).apply();
-            salve.work.ModelDownloadWorker.enqueueOptionalAfterCurrent(context, LocalModelPolicy.GEMMA_E4B);
+            // Ya no se descarga el Gemma 4 E4B normal: solo los dos sin censura.
         } catch (RuntimeException unavailable) { /* se intentará en el próximo arranque */ }
     }
 

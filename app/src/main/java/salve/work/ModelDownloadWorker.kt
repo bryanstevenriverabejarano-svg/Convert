@@ -97,7 +97,7 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
             val result = withContext(Dispatchers.IO) {
                 val llm = salve.core.SalveLLM.getInstance(applicationContext)
                 // El modelo sin censura se carga «sí o sí»: si falta memoria, espera a que Android la libere y reintenta.
-                if (id == salve.core.LocalModelPolicy.UNCENSORED)
+                if (salve.core.LocalModelPolicy.isUncensored(id))
                     salve.core.ModelActivationRetry.run(
                         { llm.activateDownloadedModel(file.file.absolutePath, file.supportsVision) { isStopped } },
                         { isStopped })

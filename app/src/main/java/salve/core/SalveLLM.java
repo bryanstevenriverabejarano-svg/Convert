@@ -604,7 +604,9 @@ public class SalveLLM {
             String name = file.getName();
             // Los Qwen 3.5 (2,7 y 5,6 GB) se sustituyeron por Gemma 4 E4B sin censura: también se borran,
             // incluidas descargas a medias.
-            boolean retired = (name.startsWith("Dolphin3.0-") && !dolphinActive) || LocalModelPolicy.isRetiredQwen(name);
+            // El Gemma 4 E4B normal también: ahora solo se descargan los dos Gemma sin censura.
+            boolean retired = (name.startsWith("Dolphin3.0-") && !dolphinActive) || LocalModelPolicy.isRetiredQwen(name)
+                    || LocalModelPolicy.isRetiredNormalE4b(name);
             if (!retired || file.getAbsolutePath().equals(active)) continue;
             long size = file.length();
             if (file.delete()) freed += size;
