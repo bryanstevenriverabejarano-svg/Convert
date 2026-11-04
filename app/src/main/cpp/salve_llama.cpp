@@ -76,20 +76,34 @@ void error(JNIEnv *env, const char *type, const std::exception &e) {
 }
 std::once_flag backend;
 bool opencl_tried = false;
-bool gpu_active = false; // el modelo cargado tiene sus capas en la gráfica
+bool hexagon_tried = false;
+bool gpu_active = false; // solamente OpenCL, no Hexagon
+bool npu_active = false; // confirmado tras carga y warm-up en Hexagon
 std::string last_stats;  // medida de la última respuesta: dónde se alarga (leer o escribir)
 
 // Motores de ggml como módulos aparte (GGML_BACKEND_DL): si la gráfica no carga, el procesador sigue.
-void load_backends(bool gpu, const std::string &cache) {
+void load_backends(bool npu, bool gpu, const std::string &cache, const std::string &native_dir) {
     std::call_once(backend, [] {
         if (!ggml_backend_reg_by_name("CPU")) ggml_backend_load("libggml-cpu.so");
         llama_backend_init();
     });
-    if (!gpu || opencl_tried) return;
-    opencl_tried = true;
-    // Los kernels OpenCL se compilan la primera vez (tarda); después se leen de esta caché.
-    if (!cache.empty()) setenv("GGML_OPENCL_KERNEL_CACHE_DIR", cache.c_str(), 1);
-    if (!ggml_backend_reg_by_name("OpenCL")) ggml_backend_load("libggml-opencl.so");
+    if (npu && !hexagon_tried) {
+        hexagon_tried = true;
+        // Android's Hexagon DSP side looks for libggml-htp-v75.so via FastRPC.
+        // Never set an untrusted path: native_dir comes from ApplicationInfo.nativeLibraryDir.
+        if (!native_dir.empty()) {
+            const char *existing = getenv("ADSP_LIBRARY_PATH");
+            std::string paths = native_dir;
+            if (existing && *existing) paths += ";" + std::string(existing);
+            setenv("ADSP_LIBRARY_PATH", paths.c_str(), 1);
+        }
+        if (!ggml_backend_reg_by_name("HTP")) ggml_backend_load("libggml-hexagon.so");
+    }
+    if (gpu && !opencl_tried) {
+        opencl_tried = true;
+        if (!cache.empty()) setenv("GGML_OPENCL_KERNEL_CACHE_DIR", cache.c_str(), 1);
+        if (!ggml_backend_reg_by_name("OpenCL")) ggml_backend_load("libggml-opencl.so");
+    }
 }
 
 // Prueba real en la gráfica (leer unos tokens y escribir uno) DENTRO de la carga, que tiene más margen:
@@ -118,12 +132,10 @@ bool warm_up(llama_model *model, R &request) {
     } catch (const std::exception &) { return false; }
 }
 
-ggml_backend_dev_t gpu_device() {
-    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
-        auto *dev = ggml_backend_dev_get(i);
-        if (ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_GPU) return dev;
-    }
-    return nullptr;
+ggml_backend_dev_t named_device(const char *registration) {
+    // Hexagon advertises DEVICE_TYPE_GPU; selecting only by type would confuse NPU and Adreno.
+    auto *reg = ggml_backend_reg_by_name(registration);
+    return reg ? ggml_backend_reg_dev_get(reg, 0) : nullptr;
 }
 
 // Adaptador LoRA personal activo (entrenado fuera del móvil con recuerdos consolidados).
@@ -133,16 +145,21 @@ float active_scale = 0.0f;
 }
 
 extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
-        JNIEnv *env, jclass, jbyteArray path, jboolean allowGpu, jbyteArray cacheDir, jobject cancelled) {
+        JNIEnv *env, jclass, jbyteArray path, jboolean allowNpu, jboolean allowGpu,
+        jbyteArray cacheDir, jbyteArray nativeLibDir, jobject cancelled) {
     try {
         gpu_active = false;
-        load_backends(allowGpu, cacheDir ? bytes(env, cacheDir) : std::string());
+        npu_active = false;
+        load_backends(allowNpu, allowGpu,
+                      cacheDir ? bytes(env, cacheDir) : std::string(),
+                      nativeLibDir ? bytes(env, nativeLibDir) : std::string());
         Request request(env, cancelled);
         // Con gráfica, la primera carga también compila los kernels: más margen que 120 s.
-        if (allowGpu) request.deadline = Clock::now() + std::chrono::seconds(300);
+        if (allowGpu || allowNpu) request.deadline = Clock::now() + std::chrono::seconds(300);
         request.check();
         std::string file = bytes(env, path);
-        ggml_backend_dev_t gpu = allowGpu ? gpu_device() : nullptr;
+        ggml_backend_dev_t npu = allowNpu ? named_device("HTP") : nullptr;
+        ggml_backend_dev_t gpu = allowGpu ? named_device("OpenCL") : nullptr;
         auto attempt = [&](ggml_backend_dev_t device) {
             auto params = llama_model_default_params();
             ggml_backend_dev_t devices[] = {device, nullptr}; // {nullptr}: solo procesador
@@ -153,22 +170,31 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
             params.progress_callback_user_data = &request;
             return llama_model_load_from_file(file.c_str(), params);
         };
-        llama_model *loaded = gpu ? attempt(gpu) : nullptr;
-        if (loaded && !warm_up(loaded, request)) { // la gráfica cargó pero no sabe calcular: procesador
+        llama_model *loaded = npu ? attempt(npu) : nullptr;
+        if (loaded && !warm_up(loaded, request)) {
             llama_model_free(loaded);
             loaded = nullptr;
         }
-        if (loaded) gpu_active = true;
+        if (loaded) npu_active = true;
         else {
             request.check();
-            loaded = attempt(nullptr); // sin gráfica, o la gráfica no pudo: procesador
+            loaded = gpu ? attempt(gpu) : nullptr;
+            if (loaded && !warm_up(loaded, request)) {
+                llama_model_free(loaded);
+                loaded = nullptr;
+            }
+            if (loaded) gpu_active = true;
+            else {
+                request.check();
+                loaded = attempt(nullptr);
+            }
         }
         std::unique_ptr<llama_model, decltype(&llama_model_free)> model(loaded, llama_model_free);
         request.check();
         if (!model) throw std::runtime_error("No se pudo cargar el archivo GGUF");
         return reinterpret_cast<jlong>(model.release());
-    } catch (const Cancelled &e) { gpu_active = false; error(env, "java/util/concurrent/CancellationException", e); }
-      catch (const std::exception &e) { gpu_active = false; error(env, "java/lang/IllegalStateException", e); }
+    } catch (const Cancelled &e) { gpu_active = false; npu_active = false; error(env, "java/util/concurrent/CancellationException", e); }
+      catch (const std::exception &e) { gpu_active = false; npu_active = false; error(env, "java/lang/IllegalStateException", e); }
     return 0;
 }
 
@@ -178,6 +204,9 @@ extern "C" JNIEXPORT jstring JNICALL Java_salve_core_GgufLlm_lastStats(JNIEnv *e
 
 extern "C" JNIEXPORT jboolean JNICALL Java_salve_core_GgufLlm_gpuActive(JNIEnv *, jclass) {
     return gpu_active ? JNI_TRUE : JNI_FALSE;
+}
+extern "C" JNIEXPORT jboolean JNICALL Java_salve_core_GgufLlm_npuActive(JNIEnv *, jclass) {
+    return npu_active ? JNI_TRUE : JNI_FALSE;
 }
 
 // Ojos (y oídos) de los Gemma 4 sin censura: el «mmproj» que convierte una foto en tokens para el modelo.
@@ -313,7 +342,7 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         auto stats = [&]() {
             char text[200];
             std::snprintf(text, sizeof(text), "%s: leyó %d tokens en %.1f s; escribió %d en %.1f s",
-                          gpu_active ? "gráfica" : "procesador", count, prefill, written,
+                          npu_active ? "NPU Hexagon" : gpu_active ? "gráfica" : "procesador", count, prefill, written,
                           prefill > 0 ? seconds(started) - prefill : 0.0);
             last_stats = text;
             return last_stats;
@@ -443,5 +472,6 @@ extern "C" JNIEXPORT void JNICALL Java_salve_core_GgufLlm_release(JNIEnv *, jcla
     active_adapter = nullptr;
     active_scale = 0.0f;
     gpu_active = false;
+    npu_active = false;
     llama_model_free(reinterpret_cast<llama_model *>(handle));
 }
