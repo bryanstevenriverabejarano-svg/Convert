@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Cabeceras
         run: |
-          for Q in Q4_K_M IQ4_XS Q3_K_M; do
+          for Q in Q4_K_M; do
             URL="https://huggingface.co/HauhauCS/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive/resolve/main/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-$Q.gguf"
             echo "== $Q"; curl -sSI "$URL" | grep -iE "^(HTTP|x-linked-size|x-linked-etag|x-repo-commit):" || true
           done
@@ -39,5 +39,5 @@ jobs:
                   print(k, "=", v)
               if k == "tokenizer.chat_template":
                   print("enable_thinking en plantilla:", "enable_thinking" in v)
-                  i = v.find("enable_thinking"); print("TPL_LEN", len(v)); print(repr(v[max(0,i-300):i+600]) if i >= 0 else repr(v[-900:]))
+                  print("TPL_BEGIN"); print(v); print("TPL_END")
           PY
