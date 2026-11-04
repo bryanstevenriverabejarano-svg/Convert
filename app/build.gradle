@@ -4,22 +4,37 @@ plugins {
 }
 
 // Keep multi-GB language model weights out of APKs, including future accidental additions.
+// The Qualcomm toolchain builds the two Hexagon libraries from the *pinned* llama.cpp
+// submodule. Gradle packages those prebuilt artifacts; it does not need proprietary
+// Hexagon compilers in the normal Android SDK or on every pull request.
 def enableHexagon = System.getenv('SALVE_ENABLE_HEXAGON') == '1'
 def hexagonSkel = System.getenv('SALVE_HEXAGON_SKEL_V75')
+def hexagonHost = System.getenv('SALVE_HEXAGON_ARM64_LIB')
 def hexagonAssets = layout.buildDirectory.dir('generated/hexagon-assets')
+def hexagonJni = layout.buildDirectory.dir('generated/hexagon-jni')
 if (enableHexagon) {
-    // A DSP .so is not an ARM64 JNI library. Package it as an asset for FastRPC.
-    def stageHexagonSkel = tasks.register('stageHexagonSkel', Copy) {
-        doFirst {
-            if (!hexagonSkel || !file(hexagonSkel).isFile()) {
-                throw new GradleException('SALVE_HEXAGON_SKEL_V75 debe apuntar al libggml-htp-v75.so compilado del mismo commit de llama.cpp')
+    def stageHexagonLibraries = tasks.register('stageHexagonLibraries') {
+        inputs.property('hexagon-variant', 'v75')
+        outputs.dir(hexagonAssets)
+        outputs.dir(hexagonJni)
+        doLast {
+            if (!hexagonSkel || !file(hexagonSkel).isFile() || !hexagonHost || !file(hexagonHost).isFile()) {
+                throw new GradleException('Hexagon requiere SALVE_HEXAGON_SKEL_V75 y SALVE_HEXAGON_ARM64_LIB, ambos compilados del submódulo fijado')
             }
+            def hostFile = file(hexagonHost)
+            def skelFile = file(hexagonSkel)
+            if (hostFile.length() < 4096L || skelFile.length() < 4096L) {
+                throw new GradleException('Bibliotecas Hexagon ausentes o incompletas')
+            }
+            def hostDest = hexagonJni.get().file('arm64-v8a/libggml-hexagon.so').asFile
+            def dspDest = hexagonAssets.get().file('hexagon/libggml-htp-v75.so').asFile
+            hostDest.parentFile.mkdirs()
+            dspDest.parentFile.mkdirs()
+            java.nio.file.Files.copy(hostFile.toPath(), hostDest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            java.nio.file.Files.copy(skelFile.toPath(), dspDest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
         }
-        from({ hexagonSkel ? file(hexagonSkel) : files() })
-        into(hexagonAssets.get().dir('hexagon').asFile)
-        rename { 'libggml-htp-v75.so' }
     }
-    tasks.named('preBuild').configure { dependsOn(stageHexagonSkel) }
+    tasks.named('preBuild').configure { dependsOn(stageHexagonLibraries) }
 }
 
 def verifyExternalLlmWeights = tasks.register('verifyExternalLlmWeights') {
@@ -124,16 +139,9 @@ android {
             cmake {
                 // c++_shared: llama.cpp y ggml son ahora varias .so (motor de procesador y de gráfica por separado).
                 arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
-                if (enableHexagon) {
-                    def sdk = System.getenv('HEXAGON_SDK_ROOT')
-                    if (!sdk) throw new GradleException('HEXAGON_SDK_ROOT es obligatorio en builds Hexagon')
-                    arguments "-DSALVE_HEXAGON=ON", "-DHEXAGON_SDK_ROOT=${sdk}"
-                }
                 // Build only app JNI libraries, not SentencePiece's desktop training/CLI tools.
                 // ggml-cpu y ggml-opencl se abren en tiempo de ejecución, así que hay que pedirlos aquí.
-                def nativeTargets = ["salve_llama", "salve_sentencepiece", "llama", "ggml", "ggml-base", "ggml-cpu", "ggml-opencl", "mtmd"]
-                if (enableHexagon) nativeTargets.add("ggml-hexagon")
-                targets(*nativeTargets)
+                targets "salve_llama", "salve_sentencepiece", "llama", "ggml", "ggml-base", "ggml-cpu", "ggml-opencl", "mtmd"
             }
         }
 
@@ -204,7 +212,10 @@ android {
     sourceSets {
         test.resources.srcDir("$projectDir/schemas")
         main.assets.srcDir(selfCodeDir.get().asFile)
-        if (enableHexagon) main.assets.srcDir(hexagonAssets.get().asFile)
+        if (enableHexagon) {
+            main.assets.srcDir(hexagonAssets.get().asFile)
+            main.jniLibs.srcDir(hexagonJni.get().asFile)
+        }
     }
 
     packagingOptions {
