@@ -24,6 +24,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/salve-hexagon-npu-s24'
     runs-on: ubuntu-24.04
     timeout-minutes: 65
+    permissions:
+      contents: write # solo para publicar la descarga directa de prueba (nunca toca salve-ultima)
     steps:
       - name: Checkout pinned source and submodules
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -132,3 +134,21 @@ jobs:
             app/build/outputs/apk/preview/app-preview.apk.sha256
           if-no-files-found: error
           retention-days: 2
+
+      # Desde el móvil no se pueden bajar los artefactos de Actions (y llegan en .zip): se publica
+      # también como prerelease con enlace fijo. No es «latest» y no pisa la release normal.
+      - name: Publish direct download for the phone
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/preview/app-preview.apk dist/salve-hexagon-arm64.apk
+          (cd dist && sha256sum salve-hexagon-arm64.apk > SHA256SUMS.txt)
+          short="${GITHUB_SHA::7}"
+          gh release delete salve-hexagon-prueba --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes 2>/dev/null || true
+          gh release create salve-hexagon-prueba dist/salve-hexagon-arm64.apk dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "Salve · prueba NPU Hexagon (${short})" \
+            --notes "APK experimental con NPU Hexagon v75 para el Galaxy S24 Ultra. Se instala como app aparte (.preview). No es la versión normal: esa sigue en salve-ultima."
+          echo "Publicada: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/salve-hexagon-prueba/salve-hexagon-arm64.apk"
