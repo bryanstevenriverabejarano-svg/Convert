@@ -17,6 +17,8 @@ public final class AutoModelUpgrade {
     static final String PREFS = "salve_prefs";
     static final String ATTEMPTED_KEY = "auto_e4b_attempted";
     static final String DECLINED_KEY = "auto_e4b_declined";
+    /** Una sola vez: Bryan pidió que el modelo sin censura se descargue y active solo. */
+    static final String UNCENSORED_KEY = "auto_uncensored_attempted";
 
     private AutoModelUpgrade() { }
 
@@ -25,11 +27,21 @@ public final class AutoModelUpgrade {
         return totalRamBytes >= MIN_TOTAL_RAM && LocalModelPolicy.FALLBACK.equals(activeModelId) && !attempted && !declined;
     }
 
+    /** ¿Toca descargar y activar Gemma 4 E4B sin censura sola? Una vez, en móviles con RAM de sobra. */
+    static boolean shouldGetUncensored(long totalRamBytes, String activeModelId, boolean attempted) {
+        return totalRamBytes >= MIN_TOTAL_RAM && !LocalModelPolicy.UNCENSORED.equals(activeModelId) && !attempted;
+    }
+
     /** Llamar al arrancar y tras preparar el modelo por defecto. No hace nada si no procede. */
     public static void maybeUpgrade(Context context) {
         try {
             SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
             String active = LocalModelPolicy.idForPath(SalveLLM.getInstance(context).activeModelPath());
+            if (shouldGetUncensored(totalRam(context), active, prefs.getBoolean(UNCENSORED_KEY, false))) {
+                prefs.edit().putBoolean(UNCENSORED_KEY, true).putBoolean(ATTEMPTED_KEY, true).apply();
+                salve.work.ModelDownloadWorker.enqueueOptionalAfterCurrent(context, LocalModelPolicy.UNCENSORED);
+                return;
+            }
             if (!shouldUpgrade(totalRam(context), active, prefs.getBoolean(ATTEMPTED_KEY, false), prefs.getBoolean(DECLINED_KEY, false)))
                 return;
             prefs.edit().putBoolean(ATTEMPTED_KEY, true).apply();

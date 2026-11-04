@@ -196,16 +196,31 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         };
         const char *chatTemplate = llama_model_chat_template(model, nullptr);
         if (!chatTemplate) throw std::invalid_argument("El GGUF no declara una plantilla de conversación");
-        int length = llama_chat_apply_template(chatTemplate, messages, 2, true, nullptr, 0);
-        if (length <= 0) throw std::invalid_argument("Plantilla GGUF no compatible");
-        std::vector<char> formatted(length + 1);
-        length = llama_chat_apply_template(chatTemplate, messages, 2, true, formatted.data(), formatted.size());
-        std::string prompt(formatted.data(), length);
-        // Modelos que «piensan» (Qwen 3 / 3.5…): su propia plantilla, con enable_thinking=false, abre y
-        // cierra un pensamiento vacío. Así contestan directo, antes, y sin gastar los tokens de respuesta.
-        if (std::string(chatTemplate).find("enable_thinking") != std::string::npos)
-            prompt += "<think>\n\n</think>\n\n";
-        length = static_cast<int>(prompt.size());
+        const std::string templateText(chatTemplate);
+        std::string prompt;
+        if (templateText.find("<|turn>") != std::string::npos) {
+            // Gemma 4: llama.cpp no la reconoce sin jinja. Mismo formato que su plantilla con
+            // enable_thinking desactivado (el BOS lo pone el tokenizador).
+            auto trim = [](std::string v) {
+                const char *space = " \t\r\n";
+                auto first = v.find_first_not_of(space);
+                if (first == std::string::npos) return std::string();
+                return v.substr(first, v.find_last_not_of(space) - first + 1);
+            };
+            prompt = "<|turn>system\n" + trim(system) + "<turn|>\n<|turn>user\n" + trim(content)
+                    + "<turn|>\n<|turn>model\n";
+        } else {
+            int length = llama_chat_apply_template(chatTemplate, messages, 2, true, nullptr, 0);
+            if (length <= 0) throw std::invalid_argument("Plantilla GGUF no compatible");
+            std::vector<char> formatted(length + 1);
+            length = llama_chat_apply_template(chatTemplate, messages, 2, true, formatted.data(), formatted.size());
+            prompt.assign(formatted.data(), length);
+            // Modelos que «piensan» con <think> (Qwen 3 / 3.5…): su plantilla, con enable_thinking=false,
+            // abre y cierra un pensamiento vacío. Así contestan directo y sin gastar los tokens de respuesta.
+            if (templateText.find("enable_thinking") != std::string::npos && templateText.find("<think>") != std::string::npos)
+                prompt += "<think>\n\n</think>\n\n";
+        }
+        int length = static_cast<int>(prompt.size());
         int count = -llama_tokenize(vocab, prompt.data(), length, nullptr, 0, true, true);
         const int outputTokens = repair ? 256 : 512;
         const int batchSize = contextSize == 2048 ? 128 : 256;
@@ -313,10 +328,12 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             llama_token token = sample();
             if (llama_vocab_is_eog(vocab, token)) break;
             char local[256];
-            int size = llama_token_to_piece(vocab, token, local, sizeof(local), 0, false);
+            // special=true: así se ven las marcas de «pensamiento» (<|channel>…<channel|> en Gemma 4)
+            // y ThinkingFilter puede quitar ese bloque entero en vez de dejar su texto suelto.
+            int size = llama_token_to_piece(vocab, token, local, sizeof(local), 0, true);
             if (size < 0) {
                 std::vector<char> piece(-size);
-                size = llama_token_to_piece(vocab, token, piece.data(), piece.size(), 0, false);
+                size = llama_token_to_piece(vocab, token, piece.data(), piece.size(), 0, true);
                 if (size < 0) throw std::runtime_error("Token GGUF inválido");
                 output.append(piece.data(), size);
             } else output.append(local, size);
