@@ -11,8 +11,12 @@ import java.util.regex.Pattern;
  * confundirlo con una pregunta («¿qué tal funciona gemma 4 e2b?»). Lógica pura para pruebas JVM.
  */
 public final class ModelSwitchCommand {
-    /** UNCENSORED = Gemma 4 E4B sin censura (GGUF). Sustituye a los Qwen: decir «Qwen» también lleva aquí. */
-    public enum Target { E2B, E4B, UNCENSORED }
+    /**
+     * Solo hay dos modelos para elegir, los dos sin censura (GGUF): E2B (pequeño y rápido) y E4B (más
+     * listo). «Gemma 4 E2B», «el modelo rápido» → E2B; «Gemma 4 E4B», «el grande», «sin censura» o
+     * «Qwen» (al que sustituyen) → E4B.
+     */
+    public enum Target { E2B, E4B }
 
     private static final Pattern VERB = Pattern.compile(
             "^(?:quiero que |a partir de ahora |de ahora en adelante )?(?:usa|uses|utiliza|utilices|cambia|cambiate|"
@@ -34,21 +38,20 @@ public final class ModelSwitchCommand {
     public static Target parse(String input) {
         String text = normalize(input);
         if (text.isEmpty() || text.split(" ").length > MAX_WORDS || !VERB.matcher(text).matches()) return null;
-        if (QWEN.matcher(text).find() || UNCENSORED.matcher(text).find()) return Target.UNCENSORED;
+        boolean uncensored = QWEN.matcher(text).find() || UNCENSORED.matcher(text).find();
         if (LIGHT.matcher(text).find()) return Target.E2B;
         if (LARGE.matcher(text).find()) return Target.E4B;
         String compact = text.replace("cuatro", "4").replace(" dos ", " 2 ").replaceAll(" dos$", " 2")
                 .replace(" de ", " ").replace(" ", "");
         // «gemma 4 e4b» compacta a «gemma4e4b»; «gemma 42b» a «gemma42b» (E2B).
         boolean e4 = NAME_E4B.matcher(compact).find(), e2 = NAME_E2B.matcher(compact).find();
-        if (e2 == e4) return null; // ninguno, o los dos («cambia de e2b a e4b»: que lo diga claro)
+        if (e2 == e4) return uncensored && !e2 ? Target.E4B : null; // ninguno, o los dos («cambia de e2b a e4b»: que lo diga claro)
         return e2 ? Target.E2B : Target.E4B;
     }
 
     public static String label(Target target) {
         switch (target) {
-            case E2B: return "Gemma 4 E2B";
-            case E4B: return "Gemma 4 E4B";
+            case E2B: return "Gemma 4 E2B sin censura";
             default: return "Gemma 4 E4B sin censura";
         }
     }

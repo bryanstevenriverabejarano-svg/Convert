@@ -1,14 +1,14 @@
 {
   "items": [
     {
-      "id": "Gemma 4 E4B",
-      "url": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/2eee7ac325f20eb8c9ac1d0e972f7c84663062da/gemma-4-E4B-it.litertlm?download=true",
-      "filename": "gemma-4-E4B-it-2eee7ac.litertlm",
-      "sizeBytes": 3659530240,
-      "sha256": "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0",
-      "supportsVision": true,
+      "id": "Gemma 4 E2B sin censura",
+      "url": "https://huggingface.co/HauhauCS/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive/resolve/da8593c3e407afcd3e7da94ff2d69d77e2a28a48/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf?download=true",
+      "filename": "Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-Q4_K_P-da8593c.gguf",
+      "sizeBytes": 3450277824,
+      "sha256": "aa866c1e514468f3d0f33971679d63c11b7c9c47acddd1cc5785fc467e52c21d",
+      "supportsVision": false,
       "license": "Apache-2.0",
-      "modelCard": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm"
+      "modelCard": "https://huggingface.co/HauhauCS/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive"
     },
     {
       "id": "Gemma 4 E4B sin censura",

@@ -33,6 +33,10 @@ public class ModelMemoryPolicyTest {
         assertTrue(LocalModelPolicy.isRetiredQwen("Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M-0a41c68.gguf"));
         assertTrue(LocalModelPolicy.isRetiredQwen("Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M-c09cdbc.gguf.part"));
         assertFalse(LocalModelPolicy.isRetiredQwen(LocalModelPolicy.UNCENSORED_FILE));
+        assertTrue(LocalModelPolicy.isRetiredNormalE4b("gemma-4-E4B-it-2eee7ac.litertlm"));
+        assertFalse("el E2B normal es el respaldo de emergencia", LocalModelPolicy.isRetiredNormalE4b("gemma-4-E2B-it-6e5c4f1.litertlm"));
+        assertEquals(LocalModelPolicy.UNCENSORED_E2B, LocalModelPolicy.idForPath("/x/" + LocalModelPolicy.UNCENSORED_E2B_FILE));
+        assertTrue(ModelMemoryPolicy.required(LocalModelPolicy.UNCENSORED_E2B, false, 0) < ModelMemoryPolicy.required(LocalModelPolicy.UNCENSORED, false, 0));
         assertEquals(LocalModelPolicy.UNCENSORED, LocalModelPolicy.idForPath("/x/" + LocalModelPolicy.UNCENSORED_FILE));
     }
 

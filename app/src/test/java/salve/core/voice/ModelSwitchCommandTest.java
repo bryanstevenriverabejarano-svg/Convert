@@ -33,21 +33,18 @@ public class ModelSwitchCommandTest {
         assertNull(ModelSwitchCommand.parse("usa el modelo gemma 4 e2b para escribir un cuento muy largo sobre dragones que vuelan por la noche en el bosque"));
     }
 
-    @Test public void uncensoredGemmaReplacesQwen() {
-        assertEquals(UNCENSORED, ModelSwitchCommand.parse("usa el modelo sin censura"));
-        assertEquals(UNCENSORED, ModelSwitchCommand.parse("descarga gemma 4 e4b sin censura"));
-        assertEquals(UNCENSORED, ModelSwitchCommand.parse("usa el gemma sin censura"));
-        assertEquals(UNCENSORED, ModelSwitchCommand.parse("pon el modelo sin filtros"));
-        assertEquals("decir Qwen lleva al sustituto", UNCENSORED, ModelSwitchCommand.parse("usa el modelo cuen"));
-        assertEquals(UNCENSORED, ModelSwitchCommand.parse("descarga Qwen 3.5"));
+    @Test public void onlyTheTwoUncensoredModelsRemain() {
+        assertEquals(E4B, ModelSwitchCommand.parse("usa el modelo sin censura"));
+        assertEquals(E4B, ModelSwitchCommand.parse("descarga gemma 4 e4b sin censura"));
+        assertEquals(E2B, ModelSwitchCommand.parse("usa gemma 4 e2b sin censura"));
+        assertEquals(E2B, ModelSwitchCommand.parse("usa el modelo rápido sin censura"));
+        assertEquals("decir Qwen lleva al sustituto", E4B, ModelSwitchCommand.parse("usa el modelo cuen"));
         assertNull("una pregunta no cambia nada", ModelSwitchCommand.parse("qué tal es el modelo sin censura"));
         assertNull("«cuenta» no es Qwen", ModelSwitchCommand.parse("usa la cuenta de gmail"));
-        assertEquals("el Gemma normal sigue igual", E4B, ModelSwitchCommand.parse("usa el modelo Gemma 4 E4B"));
-        assertEquals("Gemma 4 E4B sin censura", ModelSwitchCommand.label(UNCENSORED));
     }
 
     @Test public void labels() {
-        assertEquals("Gemma 4 E2B", ModelSwitchCommand.label(E2B));
-        assertEquals("Gemma 4 E4B", ModelSwitchCommand.label(E4B));
+        assertEquals("Gemma 4 E2B sin censura", ModelSwitchCommand.label(E2B));
+        assertEquals("Gemma 4 E4B sin censura", ModelSwitchCommand.label(E4B));
     }
 }
