@@ -74,56 +74,7 @@ jobs:
           readelf -h build/qualcomm-dist/libggml-hexagon.so | grep -E 'Machine:.*AArch64'
           # Module MUST export the GGML entry point for ggml_backend_load() in Salve.
           readelf --wide --dyn-syms build/qualcomm-dist/libggml-hexagon.so \
-            | grep -E '[[:space:]]ggml_backend_init
-
-      - name: Build Salve preview APK with the matching host + DSP libraries
-        timeout-minutes: 30
-        env:
-          SALVE_ENABLE_HEXAGON: '1'
-          SALVE_HEXAGON_ARM64_LIB: ${{ github.workspace }}/build/qualcomm-dist/libggml-hexagon.so
-          SALVE_HEXAGON_SKEL_V75: ${{ github.workspace }}/build/qualcomm-dist/libggml-htp-v75.so
-        run: |
-          bash ./gradlew --no-daemon --console=plain --max-workers=2 \
-            --init-script scripts/android-arm64.init.gradle \
-            :app:testPreviewUnitTest :app:assemblePreview
-
-      - name: Verify NPU packaging and standard Android runtime are both present
-        run: |
-          python3 - <<'PY'
-          import zipfile
-          from pathlib import Path
-          p = Path("app/build/outputs/apk/preview/app-preview.apk")
-          assert p.is_file(), "Missing preview APK"
-          with zipfile.ZipFile(p) as z:
-              names = set(z.namelist())
-              for name in (
-                  "lib/arm64-v8a/libggml-hexagon.so",
-                  "lib/arm64-v8a/libggml-opencl.so",
-                  "lib/arm64-v8a/libggml-cpu.so",
-                  "lib/arm64-v8a/libsalve_llama.so",
-                  "assets/hexagon/libggml-htp-v75.so",
-              ):
-                  assert name in names, f"Missing Hexagon/backup component: {name}"
-              assert "lib/arm64-v8a/libOpenCL.so" not in names, "Do not ship the OpenCL ICD stub"
-          print("Hexagon host, DSP and local fallbacks packaged")
-          PY
-          python3 scripts/check_android_native_alignment.py \
-            app/build/outputs/apk/preview/app-preview.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify \
-            app/build/outputs/apk/preview/app-preview.apk
-          sha256sum app/build/outputs/apk/preview/app-preview.apk \
-            > app/build/outputs/apk/preview/app-preview.apk.sha256
-
-      - name: Share an isolated short-lived APK for physical S24 Ultra validation
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: salve-hexagon-v75-preview-${{ github.sha }}
-          path: |
-            app/build/outputs/apk/preview/app-preview.apk
-            app/build/outputs/apk/preview/app-preview.apk.sha256
-          if-no-files-found: error
-          retention-days: 2
-
+            | grep -E '[[:space:]]ggml_backend_init$'
 
       - name: Build Salve preview APK with the matching host + DSP libraries
         timeout-minutes: 30
