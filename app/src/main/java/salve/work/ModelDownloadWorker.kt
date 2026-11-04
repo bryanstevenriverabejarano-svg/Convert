@@ -96,8 +96,8 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
             updateProgress(99, "Cargando $id y comprobando una respuesta…")
             val result = withContext(Dispatchers.IO) {
                 val llm = salve.core.SalveLLM.getInstance(applicationContext)
-                // El Qwen grande se carga «sí o sí»: si falta memoria, espera a que Android la libere y reintenta.
-                if (id == salve.core.LocalModelPolicy.QWEN35_9B || id == salve.core.LocalModelPolicy.QWEN35_4B)
+                // El modelo sin censura se carga «sí o sí»: si falta memoria, espera a que Android la libere y reintenta.
+                if (id == salve.core.LocalModelPolicy.UNCENSORED)
                     salve.core.ModelActivationRetry.run(
                         { llm.activateDownloadedModel(file.file.absolutePath, file.supportsVision) { isStopped } },
                         { isStopped })

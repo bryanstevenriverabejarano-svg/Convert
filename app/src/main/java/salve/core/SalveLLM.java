@@ -596,12 +596,16 @@ public class SalveLLM {
      */
     public long removeRetiredModels() {
         String active = modelPath;
-        if (active == null || LocalModelPolicy.isDolphin(active)) return 0;
+        if (active == null) return 0;
+        boolean dolphinActive = LocalModelPolicy.isDolphin(active);
         long freed = 0;
         File[] files = ModelStore.dir(appContext).listFiles();
         if (files != null) for (File file : files) {
             String name = file.getName();
-            if (!name.startsWith("Dolphin3.0-") || file.getAbsolutePath().equals(active)) continue;
+            // Los Qwen 3.5 (2,7 y 5,6 GB) se sustituyeron por Gemma 4 E4B sin censura: también se borran,
+            // incluidas descargas a medias.
+            boolean retired = (name.startsWith("Dolphin3.0-") && !dolphinActive) || LocalModelPolicy.isRetiredQwen(name);
+            if (!retired || file.getAbsolutePath().equals(active)) continue;
             long size = file.length();
             if (file.delete()) freed += size;
         }

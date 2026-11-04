@@ -1822,12 +1822,11 @@ public class MotorConversacional {
             String active = LocalModelPolicy.idForPath(SalveLLM.getInstance(context).activeModelPath());
             String wanted = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? LocalModelPolicy.FALLBACK
                     : target == salve.core.voice.ModelSwitchCommand.Target.E4B ? LocalModelPolicy.GEMMA_E4B
-                    : target == salve.core.voice.ModelSwitchCommand.Target.QWEN35_9B ? LocalModelPolicy.QWEN35_9B : LocalModelPolicy.QWEN35_4B;
+                    : LocalModelPolicy.UNCENSORED;
             if (wanted.equals(active))
                 return "Ya estoy usando " + salve.core.voice.ModelSwitchCommand.label(target)
                         + ". Me quedo con él hasta que me pidas otro.";
-            if (target == salve.core.voice.ModelSwitchCommand.Target.QWEN35) return cambioAQwen(false);
-            if (target == salve.core.voice.ModelSwitchCommand.Target.QWEN35_9B) return cambioAQwen(true);
+            if (target == salve.core.voice.ModelSwitchCommand.Target.UNCENSORED) return cambioASinCensura();
             // El mismo camino que la frase exacta de siempre.
             t = target == salve.core.voice.ModelSwitchCommand.Target.E2B ? "usa gemma 4 e2b" : "usa gemma 4 e4b";
         }
@@ -1900,34 +1899,27 @@ public class MotorConversacional {
     }
 
     /**
-     * Qwen 3.5 9B sin censura (GGUF, motor llama.cpp en CPU). Si ya está descargado se carga «sí o sí»:
-     * varios intentos dejando que Android libere memoria; si aun así no entra, se queda el modelo
-     * anterior. Si no, se descarga con Wi-Fi (archivo fijado y verificado por SHA-256) y se activa.
+     * Gemma 4 E4B sin censura (GGUF, motor llama.cpp; por la gráfica si puede). Si ya está descargado se
+     * carga «sí o sí»: varios intentos dejando que Android libere memoria; si aun así no entra, se queda
+     * el modelo anterior. Si no, se descarga con Wi-Fi (archivo fijado y verificado por SHA-256) y se activa.
      */
-    private String cambioAQwen(boolean big) {
-        String id = big ? LocalModelPolicy.QWEN35_9B : LocalModelPolicy.QWEN35_4B;
-        String name = big ? "Qwen 3.5 9B" : "Qwen 3.5 4B";
-        java.io.File qwen = new java.io.File(ModelStore.dir(context), big
-                ? "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M-0a41c68.gguf"
-                : "Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M-c09cdbc.gguf");
-        String slow = big
-                ? " Ojo: el de 9B (5,6 GB) no cabe entero en tu RAM y puede ir muy lento; si pasa, prueba «usa el modelo Qwen» (4B)."
-                : " Va por el procesador, así que contesta algo más despacio que Gemma.";
-        if (!qwen.isFile()) {
-            salve.work.ModelDownloadWorker.enqueueOptional(context, id);
-            return "Descargo " + name + " sin censura (" + (big ? "5,6" : "2,7") + " GB) en cuanto haya Wi-Fi, compruebo que es el archivo "
-                    + "exacto y lo activo; verás el progreso en la notificación." + slow + " Para volver: «usa el modelo Gemma 4 E2B».";
+    private String cambioASinCensura() {
+        String name = LocalModelPolicy.UNCENSORED;
+        java.io.File model = new java.io.File(ModelStore.dir(context), LocalModelPolicy.UNCENSORED_FILE);
+        if (!model.isFile()) {
+            salve.work.ModelDownloadWorker.enqueueOptional(context, LocalModelPolicy.UNCENSORED);
+            return "Descargo " + name + " (5,3 GB) en cuanto haya Wi-Fi, compruebo que es el archivo exacto y lo activo; "
+                    + "verás el progreso en la notificación. Para volver: «usa el modelo Gemma 4 E2B».";
         }
         new Thread(() -> {
             ModelResult result = ModelActivationRetry.run(
-                    () -> SalveLLM.getInstance(context).activateDownloadedModel(qwen.getAbsolutePath(), false, () -> false),
+                    () -> SalveLLM.getInstance(context).activateDownloadedModel(model.getAbsolutePath(), false, () -> false),
                     () -> closed);
             hablar(result.isSuccess()
-                    ? "Ya uso " + name + "." + slow + " Me quedo con él aunque cierres la app; para volver, dime «usa el modelo Gemma 4 E2B»."
-                    : "No pude cargar " + name + " (" + result.getError() + "). Sigo con el modelo anterior."
-                        + (big ? " El de 4B cabe mejor: dime «usa el modelo Qwen»." : ""));
+                    ? "Ya uso " + name + ". Me quedo con él aunque cierres la app; para volver, dime «usa el modelo Gemma 4 E2B»."
+                    : "No pude cargar " + name + " (" + result.getError() + "). Sigo con el modelo anterior.");
         }, "salve-model-switch").start();
-        return "Cargando " + name + "… tarda un poco; si le falta memoria, espero a que el móvil la libere y lo reintento.";
+        return "Cargando " + name + "… la primera vez tarda más porque prepara la gráfica.";
     }
 
     private static boolean pideFotoEnLaNube(String input) {

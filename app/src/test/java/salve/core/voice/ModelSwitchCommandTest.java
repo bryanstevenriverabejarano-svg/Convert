@@ -33,19 +33,17 @@ public class ModelSwitchCommandTest {
         assertNull(ModelSwitchCommand.parse("usa el modelo gemma 4 e2b para escribir un cuento muy largo sobre dragones que vuelan por la noche en el bosque"));
     }
 
-    @Test public void understandsQwenHoweverItIsDictated() {
-        assertEquals(QWEN35, ModelSwitchCommand.parse("descarga Qwen 3.5"));
-        assertEquals(QWEN35, ModelSwitchCommand.parse("usa el modelo cuen"));
-        assertEquals(QWEN35, ModelSwitchCommand.parse("Salve, cámbiate a kuen tres punto cinco"));
-        assertEquals(QWEN35, ModelSwitchCommand.parse("usa el modelo sin censura"));
-        assertEquals(QWEN35, ModelSwitchCommand.parse("instala el modelo qwen"));
-        assertNull("una pregunta no cambia nada", ModelSwitchCommand.parse("qué tal es qwen"));
+    @Test public void uncensoredGemmaReplacesQwen() {
+        assertEquals(UNCENSORED, ModelSwitchCommand.parse("usa el modelo sin censura"));
+        assertEquals(UNCENSORED, ModelSwitchCommand.parse("descarga gemma 4 e4b sin censura"));
+        assertEquals(UNCENSORED, ModelSwitchCommand.parse("usa el gemma sin censura"));
+        assertEquals(UNCENSORED, ModelSwitchCommand.parse("pon el modelo sin filtros"));
+        assertEquals("decir Qwen lleva al sustituto", UNCENSORED, ModelSwitchCommand.parse("usa el modelo cuen"));
+        assertEquals(UNCENSORED, ModelSwitchCommand.parse("descarga Qwen 3.5"));
+        assertNull("una pregunta no cambia nada", ModelSwitchCommand.parse("qué tal es el modelo sin censura"));
         assertNull("«cuenta» no es Qwen", ModelSwitchCommand.parse("usa la cuenta de gmail"));
-        assertEquals("por defecto el de 4B, que cabe en RAM", "Qwen 3.5 4B sin censura", ModelSwitchCommand.label(QWEN35));
-        assertEquals(QWEN35_9B, ModelSwitchCommand.parse("usa el modelo qwen 9b"));
-        assertEquals(QWEN35_9B, ModelSwitchCommand.parse("descarga el qwen grande"));
-        assertEquals(QWEN35_9B, ModelSwitchCommand.parse("usa cuen nueve b"));
-        assertEquals("Qwen 3.5 9B sin censura", ModelSwitchCommand.label(QWEN35_9B));
+        assertEquals("el Gemma normal sigue igual", E4B, ModelSwitchCommand.parse("usa el modelo Gemma 4 E4B"));
+        assertEquals("Gemma 4 E4B sin censura", ModelSwitchCommand.label(UNCENSORED));
     }
 
     @Test public void labels() {
