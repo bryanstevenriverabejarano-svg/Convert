@@ -857,6 +857,41 @@ public class SalveLLM {
         }
     }
 
+    /** ¿El modelo activo puede oír? Los Gemma 4 sin censura, cuando su mmproj (ojos y oídos) está descargado. */
+    public boolean supportsAudio() { return modelAvailable && ggufVisionPath() != null; }
+
+    /**
+     * Oídos: un WAV corto (16 kHz mono) entra por el mmproj del Gemma sin censura, igual que una foto.
+     * Salve oye el sonido de verdad (música, ruidos, tono de voz), no una transcripción.
+     */
+    public synchronized ModelResult generateAudioResult(String prompt, byte[] wav, java.util.function.BooleanSupplier cancelled) {
+        long start = System.nanoTime();
+        String ears = ggufVisionPath();
+        if (!modelAvailable || ears == null) return ModelResult.failure(ModelResult.Status.UNAVAILABLE,
+                "Para oír necesito uno de los Gemma 4 sin censura con su archivo de visión y audio descargado.", 0L);
+        if (wav == null || wav.length <= 44) return ModelResult.failure(ModelResult.Status.ERROR, "No llegó sonido del micrófono", 0L);
+        try {
+            initEngineIfNeeded(false);
+            GgufLlm.ensureVision(ears);
+            String text = GgufLlm.generate(prompt, ModelRuntimeInfo.context(modelPath) + "Responde en español.",
+                    ggufContextTokens, wav, cancelled);
+            if (text == null || text.trim().isEmpty()) throw new IllegalStateException("El modelo no dijo nada del audio");
+            lastErrorMessage = null;
+            publishStatus("activo");
+            return ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L).withProvider(ModelRuntimeInfo.name(modelPath));
+        } catch (java.util.concurrent.CancellationException e) {
+            return ModelResult.failure(ModelResult.Status.CANCELLED, "Turno cancelado", 0L);
+        } catch (Exception | LinkageError e) {
+            engineInitialized = GgufLlm.isInitialized();
+            lastErrorMessage = e.getMessage();
+            Log.e(TAG, "Fallo de audio local", e);
+            String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            if (reason.length() > 140) reason = reason.substring(0, 140) + "…";
+            return ModelResult.failure(ModelResult.Status.ERROR, "No pude escuchar el audio (" + reason + ").",
+                    (System.nanoTime() - start) / 1_000_000L);
+        }
+    }
+
     /** Conservative character budget; the runtime tokenizer remains authoritative. */
     public int getConversationPromptBudgetChars() {
         String path = modelPath;

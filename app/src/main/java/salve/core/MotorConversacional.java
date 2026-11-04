@@ -795,6 +795,9 @@ public class MotorConversacional {
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         // Antes que vídeos/música: «pon la canción anterior» es la anterior, no buscar «anterior».
+        // Oídos: «escucha esta canción», «oye este ruido»… (Gemma 4 sin censura con su mmproj).
+        salve.core.voice.ListenCommand listen = salve.core.voice.ListenCommand.parse(entrada);
+        if (listen != null) { hablar(escuchar(listen)); return; }
         String music = controlMusica(entrada);
         if (music != null) { hablar(music); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
@@ -1845,9 +1848,12 @@ public class MotorConversacional {
             case PREVIOUS:
                 return salve.devices.MusicController.previous(context) ? "La anterior." : "No encontré música sonando.";
             case NOW_PLAYING: {
+                String now = salve.devices.MusicController.hasAccess(context) ? salve.devices.MusicController.nowPlaying(context) : null;
+                if (now != null) return "Suena " + now + ".";
+                // Ninguna app dice qué suena (radio, la tele, un bar…): si Salve puede oír, escucha.
+                if (llm != null && llm.supportsAudio()) return escuchar(salve.core.voice.ListenCommand.forSongNobodyReports());
                 if (!salve.devices.MusicController.hasAccess(context)) return musicAccessHint(driving, "decirte qué suena");
-                String now = salve.devices.MusicController.nowPlaying(context);
-                return now == null ? "Ahora mismo no suena nada que pueda leer." : "Suena " + now + ".";
+                return "Ahora mismo no suena nada que pueda leer.";
             }
             case LIST_PLAYLISTS:
                 return "Spotify no deja que otras apps lean tus listas desde el móvil, así que todavía no puedo leértelas. "
@@ -1858,6 +1864,39 @@ public class MotorConversacional {
             default:
                 return null;
         }
+    }
+
+    /**
+     * Graba unos segundos y se los da al modelo para que los oiga. Espera a que Salve termine de hablar
+     * para no oírse a sí misma; el audio solo vive en memoria.
+     */
+    private String escuchar(salve.core.voice.ListenCommand listen) {
+        if (llm == null || !llm.supportsAudio())
+            return "Para oír necesito uno de los Gemma 4 sin censura con su archivo de visión y audio: dime «usa el modelo sin censura».";
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            return "Necesito permiso de micrófono para escuchar. Dámelo en los ajustes de la app.";
+        new Thread(() -> {
+            try {
+                Thread.sleep(700);
+                for (int i = 0; i < 60; i++) { // hasta 6 s mientras termina «Te escucho…»
+                    boolean speaking;
+                    try { speaking = tts != null && tts.isSpeaking(); } catch (RuntimeException e) { speaking = false; }
+                    if (!speaking) break;
+                    Thread.sleep(100);
+                }
+            } catch (InterruptedException stop) { return; }
+            if (closed) return;
+            byte[] wav;
+            try { wav = salve.devices.AudioClipRecorder.record(listen.seconds, () -> closed); }
+            catch (SecurityException | IllegalStateException | IllegalArgumentException mic) {
+                hablar("No pude usar el micrófono: " + mic.getMessage() + ".");
+                return;
+            }
+            ModelResult heard = llm.generateAudioResult(listen.question, wav, () -> closed);
+            if (!closed) hablar(heard.isSuccess() ? heard.getText() : heard.getError());
+        }, "salve-oidos").start();
+        return "Te escucho " + listen.seconds + " segundos…";
     }
 
     private String musicAccessHint(boolean driving, String what) {
