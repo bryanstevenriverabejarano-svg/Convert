@@ -82,6 +82,8 @@ public class SalveLLM {
     private java.util.function.BooleanSupplier installationCancelled = () -> false;
     private volatile boolean visionModel = false;
     private volatile boolean engineInitialized = false;
+    /** El GGUF cargó en la gráfica y aún no ha completado ninguna respuesta allí. */
+    private volatile boolean ggufGpuUnconfirmed = false;
     private volatile boolean modelAvailable    = false;   // ⬅️ indica si tenemos info suficiente del modelo
     private volatile String lastErrorMessage   = null;
     private volatile ModelCatalog.RuntimeSnapshot modelSnapshot = new ModelCatalog.RuntimeSnapshot(
@@ -309,7 +311,16 @@ public class SalveLLM {
             boolean large = LocalModelPolicy.isLarge(modelPath);
             DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
             if (large) markLargeOperation(true);
-            try { GgufLlm.init(modelPath, watch); }
+            GgufGpuGuard gpuGuard = gpuGuard();
+            boolean gpu = gpuGuard.allowed(installStamp());
+            // Apuntado en disco ANTES de cargar: si el driver de la GPU tumba la app, el próximo arranque usa el procesador.
+            if (gpu) gpuGuard.trying();
+            try {
+                // Una excepción no es un cierre de la app: no hay nada que recordar (el motor ya cae solo al procesador).
+                try { GgufLlm.init(modelPath, gpu, kernelCacheDir(), watch); }
+                finally { if (gpu) gpuGuard.fine(); }
+                ggufGpuUnconfirmed = GgufLlm.usesGpu();
+            }
             catch (java.util.concurrent.CancellationException e) {
                 if (watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
                     throw new ModelMemoryPolicy.PressureException("Memoria baja durante la carga de " + ModelRuntimeInfo.name(modelPath)
@@ -425,9 +436,15 @@ public class SalveLLM {
                 boolean large = LocalModelPolicy.isLarge(modelPath);
                 DeviceModelMemory.Watch watch = new DeviceModelMemory.Watch(appContext, installationCancelled);
                 if (large) markLargeOperation(true);
+                boolean onGpu = GgufLlm.usesGpu();
+                // La primera respuesta en la gráfica también se apunta: el driver puede caer al pensar, no solo al cargar.
+                if (onGpu && ggufGpuUnconfirmed) gpuGuard().trying();
                 try {
-                    text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
-                            ggufContextTokens, watch);
+                    try {
+                        text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
+                                ggufContextTokens, watch);
+                    } finally { if (onGpu && ggufGpuUnconfirmed) gpuGuard().fine(); }
+                    if (onGpu) ggufGpuUnconfirmed = false;
                     if (onChunk != null && text != null) onChunk.accept(text);
                 }
                 catch (java.util.concurrent.CancellationException e) {
@@ -435,7 +452,19 @@ public class SalveLLM {
                         throw new ModelMemoryPolicy.PressureException("Memoria baja durante la respuesta de " + ModelRuntimeInfo.name(modelPath)
                                 + ". " + getMemoryDescription());
                     throw e;
-                } finally {
+                }
+                catch (IllegalStateException gpuFailure) {
+                    if (!onGpu) throw gpuFailure;
+                    // Falló en la gráfica: se apaga y Salve sigue con el procesador.
+                    Log.w(TAG, "La gráfica falló; el motor GGUF vuelve al procesador", gpuFailure);
+                    gpuGuard().disable();
+                    GgufLlm.reset();
+                    engineInitialized = false;
+                    String why = gpuFailure.getMessage() == null ? "" : gpuFailure.getMessage();
+                    if (why.contains("tiempo")) throw gpuFailure; // tras 2 minutos no se hace esperar otros 2
+                    return generateLocalResult(prompt, role, onChunk);
+                }
+                finally {
                     ggufContextTokens = Math.min(ggufContextTokens, GgufLlm.getContextTokens());
                     if (large) markLargeOperation(false);
                 }
@@ -454,7 +483,7 @@ public class SalveLLM {
             recordInference(ModelCatalog.Capability.TEXT, true);
             if (confirming) { contextUnconfirmed = false; contextGuard().loaded(); }
             lastErrorMessage = null;
-            Log.i(TAG, "provider=local runtime=" + (isGguf ? "llama.cpp CPU" : isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
+            Log.i(TAG, "provider=local runtime=" + (isGguf ? (GgufLlm.usesGpu() ? "llama.cpp GPU OpenCL" : "llama.cpp CPU") : isLiteRT ? LiteRTLlm.getBackendName() : "mlc") + " latency_ms=" + latency);
             publishStatus(activationInProgress ? "comprobando activación" : "activo");
             return ModelResult.success(text, latency).withProvider(ModelRuntimeInfo.name(modelPath));
         } catch (java.util.concurrent.CancellationException e) {
@@ -558,7 +587,8 @@ public class SalveLLM {
 
     private void publishStatus(String phase) {
         runtimeStatus = ModelRuntimeInfo.name(modelPath) + " · " + phase
-                + (isGguf && engineInitialized ? " · contexto " + ggufContextTokens + " tokens" : "");
+                + (isGguf && engineInitialized ? " · contexto " + ggufContextTokens + " tokens"
+                        + (GgufLlm.usesGpu() ? " · gráfica (OpenCL)" : " · procesador") : "");
     }
     /**
      * Borra del almacenamiento los Dolphin retirados (hasta 6,9 GB) si el motor activo no es uno de
@@ -596,6 +626,7 @@ public class SalveLLM {
         GenerationSpeed.Sample last = GenerationSpeed.last();
         int ctx = loadedContextTokens();
         return runtimeStatus + (isLiteRT && LiteRTLlm.getSpeculativeActive() ? " · MTP" : "")
+                + (isGguf && GgufLlm.usesGpu() ? " · gráfica" : "")
                 + (ctx > 0 ? " · " + Math.round(ctx / 1024f) + "k" : "")
                 + (last == null ? "" : " · " + last.compact());
     }
@@ -834,6 +865,21 @@ public class SalveLLM {
             long t = appContext.getPackageManager().getPackageInfo(appContext.getPackageName(), 0).lastUpdateTime;
             return (int) (t ^ (t >>> 32));
         } catch (Exception unknown) { return 0; }
+    }
+
+    private GgufGpuGuard gpuGuard() {
+        android.content.SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return new GgufGpuGuard(new LiteRtContextGuard.Store() {
+            @Override public int get(String key) { return prefs.getInt(key, 0); }
+            @Override public void put(String key, int value) {
+                if (value == 0) prefs.edit().remove(key).commit(); else prefs.edit().putInt(key, value).commit();
+            }
+        });
+    }
+
+    private String kernelCacheDir() {
+        java.io.File dir = new java.io.File(appContext.getCacheDir(), "opencl-kernels");
+        return dir.isDirectory() || dir.mkdirs() ? dir.getAbsolutePath() : null;
     }
 
     private LiteRtContextGuard contextGuard() {

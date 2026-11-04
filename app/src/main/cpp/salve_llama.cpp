@@ -1,5 +1,7 @@
 #include <jni.h>
 #include "llama.h"
+#include "ggml-backend.h"
+#include <cstdlib>
 #include <algorithm>
 #include <chrono>
 #include <memory>
@@ -69,6 +71,29 @@ void error(JNIEnv *env, const char *type, const std::exception &e) {
     env->ThrowNew(env->FindClass(type), e.what());
 }
 std::once_flag backend;
+bool opencl_tried = false;
+bool gpu_active = false; // el modelo cargado tiene sus capas en la gráfica
+
+// Motores de ggml como módulos aparte (GGML_BACKEND_DL): si la gráfica no carga, el procesador sigue.
+void load_backends(bool gpu, const std::string &cache) {
+    std::call_once(backend, [] {
+        if (!ggml_backend_reg_by_name("CPU")) ggml_backend_load("libggml-cpu.so");
+        llama_backend_init();
+    });
+    if (!gpu || opencl_tried) return;
+    opencl_tried = true;
+    // Los kernels OpenCL se compilan la primera vez (tarda); después se leen de esta caché.
+    if (!cache.empty()) setenv("GGML_OPENCL_KERNEL_CACHE_DIR", cache.c_str(), 1);
+    if (!ggml_backend_reg_by_name("OpenCL")) ggml_backend_load("libggml-opencl.so");
+}
+
+ggml_backend_dev_t gpu_device() {
+    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+        auto *dev = ggml_backend_dev_get(i);
+        if (ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_GPU) return dev;
+    }
+    return nullptr;
+}
 
 // Adaptador LoRA personal activo (entrenado fuera del móvil con recuerdos consolidados).
 // Pertenece al modelo cargado: llama.cpp lo libera con él. GgufLlm serializa todo el acceso.
@@ -77,24 +102,43 @@ float active_scale = 0.0f;
 }
 
 extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
-        JNIEnv *env, jclass, jbyteArray path, jobject cancelled) {
+        JNIEnv *env, jclass, jbyteArray path, jboolean allowGpu, jbyteArray cacheDir, jobject cancelled) {
     try {
-        std::call_once(backend, [] { llama_backend_init(); });
+        gpu_active = false;
+        load_backends(allowGpu, cacheDir ? bytes(env, cacheDir) : std::string());
         Request request(env, cancelled);
+        // Con gráfica, la primera carga también compila los kernels: más margen que 120 s.
+        if (allowGpu) request.deadline = Clock::now() + std::chrono::seconds(300);
         request.check();
-        auto params = llama_model_default_params();
-        params.n_gpu_layers = 0;
-        params.load_mode = LLAMA_LOAD_MODE_MMAP; // antes use_mmap = true: el modelo se lee del archivo, no se copia a RAM
-        params.progress_callback = Request::progress;
-        params.progress_callback_user_data = &request;
-        std::unique_ptr<llama_model, decltype(&llama_model_free)> model(
-                llama_model_load_from_file(bytes(env, path).c_str(), params), llama_model_free);
+        std::string file = bytes(env, path);
+        ggml_backend_dev_t gpu = allowGpu ? gpu_device() : nullptr;
+        auto attempt = [&](ggml_backend_dev_t device) {
+            auto params = llama_model_default_params();
+            ggml_backend_dev_t devices[] = {device, nullptr}; // {nullptr}: solo procesador
+            params.devices = devices;
+            params.n_gpu_layers = device ? 999 : 0;
+            params.load_mode = LLAMA_LOAD_MODE_MMAP; // el modelo se lee del archivo, no se copia a RAM
+            params.progress_callback = Request::progress;
+            params.progress_callback_user_data = &request;
+            return llama_model_load_from_file(file.c_str(), params);
+        };
+        llama_model *loaded = gpu ? attempt(gpu) : nullptr;
+        if (loaded) gpu_active = true;
+        else {
+            request.check();
+            loaded = attempt(nullptr); // sin gráfica, o la gráfica no pudo: procesador
+        }
+        std::unique_ptr<llama_model, decltype(&llama_model_free)> model(loaded, llama_model_free);
         request.check();
         if (!model) throw std::runtime_error("No se pudo cargar el archivo GGUF");
         return reinterpret_cast<jlong>(model.release());
-    } catch (const Cancelled &e) { error(env, "java/util/concurrent/CancellationException", e); }
-      catch (const std::exception &e) { error(env, "java/lang/IllegalStateException", e); }
+    } catch (const Cancelled &e) { gpu_active = false; error(env, "java/util/concurrent/CancellationException", e); }
+      catch (const std::exception &e) { gpu_active = false; error(env, "java/lang/IllegalStateException", e); }
     return 0;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_salve_core_GgufLlm_gpuActive(JNIEnv *, jclass) {
+    return gpu_active ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
@@ -219,5 +263,6 @@ extern "C" JNIEXPORT void JNICALL Java_salve_core_GgufLlm_release(JNIEnv *, jcla
     // El modelo libera sus adaptadores; olvidar el puntero evita un doble free.
     active_adapter = nullptr;
     active_scale = 0.0f;
+    gpu_active = false;
     llama_model_free(reinterpret_cast<llama_model *>(handle));
 }

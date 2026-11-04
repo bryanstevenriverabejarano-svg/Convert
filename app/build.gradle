@@ -104,9 +104,11 @@ android {
         ndk { abiFilters "arm64-v8a", "x86_64" }
         externalNativeBuild {
             cmake {
-                arguments "-DANDROID_STL=c++_static", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+                // c++_shared: llama.cpp y ggml son ahora varias .so (motor de procesador y de gráfica por separado).
+                arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
                 // Build only app JNI libraries, not SentencePiece's desktop training/CLI tools.
-                targets "salve_llama", "salve_sentencepiece"
+                // ggml-cpu y ggml-opencl se abren en tiempo de ejecución, así que hay que pedirlos aquí.
+                targets "salve_llama", "salve_sentencepiece", "llama", "ggml", "ggml-base", "ggml-cpu", "ggml-opencl"
             }
         }
 
@@ -182,6 +184,10 @@ android {
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+        jniLibs {
+            // Solo sirve para enlazar: en el móvil se usa el libOpenCL.so del fabricante (Adreno).
+            excludes += '**/libOpenCL.so'
         }
     }
 }

@@ -3,24 +3,38 @@ package salve.core;
 import java.nio.charset.StandardCharsets;
 import java.util.function.BooleanSupplier;
 
-/** CPU llama.cpp backend. All handles are accessed under this class's monitor. */
+/** llama.cpp: gráfica (OpenCL) si se permite y funciona; si no, procesador. Todo bajo este monitor. */
 public final class GgufLlm {
     private static boolean libraryLoaded;
     private static long model;
     private static String loadedPath;
+    private static boolean loadedWithGpu;
+    // volatile y sin monitor: la cabecera lo lee mientras otro hilo está generando.
+    private static volatile boolean gpuActive;
     private static int contextTokens = GgufContextPolicy.STANDARD;
     private GgufLlm() { }
 
     public static synchronized void init(String path, BooleanSupplier cancelled) {
-        if (model != 0 && path.equals(loadedPath)) return;
+        init(path, false, null, cancelled);
+    }
+
+    /**
+     * @param allowGpu probar la gráfica; el motor vuelve solo al procesador si no hay GPU compatible
+     * @param kernelCache carpeta para guardar los kernels OpenCL compilados (la 1.ª carga tarda más)
+     */
+    public static synchronized void init(String path, boolean allowGpu, String kernelCache, BooleanSupplier cancelled) {
+        if (model != 0 && path.equals(loadedPath) && (allowGpu || !loadedWithGpu)) return;
         reset();
         if (!libraryLoaded) {
             System.loadLibrary("salve_llama");
             libraryLoaded = true;
         }
-        model = load(path.getBytes(StandardCharsets.UTF_8), cancellation(cancelled));
+        model = load(path.getBytes(StandardCharsets.UTF_8), allowGpu,
+                kernelCache == null ? null : kernelCache.getBytes(StandardCharsets.UTF_8), cancellation(cancelled));
         if (model == 0) throw new IllegalStateException("No se pudo cargar el modelo GGUF");
         loadedPath = path;
+        loadedWithGpu = allowGpu;
+        gpuActive = gpuActive();
     }
 
     public static synchronized String generate(String prompt, BooleanSupplier cancelled) {
@@ -50,15 +64,20 @@ public final class GgufLlm {
     }
 
     public static synchronized boolean isInitialized() { return model != 0; }
+    /** ¿El modelo cargado piensa en la gráfica? */
+    public static boolean usesGpu() { return gpuActive; }
     public static synchronized int getContextTokens() { return contextTokens; }
     public static synchronized void reset() {
         if (model != 0) release(model);
         model = 0;
         loadedPath = null;
+        loadedWithGpu = false;
+        gpuActive = false;
         adapterPath = null;
         contextTokens = GgufContextPolicy.STANDARD;
     }
-    private static native long load(byte[] path, BooleanSupplier cancelled);
+    private static native long load(byte[] path, boolean allowGpu, byte[] kernelCache, BooleanSupplier cancelled);
+    private static native boolean gpuActive();
     private static native byte[] infer(long model, byte[] prompt, byte[] system, byte[] grammar, int contextTokens, boolean repair, BooleanSupplier cancelled);
     private static native void release(long model);
     private static native boolean setAdapter(long model, byte[] path, float scale);
