@@ -14,8 +14,18 @@ public final class ModelRuntimeInfo {
     public static String context(String path) {
         return "DATOS ACTUALES DEL MOTOR (proporcionados por Salve): tu identidad es Salve; "
                 + "el modelo que está generando esta respuesta es " + name(path)
-                + ". Se ejecuta localmente en el teléfono. Estos datos sustituyen cualquier nombre de modelo en el historial.\n";
+                + ". Se ejecuta localmente en el teléfono. Estos datos sustituyen cualquier nombre de modelo en el historial.\n"
+                + CAPABILITIES;
     }
+    /**
+     * Lo que la app ya hace por órdenes directas (antes de que pienses). Sin esto el modelo decía
+     * «no puedo abrir WhatsApp» cuando Salve sí puede: solo hace falta pedirlo con la frase adecuada.
+     */
+    static final String CAPABILITIES = "CAPACIDADES DE SALVE EN ESTE MÓVIL: la app ejecuta por sí misma órdenes directas de Bryan: "
+            + "abrir apps; poner música en Spotify («pon <canción> en Spotify», «pon mi lista <nombre>», «pon mis me gusta») "
+            + "o en YouTube; preparar un WhatsApp a un contacto para que Bryan lo revise y envíe («abre el chat de <contacto> "
+            + "y dile <mensaje>»); rutas en Maps; llamadas con confirmación; y buscar en internet. Si te piden algo de esto y "
+            + "estás respondiendo tú, es que la orden no se reconoció: no digas que no puedes; di la frase que lo hace.\n";
     /** Igual que {@link #context} pero sin atribuir identidad: para voces que no son Salve (Salventes). */
     public static String neutralContext(String path) {
         return "DATOS DEL MOTOR: el modelo que genera esta respuesta es " + name(path)

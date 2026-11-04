@@ -55,4 +55,10 @@ public class MediaAndLiveSearchTest {
         assertEquals(LiveSearchCommand.Action.CLOSE, LiveSearchCommand.parse("para la música"));
         assertNull(LiveSearchCommand.parse("busca el tiempo en Vitoria"));
     }
+
+    @org.junit.Test public void spotifyRequestsNeverGoToYouTube() {
+        org.junit.Assert.assertNull(MediaRequest.parse("Pon musica en spoty fay"));
+        org.junit.Assert.assertNull(MediaRequest.parse("pon Te arrepentirás en Spotify"));
+        org.junit.Assert.assertNotNull(MediaRequest.parse("pon te arrepentirás en youtube"));
+    }
 }

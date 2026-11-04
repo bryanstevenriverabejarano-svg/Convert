@@ -78,4 +78,17 @@ public class AppActionCommandTest {
     @Test public void contactSearchTreatsWildcardsLiterally() {
         assertEquals("%a\\%b\\_c%", AppActionCommand.likeArgument("a%b_c"));
     }
+
+    @Test public void dictatedSpotifyNames() {
+        for (String said : new String[]{"Pon musica en spoty fay", "pon música en espotifai", "pon algo de música en Spotify"}) {
+            AppActionCommand c = AppActionCommand.parse(said);
+            assertNotNull(said, c);
+            assertEquals(said, AppActionCommand.Type.LIKED, c.type);
+        }
+        AppActionCommand song = AppActionCommand.parse("pon Te arrepentirás en spotifai");
+        assertEquals(AppActionCommand.Type.MUSIC, song.type);
+        assertEquals("Te arrepentirás", song.target);
+        assertEquals(AppActionCommand.Type.PLAYLIST, AppActionCommand.parse("pon mi lista Gym en spoti fai").type);
+        assertEquals("el spot publicitario no es Spotify", "el spot de la tele", AppAliases.normalize("el spot de la tele"));
+    }
 }

@@ -44,6 +44,7 @@ public final class AppActionCommand {
     /** «abre la cámara», «abre WhatsApp», «lanza Spotify». Solo un nombre corto, sin encadenar acciones. */
     private static final Pattern OPEN_APP = Pattern.compile(
             "^(?:abre|abrir|[aá]breme|lanza|inicia|arranca)\\s+(?:(?:la )?(?:app|aplicaci[oó]n) (?:de |del )?)?(.+)$", FLAGS);
+    private static final Pattern SPOTIFY_NAMED = Pattern.compile("(?iu)\\bspotify\\b");
     private static final Pattern NUMBER = Pattern.compile("\\+?[0-9][0-9 ()-]{2,19}");
 
     public final Type type;
@@ -53,7 +54,7 @@ public final class AppActionCommand {
 
     public static AppActionCommand parse(String input) {
         if (input == null || input.length() > 300 || input.indexOf('\n') >= 0) return null;
-        String text = input.trim().replaceFirst("(?iu)^salve[,:]?\\s+", "")
+        String text = AppAliases.normalize(input).trim().replaceFirst("(?iu)^salve[,:]?\\s+", "")
                 .replaceFirst("^[¿¡]+", "").replaceFirst("[.!?¿¡ ]+$", "").trim();
         if (text.isEmpty()) return null;
         AppActionCommand found = match(Type.NAVIGATE, NAVIGATE, text);
@@ -85,6 +86,10 @@ public final class AppActionCommand {
         if (!m.matches()) return null;
         String target = m.group(1).trim().replaceFirst("(?iu)^(?:el|la|los|las)\\s+(?=\\S)", type == Type.MUSIC ? "" : "$0");
         if (target.isEmpty() || target.length() > (type == Type.CALL ? 60 : 160)) return null;
+        // «pon música en Spotify»: no hay nada que buscar; se pone su música (Tus me gusta), no una canción llamada «música».
+        if (type == Type.MUSIC && target.matches("(?iu)(?:(?:mi|tu|la|algo de|un poco de)\\s+)?(?:m[uú]sica|musiquita|algo|canciones|temas)")
+                && SPOTIFY_NAMED.matcher(text).find())
+            return new AppActionCommand(Type.LIKED, "Tus me gusta");
         // «pon la lista de la compra / de tareas» no es música.
         if (type == Type.PLAYLIST && target.matches(
                 "(?iu)(?:(?:la|las|los|el|mis)\\s+)?(?:compra|tareas|pendientes|deberes|cosas|invitados|contactos|regalos)\\b.*")) return null;
