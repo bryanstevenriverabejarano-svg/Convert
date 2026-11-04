@@ -22,40 +22,62 @@ partir del nombre del procesador, de una descarga completada o de un código fus
 
 ## Cómo generar la variante experimental
 
-Requiere un entorno de desarrollo Android con el SDK/NDK de este proyecto y el
-**Qualcomm Hexagon SDK** compatible con la revisión fijada de llama.cpp. Qualcomm
-publica una imagen de toolchain de Snapdragon con NDK y Hexagon:
-`ghcr.io/snapdragon-toolchain/arm64-android:v0.8`.
+El workflow `.github/workflows/salve-hexagon-preview.yml` compila una **APK de prueba
+independiente** desde un PR de la rama de integración. No cambia la release
+`salve-ultima` ni sube esta compilación experimental como actualización obligatoria.
 
-1. `git submodule update --init --recursive`. No actualizar el submódulo a
-   otra revisión sin revisar la API JNI; actualmente está fijado en
-   `07ec7c8af09b576792063411d7dc2ec60b2f3a6f`.
-2. Compilar con ese submódulo la biblioteca de DSP
-   `libggml-htp-v75.so` para arquitectura **Hexagon V75**. El mecanismo
-   oficial es el preset `arm64-android-snapdragon-release` de
-   `third_party/llama.cpp/docs/backend/snapdragon/CMakeUserPresets.json`
-   y su target `htp-v75` en el toolchain Qualcomm. **No confundir** el
-   binario DSP con la biblioteca ARM64 `libggml-hexagon.so`.
-3. Compilar Salve en un entorno con Android y Hexagon SDK exportando:
+- Primero construye `libggml-hexagon.so` (biblioteca **Android ARM64**) y
+  `libggml-htp-v75.so` (biblioteca **NPU DSP**) desde la **misma revisión fijada**
+  del submódulo llama.cpp:
+  `07ec7c8af09b576792063411d7dc2ec60b2f3a6f`.
+- Utiliza la imagen oficial de herramientas de Qualcomm
+  `ghcr.io/snapdragon-toolchain/arm64-android:v0.8`, que contiene el SDK
+  Hexagon, el compilador DSP y el Android NDK. Un host Android normal **no**
+  necesita ni debe incorporar estas herramientas propietarias.
+- Luego usa Gradle/NDK habitual de Salve con `SALVE_ENABLE_HEXAGON=1` y
+  copia ambos binarios precompilados al APK. No toca las versiones de las
+  bibliotecas base, el código de memoria ni las otras rutas de inferencia.
+- La publicación se limita a un artefacto de GitHub Actions de **dos días**,
+  no a una nueva release. Es la APK `app-preview.apk` bajo
+  `salve-hexagon-v75-preview-<commit>`.
 
-   ```sh
-   export SALVE_ENABLE_HEXAGON=1
-   export HEXAGON_SDK_ROOT=/ruta/al/Hexagon-SDK
-   export SALVE_HEXAGON_SKEL_V75=/ruta/al/libggml-htp-v75.so
-   ./gradlew :app:assemblePreview
-   ```
+### Reproducción local con Docker + Android SDK
 
-   Gradle compila `ggml-hexagon` además de los motores existentes y
-   empaqueta el kernel DSP como asset `hexagon/libggml-htp-v75.so`.
-   En el primer intento compatible, `HexagonDspAssets` lo extrae al espacio
-   privado de la aplicación y JNI configura `ADSP_LIBRARY_PATH` para FastRPC.
+```sh
+git submodule update --init --recursive
+mkdir -p build/qualcomm-dist
+docker run --rm --platform linux/amd64 -v "$PWD:/workspace" \
+  -w /workspace/third_party/llama.cpp \
+  ghcr.io/snapdragon-toolchain/arm64-android:v0.8 bash -euc '
+    cp docs/backend/snapdragon/CMakeUserPresets.json .
+    cmake --preset arm64-android-snapdragon-release \
+      -B /workspace/build/qualcomm-llama \
+      -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+      -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
+    cmake --build /workspace/build/qualcomm-llama \
+      --target ggml-hexagon htp-v75 --parallel 2
+    cp /workspace/build/qualcomm-llama/ggml/src/ggml-hexagon/libggml-hexagon.so \
+       /workspace/build/qualcomm-dist/
+    cp /workspace/build/qualcomm-llama/ggml/src/ggml-hexagon/libggml-htp-v75.so \
+       /workspace/build/qualcomm-dist/
+  '
+export SALVE_ENABLE_HEXAGON=1
+export SALVE_HEXAGON_ARM64_LIB="$PWD/build/qualcomm-dist/libggml-hexagon.so"
+export SALVE_HEXAGON_SKEL_V75="$PWD/build/qualcomm-dist/libggml-htp-v75.so"
+bash scripts/setup-android-sdk.sh
+./gradlew --init-script scripts/android-arm64.init.gradle :app:testPreviewUnitTest :app:assemblePreview
+```
 
-4. **Verificar el APK**, por ejemplo:
-   ```sh
-   unzip -l app/build/outputs/apk/preview/app-preview.apk | grep -E 'ggml-hexagon|hexagon/libggml-htp-v75'
-   ```
-   Ambas entradas son obligatorias: una es CPU-side ARM64 y otra DSP-side.
-   Si falta cualquiera, **no** afirmar que la APK puede utilizar Hexagon.
+Comprueba el contenido:
+```sh
+unzip -l app/build/outputs/apk/preview/app-preview.apk \
+  | grep -E 'lib/arm64-v8a/libggml-hexagon.so|assets/hexagon/libggml-htp-v75.so'
+```
+Ambos archivos son necesarios para intentar la NPU. Si falta uno, no afirmar
+que la APK la utiliza. En el primer intento compatible, `HexagonDspAssets`
+extrae el binario DSP y configura `ADSP_LIBRARY_PATH` para FastRPC.
+La integración de controladores con el firmware Samsung sigue requiriendo una
+prueba en un S24 Ultra real.
 
 ## Validación física obligatoria (S24 Ultra)
 
@@ -79,7 +101,8 @@ publica una imagen de toolchain de Snapdragon con NDK y Hexagon:
 ## Límites y rollback
 
 - No se ha probado en el Galaxy S24 Ultra ni se ha medido velocidad real.
-- Las variantes corrientes de CI **no** llevan el binario Hexagon.
+- Las variantes ordinarias de CI **no** llevan el binario Hexagon; solo
+  `Salve Hexagon V75 experimental APK` intenta empaquetarlo.
 - Los drivers FastRPC, permisos del firmware Samsung y el acceso al DSP
   pueden impedir el arranque incluso con SDK, bibliotecas y modelos correctos.
 - Esta rama no cambia almacenamiento de recuerdos, interfaz, herramientas
