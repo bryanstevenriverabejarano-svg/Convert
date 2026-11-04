@@ -18,6 +18,7 @@ public final class AutoModelUpgrade {
     static final String DECLINED_KEY = "auto_e4b_declined";
     /** Una sola vez: Bryan pidió que el modelo sin censura se descargue y active solo. */
     static final String UNCENSORED_KEY = "auto_uncensored_attempted";
+    static final String VISION_KEY = "auto_uncensored_vision_requested_at";
 
     private AutoModelUpgrade() { }
 
@@ -36,6 +37,14 @@ public final class AutoModelUpgrade {
                 salve.work.ModelDownloadWorker.enqueueOptionalAfterCurrent(context, LocalModelPolicy.UNCENSORED);
             }
             // Ya no se descarga el Gemma 4 E4B normal: solo los dos sin censura.
+            // Modelo sin censura activo pero sin ojos (instalado antes de la visión, o la descarga falló):
+            // se pide su visión, como mucho una vez cada 12 horas.
+            String vision = LocalModelPolicy.visionFor(active);
+            if (vision != null && !new java.io.File(ModelStore.dir(context), LocalModelPolicy.visionFileFor(active)).isFile()
+                    && System.currentTimeMillis() - prefs.getLong(VISION_KEY, 0L) > 12L * 60 * 60 * 1000) {
+                prefs.edit().putLong(VISION_KEY, System.currentTimeMillis()).apply();
+                salve.work.ModelDownloadWorker.enqueueOptionalAfterCurrent(context, vision);
+            }
         } catch (RuntimeException unavailable) { /* se intentará en el próximo arranque */ }
     }
 

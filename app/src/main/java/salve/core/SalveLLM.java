@@ -683,7 +683,16 @@ public class SalveLLM {
     }
     public String getComputeStatus() { return distributed.status(); }
 
-    public boolean supportsVision() { return modelAvailable && isLiteRT && visionModel; }
+    public boolean supportsVision() { return modelAvailable && ((isLiteRT && visionModel) || ggufVisionPath() != null); }
+
+    /** Ojos del GGUF activo (mmproj de los Gemma sin censura), si ya están descargados. */
+    private String ggufVisionPath() {
+        if (!isGguf) return null;
+        String file = LocalModelPolicy.visionFileFor(LocalModelPolicy.idForPath(modelPath));
+        if (file == null) return null;
+        File vision = new File(ModelStore.dir(appContext), file);
+        return vision.isFile() ? vision.getAbsolutePath() : null;
+    }
 
     /** Nonblocking snapshot for diagnostics/selection; it never starts native inference on the UI thread. */
     public ModelCatalog.RuntimeSnapshot getModelSnapshot() { return modelSnapshot; }
@@ -804,7 +813,8 @@ public class SalveLLM {
         if (image == null || image.isRecycled()) return ModelResult.failure(ModelResult.Status.ERROR, "Foto no válida", 0L);
         try {
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
-            initEngineIfNeeded(true);
+            // GGUF: el modelo de texto sirve tal cual; sus ojos se cargan aparte (GgufLlm.ensureVision).
+            initEngineIfNeeded(!isGguf);
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
             // Una foto de cámara a resolución completa ocupa mucha memoria al codificarla; el modelo
             // la reescala igualmente a su tamaño de entrada.
@@ -818,7 +828,15 @@ public class SalveLLM {
             boolean encoded = scaled.compress(Bitmap.CompressFormat.JPEG, 85, bytes);
             if (scaled != image) scaled.recycle();
             if (!encoded) throw new java.io.IOException("No se pudo leer la foto");
-            String text = LiteRTLlm.generateImage(ModelRuntimeInfo.context(modelPath)
+            String text;
+            if (isGguf) {
+                // Gemma sin censura: la foto entra por su mmproj (se carga la primera vez que llega una).
+                String eyes = ggufVisionPath();
+                if (eyes == null) throw new IllegalStateException("La visión de este modelo aún no está descargada");
+                GgufLlm.ensureVision(eyes);
+                text = GgufLlm.generate(salve.core.cognition.CognitivePrompt.withEngine(prompt, ModelRuntimeInfo.name(modelPath), true, ggufContextTokens),
+                        ModelRuntimeInfo.context(modelPath) + "Responde en español.", ggufContextTokens, bytes.toByteArray(), () -> false);
+            } else text = LiteRTLlm.generateImage(ModelRuntimeInfo.context(modelPath)
                     + salve.core.cognition.CognitivePrompt.withEngine(prompt, ModelRuntimeInfo.name(modelPath), true, null), bytes.toByteArray(), salve.core.cognition.CognitivePrompt.isCognitive(prompt),
                     salve.core.cognition.CognitivePrompt.isFormatRepair(prompt));
             ModelResult result = ModelResult.success(text, (System.nanoTime() - start) / 1_000_000L)
@@ -829,7 +847,7 @@ public class SalveLLM {
             return result;
         } catch (Exception | LinkageError e) {
             recordInference(ModelCatalog.Capability.VISION, false);
-            engineInitialized = LiteRTLlm.isInitialized();
+            engineInitialized = isGguf ? GgufLlm.isInitialized() : LiteRTLlm.isInitialized();
             lastErrorMessage = e.getMessage();
             Log.e(TAG, "Fallo de visión local", e);
             String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();

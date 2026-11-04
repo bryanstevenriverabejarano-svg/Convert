@@ -108,7 +108,7 @@ android {
                 arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
                 // Build only app JNI libraries, not SentencePiece's desktop training/CLI tools.
                 // ggml-cpu y ggml-opencl se abren en tiempo de ejecución, así que hay que pedirlos aquí.
-                targets "salve_llama", "salve_sentencepiece", "llama", "ggml", "ggml-base", "ggml-cpu", "ggml-opencl"
+                targets "salve_llama", "salve_sentencepiece", "llama", "ggml", "ggml-base", "ggml-cpu", "ggml-opencl", "mtmd"
             }
         }
 

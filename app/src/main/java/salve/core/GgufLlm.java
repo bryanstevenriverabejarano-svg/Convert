@@ -45,7 +45,17 @@ public final class GgufLlm {
         return generate(prompt, system, GgufContextPolicy.STANDARD, cancelled);
     }
     public static synchronized String generate(String prompt, String system, int requestedContext, BooleanSupplier cancelled) {
+        return generate(prompt, system, requestedContext, null, cancelled);
+    }
+
+    /**
+     * Con {@code media} (una foto JPEG/PNG) usa la visión cargada con {@link #ensureVision}; si no hay
+     * visión cargada, falla en vez de contestar sin haber mirado la foto.
+     */
+    public static synchronized String generate(String prompt, String system, int requestedContext, byte[] media, BooleanSupplier cancelled) {
         if (model == 0) throw new IllegalStateException("GGUF no está inicializado");
+        if (media != null && vision == 0) throw new IllegalStateException("El modelo no tiene la visión cargada");
+        final long eyes = media == null ? 0 : vision;
         BooleanSupplier stop = cancellation(cancelled);
         byte[] input = prompt.getBytes(StandardCharsets.UTF_8), identity = system.getBytes(StandardCharsets.UTF_8);
         byte[] grammar = salve.core.cognition.CognitivePrompt.isCognitive(prompt)
@@ -54,7 +64,7 @@ public final class GgufLlm {
             contextTokens = selected;
             try {
                 return ThinkingFilter.strip(new String(infer(model, input, identity, grammar, selected,
-                        salve.core.cognition.CognitivePrompt.isFormatRepair(prompt), stop), StandardCharsets.UTF_8).trim());
+                        salve.core.cognition.CognitivePrompt.isFormatRepair(prompt), eyes, media, stop), StandardCharsets.UTF_8).trim());
             } finally {
                 String measured = lastStats();
                 stats = measured == null ? "" : measured;
@@ -73,7 +83,24 @@ public final class GgufLlm {
     /** ¿El modelo cargado piensa en la gráfica? */
     public static boolean usesGpu() { return gpuActive; }
     public static synchronized int getContextTokens() { return contextTokens; }
+    /** Carga (una vez) la visión del modelo actual. La visión depende del modelo: se libera antes que él. */
+    public static synchronized void ensureVision(String mmprojPath) {
+        if (model == 0) throw new IllegalStateException("GGUF no está inicializado");
+        if (vision != 0 && mmprojPath.equals(visionPath)) return;
+        releaseVisionIfLoaded();
+        vision = loadVision(model, mmprojPath.getBytes(StandardCharsets.UTF_8));
+        if (vision == 0) throw new IllegalStateException("No se pudo cargar la visión del modelo");
+        visionPath = mmprojPath;
+    }
+    public static synchronized boolean hasVision() { return vision != 0; }
+    private static void releaseVisionIfLoaded() {
+        if (vision != 0) releaseVision(vision);
+        vision = 0;
+        visionPath = null;
+    }
+
     public static synchronized void reset() {
+        releaseVisionIfLoaded();
         if (model != 0) release(model);
         model = 0;
         loadedPath = null;
@@ -89,7 +116,12 @@ public final class GgufLlm {
 
     /** Dónde se fue el tiempo de la última respuesta (leer el mensaje / escribir), y si fue por gráfica. */
     public static String getLastStats() { return stats; }
-    private static native byte[] infer(long model, byte[] prompt, byte[] system, byte[] grammar, int contextTokens, boolean repair, BooleanSupplier cancelled);
+    private static native byte[] infer(long model, byte[] prompt, byte[] system, byte[] grammar, int contextTokens, boolean repair,
+                                       long vision, byte[] media, BooleanSupplier cancelled);
+    private static native long loadVision(long model, byte[] mmprojPath);
+    private static native void releaseVision(long vision);
+    private static long vision;
+    private static String visionPath;
     private static native void release(long model);
     private static native boolean setAdapter(long model, byte[] path, float scale);
 

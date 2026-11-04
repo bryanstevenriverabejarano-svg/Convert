@@ -1,6 +1,8 @@
 #include <jni.h>
 #include "llama.h"
 #include "ggml-backend.h"
+#include "mtmd.h"
+#include "mtmd-helper.h"
 #include <cstdlib>
 #include <algorithm>
 #include <chrono>
@@ -178,9 +180,35 @@ extern "C" JNIEXPORT jboolean JNICALL Java_salve_core_GgufLlm_gpuActive(JNIEnv *
     return gpu_active ? JNI_TRUE : JNI_FALSE;
 }
 
-extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
-        JNIEnv *env, jclass, jlong handle, jbyteArray input, jbyteArray systemInput, jbyteArray grammarInput, jint contextSize, jboolean repair, jobject cancelled) {
+// Ojos (y oídos) de los Gemma 4 sin censura: el «mmproj» que convierte una foto en tokens para el modelo.
+extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_loadVision(
+        JNIEnv *env, jclass, jlong handle, jbyteArray path) {
     try {
+        auto *model = reinterpret_cast<llama_model *>(handle);
+        if (!model) throw std::invalid_argument("Modelo GGUF no cargado");
+        auto params = mtmd_context_params_default();
+        params.use_gpu = gpu_active; // en la misma gráfica que el modelo, o en el procesador
+        params.n_threads = 4;
+        params.print_timings = false;
+        params.warmup = false;
+        params.image_max_tokens = 280; // cabe en un solo lote: la foto se lee entera de una vez
+        auto *vision = mtmd_init_from_file(bytes(env, path).c_str(), model, params);
+        if (!vision) throw std::runtime_error("No se pudo cargar la visión del modelo");
+        return reinterpret_cast<jlong>(vision);
+    } catch (const std::exception &e) { error(env, "java/lang/IllegalStateException", e); }
+    return 0;
+}
+
+extern "C" JNIEXPORT void JNICALL Java_salve_core_GgufLlm_releaseVision(JNIEnv *, jclass, jlong vision) {
+    if (vision) mtmd_free(reinterpret_cast<mtmd_context *>(vision));
+}
+
+extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
+        JNIEnv *env, jclass, jlong handle, jbyteArray input, jbyteArray systemInput, jbyteArray grammarInput, jint contextSize, jboolean repair,
+        jlong visionHandle, jbyteArray mediaInput, jobject cancelled) {
+    try {
+        auto *vision = reinterpret_cast<mtmd_context *>(visionHandle);
+        const bool withMedia = vision && mediaInput;
         if (contextSize != 4096 && contextSize != 2048) throw std::invalid_argument("Contexto GGUF no admitido");
         auto *model = reinterpret_cast<llama_model *>(handle);
         Request request(env, cancelled);
@@ -189,6 +217,8 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         const auto *vocab = llama_model_get_vocab(model);
         std::string content = bytes(env, input);
         std::string system = bytes(env, systemInput);
+        // La foto va delante del texto del usuario; mtmd cambia la marca por los tokens de la imagen.
+        if (withMedia) content = std::string(mtmd_default_marker()) + "\n" + content;
         // Dolphin 3.0 uses ChatML. Use GGUF's declared template for other imports.
         llama_chat_message messages[] = {
             {"system", system.c_str()},
@@ -221,14 +251,35 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
                 prompt += "<think>\n\n</think>\n\n";
         }
         int length = static_cast<int>(prompt.size());
-        int count = -llama_tokenize(vocab, prompt.data(), length, nullptr, 0, true, true);
         const int outputTokens = repair ? 256 : 512;
-        const int batchSize = contextSize == 2048 ? 128 : 256;
+        // Con foto, un lote grande: los tokens de la imagen se leen juntos (atención no causal).
+        const int batchSize = withMedia ? 512 : contextSize == 2048 ? 128 : 256;
+        std::vector<llama_token> tokens;
+        std::unique_ptr<mtmd_input_chunks, decltype(&mtmd_input_chunks_free)> chunks(nullptr, mtmd_input_chunks_free);
+        int count = 0;
+        if (withMedia) {
+            std::string media = bytes(env, mediaInput);
+            auto wrapped = mtmd_helper_bitmap_init_from_buf(vision, reinterpret_cast<const unsigned char *>(media.data()),
+                                                            media.size(), false, mtmd_helper_init_opt_default());
+            std::unique_ptr<mtmd_bitmap, decltype(&mtmd_bitmap_free)> bitmap(wrapped.bitmap, mtmd_bitmap_free);
+            if (wrapped.video_ctx) mtmd_helper_video_free(wrapped.video_ctx);
+            if (!bitmap) throw std::invalid_argument("No se pudo leer la foto");
+            chunks.reset(mtmd_input_chunks_init());
+            mtmd_input_text text{prompt.c_str(), prompt.size(), true, true};
+            const mtmd_bitmap *bitmaps[] = {bitmap.get()};
+            if (mtmd_tokenize(vision, chunks.get(), &text, bitmaps, 1) != 0)
+                throw std::runtime_error("No se pudo preparar la foto para el modelo");
+            count = static_cast<int>(mtmd_helper_get_n_tokens(chunks.get()));
+        } else {
+            count = -llama_tokenize(vocab, prompt.data(), length, nullptr, 0, true, true);
+        }
         if (count <= 0 || count > contextSize - outputTokens)
             throw std::invalid_argument("El mensaje supera el contexto local; acórtalo e inténtalo de nuevo");
-        std::vector<llama_token> tokens(count);
-        if (llama_tokenize(vocab, prompt.data(), length, tokens.data(), count, true, true) != count)
-            throw std::runtime_error("No se pudo tokenizar el mensaje");
+        if (!withMedia) {
+            tokens.resize(count);
+            if (llama_tokenize(vocab, prompt.data(), length, tokens.data(), count, true, true) != count)
+                throw std::runtime_error("No se pudo tokenizar el mensaje");
+        }
         auto params = llama_context_default_params();
         params.n_ctx = contextSize;
         params.n_batch = batchSize;
@@ -268,8 +319,16 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             return last_stats;
         };
         try {
-            for (int offset = 0; offset < count; offset += batchSize)
-                decode(tokens.data() + offset, std::min(batchSize, count - offset));
+            if (withMedia) {
+                llama_pos past = 0;
+                request.check();
+                int status = mtmd_helper_eval_chunks(vision, ctx.get(), chunks.get(), 0, 0, batchSize, true, &past);
+                request.check();
+                if (status != 0) throw std::runtime_error("Falló la lectura de la foto");
+            } else {
+                for (int offset = 0; offset < count; offset += batchSize)
+                    decode(tokens.data() + offset, std::min(batchSize, count - offset));
+            }
         } catch (const Cancelled &) { throw; }
           catch (const std::exception &e) {
             prefill = seconds(started);

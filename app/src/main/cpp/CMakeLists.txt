@@ -67,9 +67,12 @@ set(LLAMA_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_COMMON OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_APP OFF CACHE BOOL "" FORCE)
 set(LLAMA_OPENSSL OFF CACHE BOOL "" FORCE)
+# Visión y audio de los Gemma 4 sin censura (mmproj): solo la biblioteca mtmd, sin sus programas.
+set(LLAMA_BUILD_MTMD ON CACHE BOOL "" FORCE)
+set(MTMD_VIDEO OFF CACHE BOOL "" FORCE)
 add_subdirectory(../../../../third_party/llama.cpp llama)
 add_library(salve_llama SHARED salve_llama.cpp)
-target_link_libraries(salve_llama PRIVATE llama)
+target_link_libraries(salve_llama PRIVATE llama mtmd)
 if(ANDROID)
     # NDK r27 needs both flags for LOAD and GNU_RELRO on 16 KB devices.
     target_link_options(salve_llama PRIVATE
