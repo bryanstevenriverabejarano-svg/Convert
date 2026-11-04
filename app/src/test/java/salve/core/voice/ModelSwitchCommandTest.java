@@ -33,6 +33,23 @@ public class ModelSwitchCommandTest {
         assertNull(ModelSwitchCommand.parse("usa el modelo gemma 4 e2b para escribir un cuento muy largo sobre dragones que vuelan por la noche en el bosque"));
     }
 
+    @Test public void downloadStatusQuestions() {
+        assertTrue(ModelSwitchCommand.asksDownloadStatus("¿Cómo va la descarga?"));
+        assertTrue(ModelSwitchCommand.asksDownloadStatus("estado de la descarga del modelo"));
+        assertTrue(ModelSwitchCommand.asksDownloadStatus("¿ha terminado la descarga?"));
+        assertFalse(ModelSwitchCommand.asksDownloadStatus("descarga gemma 4 e2b"));
+    }
+
+    @Test public void infinitivesAndTyposStillSwitch() {
+        assertEquals(E2B, ModelSwitchCommand.parse("Descaegar Gemma 4 E2b sin censura"));
+        assertEquals(E2B, ModelSwitchCommand.parse("descargar gemma 4 e2b sin censura"));
+        assertEquals(E2B, ModelSwitchCommand.parse("quiero usar el gemma 4 e2b"));
+        assertEquals(E4B, ModelSwitchCommand.parse("cámbialo al gemma 4 e4b sin censura"));
+        assertEquals(E4B, ModelSwitchCommand.parse("puedes descargarte el modelo sin censura"));
+        assertNull("describir no es descargar", ModelSwitchCommand.parse("describe el gemma 4 e2b"));
+        assertNull(ModelSwitchCommand.parse("qué tal funciona el gemma 4 e2b sin censura"));
+    }
+
     @Test public void onlyTheTwoUncensoredModelsRemain() {
         assertEquals(E4B, ModelSwitchCommand.parse("usa el modelo sin censura"));
         assertEquals(E4B, ModelSwitchCommand.parse("descarga gemma 4 e4b sin censura"));

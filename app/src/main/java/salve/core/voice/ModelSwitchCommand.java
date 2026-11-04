@@ -18,10 +18,14 @@ public final class ModelSwitchCommand {
      */
     public enum Target { E2B, E4B }
 
+    /**
+     * Verbo de cambio al principio, en cualquier forma («usa», «usar», «descárgate», «cámbialo»…) y
+     * con las erratas típicas del teclado («descaegar», «descrgar»). Nunca «describe»: no lleva «ga».
+     */
     private static final Pattern VERB = Pattern.compile(
-            "^(?:quiero que |a partir de ahora |de ahora en adelante )?(?:usa|uses|utiliza|utilices|cambia|cambiate|"
-                    + "cambies|pasa|pasate|pases|activa|actives|vuelve|vuelvas|ponte|pon|carga|cargues|"
-                    + "descarga|descargate|descargues|instala|instalate|baja|bajate)\\b.*");
+            "^(?:quiero que |quiero |a partir de ahora |de ahora en adelante |puedes |podrias )?"
+                    + "(?:us[ae]\\w*|utiliz\\w*|utilic\\w*|cambi\\w*|pas[ae]\\w*|activ\\w*|vuelv\\w*|volver|pon\\w*|"
+                    + "carg\\w*|desc\\w{0,3}g[ae]\\w*|instal\\w*|baj[ae]\\w*)\\b.*");
     private static final Pattern NAME_E2B = Pattern.compile("(?:gem+a|jema|yema|modelo)4?e?2b");
     private static final Pattern NAME_E4B = Pattern.compile("(?:gem+a|jema|yema|modelo)4?e?4b");
     private static final Pattern LIGHT = Pattern.compile(
@@ -47,6 +51,15 @@ public final class ModelSwitchCommand {
         boolean e4 = NAME_E4B.matcher(compact).find(), e2 = NAME_E2B.matcher(compact).find();
         if (e2 == e4) return uncensored && !e2 ? Target.E4B : null; // ninguno, o los dos («cambia de e2b a e4b»: que lo diga claro)
         return e2 ? Target.E2B : Target.E4B;
+    }
+
+    private static final Pattern DOWNLOAD_STATUS = Pattern.compile(
+            "^(?:(?:como|que tal|en que) va(?:n)?|(?:cual es el )?estado de|que pasa con|como esta|ha terminado|termino|se ha bajado)"
+                    + " (?:la |las |el )?(?:descargas?|modelo nuevo|modelo sin censura)(?: del modelo| de los modelos| del gemma.*)?$");
+
+    /** «¿Cómo va la descarga?», «estado de la descarga», «¿ha terminado la descarga?». */
+    public static boolean asksDownloadStatus(String input) {
+        return DOWNLOAD_STATUS.matcher(normalize(input)).matches();
     }
 
     public static String label(Target target) {
