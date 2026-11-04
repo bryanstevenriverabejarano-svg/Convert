@@ -52,8 +52,14 @@ public final class GgufLlm {
                 ? salve.core.cognition.CognitiveOutputConstraints.gbnf().getBytes(StandardCharsets.UTF_8) : new byte[0];
         GgufContextPolicy.Generation result = GgufContextPolicy.generate(requestedContext, selected -> {
             contextTokens = selected;
-            return ThinkingFilter.strip(new String(infer(model, input, identity, grammar, selected,
-                    salve.core.cognition.CognitivePrompt.isFormatRepair(prompt), stop), StandardCharsets.UTF_8).trim());
+            try {
+                return ThinkingFilter.strip(new String(infer(model, input, identity, grammar, selected,
+                        salve.core.cognition.CognitivePrompt.isFormatRepair(prompt), stop), StandardCharsets.UTF_8).trim());
+            } finally {
+                String measured = lastStats();
+                stats = measured == null ? "" : measured;
+                if (!stats.isEmpty()) android.util.Log.i("GgufLlm", stats);
+            }
         }, stop);
         return result.text;
     }
@@ -78,6 +84,11 @@ public final class GgufLlm {
     }
     private static native long load(byte[] path, boolean allowGpu, byte[] kernelCache, BooleanSupplier cancelled);
     private static native boolean gpuActive();
+    private static native String lastStats();
+    private static volatile String stats = "";
+
+    /** Dónde se fue el tiempo de la última respuesta (leer el mensaje / escribir), y si fue por gráfica. */
+    public static String getLastStats() { return stats; }
     private static native byte[] infer(long model, byte[] prompt, byte[] system, byte[] grammar, int contextTokens, boolean repair, BooleanSupplier cancelled);
     private static native void release(long model);
     private static native boolean setAdapter(long model, byte[] path, float scale);

@@ -650,6 +650,8 @@ public class SalveLLM {
         }
         String error = lastErrorMessage;
         if (error != null && !error.isEmpty()) report.append("\nÚltimo fallo: ").append(error);
+        if (isGguf && !GgufLlm.getLastStats().isEmpty()) report.append("\nÚltima respuesta GGUF (").append(GgufLlm.getLastStats()).append(").");
+        if (isGguf && engineInitialized) report.append(GgufLlm.usesGpu() ? "\nMotor GGUF: gráfica (OpenCL)." : "\nMotor GGUF: procesador.");
         return report.append("\nEl tamaño del archivo y el contexto en tokens no son la RAM disponible.").toString();
     }
 

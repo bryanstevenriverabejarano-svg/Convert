@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstdio>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -73,6 +75,7 @@ void error(JNIEnv *env, const char *type, const std::exception &e) {
 std::once_flag backend;
 bool opencl_tried = false;
 bool gpu_active = false; // el modelo cargado tiene sus capas en la gráfica
+std::string last_stats;  // medida de la última respuesta: dónde se alarga (leer o escribir)
 
 // Motores de ggml como módulos aparte (GGML_BACKEND_DL): si la gráfica no carga, el procesador sigue.
 void load_backends(bool gpu, const std::string &cache) {
@@ -85,6 +88,32 @@ void load_backends(bool gpu, const std::string &cache) {
     // Los kernels OpenCL se compilan la primera vez (tarda); después se leen de esta caché.
     if (!cache.empty()) setenv("GGML_OPENCL_KERNEL_CACHE_DIR", cache.c_str(), 1);
     if (!ggml_backend_reg_by_name("OpenCL")) ggml_backend_load("libggml-opencl.so");
+}
+
+// Prueba real en la gráfica (leer unos tokens y escribir uno) DENTRO de la carga, que tiene más margen:
+// el driver compila aquí los kernels que falten, y si algo no funciona se sabe antes de responder.
+template <typename R>
+bool warm_up(llama_model *model, R &request) {
+    try {
+        auto params = llama_context_default_params();
+        params.n_ctx = 512;
+        params.n_batch = 64;
+        params.n_ubatch = 64;
+        params.n_threads = 4;
+        params.n_threads_batch = 4;
+        params.abort_callback = R::abort;
+        params.abort_callback_data = &request;
+        std::unique_ptr<llama_context, decltype(&llama_free)> ctx(llama_init_from_model(model, params), llama_free);
+        if (!ctx) return false;
+        const auto *vocab = llama_model_get_vocab(model);
+        const char *text = "Hola, esto es una prueba de la gráfica.";
+        llama_token tokens[64];
+        int n = llama_tokenize(vocab, text, static_cast<int>(std::char_traits<char>::length(text)), tokens, 64, true, false);
+        if (n <= 0) return false;
+        if (llama_decode(ctx.get(), llama_batch_get_one(tokens, n)) != 0) return false;
+        llama_token next = tokens[n - 1];
+        return llama_decode(ctx.get(), llama_batch_get_one(&next, 1)) == 0;
+    } catch (const std::exception &) { return false; }
 }
 
 ggml_backend_dev_t gpu_device() {
@@ -123,6 +152,10 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
             return llama_model_load_from_file(file.c_str(), params);
         };
         llama_model *loaded = gpu ? attempt(gpu) : nullptr;
+        if (loaded && !warm_up(loaded, request)) { // la gráfica cargó pero no sabe calcular: procesador
+            llama_model_free(loaded);
+            loaded = nullptr;
+        }
         if (loaded) gpu_active = true;
         else {
             request.check();
@@ -135,6 +168,10 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
     } catch (const Cancelled &e) { gpu_active = false; error(env, "java/util/concurrent/CancellationException", e); }
       catch (const std::exception &e) { gpu_active = false; error(env, "java/lang/IllegalStateException", e); }
     return 0;
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_salve_core_GgufLlm_lastStats(JNIEnv *env, jclass) {
+    return env->NewStringUTF(last_stats.c_str());
 }
 
 extern "C" JNIEXPORT jboolean JNICALL Java_salve_core_GgufLlm_gpuActive(JNIEnv *, jclass) {
@@ -201,25 +238,79 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             request.check();
             if (status != 0) throw std::runtime_error("Falló la inferencia GGUF");
         };
-        for (int offset = 0; offset < count; offset += batchSize)
-            decode(tokens.data() + offset, std::min(batchSize, count - offset));
+        const auto started = Clock::now();
+        auto seconds = [](Clock::time_point from) {
+            return std::chrono::duration<double>(Clock::now() - from).count();
+        };
+        double prefill = 0;
+        int written = 0;
+        auto stats = [&]() {
+            char text[200];
+            std::snprintf(text, sizeof(text), "%s: leyó %d tokens en %.1f s; escribió %d en %.1f s",
+                          gpu_active ? "gráfica" : "procesador", count, prefill, written,
+                          prefill > 0 ? seconds(started) - prefill : 0.0);
+            last_stats = text;
+            return last_stats;
+        };
+        try {
+            for (int offset = 0; offset < count; offset += batchSize)
+                decode(tokens.data() + offset, std::min(batchSize, count - offset));
+        } catch (const Cancelled &) { throw; }
+          catch (const std::exception &e) {
+            prefill = seconds(started);
+            stats();
+            if (request.expired()) throw std::runtime_error("El modelo local agotó el tiempo de respuesta leyendo el mensaje (" + last_stats + ")");
+            throw;
+        }
+        prefill = seconds(started);
         std::unique_ptr<llama_sampler, decltype(&llama_sampler_free)> sampler(
                 llama_sampler_chain_init(llama_sampler_chain_default_params()), llama_sampler_free);
-        std::string grammar = bytes(env, grammarInput);
-        if (!grammar.empty()) {
-            // Mask invalid tokens BEFORE top-k/top-p. sample() also accepts the chosen token once.
-            auto *constraint = llama_sampler_init_grammar(vocab, grammar.c_str(), "root");
-            if (!constraint) throw std::invalid_argument("Gramática de salida de Salve inválida");
-            llama_sampler_chain_add(sampler.get(), constraint);
-        }
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_k(40));
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_p(0.9f, 1));
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_temp(0.3f));
         llama_sampler_chain_add(sampler.get(), llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+        std::string grammar = bytes(env, grammarInput);
+        std::unique_ptr<llama_sampler, decltype(&llama_sampler_free)> constraint(nullptr, llama_sampler_free);
+        if (!grammar.empty()) {
+            constraint.reset(llama_sampler_init_grammar(vocab, grammar.c_str(), "root"));
+            if (!constraint) throw std::invalid_argument("Gramática de salida de Salve inválida");
+        }
+        const int vocabSize = llama_vocab_n_tokens(vocab);
+        std::vector<llama_token_data> candidates;
+        auto fill = [&]() {
+            const float *logits = llama_get_logits_ith(ctx.get(), -1);
+            candidates.resize(vocabSize);
+            for (llama_token id = 0; id < vocabSize; ++id) candidates[id] = {id, logits[id], 0.0f};
+            return llama_token_data_array{candidates.data(), candidates.size(), -1, false};
+        };
+        // Gramática rápida (como llama.cpp common): se elige un token sin ella y solo se comprueba ese.
+        // Si no encaja, se enmascara TODO el vocabulario ANTES de top-k/top-p y se vuelve a elegir.
+        // Con los 248.000 tokens de Qwen 3.5, enmascarar siempre era lentísimo.
+        auto sample = [&]() -> llama_token {
+            if (!constraint) return llama_sampler_sample(sampler.get(), ctx.get(), -1);
+            auto all = fill();
+            llama_sampler_apply(sampler.get(), &all);
+            llama_token token = all.data[all.selected].id;
+            llama_token_data single{token, 1.0f, 0.0f};
+            llama_token_data_array one{&single, 1, -1, false};
+            llama_sampler_apply(constraint.get(), &one);
+            if (std::isinf(single.logit) && single.logit < 0) {
+                all = fill();
+                llama_sampler_apply(constraint.get(), &all);
+                llama_sampler_apply(sampler.get(), &all);
+                token = all.data[all.selected].id;
+            }
+            llama_sampler_accept(constraint.get(), token);
+            llama_sampler_accept(sampler.get(), token);
+            return token;
+        };
         std::string output;
+        bool truncated = false;
         for (int i = 0; i < outputTokens; ++i) {
-            request.check();
-            llama_token token = llama_sampler_sample(sampler.get(), ctx.get(), -1);
+            if (request.cancelled()) throw Cancelled();
+            // Sin tiempo pero con texto: se entrega lo escrito en vez de tirarlo todo.
+            if (request.expired()) { truncated = true; break; }
+            llama_token token = sample();
             if (llama_vocab_is_eog(vocab, token)) break;
             char local[256];
             int size = llama_token_to_piece(vocab, token, local, sizeof(local), 0, false);
@@ -229,8 +320,20 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
                 if (size < 0) throw std::runtime_error("Token GGUF inválido");
                 output.append(piece.data(), size);
             } else output.append(local, size);
-            if (i + 1 < outputTokens) decode(&token, 1);
+            ++written;
+            if (i + 1 < outputTokens) {
+                if (request.cancelled()) throw Cancelled();
+                int status = llama_decode(ctx.get(), llama_batch_get_one(&token, 1));
+                if (status != 0) {
+                    if (request.cancelled()) throw Cancelled();
+                    if (request.expired()) { truncated = true; break; }
+                    throw std::runtime_error("Falló la inferencia GGUF");
+                }
+            }
         }
+        stats();
+        if (truncated && output.empty())
+            throw std::runtime_error("El modelo local agotó el tiempo de respuesta (" + last_stats + ")");
         auto result = env->NewByteArray(output.size());
         if (result) env->SetByteArrayRegion(result, 0, output.size(), reinterpret_cast<const jbyte *>(output.data()));
         return result;
