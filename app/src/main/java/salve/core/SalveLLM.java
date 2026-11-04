@@ -677,6 +677,21 @@ public class SalveLLM {
         if (error != null && !error.isEmpty()) report.append("\nÚltimo fallo: ").append(error);
         if (isGguf && !GgufLlm.getLastStats().isEmpty()) report.append("\nÚltima respuesta GGUF (").append(GgufLlm.getLastStats()).append(").");
         if (isGguf && engineInitialized) report.append("\nMotor GGUF real: ").append(GgufLlm.backendName()).append(".");
+        if (isGguf) {
+            String soc = android.os.Build.VERSION.SDK_INT >= 31 ? android.os.Build.SOC_MODEL : null;
+            report.append("\nNPU Hexagon (experimental): ");
+            if (!GgufNpuPolicy.eligible(soc, modelPath)) {
+                report.append("requiere SM8650 y un GGUF Q4_0; el modelo actual continúa con OpenCL/CPU.");
+            } else if (!HexagonDspAssets.isPackaged(appContext)) {
+                report.append("esta APK no incluye el binario HTP v75; no se intentará la NPU.");
+            } else if (npuGuard().disabled()) {
+                report.append("desactivada tras un fallo anterior; usa GPU/CPU.");
+            } else if (GgufLlm.usesNpu()) {
+                report.append("ACTIVA: backend HTP confirmado tras cargar y generar.");
+            } else {
+                report.append("disponible para probar; el backend real actual es ").append(GgufLlm.backendName()).append(".");
+            }
+        }
         return report.append("\nEl tamaño del archivo y el contexto en tokens no son la RAM disponible.").toString();
     }
 
