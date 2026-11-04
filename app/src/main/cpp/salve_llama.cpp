@@ -146,7 +146,7 @@ float active_scale = 0.0f;
 
 extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
         JNIEnv *env, jclass, jbyteArray path, jboolean allowNpu, jboolean allowGpu,
-        jbyteArray cacheDir, jbyteArray nativeLibDir, jobject cancelled) {
+        jbyteArray cacheDir, jbyteArray nativeLibDir, jboolean acceleratorOnly, jobject cancelled) {
     try {
         gpu_active = false;
         npu_active = false;
@@ -186,6 +186,8 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
             if (loaded) gpu_active = true;
             else {
                 request.check();
+                // Solo se pedía probar un acelerador: Java decide el siguiente paso (y qué guardia apuntar).
+                if (acceleratorOnly) return 0;
                 loaded = attempt(nullptr);
             }
         }

@@ -316,28 +316,31 @@ public class SalveLLM {
             GgufGpuGuard gpuGuard = gpuGuard();
             GgufGpuGuard npuGuard = npuGuard();
             boolean gpu = gpuGuard.allowed(installStamp());
-            // Deliberately restrict early Hexagon experiments to SM8650 + Q4_0:
-            // the existing Q4_K_M / Q4_K_P downloads must keep working on Adreno/CPU.
+            // Hexagon only on SM8650 with quantizations its HTP kernels support (Q4_0, Q8_0, Q4_K, Q6_K).
             String soc = android.os.Build.VERSION.SDK_INT >= 31 ? android.os.Build.SOC_MODEL : null;
             String dspDir = GgufNpuPolicy.eligible(soc, modelPath) ? HexagonDspAssets.prepare(appContext) : null;
             boolean npu = dspDir != null && npuGuard.allowed(installStamp());
-            // Persist both guards: a hard native crash can occur during either backend's warm-up.
-            if (npu) npuGuard.trying();
-            if (gpu) gpuGuard.trying();
             try {
-                try { GgufLlm.init(modelPath, npu, gpu, kernelCacheDir(), dspDir, watch); }
-                finally {
-                    if (npu) npuGuard.fine();
-                    if (gpu) gpuGuard.fine();
+                boolean onNpu = false;
+                if (npu) {
+                    // Only the NPU guard is armed while Hexagon is being tried: a DSP crash must not disable Adreno.
+                    npuGuard.trying();
+                    try { onNpu = GgufLlm.tryInitNpu(modelPath, dspDir, watch); }
+                    finally { npuGuard.fine(); }
+                    if (!onNpu) {
+                        // Do not repeatedly spend time on an HTP backend that could not even warm up here.
+                        npuGuard.disable();
+                        Log.w(TAG, "Hexagon v75 no superó la carga/calibración; se prueba la gráfica o el procesador");
+                    }
+                }
+                if (!onNpu) {
+                    // Apuntado en disco ANTES de cargar: si el driver de la GPU tumba la app, el próximo arranque usa el procesador.
+                    if (gpu) gpuGuard.trying();
+                    try { GgufLlm.init(modelPath, false, gpu, kernelCacheDir(), null, watch); }
+                    finally { if (gpu) gpuGuard.fine(); }
                 }
                 ggufGpuUnconfirmed = GgufLlm.usesGpu();
                 ggufNpuUnconfirmed = GgufLlm.usesNpu();
-                // Do not repeatedly spend time on an HTP backend that could not even
-                // warm up on this phone/firmware. Keep the proven OpenCL/CPU route.
-                if (npu && !ggufNpuUnconfirmed) {
-                    npuGuard.disable();
-                    Log.w(TAG, "Hexagon v75 no superó la carga/calibración; respaldo " + GgufLlm.backendName());
-                }
             }
             catch (java.util.concurrent.CancellationException e) {
                 if (watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
@@ -657,7 +660,6 @@ public class SalveLLM {
         GenerationSpeed.Sample last = GenerationSpeed.last();
         int ctx = loadedContextTokens();
         return runtimeStatus + (isLiteRT && LiteRTLlm.getSpeculativeActive() ? " · MTP" : "")
-                + (isGguf && GgufLlm.usesNpu() ? " · Hexagon" : "")
                 + (ctx > 0 ? " · " + Math.round(ctx / 1024f) + "k" : "")
                 + (last == null ? "" : " · " + last.compact());
     }
@@ -687,7 +689,7 @@ public class SalveLLM {
             String soc = android.os.Build.VERSION.SDK_INT >= 31 ? android.os.Build.SOC_MODEL : null;
             report.append("\nNPU Hexagon (experimental): ");
             if (!GgufNpuPolicy.eligible(soc, modelPath)) {
-                report.append("requiere SM8650 y un GGUF Q4_0; el modelo actual continúa con OpenCL/CPU.");
+                report.append("requiere SM8650 y un GGUF Q4_0, Q8_0, Q4_K o Q6_K; el modelo actual continúa con OpenCL/CPU.");
             } else if (!HexagonDspAssets.isPackaged(appContext)) {
                 report.append("esta APK no incluye el binario HTP v75; no se intentará la NPU.");
             } else if (npuGuard().disabled()) {

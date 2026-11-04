@@ -51,7 +51,7 @@ jobs:
           docker run --rm --platform linux/amd64 \
             --volume "$PWD:/workspace" \
             --workdir /workspace/third_party/llama.cpp \
-            ghcr.io/snapdragon-toolchain/arm64-android:v0.8 \
+            ghcr.io/snapdragon-toolchain/arm64-android:v0.8@sha256:e39e5e9c0957550a92c0de756b7556d81196c7c7f7328ed80de252bfb4878adf \
             bash -euc '
               cp docs/backend/snapdragon/CMakeUserPresets.json .
               cmake --preset arm64-android-snapdragon-release \
@@ -72,6 +72,15 @@ jobs:
           test -s build/qualcomm-dist/libggml-htp-v75.so
           file build/qualcomm-dist/*.so
           readelf -h build/qualcomm-dist/libggml-hexagon.so | grep -E 'Machine:.*AArch64'
+          # The host module is built apart (Qualcomm preset, its own STL/LTO) but binds at runtime to
+          # Salve's libggml-base.so: it must need nothing the APK does not ship or the system lacks.
+          readelf -d build/qualcomm-dist/libggml-hexagon.so | grep NEEDED
+          readelf -d build/qualcomm-dist/libggml-hexagon.so | grep NEEDED | grep -oE '\[[^]]+\]' | tr -d '[]' | while read -r lib; do
+            case "$lib" in
+              libggml-base.so|libggml.so|libc++_shared.so|libc.so|libm.so|libdl.so|liblog.so|libandroid.so|libcdsprpc.so) ;;
+              *) echo "Unexpected dependency of libggml-hexagon.so: $lib"; exit 1 ;;
+            esac
+          done
           # Module MUST export the GGML entry point for ggml_backend_load() in Salve.
           readelf --wide --dyn-syms build/qualcomm-dist/libggml-hexagon.so \
             | grep -E '[[:space:]]ggml_backend_init$'

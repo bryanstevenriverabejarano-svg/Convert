@@ -40,13 +40,36 @@ public final class GgufLlm {
         }
         model = load(path.getBytes(StandardCharsets.UTF_8), allowNpu, allowGpu,
                 kernelCache == null ? null : kernelCache.getBytes(StandardCharsets.UTF_8),
-                nativeLibDir == null ? null : nativeLibDir.getBytes(StandardCharsets.UTF_8), cancellation(cancelled));
+                nativeLibDir == null ? null : nativeLibDir.getBytes(StandardCharsets.UTF_8), false, cancellation(cancelled));
         if (model == 0) throw new IllegalStateException("No se pudo cargar el modelo GGUF");
         loadedPath = path;
         loadedWithGpu = allowGpu;
         loadedWithNpu = allowNpu;
         gpuActive = gpuActive();
         npuActive = npuActive();
+    }
+
+    /**
+     * Solo Hexagon: carga y calienta el modelo en la NPU; si no puede, devuelve false SIN cargar nada
+     * en la gráfica ni en el procesador. Así cada guardia (NPU / gráfica) se apunta solo mientras de
+     * verdad se prueba su acelerador, y un cierre en la NPU no apaga también la gráfica.
+     */
+    public static synchronized boolean tryInitNpu(String path, String dspDir, BooleanSupplier cancelled) {
+        reset();
+        if (!libraryLoaded) {
+            System.loadLibrary("salve_llama");
+            libraryLoaded = true;
+        }
+        long handle = load(path.getBytes(StandardCharsets.UTF_8), true, false, null,
+                dspDir == null ? null : dspDir.getBytes(StandardCharsets.UTF_8), true, cancellation(cancelled));
+        if (handle == 0) return false;
+        model = handle;
+        loadedPath = path;
+        loadedWithNpu = true;
+        loadedWithGpu = false;
+        gpuActive = false;
+        npuActive = npuActive();
+        return true;
     }
 
     public static synchronized String generate(String prompt, BooleanSupplier cancelled) {
@@ -127,7 +150,7 @@ public final class GgufLlm {
         contextTokens = GgufContextPolicy.STANDARD;
     }
     private static native long load(byte[] path, boolean allowNpu, boolean allowGpu,
-                                    byte[] kernelCache, byte[] nativeLibDir, BooleanSupplier cancelled);
+                                    byte[] kernelCache, byte[] nativeLibDir, boolean acceleratorOnly, BooleanSupplier cancelled);
     private static native boolean npuActive();
     private static native boolean gpuActive();
     private static native String lastStats();

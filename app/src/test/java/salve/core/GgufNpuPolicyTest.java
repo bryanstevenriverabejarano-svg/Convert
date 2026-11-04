@@ -6,12 +6,18 @@ import java.util.Map;
 import org.junit.Test;
 
 public class GgufNpuPolicyTest {
-    @Test public void allowsQ40OnSnapdragon8Gen3Only() {
+    @Test public void allowsHtpQuantizationsOnSnapdragon8Gen3Only() {
         assertTrue(GgufNpuPolicy.eligible("SM8650", "/files/Gemma-4-E2B-Q4_0.gguf"));
         assertTrue(GgufNpuPolicy.eligible("SM8650-AC", "test-q4_0.GGUF"));
+        assertTrue(GgufNpuPolicy.eligible("SM8650", "/files/Dolphin-Q8_0.gguf"));
+        // Los dos Gemma 4 sin censura que descarga Salve (con el sufijo del commit fijado).
+        assertTrue(GgufNpuPolicy.eligible("SM8650", "/m/" + LocalModelPolicy.UNCENSORED_FILE));
+        assertTrue(GgufNpuPolicy.eligible("SM8650", "/m/" + LocalModelPolicy.UNCENSORED_E2B_FILE));
+        assertTrue(GgufNpuPolicy.eligible("SM8650", "/files/Dolphin-Q6_K.gguf"));
         assertFalse(GgufNpuPolicy.eligible("SM8750", "/files/Gemma-4-E2B-Q4_0.gguf"));
-        assertFalse(GgufNpuPolicy.eligible("SM8650", "/files/Dolphin-Q4_K_M.gguf"));
-        assertFalse(GgufNpuPolicy.eligible("SM8650", "/files/Gemma-Q4_K_P.gguf"));
+        assertFalse("sin kernels HTP", GgufNpuPolicy.eligible("SM8650", "/files/Gemma-IQ3_M.gguf"));
+        assertFalse(GgufNpuPolicy.eligible("SM8650", "/files/Gemma-Q5_K_M.gguf"));
+        assertFalse("el mmproj no es el modelo", GgufNpuPolicy.eligible("SM8650", "/m/mmproj-Gemma-f16-45b6a33.gguf"));
         assertFalse(GgufNpuPolicy.eligible(null, "x-Q4_0.gguf"));
     }
 
