@@ -36,6 +36,13 @@ public class ModelMemoryPolicyTest {
         assertTrue(LocalModelPolicy.isRetiredNormalE4b("gemma-4-E4B-it-2eee7ac.litertlm"));
         assertFalse("el E2B normal es el respaldo de emergencia", LocalModelPolicy.isRetiredNormalE4b("gemma-4-E2B-it-6e5c4f1.litertlm"));
         assertEquals(LocalModelPolicy.UNCENSORED_E2B, LocalModelPolicy.idForPath("/x/" + LocalModelPolicy.UNCENSORED_E2B_FILE));
+        // Cada modelo sin censura tiene sus ojos; la visión no es un modelo que se pueda activar.
+        assertEquals(LocalModelPolicy.UNCENSORED_VISION, LocalModelPolicy.visionFor(LocalModelPolicy.UNCENSORED));
+        assertEquals(LocalModelPolicy.UNCENSORED_E2B_VISION, LocalModelPolicy.visionFor(LocalModelPolicy.UNCENSORED_E2B));
+        assertNull(LocalModelPolicy.visionFor(LocalModelPolicy.FALLBACK));
+        assertTrue(LocalModelPolicy.isVisionCompanion(LocalModelPolicy.UNCENSORED_VISION));
+        assertFalse(LocalModelPolicy.isUncensored(LocalModelPolicy.UNCENSORED_VISION));
+        assertNull("el mmproj no se confunde con un modelo", LocalModelPolicy.idForPath("/x/" + LocalModelPolicy.UNCENSORED_VISION_FILE));
         assertTrue(ModelMemoryPolicy.required(LocalModelPolicy.UNCENSORED_E2B, false, 0) < ModelMemoryPolicy.required(LocalModelPolicy.UNCENSORED, false, 0));
         assertEquals(LocalModelPolicy.UNCENSORED, LocalModelPolicy.idForPath("/x/" + LocalModelPolicy.UNCENSORED_FILE));
     }
