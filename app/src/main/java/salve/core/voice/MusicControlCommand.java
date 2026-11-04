@@ -54,7 +54,7 @@ public final class MusicControlCommand {
 
     static String normalize(String value) {
         if (value == null) return "";
-        return Normalizer.normalize(value.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+        return Normalizer.normalize(salve.core.devicecontrol.AppAliases.normalize(value).toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim()
                 .replaceFirst("^(?:salve |oye salve |oye )", "").replaceFirst("^(?:puedes |podrias )", "")
                 .replaceFirst(" (?:por favor|porfa|ya|ahora|salve)$", "").trim();

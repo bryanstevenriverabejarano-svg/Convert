@@ -54,4 +54,28 @@ public class MobileCommandTest {
         for (String value : new String[]{"no abre el panel flotante", "¿Puedes abrir ventanas?", "envía un whatsapp a +34612345678: hola", "no prepara un whatsapp a +34612345678: hola", "busca en mini ventana:"})
             assertNull(value, MobileCommand.parse(value));
     }
+
+    @Test public void dictatedWhatsAppPhrasings() {
+        MobileCommand bryan = MobileCommand.parse("Abre whasa y en el chat de mami dile que la quiero");
+        assertNotNull(bryan);
+        assertEquals(MobileCommand.Type.WHATSAPP, bryan.type);
+        assertEquals("mami", bryan.contact);
+        assertEquals("Te quiero", bryan.message);
+
+        MobileCommand tell = MobileCommand.parse("en WhatsApp dile a mamá que llego tarde");
+        assertNotNull(tell);
+        assertEquals("mamá", tell.contact);
+        assertEquals("Llego tarde", tell.message);
+
+        MobileCommand by = MobileCommand.parse("dile a Ana por guasap que ya salgo");
+        assertNotNull(by);
+        assertEquals("Ana", by.contact);
+        assertEquals("Ya salgo", by.message);
+
+        MobileCommand noAnd = MobileCommand.parse("abre el chat de Mami dile que la quiero mucho");
+        assertEquals("Te quiero mucho", noAnd.message);
+
+        assertNull("sin WhatsApp no es un borrador", MobileCommand.parse("dile a Ana que ya salgo"));
+        assertNull("nunca enviar", MobileCommand.parse("envía un wasap a mami diciendo que la quiero"));
+    }
 }

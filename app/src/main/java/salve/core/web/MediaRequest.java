@@ -27,8 +27,10 @@ public final class MediaRequest {
                     + "(.+?)(?: (?:en|por|desde) youtube)?$");
 
     public static MediaRequest parse(String input) {
-        String text = normalize(input);
+        String text = normalize(salve.core.devicecontrol.AppAliases.normalize(input));
         if (text.isEmpty()) return null;
+        // «pon música en Spotify» (o «spoty fay» dictado) es de Spotify, no de YouTube.
+        if (text.contains("spotify") && !text.contains("youtube")) return null;
         // El dictado a veces junta «pon te arrepentirás» en «ponte arrepentirás»: con YouTube es un título.
         if (text.startsWith("ponte ") && text.contains("youtube")) text = "pon te " + text.substring(6);
         Matcher search = YOUTUBE_SEARCH.matcher(text);
