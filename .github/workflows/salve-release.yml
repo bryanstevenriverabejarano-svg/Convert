@@ -22,7 +22,7 @@ jobs:
   publicar:
     name: Compilar y publicar los APK
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 80
     permissions:
       contents: write
     defaults:
@@ -66,8 +66,55 @@ jobs:
             echo "::warning::Sin SALVE_DEBUG_KEYSTORE_B64 el APK usa una firma aleatoria."
           fi
 
+      - name: Build the Hexagon v75 NPU libraries (Galaxy S24 Ultra) from the pinned llama.cpp
+        timeout-minutes: 30
+        run: |
+          set -euo pipefail
+          mkdir -p build/qualcomm-dist
+          docker run --rm --platform linux/amd64 \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace/third_party/llama.cpp \
+            ghcr.io/snapdragon-toolchain/arm64-android:v0.8@sha256:e39e5e9c0957550a92c0de756b7556d81196c7c7f7328ed80de252bfb4878adf \
+            bash -euc '
+              cp docs/backend/snapdragon/CMakeUserPresets.json .
+              cmake --preset arm64-android-snapdragon-release \
+                -B /workspace/build/qualcomm-llama \
+                -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+                -DGGML_BACKEND_DL=ON -DBUILD_SHARED_LIBS=ON \
+                -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384" \
+                -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
+                -DLLAMA_BUILD_SERVER=OFF -DLLAMA_BUILD_TOOLS=OFF
+              cmake --build /workspace/build/qualcomm-llama \
+                --target ggml-hexagon htp-v75 --parallel 2
+              cp /workspace/build/qualcomm-llama/bin/libggml-hexagon.so \
+                /workspace/build/qualcomm-dist/libggml-hexagon.so
+              cp /workspace/build/qualcomm-llama/ggml/src/ggml-hexagon/libggml-htp-v75.so \
+                /workspace/build/qualcomm-dist/libggml-htp-v75.so
+            '
+          test -s build/qualcomm-dist/libggml-hexagon.so
+          test -s build/qualcomm-dist/libggml-htp-v75.so
+          file build/qualcomm-dist/*.so
+          readelf -h build/qualcomm-dist/libggml-hexagon.so | grep -E 'Machine:.*AArch64'
+          # The host module is built apart (Qualcomm preset, its own STL/LTO) but binds at runtime to
+          # Salve's libggml-base.so: it must need nothing the APK does not ship or the system lacks.
+          readelf -d build/qualcomm-dist/libggml-hexagon.so | grep NEEDED
+          readelf -d build/qualcomm-dist/libggml-hexagon.so | grep NEEDED | grep -oE '\[[^]]+\]' | tr -d '[]' | while read -r lib; do
+            case "$lib" in
+              libggml-base.so|libggml.so|libc++_shared.so|libc.so|libm.so|libdl.so|liblog.so|libandroid.so|libcdsprpc.so) ;;
+              *) echo "Unexpected dependency of libggml-hexagon.so: $lib"; exit 1 ;;
+            esac
+          done
+          # Module MUST export the GGML entry point for ggml_backend_load() in Salve.
+          readelf --wide --dyn-syms build/qualcomm-dist/libggml-hexagon.so \
+            | grep -E '[[:space:]]ggml_backend_init$'
+
       - name: Build the ARM64 APKs
         timeout-minutes: 35
+        # Con las bibliotecas Hexagon: la app prueba la NPU solo en un SM8650 y vuelve sola a GPU/CPU si falla.
+        env:
+          SALVE_ENABLE_HEXAGON: '1'
+          SALVE_HEXAGON_ARM64_LIB: ${{ github.workspace }}/build/qualcomm-dist/libggml-hexagon.so
+          SALVE_HEXAGON_SKEL_V75: ${{ github.workspace }}/build/qualcomm-dist/libggml-htp-v75.so
         run: >-
           bash ./gradlew --no-daemon --console=plain --max-workers=2
           --init-script scripts/android-arm64.init.gradle
