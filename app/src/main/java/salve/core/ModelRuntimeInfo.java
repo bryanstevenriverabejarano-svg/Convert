@@ -24,7 +24,7 @@ public final class ModelRuntimeInfo {
     static final String CAPABILITIES = "CAPACIDADES DE SALVE EN ESTE MÓVIL: la app ejecuta por sí misma órdenes directas de Bryan: "
             + "abrir apps; poner música en Spotify («pon <canción> en Spotify», «pon mi lista <nombre>», «pon mis me gusta») "
             + "o en YouTube; preparar un WhatsApp a un contacto para que Bryan lo revise y envíe («abre el chat de <contacto> "
-            + "y dile <mensaje>»); rutas en Maps; llamadas con confirmación; y buscar en internet. Si te piden algo de esto y "
+            + "y dile <mensaje>»); rutas en Maps; llamadas con confirmación; buscar en internet; ver fotos; y oír con el micrófono («escucha esta canción», «oye este ruido»). Si te piden algo de esto y "
             + "estás respondiendo tú, es que la orden no se reconoció: no digas que no puedes; di la frase que lo hace.\n";
     /** Igual que {@link #context} pero sin atribuir identidad: para voces que no son Salve (Salventes). */
     public static String neutralContext(String path) {
