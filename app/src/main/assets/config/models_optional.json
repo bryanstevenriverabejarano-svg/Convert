@@ -26,7 +26,7 @@
       "filename": "mmproj-Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-f16-da8593c.gguf",
       "sizeBytes": 985570240,
       "sha256": "628b7e999f89beef70b32396ae84f59c096e867747d7901f0134064ff672e290",
-      "supportsVision": true,
+      "supportsVision": false,
       "license": "Apache-2.0",
       "modelCard": "https://huggingface.co/HauhauCS/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive"
     },
@@ -36,7 +36,7 @@
       "filename": "mmproj-Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-f16-45b6a33.gguf",
       "sizeBytes": 990288832,
       "sha256": "debad39ab9c1152ab67695a674fb35e8375b2320c57bfd5075835d3ccb16c7db",
-      "supportsVision": true,
+      "supportsVision": false,
       "license": "Apache-2.0",
       "modelCard": "https://huggingface.co/HauhauCS/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive"
     }
