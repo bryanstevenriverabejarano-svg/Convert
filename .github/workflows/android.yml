@@ -88,6 +88,10 @@ jobs:
             echo "::warning::Sin el secreto SALVE_DEBUG_KEYSTORE_B64 el APK usa una firma aleatoria: para actualizar habrá que desinstalar."
           fi
 
+      - name: Fetch Salve's neural voice (sherpa-onnx + espeak data, pinned by SHA-256)
+        timeout-minutes: 10
+        run: bash scripts/fetch-neural-voice.sh
+
       - name: Run JVM tests and build the ARM64 APK
         timeout-minutes: 30
         # The checked-in daemon criteria still select/download JetBrains JDK 21.
@@ -167,6 +171,8 @@ jobs:
           assert "lib/arm64-v8a/libsalve_sentencepiece.so" in names, "Missing multilingual tokenizer"
           for module in ("libllama.so", "libggml.so", "libggml-base.so", "libggml-cpu.so", "libggml-opencl.so", "libmtmd.so", "libc++_shared.so"):
               assert "lib/arm64-v8a/" + module in names, "Missing GGUF engine module " + module
+          assert "lib/arm64-v8a/libsherpa-onnx-jni.so" in names, "Missing the neural voice engine"
+          assert "assets/neural-voice/tokens.txt" in names and "assets/neural-voice/espeak-ng-data/es_dict" in names, "Missing neural voice data"
           assert "lib/arm64-v8a/libOpenCL.so" not in names, "The vendor OpenCL driver must not be shadowed by the ICD stub"
           assert not any(name.startswith("assets/embeddings/") for name in names), "Embedding weights must download separately"
           print("ARM64-only APK includes the Dolphin GGUF runtime")

@@ -94,6 +94,12 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
             }
             val file = completed ?: throw java.io.IOException("No se confirmó el archivo de $id")
             // La visión (mmproj) no se activa: queda junto a su modelo y se carga cuando llegue una foto.
+            // La voz neuronal tampoco se activa como modelo: Salve cambia de motor de voz ella sola.
+            if (id == salve.core.voice.NeuralVoice.ID) {
+                salve.core.voice.NeuralVoice.notifyChanged()
+                return Result.success(workDataOf(KEY_OPTIONAL_ID to id, KEY_STATUS to "ready",
+                    KEY_MESSAGE to "Voz neuronal lista: Salve ya habla con ella."))
+            }
             if (salve.core.LocalModelPolicy.isVisionCompanion(id))
                 return Result.success(workDataOf(KEY_OPTIONAL_ID to id, KEY_STATUS to "ready", KEY_MESSAGE to "$id lista: ya puedo ver fotos con este modelo."))
             updateProgress(99, "Cargando $id y comprobando una respuesta…")

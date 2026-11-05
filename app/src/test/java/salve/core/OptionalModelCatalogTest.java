@@ -28,7 +28,10 @@ public class OptionalModelCatalogTest {
             assertTrue(ids.contains(LocalModelPolicy.UNCENSORED_E2B));
             assertTrue(ids.contains(LocalModelPolicy.UNCENSORED_VISION));
             assertTrue(ids.contains(LocalModelPolicy.UNCENSORED_E2B_VISION));
+            assertTrue("la voz neuronal también se descarga", ids.contains(salve.core.voice.NeuralVoice.ID));
             for (ModelCatalog.Entry entry : catalog.getEntries()) {
+                if (salve.core.voice.NeuralVoice.ID.equals(entry.id))
+                    assertEquals(salve.core.voice.NeuralVoice.MODEL_FILE, entry.filename);
                 if (LocalModelPolicy.isUncensored(entry.id))
                     assertEquals(LocalModelPolicy.uncensoredFile(entry.id), entry.filename);
             }

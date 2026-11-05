@@ -94,6 +94,54 @@ public class MotorConversacional {
     private int mensajesEnSesion = 0;
     private final SharedPreferences preferencias;
     private TextToSpeech tts;
+    private volatile boolean usingNeuralVoice;
+    /** Su motor falló al arrancar en esta sesión: no se reintenta hasta reabrir la app. */
+    private volatile boolean neuralVoiceBroken;
+    private final Runnable neuralVoiceChanged = () -> new android.os.Handler(android.os.Looper.getMainLooper()).post(this::cambiarMotorDeVoz);
+
+    /** Crea el TextToSpeech de Salve: su voz neuronal si está lista y activada; si no, la de Android. */
+    private synchronized void crearVoz() {
+        final TextToSpeech[] created = new TextToSpeech[1];
+        TextToSpeech.OnInitListener ready = status -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            if (closed || this.tts == null || this.tts != created[0]) return;
+            if (status == TextToSpeech.SUCCESS) {
+                this.tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override public void onStart(String id) {
+                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechStart(avatarSession, id), 1);
+                    }
+                    @Override public void onRangeStart(String id, int start, int end, int frame) {
+                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechRange(avatarSession, id, start, end), 0);
+                    }
+                    @Override public void onDone(String id) { finishSpeech(id, true); }
+                    @Override public void onError(String id) { finishSpeech(id, false); }
+                    @Override public void onError(String id, int errorCode) { finishSpeech(id, false); }
+                    @Override public void onStop(String id, boolean interrupted) { finishSpeech(id, false); }
+                });
+                applyConfiguredVoice();
+            } else if (usingNeuralVoice) {
+                // Su motor no arrancó: en esta sesión vuelve a la voz de Android para no quedarse muda.
+                Log.w(TAG, "La voz neuronal no arrancó; uso la voz de Android");
+                neuralVoiceBroken = true;
+                cambiarMotorDeVoz();
+            }
+        });
+        // Con la voz neuronal lista, Salve habla con su propio motor; si no, con el de Android.
+        boolean neural = !neuralVoiceBroken && salve.core.voice.NeuralVoice.active(context);
+        created[0] = neural ? new TextToSpeech(context, ready, context.getPackageName()) : new TextToSpeech(context, ready);
+        this.tts = created[0];
+        usingNeuralVoice = neural;
+    }
+
+    /** Cambia de motor si hace falta (voz neuronal descargada, activada o desactivada). */
+    private synchronized void cambiarMotorDeVoz() {
+        boolean wanted = !neuralVoiceBroken && salve.core.voice.NeuralVoice.active(context);
+        if (closed || wanted == usingNeuralVoice) return;
+        TextToSpeech old = tts;
+        tts = null;
+        ttsReady = false;
+        if (old != null) { try { old.stop(); old.shutdown(); } catch (RuntimeException ignored) { } }
+        crearVoz();
+    }
     private volatile boolean ttsReady;
     private final VoiceProfileStore voiceProfiles;
     final salve.avatar.AvatarDesignTool avatarDesignTool;
@@ -358,24 +406,9 @@ public class MotorConversacional {
 
         this.preferencias = context.getSharedPreferences("config_salve", Context.MODE_PRIVATE);
 
-        this.tts = new TextToSpeech(context, status -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-            if (closed || this.tts == null) return;
-            if (status == TextToSpeech.SUCCESS) {
-                this.tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                    @Override public void onStart(String id) {
-                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechStart(avatarSession, id), 1);
-                    }
-                    @Override public void onRangeStart(String id, int start, int end, int frame) {
-                        dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechRange(avatarSession, id, start, end), 0);
-                    }
-                    @Override public void onDone(String id) { finishSpeech(id, true); }
-                    @Override public void onError(String id) { finishSpeech(id, false); }
-                    @Override public void onError(String id, int errorCode) { finishSpeech(id, false); }
-                    @Override public void onStop(String id, boolean interrupted) { finishSpeech(id, false); }
-                });
-                applyConfiguredVoice();
-            }
-        }));
+        crearVoz();
+        // Voz neuronal descargada o activada/desactivada: se cambia de motor sin reiniciar la app.
+        salve.core.voice.NeuralVoice.addChangeListener(neuralVoiceChanged);
         conversationExecutor.execute(conversationSession::loadSaved);
     }
 
@@ -796,6 +829,8 @@ public class MotorConversacional {
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         // Antes que vídeos/música: «pon la canción anterior» es la anterior, no buscar «anterior».
         // Oídos: «escucha esta canción», «oye este ruido»… (Gemma 4 sin censura con su mmproj).
+        salve.core.voice.VoiceEngineCommand.Target voz = salve.core.voice.VoiceEngineCommand.parse(entrada);
+        if (voz != null) { hablar(cambioDeVoz(voz)); return; }
         salve.core.voice.ListenCommand listen = salve.core.voice.ListenCommand.parse(entrada);
         if (listen != null) { hablar(escuchar(listen)); return; }
         String music = controlMusica(entrada);
@@ -1901,6 +1936,23 @@ public class MotorConversacional {
             if (!closed) hablar(heard.isSuccess() ? heard.getText() : heard.getError());
         }, "salve-oidos").start();
         return "Te escucho " + listen.seconds + " segundos…";
+    }
+
+    /** «Usa tu voz nueva» / «usa la voz de Android». La elección se guarda. */
+    private String cambioDeVoz(salve.core.voice.VoiceEngineCommand.Target target) {
+        if (target == salve.core.voice.VoiceEngineCommand.Target.ANDROID) {
+            salve.core.voice.NeuralVoice.setEnabled(context, false);
+            return "Vuelvo a la voz de Android. Para recuperar la nueva, dime «usa tu voz nueva».";
+        }
+        if (!salve.core.voice.NeuralVoice.packaged(context))
+            return "Esta versión de la app no trae mi voz nueva; instala la última versión de Salve.";
+        neuralVoiceBroken = false;
+        salve.core.voice.NeuralVoice.setEnabled(context, true);
+        if (!salve.core.voice.NeuralVoice.ready(context)) {
+            salve.work.ModelDownloadWorker.enqueueOptional(context, salve.core.voice.NeuralVoice.ID);
+            return "Descargo mi voz nueva (77 MB) en cuanto haya Wi-Fi. Cuando termine, hablo con ella sin que hagas nada.";
+        }
+        return "Desde ahora hablo con mi voz nueva. Si la prefieres de antes, dime «usa la voz de Android».";
     }
 
     private String musicAccessHint(boolean driving, String what) {
@@ -3056,6 +3108,7 @@ public class MotorConversacional {
         cloudExecutor.shutdownNow();
         speechRouteHandler.removeCallbacks(carFocusCheck);
         releaseCarSpeechFocus();
+        salve.core.voice.NeuralVoice.removeChangeListener(neuralVoiceChanged);
         if (tts != null) {
             tts.stop();
             tts.shutdown();

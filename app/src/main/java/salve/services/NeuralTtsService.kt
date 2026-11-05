@@ -1,0 +1,83 @@
+package salve.services
+
+import android.media.AudioFormat
+import android.speech.tts.SynthesisCallback
+import android.speech.tts.SynthesisRequest
+import android.speech.tts.TextToSpeech
+import android.speech.tts.TextToSpeechService
+import android.speech.tts.Voice
+import android.util.Log
+import salve.core.voice.NeuralVoice
+import java.util.Locale
+
+/**
+ * Motor de texto a voz propio de Salve con su voz neuronal. Salve crea su TextToSpeech con este
+ * motor (su propio paquete), así que listeners, foco de audio del coche e interrupciones no cambian.
+ */
+class NeuralTtsService : TextToSpeechService() {
+    @Volatile private var stopped = false
+
+    private fun spanish(lang: String?) = lang != null && (lang.equals("spa", true) || lang.equals("es", true))
+
+    override fun onIsLanguageAvailable(lang: String?, country: String?, variant: String?): Int = when {
+        !spanish(lang) || !NeuralVoice.ready(this) -> TextToSpeech.LANG_NOT_SUPPORTED
+        country.equals("ESP", true) || country.equals("ES", true) -> TextToSpeech.LANG_COUNTRY_AVAILABLE
+        else -> TextToSpeech.LANG_AVAILABLE
+    }
+
+    override fun onGetLanguage(): Array<String> = arrayOf("spa", "ESP", "")
+
+    override fun onLoadLanguage(lang: String?, country: String?, variant: String?): Int =
+        onIsLanguageAvailable(lang, country, variant)
+
+    override fun onGetVoices(): List<Voice> = if (!NeuralVoice.ready(this)) emptyList() else listOf(
+        Voice(NeuralVoice.VOICE_NAME, Locale("es", "ES"), Voice.QUALITY_VERY_HIGH, Voice.LATENCY_NORMAL, false, emptySet()))
+
+    override fun onIsValidVoiceName(voiceName: String?): Int =
+        if (voiceName == NeuralVoice.VOICE_NAME && NeuralVoice.ready(this)) TextToSpeech.SUCCESS else TextToSpeech.ERROR
+
+    override fun onLoadVoice(voiceName: String?): Int = onIsValidVoiceName(voiceName)
+
+    override fun onGetDefaultVoiceNameFor(lang: String?, country: String?, variant: String?): String? =
+        if (spanish(lang)) NeuralVoice.VOICE_NAME else null
+
+    override fun onStop() { stopped = true }
+
+    override fun onSynthesizeText(request: SynthesisRequest?, callback: SynthesisCallback?) {
+        if (request == null || callback == null) return
+        stopped = false
+        val text = request.charSequenceText?.toString().orEmpty()
+        val engine = try { NeuralVoice.engine(this) } catch (e: Exception) {
+            Log.e(TAG, "La voz neuronal no pudo arrancar", e)
+            callback.error(TextToSpeech.ERROR_SYNTHESIS)
+            return
+        } catch (e: UnsatisfiedLinkError) {
+            Log.e(TAG, "Este APK no trae el motor de la voz neuronal", e)
+            callback.error(TextToSpeech.ERROR_SYNTHESIS)
+            return
+        }
+        if (callback.start(engine.sampleRate(), AudioFormat.ENCODING_PCM_16BIT, 1) != TextToSpeech.SUCCESS) return
+        if (text.isBlank()) { callback.done(); return }
+        // Android da la velocidad en % (100 = normal); Piper la entiende como factor.
+        val speed = (request.speechRate / 100f).coerceIn(0.6f, 1.6f)
+        try {
+            engine.generateWithCallback(text, sid = NeuralVoice.FEMALE_SPEAKER, speed = speed) { samples ->
+                if (stopped) return@generateWithCallback 0
+                val pcm = NeuralVoice.toPcm16(samples)
+                var offset = 0
+                while (offset < pcm.size && !stopped) {
+                    val size = minOf(callback.maxBufferSize, pcm.size - offset)
+                    if (callback.audioAvailable(pcm, offset, size) != TextToSpeech.SUCCESS) { stopped = true; break }
+                    offset += size
+                }
+                if (stopped) 0 else 1
+            }
+            if (!stopped) callback.done()
+        } catch (e: Exception) {
+            Log.e(TAG, "Fallo generando la voz", e)
+            callback.error(TextToSpeech.ERROR_SYNTHESIS)
+        }
+    }
+
+    private companion object { const val TAG = "NeuralTtsService" }
+}

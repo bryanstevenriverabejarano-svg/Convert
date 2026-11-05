@@ -108,6 +108,10 @@ jobs:
           readelf --wide --dyn-syms build/qualcomm-dist/libggml-hexagon.so \
             | grep -E '[[:space:]]ggml_backend_init$'
 
+      - name: Fetch Salve's neural voice (sherpa-onnx + espeak data, pinned by SHA-256)
+        timeout-minutes: 10
+        run: bash scripts/fetch-neural-voice.sh
+
       - name: Build the ARM64 APKs
         timeout-minutes: 35
         # Con las bibliotecas Hexagon: la app prueba la NPU solo en un SM8650 y vuelve sola a GPU/CPU si falla.
