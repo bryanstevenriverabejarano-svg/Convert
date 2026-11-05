@@ -83,6 +83,18 @@
         <uses-native-library android:name="libcdsprpc.so" android:required="false" />
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
 
+        <!-- Voz neuronal de Salve: su propio motor de texto a voz (sherpa-onnx, sin internet). -->
+        <service
+            android:name="salve.services.NeuralTtsService"
+            android:exported="true"
+            android:label="Voz de Salve">
+            <intent-filter>
+                <action android:name="android.intent.action.TTS_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data android:name="android.speech.tts" android:resource="@xml/salve_tts_engine" />
+        </service>
+
         <activity
             android:name="salve.presentation.ui.MainActivity"
             android:theme="@style/Theme.Salve.Stage"

@@ -212,6 +212,13 @@ android {
     sourceSets {
         test.resources.srcDir("$projectDir/schemas")
         main.assets.srcDir(selfCodeDir.get().asFile)
+        // Voz neuronal (sherpa-onnx + datos de espeak): la deja aquí scripts/fetch-neural-voice.sh en la CI.
+        // Sin ella la app compila igual y habla con la voz de Android.
+        def neuralVoice = file("$buildDir/generated/neural-voice")
+        if (neuralVoice.isDirectory()) {
+            main.assets.srcDir(new File(neuralVoice, 'assets'))
+            main.jniLibs.srcDir(new File(neuralVoice, 'jniLibs'))
+        }
         if (enableHexagon) {
             main.assets.srcDir(hexagonAssets.get().asFile)
             main.jniLibs.srcDir(hexagonJni.get().asFile)

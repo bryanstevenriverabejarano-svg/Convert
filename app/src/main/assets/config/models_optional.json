@@ -39,6 +39,16 @@
       "supportsVision": false,
       "license": "Apache-2.0",
       "modelCard": "https://huggingface.co/HauhauCS/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive"
+    },
+    {
+      "id": "Voz neuronal de Salve",
+      "url": "https://huggingface.co/csukuangfj/vits-piper-es_ES-sharvard-medium/resolve/2306b73bae558eddfdaee0a7ef3048a966a291d4/es_ES-sharvard-medium.onnx?download=true",
+      "filename": "vits-piper-es_ES-sharvard-medium-2306b73.onnx",
+      "sizeBytes": 76733743,
+      "sha256": "f26006cd03e2d558966fa3c49cfa9361dfa22d72197d74b6b50437cb02b8faaf",
+      "supportsVision": false,
+      "license": "Ver ficha del modelo (Piper, voz sharvard)",
+      "modelCard": "https://huggingface.co/csukuangfj/vits-piper-es_ES-sharvard-medium"
     }
   ]
 }

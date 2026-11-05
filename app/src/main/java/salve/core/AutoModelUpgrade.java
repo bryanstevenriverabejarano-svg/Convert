@@ -19,6 +19,7 @@ public final class AutoModelUpgrade {
     /** Una sola vez: Bryan pidió que el modelo sin censura se descargue y active solo. */
     static final String UNCENSORED_KEY = "auto_uncensored_attempted";
     static final String VISION_KEY = "auto_uncensored_vision_requested_at";
+    static final String VOICE_KEY = "auto_neural_voice_requested_at";
 
     private AutoModelUpgrade() { }
 
@@ -35,6 +36,13 @@ public final class AutoModelUpgrade {
             if (shouldGetUncensored(totalRam(context), active, prefs.getBoolean(UNCENSORED_KEY, false))) {
                 prefs.edit().putBoolean(UNCENSORED_KEY, true).putBoolean(ATTEMPTED_KEY, true).apply();
                 salve.work.ModelDownloadWorker.enqueueOptionalAfterCurrent(context, LocalModelPolicy.UNCENSORED);
+            }
+            // Voz neuronal (Bryan la pidió): se descarga sola si el APK trae el motor y no la ha desactivado.
+            if (salve.core.voice.NeuralVoice.packaged(context) && salve.core.voice.NeuralVoice.enabled(context)
+                    && !salve.core.voice.NeuralVoice.modelFile(context).isFile()
+                    && System.currentTimeMillis() - prefs.getLong(VOICE_KEY, 0L) > 12L * 60 * 60 * 1000) {
+                prefs.edit().putLong(VOICE_KEY, System.currentTimeMillis()).apply();
+                salve.work.ModelDownloadWorker.enqueueOptionalAfterCurrent(context, salve.core.voice.NeuralVoice.ID);
             }
             // Ya no se descarga el Gemma 4 E4B normal: solo los dos sin censura.
             // Modelo sin censura activo pero sin ojos (instalado antes de la visión, o la descarga falló):
