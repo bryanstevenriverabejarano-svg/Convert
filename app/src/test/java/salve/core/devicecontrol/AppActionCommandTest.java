@@ -91,4 +91,14 @@ public class AppActionCommandTest {
         assertEquals(AppActionCommand.Type.PLAYLIST, AppActionCommand.parse("pon mi lista Gym en spoti fai").type);
         assertEquals("el spot publicitario no es Spotify", "el spot de la tele", AppAliases.normalize("el spot de la tele"));
     }
+
+    @Test public void genresPlayMusicInsteadOfGoingToTheModel() {
+        for (String said : new String[]{"pon reggaeton", "Pon reguetón", "ponme algo de salsa", "toca rock en Spotify", "pon música relajante"}) {
+            AppActionCommand c = AppActionCommand.parse(said);
+            assertNotNull(said, c);
+            assertEquals(said, AppActionCommand.Type.MUSIC, c.type);
+        }
+        assertEquals("reggaeton", AppActionCommand.parse("pon reggaeton").target);
+        assertNull("no es un género", AppActionCommand.parse("pon la mesa"));
+    }
 }

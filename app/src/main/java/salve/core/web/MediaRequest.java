@@ -31,6 +31,8 @@ public final class MediaRequest {
         if (text.isEmpty()) return null;
         // «pon música en Spotify» (o «spoty fay» dictado) es de Spotify, no de YouTube.
         if (text.contains("spotify") && !text.contains("youtube")) return null;
+        // «pon reggaetón», «pon música relajante»: un género va a Spotify (AppActionCommand), no a YouTube.
+        if (!text.contains("youtube") && salve.core.devicecontrol.AppActionCommand.isGenreRequest(input)) return null;
         // El dictado a veces junta «pon te arrepentirás» en «ponte arrepentirás»: con YouTube es un título.
         if (text.startsWith("ponte ") && text.contains("youtube")) text = "pon te " + text.substring(6);
         Matcher search = YOUTUBE_SEARCH.matcher(text);

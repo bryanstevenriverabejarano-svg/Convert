@@ -25,7 +25,9 @@ public final class ModelRuntimeInfo {
             + "abrir apps; poner música en Spotify («pon <canción> en Spotify», «pon mi lista <nombre>», «pon mis me gusta») "
             + "o en YouTube; preparar un WhatsApp a un contacto para que Bryan lo revise y envíe («abre el chat de <contacto> "
             + "y dile <mensaje>»); rutas en Maps; llamadas con confirmación; buscar en internet; ver fotos; y oír con el micrófono («escucha esta canción», «oye este ruido»). Si te piden algo de esto y "
-            + "estás respondiendo tú, es que la orden no se reconoció: no digas que no puedes; di la frase que lo hace.\n";
+            + "estás respondiendo tú, es que la orden no se reconoció: no digas que no puedes; di la frase que lo hace. "
+            + "NUNCA digas ni narres que haces algo (poner música, abrir una app, mandar un mensaje) que la app no ha hecho, "
+            + "y no escribas relatos ni hables de ti en tercera persona salvo que te pidan un cuento: contesta como Salve, breve.\n";
     /** Igual que {@link #context} pero sin atribuir identidad: para voces que no son Salve (Salventes). */
     public static String neutralContext(String path) {
         return "DATOS DEL MOTOR: el modelo que genera esta respuesta es " + name(path)
