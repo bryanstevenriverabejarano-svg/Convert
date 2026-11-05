@@ -1,4 +1,3 @@
-# Temporal: datos de la voz neuronal (Piper vía sherpa-onnx) y de la biblioteca Android.
 name: tmp hash modelo
 on:
   push:
@@ -10,20 +9,12 @@ jobs:
     steps:
       - name: Datos
         run: |
-          set -x
-          for v in es_ES-sharvard-medium es_MX-claude-high es_AR-daniela-high; do
-            echo "== $v"
-            curl -sSI "https://huggingface.co/csukuangfj/vits-piper-$v/resolve/main/model.onnx" | grep -iE "^(HTTP|x-linked-size|x-linked-etag|x-repo-commit):" || true
-            curl -sSI "https://huggingface.co/csukuangfj/vits-piper-$v/resolve/main/$v.onnx" | grep -iE "^(HTTP|x-linked-size|x-linked-etag|x-repo-commit):" || true
-            curl -sSL "https://huggingface.co/api/models/csukuangfj/vits-piper-$v" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('sha')); print([s['rfilename'] for s in d.get('siblings',[])][:15])" || true
-          done
-          curl -sSL "https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/sharvard/medium/es_ES-sharvard-medium.onnx.json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('speakers', d.get('speaker_id_map'))"
+          curl -sSL -o s.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-v1.13.8-android-static-link-onnxruntime.tar.bz2
+          sha256sum s.tar.bz2; ls -l s.tar.bz2
+          mkdir s && tar xjf s.tar.bz2 -C s && ls -l s/jniLibs/arm64-v8a/
+          for f in s/jniLibs/arm64-v8a/*.so; do echo $f; readelf -lW $f | grep LOAD | head -2; readelf -d $f | grep NEEDED; readelf --dyn-syms -W $f | grep -c " Ort" ; done
           curl -sSL -o v.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-es_ES-sharvard-medium.tar.bz2
-          sha256sum v.tar.bz2; ls -l v.tar.bz2
-          tar xjf v.tar.bz2; du -sh vits-piper-es_ES-sharvard-medium/*; ls vits-piper-es_ES-sharvard-medium
-          du -sh vits-piper-es_ES-sharvard-medium/espeak-ng-data; find vits-piper-es_ES-sharvard-medium/espeak-ng-data -type f | wc -l
-          sha256sum vits-piper-es_ES-sharvard-medium/*.onnx vits-piper-es_ES-sharvard-medium/tokens.txt
-          curl -sSL -o s.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-v2.0.1-android-static-link-onnxruntime.tar.bz2
-          sha256sum s.tar.bz2; ls -l s.tar.bz2; tar tjvf s.tar.bz2 | grep arm64
-          mkdir s && tar xjf s.tar.bz2 -C s
-          for f in s/jniLibs/arm64-v8a/*.so; do echo $f; readelf -lW $f | grep LOAD | head -2; readelf -d $f | grep NEEDED; done
+          tar xjf v.tar.bz2
+          curl -sSL -o hf-tokens.txt https://huggingface.co/csukuangfj/vits-piper-es_ES-sharvard-medium/resolve/2306b73bae558eddfdaee0a7ef3048a966a291d4/tokens.txt
+          sha256sum hf-tokens.txt vits-piper-es_ES-sharvard-medium/tokens.txt
+          cd vits-piper-es_ES-sharvard-medium/espeak-ng-data && ls | grep -v _dict; du -sh es_dict; du -ch $(ls | grep -v "_dict$") | tail -1
