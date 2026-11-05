@@ -934,6 +934,13 @@ public class SalveLLM {
         }
     }
 
+    /** Modo oídos: el modelo oye la frase de Bryan y devuelve lo que dijo y cómo lo dijo. */
+    public salve.core.voice.EarMode.Heard hear(byte[] wav, java.util.function.BooleanSupplier cancelled) {
+        ModelResult result = generateAudioResult(salve.core.voice.EarMode.PROMPT, wav, cancelled);
+        if (!result.isSuccess()) throw new IllegalStateException(result.getError() == null ? "No pude oírte" : result.getError());
+        return salve.core.voice.EarMode.parseHeard(result.getText());
+    }
+
     /** Conservative character budget; the runtime tokenizer remains authoritative. */
     public int getConversationPromptBudgetChars() {
         String path = modelPath;

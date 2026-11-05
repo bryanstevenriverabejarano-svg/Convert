@@ -829,6 +829,8 @@ public class MotorConversacional {
         if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
         // Antes que vídeos/música: «pon la canción anterior» es la anterior, no buscar «anterior».
         // Oídos: «escucha esta canción», «oye este ruido»… (Gemma 4 sin censura con su mmproj).
+        salve.core.voice.EarMode.Command oidos = salve.core.voice.EarMode.parse(entrada);
+        if (oidos != null) { hablar(cambioModoOidos(oidos)); return; }
         salve.core.voice.VoiceEngineCommand.Target voz = salve.core.voice.VoiceEngineCommand.parse(entrada);
         if (voz != null) { hablar(cambioDeVoz(voz)); return; }
         salve.core.voice.ListenCommand listen = salve.core.voice.ListenCommand.parse(entrada);
@@ -1033,7 +1035,8 @@ public class MotorConversacional {
         }
         String sketchContext = experienceContext + drawingContext + nubeContexto() + entenderHilo(entrada)
                 + mesaFunciones.conocimientoPropio(entrada)
-                + estrategiaRespuesta() + mesaFunciones.misActualizaciones(entrada) + misHabilidades(entrada);
+                + estrategiaRespuesta() + mesaFunciones.misActualizaciones(entrada) + misHabilidades(entrada)
+                + tonoOido();
         if (mesaAcciones.procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
@@ -1936,6 +1939,43 @@ public class MotorConversacional {
             if (!closed) hablar(heard.isSuccess() ? heard.getText() : heard.getError());
         }, "salve-oidos").start();
         return "Te escucho " + listen.seconds + " segundos…";
+    }
+
+    private static final String EAR_MODE_KEY = "modo_oidos";
+    /** Cómo sonó la última frase de Bryan (modo oídos); se usa en la siguiente respuesta y se olvida. */
+    private volatile String pendingTone;
+
+    /** ¿Activado por Bryan? («escúchame de verdad»). */
+    public boolean earModeEnabled() {
+        return context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE).getBoolean(EAR_MODE_KEY, false);
+    }
+
+    /** Activado y con un modelo que oye: la conversación por voz usa sus oídos en vez del dictado. */
+    public boolean earModeUsable() { return earModeEnabled() && llm != null && llm.supportsAudio(); }
+
+    /** El modelo oye la frase (llamar fuera del hilo principal). Guarda el tono para la respuesta. */
+    public salve.core.voice.EarMode.Heard oirFrase(byte[] wav, java.util.function.BooleanSupplier cancelled) {
+        salve.core.voice.EarMode.Heard heard = llm.hear(wav, cancelled);
+        pendingTone = heard.tone == null || heard.tone.isEmpty() ? null : heard.tone;
+        return heard;
+    }
+
+    private String tonoOido() {
+        String tone = pendingTone;
+        pendingTone = null;
+        return tone == null ? "" : "CÓMO LO HA DICHO BRYAN (lo has oído en su voz, no lo ha escrito): " + tone
+                + ". Tenlo en cuenta con naturalidad; no lo menciones salvo que venga a cuento.\n";
+    }
+
+    private String cambioModoOidos(salve.core.voice.EarMode.Command command) {
+        boolean on = command == salve.core.voice.EarMode.Command.ON;
+        context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE).edit().putBoolean(EAR_MODE_KEY, on).apply();
+        if (!on) return "Vale, vuelvo a usar el dictado del móvil para entenderte.";
+        if (llm == null || !llm.supportsAudio())
+            return "Lo activo, pero para oírte de verdad necesito uno de los Gemma 4 sin censura con su archivo de visión y oídos "
+                    + "descargado. Mientras tanto sigo con el dictado.";
+        return "Hecho: en la conversación por voz te oigo con mis propios oídos, también tu tono. Cada respuesta tarda "
+                + "un poco más. Para volver al dictado: «desactiva el modo oídos».";
     }
 
     /** «Usa tu voz nueva» / «usa la voz de Android». La elección se guarda. */

@@ -68,6 +68,10 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     };
 
     private SpeechRecognizer recognizer;
+    /** Modo oídos: micrófono propio + oído del modelo, en lugar del dictado de Android. */
+    private salve.devices.EarCapture ear;
+    /** Los oídos fallaron en esta sesión: se sigue con el dictado hasta abrir otra. */
+    private boolean earFailed;
     private AudioFocusRequest audioFocusRequest;
     private boolean focusHeld;
     private boolean automaticInterruptDispatch;
@@ -346,6 +350,10 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             apply(loop.stop(VoiceConversationLoop.StopReason.MICROPHONE_PERMISSION));
             return;
         }
+        if (!earFailed && motor.earModeUsable()) {
+            beginEarCapture(token);
+            return;
+        }
         try {
             boolean onDevice = !standardRecognizer && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                     && SpeechRecognizer.isOnDeviceRecognitionAvailable(activity);
@@ -519,7 +527,74 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         }
     }
 
+    /**
+     * Modo oídos: Salve graba la frase con su propio micrófono y la oye con su modelo (Gemma 4 sin
+     * censura): entiende lo que el dictado escribe mal y nota el tono. Si algo falla, el dictado.
+     */
+    private void beginEarCapture(long token) {
+        final salve.devices.EarCapture capture = new salve.devices.EarCapture();
+        ear = capture;
+        backend = "Escucha: oídos de Salve (su propio modelo, sin Internet).\n" + motor.getVoiceStatus();
+        motor.setListening(true);
+        if (metrics.ready(token, now())) renderState();
+        java.util.function.BooleanSupplier current = () -> !dismissed && ear == capture && loop.owns(token)
+                && loop.state() == VoiceConversationLoop.State.LISTENING;
+        capture.start(new salve.devices.EarCapture.Listener() {
+            @Override public void onSpeechStarted() {
+                handler.post(() -> { if (current.getAsBoolean() && metrics.speechBegan(token, now())) renderState(); });
+            }
+            @Override public void onPhrase(byte[] wav) {
+                handler.post(() -> {
+                    if (!current.getAsBoolean()) return;
+                    if (metrics.speechEnded(token, now())) renderState();
+                    caption.setText("Te estoy oyendo…");
+                });
+                salve.core.voice.EarMode.Heard heard;
+                try { heard = motor.oirFrase(wav, () -> !current.getAsBoolean()); }
+                catch (RuntimeException failed) {
+                    handler.post(() -> earFallback(token, capture, failed.getMessage()));
+                    return;
+                }
+                handler.post(() -> {
+                    if (!current.getAsBoolean()) return;
+                    long timestamp = now();
+                    if (!metrics.recognized(token, timestamp)) return;
+                    voiceLab.event(token, "oidos", "final_chars=" + heard.text.length() + " tono=" + heard.tone);
+                    destroyRecognizer();
+                    apply(loop.recognized(token, heard.text, timestamp));
+                });
+            }
+            @Override public void onNoSpeech() {
+                handler.post(() -> {
+                    if (!current.getAsBoolean()) return;
+                    long timestamp = now();
+                    if (loop.hasHeldSpeech()) {
+                        if (!metrics.recognized(token, timestamp)) return;
+                    } else if (!metrics.recognitionFailed(token, timestamp, SpeechRecognizer.ERROR_SPEECH_TIMEOUT)) return;
+                    destroyRecognizer();
+                    apply(loop.recognitionFailed(token, VoiceConversationLoop.RecognitionFailure.SILENCE, timestamp));
+                });
+            }
+            @Override public void onError(String reason) { handler.post(() -> earFallback(token, capture, reason)); }
+        });
+    }
+
+    /** Los oídos no pudieron: el resto de la sesión se usa el dictado de Android. */
+    private void earFallback(long token, salve.devices.EarCapture capture, String reason) {
+        if (dismissed || ear != capture) return;
+        earFailed = true;
+        long timestamp = now();
+        recognitionErrorText = "No pude usar mis oídos (" + (reason == null ? "error" : reason) + "); sigo con el dictado del móvil.";
+        if (!loop.owns(token) || loop.state() != VoiceConversationLoop.State.LISTENING) { destroyRecognizer(); return; }
+        if (!metrics.recognitionFailed(token, timestamp, SpeechRecognizer.ERROR_CLIENT)) { destroyRecognizer(); return; }
+        destroyRecognizer();
+        apply(loop.recognitionFailed(token, VoiceConversationLoop.RecognitionFailure.TRANSIENT, timestamp));
+    }
+
     private void destroyRecognizer() {
+        salve.devices.EarCapture oldEar = ear;
+        ear = null;
+        if (oldEar != null) oldEar.cancel();
         SpeechRecognizer old = recognizer;
         recognizer = null;
         if (old != null) {
