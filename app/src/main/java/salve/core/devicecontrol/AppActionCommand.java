@@ -25,6 +25,14 @@ public final class AppActionCommand {
                     + "algo de|el (?:disco|[aá]lbum))\\s+(.+?)(?:\\s+en spotify)?$", FLAGS);
     private static final Pattern MUSIC_SPOTIFY = Pattern.compile(
             "^(?:pon|ponme|reproduce|toca)\\s+(.+?)\\s+en spotify$", FLAGS);
+    /** «pon reggaetón», «ponme algo de salsa», «toca rock en Spotify»: un género, sin «música de». */
+    private static final Pattern MUSIC_GENRE = Pattern.compile(
+            "^(?:pon|ponme|ponnos|reproduce|toca|quiero escuchar)\\s+(?:(?:un poco de|algo de|m[uú]sica|musiquita)\\s+)?"
+                    + "((?:reggaet[oó]n|reguet[oó]n|regaet[oó]n|reggaeton|salsa|bachata|merengue|cumbia|rock(?: and roll)?|pop|jazz|blues|"
+                    + "rap|hip hop|trap|techno|tecno|house|electr[oó]nica|flamenco|rumba|m[uú]sica cl[aá]sica|cl[aá]sica|lo-?fi|"
+                    + "baladas|rancheras|corridos|dembow|k-?pop|metal|indie|soul|funk|disco|ochentera|de los 80|de los 90|"
+                    + "romántica|rom[aá]ntica|relajante|para dormir|para estudiar|para conducir|latina|en espa[nñ]ol)"
+                    + "(?:\\s+(?:antiguo|nuevo|de los 2000|cl[aá]sico|actual))?)(?:\\s+en spotify)?$", FLAGS);
     private static final Pattern MUSIC_PLAIN = Pattern.compile(
             "^(?:reproduce|quiero escuchar)\\s+(.+)$", FLAGS);
     /** «pon mi lista Gym», «ponme la playlist Para correr en Spotify», «reproduce mi lista de reproducción Relax». */
@@ -63,11 +71,20 @@ public final class AppActionCommand {
         if (found == null) found = match(Type.PLAYLIST, PLAYLIST, text);
         if (found == null) found = match(Type.MUSIC_SEARCH, MUSIC_SEARCH, text);
         if (found == null) found = match(Type.MUSIC, MUSIC_CUE, text);
+        if (found == null) found = match(Type.MUSIC, MUSIC_GENRE, text);
         if (found == null) found = match(Type.MUSIC, MUSIC_SPOTIFY, text);
         if (found == null) found = match(Type.MUSIC, MUSIC_PLAIN, text);
         if (found == null) found = match(Type.CALL, CALL, text);
         if (found == null) found = match(Type.OPEN_APP, OPEN_APP, text);
         return found;
+    }
+
+    /** «pon reggaetón», «pon música relajante»: un género, que va a Spotify (no a YouTube). */
+    public static boolean isGenreRequest(String input) {
+        if (input == null) return false;
+        String text = AppAliases.normalize(input).trim().replaceFirst("(?iu)^salve[,:]?\\s+", "")
+                .replaceFirst("^[¿¡]+", "").replaceFirst("[.!?¿¡ ]+$", "").trim();
+        return MUSIC_GENRE.matcher(text).matches();
     }
 
     /** Número marcable tal cual (sin letras); los nombres se buscan en los contactos. */

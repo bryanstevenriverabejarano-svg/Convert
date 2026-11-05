@@ -61,4 +61,10 @@ public class MediaAndLiveSearchTest {
         org.junit.Assert.assertNull(MediaRequest.parse("pon Te arrepentirás en Spotify"));
         org.junit.Assert.assertNotNull(MediaRequest.parse("pon te arrepentirás en youtube"));
     }
+
+    @org.junit.Test public void genresGoToSpotifyUnlessYoutubeIsAsked() {
+        org.junit.Assert.assertNull(MediaRequest.parse("pon música relajante"));
+        org.junit.Assert.assertNull(MediaRequest.parse("pon reggaeton"));
+        org.junit.Assert.assertNotNull(MediaRequest.parse("pon reggaeton en youtube"));
+    }
 }
