@@ -1,4 +1,4 @@
-# Temporal: tamaño, commit y SHA-256 de los mmproj de Gemma 4 E2B/E4B sin censura.
+# Temporal: datos de la voz neuronal (Piper vía sherpa-onnx) y de la biblioteca Android.
 name: tmp hash modelo
 on:
   push:
@@ -8,32 +8,22 @@ jobs:
   hash:
     runs-on: ubuntu-latest
     steps:
-      - name: Cabeceras
+      - name: Datos
         run: |
-          for M in E2B E4B; do
-            URL="https://huggingface.co/HauhauCS/Gemma-4-$M-Uncensored-HauhauCS-Aggressive/resolve/main/mmproj-Gemma-4-$M-Uncensored-HauhauCS-Aggressive-f16.gguf"
-            echo "== $M"; curl -sSI "$URL" | grep -iE "^(HTTP|x-linked-size|x-linked-etag|x-repo-commit):" || true
-            curl -sSL -r 0-8388607 -o head-$M.gguf "$URL"
-            python3 - "head-$M.gguf" <<'PY'
-          import struct, sys
-          data = open(sys.argv[1],"rb").read(); off = 4
-          def rd(fmt):
-              global off
-              v = struct.unpack_from("<"+fmt, data, off)[0]; off += struct.calcsize("<"+fmt); return v
-          def rstr():
-              global off
-              n = rd("Q"); s = data[off:off+n].decode("utf-8","replace"); off += n; return s
-          rd("I"); ntens = rd("Q"); nkv = rd("Q")
-          sizes = {0:"B",1:"b",2:"H",3:"h",4:"I",5:"i",6:"f",7:"?",10:"Q",11:"q",12:"d"}
-          def val(t):
-              if t == 8: return rstr()
-              if t == 9:
-                  at = rd("I"); n = rd("Q"); items = [val(at) for _ in range(n)]
-                  return f"[array {n}]"
-              return rd(sizes[t])
-          for _ in range(nkv):
-              k = rstr(); t = rd("I"); v = val(t)
-              if k.startswith("clip.") and ("has_" in k or "projector" in k) or k == "general.architecture":
-                  print(k, "=", v)
-          PY
+          set -x
+          for v in es_ES-sharvard-medium es_MX-claude-high es_AR-daniela-high; do
+            echo "== $v"
+            curl -sSI "https://huggingface.co/csukuangfj/vits-piper-$v/resolve/main/model.onnx" | grep -iE "^(HTTP|x-linked-size|x-linked-etag|x-repo-commit):" || true
+            curl -sSI "https://huggingface.co/csukuangfj/vits-piper-$v/resolve/main/$v.onnx" | grep -iE "^(HTTP|x-linked-size|x-linked-etag|x-repo-commit):" || true
+            curl -sSL "https://huggingface.co/api/models/csukuangfj/vits-piper-$v" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('sha')); print([s['rfilename'] for s in d.get('siblings',[])][:15])" || true
           done
+          curl -sSL "https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/sharvard/medium/es_ES-sharvard-medium.onnx.json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('speakers', d.get('speaker_id_map'))"
+          curl -sSL -o v.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-es_ES-sharvard-medium.tar.bz2
+          sha256sum v.tar.bz2; ls -l v.tar.bz2
+          tar xjf v.tar.bz2; du -sh vits-piper-es_ES-sharvard-medium/*; ls vits-piper-es_ES-sharvard-medium
+          du -sh vits-piper-es_ES-sharvard-medium/espeak-ng-data; find vits-piper-es_ES-sharvard-medium/espeak-ng-data -type f | wc -l
+          sha256sum vits-piper-es_ES-sharvard-medium/*.onnx vits-piper-es_ES-sharvard-medium/tokens.txt
+          curl -sSL -o s.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-v2.0.1-android-static-link-onnxruntime.tar.bz2
+          sha256sum s.tar.bz2; ls -l s.tar.bz2; tar tjvf s.tar.bz2 | grep arm64
+          mkdir s && tar xjf s.tar.bz2 -C s
+          for f in s/jniLibs/arm64-v8a/*.so; do echo $f; readelf -lW $f | grep LOAD | head -2; readelf -d $f | grep NEEDED; done
