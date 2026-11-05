@@ -37,7 +37,13 @@ class DownloadOverlayFragment : Fragment() {
             binding.overlayRoot.visibility = View.VISIBLE
             binding.overlayCloseButton.visibility = View.VISIBLE
             binding.overlayActionButton.visibility = View.GONE
-            binding.overlayStatus.text = "Gemma 4 E2B · descarga externa"
+            val model = when (state) {
+                is DownloadUiState.Running -> state.model
+                is DownloadUiState.Success -> state.model
+                is DownloadUiState.Error -> state.model
+                else -> null
+            }
+            binding.overlayStatus.text = (model ?: "Gemma 4 E2B") + " · descarga externa"
             when (state) {
                 is DownloadUiState.Idle -> Unit
                 is DownloadUiState.Running -> {
@@ -64,7 +70,7 @@ class DownloadOverlayFragment : Fragment() {
                     binding.overlayActionButton.visibility = View.VISIBLE
                     // Si falló por RAM no hay nada que reanudar: el modelo ya está descargado, solo hay que volver a cargarlo.
                     binding.overlayActionButton.text = if (state.message.contains("RAM")) "Intentar de nuevo" else "Reanudar por Wi-Fi"
-                    binding.overlayActionButton.setOnClickListener { hiddenState = null; viewModel.startDownload() }
+                    binding.overlayActionButton.setOnClickListener { hiddenState = null; viewModel.retry(state.model) }
                 }
             }
         }

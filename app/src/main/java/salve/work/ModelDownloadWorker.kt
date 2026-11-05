@@ -95,7 +95,7 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
             val file = completed ?: throw java.io.IOException("No se confirmó el archivo de $id")
             // La visión (mmproj) no se activa: queda junto a su modelo y se carga cuando llegue una foto.
             if (salve.core.LocalModelPolicy.isVisionCompanion(id))
-                return Result.success(workDataOf(KEY_STATUS to "ready", KEY_MESSAGE to "$id lista: ya puedo ver fotos con este modelo."))
+                return Result.success(workDataOf(KEY_OPTIONAL_ID to id, KEY_STATUS to "ready", KEY_MESSAGE to "$id lista: ya puedo ver fotos con este modelo."))
             updateProgress(99, "Cargando $id y comprobando una respuesta…")
             val result = withContext(Dispatchers.IO) {
                 val llm = salve.core.SalveLLM.getInstance(applicationContext)
@@ -112,21 +112,22 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
                     val visionFile = java.io.File(salve.core.ModelStore.dir(applicationContext), salve.core.LocalModelPolicy.visionFileFor(id)!!)
                     if (!visionFile.isFile) enqueueOptionalAfterCurrent(applicationContext, vision)
                 }
-                Result.success(workDataOf(KEY_STATUS to "ready",
+                Result.success(workDataOf(KEY_OPTIONAL_ID to id, KEY_STATUS to "ready",
                     KEY_MESSAGE to "$id activo. " + salve.core.SalveLLM.getInstance(applicationContext).statusDescription))
             }
-            else Result.failure(workDataOf(KEY_STATUS to "error",
+            else Result.failure(workDataOf(KEY_OPTIONAL_ID to id, KEY_STATUS to "error",
                 KEY_MESSAGE to "$id descargado pero no se pudo activar; se conserva el modelo anterior. ${result.error ?: ""}"))
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
             android.util.Log.e("ModelDownloadWorker", "Modelo opcional fallido", error)
-            Result.failure(workDataOf(KEY_STATUS to "error", KEY_MESSAGE to (error.message ?: "No se pudo preparar $id")))
+            Result.failure(workDataOf(KEY_OPTIONAL_ID to id, KEY_STATUS to "error", KEY_MESSAGE to (error.message ?: "No se pudo preparar $id")))
         }
     }
 
     private suspend fun updateProgress(percent: Int, message: String) {
-        setProgress(workDataOf(KEY_PROGRESS to percent, KEY_MESSAGE to message, KEY_STATUS to "running"))
+        setProgress(workDataOf(KEY_PROGRESS to percent, KEY_MESSAGE to message, KEY_STATUS to "running",
+            KEY_OPTIONAL_ID to inputData.getString(KEY_OPTIONAL_ID)))
         try {
             val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.notify(NOTIFICATION_ID, buildNotification(message, percent))
@@ -161,7 +162,8 @@ class ModelDownloadWorker(appContext: Context, params: WorkerParameters) : Corou
         const val KEY_MESSAGE = "message"
         const val KEY_STATUS = "status"
         private const val KEY_FALLBACK = "fallback_only"
-        private const val KEY_OPTIONAL_ID = "optional_model_id"
+        /** También va en el progreso y el resultado: la pantalla sabe qué modelo reintentar. */
+        const val KEY_OPTIONAL_ID = "optional_model_id"
 
         /**
          * Como [enqueueOptional], pero detrás de la descarga en curso si la hay (con KEEP se
