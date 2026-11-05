@@ -1945,9 +1945,12 @@ public class MotorConversacional {
     /** Cómo sonó la última frase de Bryan (modo oídos); se usa en la siguiente respuesta y se olvida. */
     private volatile String pendingTone;
 
-    /** ¿Activado por Bryan? («escúchame de verdad»). */
+    /**
+     * Activado salvo que Bryan lo apague («desactiva el modo oídos»): en cuanto el modelo cargado puede
+     * oír (Gemma 4 sin censura con su mmproj), la conversación por voz usa sus oídos sola.
+     */
     public boolean earModeEnabled() {
-        return context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE).getBoolean(EAR_MODE_KEY, false);
+        return context.getSharedPreferences("salve_prefs", Context.MODE_PRIVATE).getBoolean(EAR_MODE_KEY, true);
     }
 
     /** Activado y con un modelo que oye: la conversación por voz usa sus oídos en vez del dictado. */
