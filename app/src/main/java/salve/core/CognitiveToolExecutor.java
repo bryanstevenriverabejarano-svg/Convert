@@ -288,12 +288,24 @@ final class CognitiveToolExecutor {
                                         + "». Todavía no tengo confirmación de que esté sonando."
                                         : "No pude iniciar la reproducción de «" + target + "».");
                                 break;
-                            case SEARCH_MUSIC:
-                                opened = salve.devices.PhoneActions.searchMusic(m.context, target);
-                                m.hablar(opened ? "Solicité abrir la búsqueda de «" + target
-                                        + "» en Spotify. No he confirmado reproducción."
-                                        : "No pude abrir la búsqueda de música.");
+                            case SEARCH_MUSIC: {
+                                boolean driving;
+                                try {
+                                    driving = salve.core.driving.DrivingModeManager.get(m.context).isActive();
+                                } catch (RuntimeException unavailable) {
+                                    driving = false;
+                                }
+                                // Preserve the legacy driving policy: never open a
+                                // screen of search results in the car.
+                                opened = driving ? salve.devices.PhoneActions.playMusic(m.context, target)
+                                        : salve.devices.PhoneActions.searchMusic(m.context, target);
+                                m.hablar(!opened ? "No pude solicitar esa música."
+                                        : driving ? "Mientras conduces he solicitado reproducir «" + target
+                                                + "», sin abrir resultados. Aún no he verificado que suene."
+                                        : "Solicité abrir la búsqueda de «" + target
+                                                + "» en Spotify. No he confirmado reproducción.");
                                 break;
+                            }
                             case CALL:
                                 m.context.startActivity(new Intent(m.context,
                                         salve.presentation.ui.DeviceControlActivity.class)
