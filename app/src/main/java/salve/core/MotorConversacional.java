@@ -835,7 +835,12 @@ public class MotorConversacional {
         if (voz != null) { hablar(cambioDeVoz(voz)); return; }
         salve.core.voice.ListenCommand listen = salve.core.voice.ListenCommand.parse(entrada);
         if (listen != null) { hablar(escuchar(listen)); return; }
-        String music = controlMusica(entrada);
+        // For a verified conversation, the LLM selects the existing music
+        // transport action. The direct parser remains an offline fallback.
+        boolean modelFirstMusic = llm != null
+                && salve.core.identity.IdentityManager.get(context).privateAccess()
+                && salve.core.cognition.MediaActionIntent.offered(entrada);
+        String music = modelFirstMusic ? null : controlMusica(entrada);
         if (music != null) { hablar(music); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
@@ -1037,13 +1042,24 @@ public class MotorConversacional {
                 + mesaFunciones.conocimientoPropio(entrada)
                 + estrategiaRespuesta() + mesaFunciones.misActualizaciones(entrada) + misHabilidades(entrada)
                 + tonoOido();
-        // A conversational messaging request belongs to the LLM: it decides
-        // whether to draft, and it writes the content in its own words.
-        // Keep the legacy direct parser only as a fallback without an LLM.
-        boolean routeDraftToModel = llm != null
+        // Model-first dispatch for already-implemented phone capabilities:
+        // the LLM decides which authorized adapter to use and its arguments.
+        // The existing explicit parser stays a fallback if no model / private
+        // authorization is available; no new Android capability is invented.
+        boolean modelFirstDevice = llm != null
                 && salve.core.identity.IdentityManager.get(context).privateAccess()
-                && salve.core.cognition.WhatsAppDraftIntent.offered(entrada);
-        if (!routeDraftToModel && mesaAcciones.procesarControlExplicito(entrada)) return;
+                && (salve.core.cognition.WhatsAppDraftIntent.offered(entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.OPEN_APP, entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.NAVIGATE, entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.PLAY_MUSIC, entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.SEARCH_MUSIC, entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.CALL, entrada));
+        if (!modelFirstDevice && mesaAcciones.procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
         if (BuscadorDescargadorModelos.esSolicitudExplicita(entrada)) {
@@ -1307,7 +1323,8 @@ public class MotorConversacional {
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
         TurnObjective objective = TurnObjective.understand(
                 entrada, hasPriorContext, intent.type == IntentType.BUSCAR_WEB);
-        if (!storyTurn && objective.needsClarification()) {
+        if (!storyTurn && objective.needsClarification()
+                && !salve.core.cognition.MediaActionIntent.offered(entrada)) {
             if (avatarSession != null) AvatarMotionController.get().clarification(avatarSession, currentAvatarTurn());
             hablar("¿Puedes concretar a qué te refieres? No tengo un turno anterior que me permita interpretarlo con seguridad.");
             return;

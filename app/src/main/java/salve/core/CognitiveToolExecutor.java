@@ -195,6 +195,141 @@ final class CognitiveToolExecutor {
                 // This is a handoff, NOT evidence of successful draft or delivery.
                 return CognitiveTurn.Receipt.handoff();
             }
+            case "device.media_control": {
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Acceso privado requerido para controles multimedia.");
+                salve.core.voice.MusicControlCommand.Action expected =
+                        salve.core.cognition.MediaActionIntent.verifiedAction(
+                                input, CognitiveReply.string(args, "action"));
+                if (expected == salve.core.voice.MusicControlCommand.Action.NOW_PLAYING) {
+                    String observed = salve.devices.MusicController.hasAccess(m.context)
+                            ? salve.devices.MusicController.nowPlaying(m.context) : null;
+                    return new CognitiveTurn.Receipt(observed != null
+                            ? "REPRODUCTOR_INFORMA: " + observed
+                            : "REPRODUCTOR_SIN_DATOS: no puedo confirmar qué está sonando; revisa acceso a notificaciones.");
+                }
+                m.mesaAcciones.postConversationTask(() -> {
+                    if (m.closed) return;
+                    if (!salve.core.identity.IdentityManager.get(m.context).privateAccess()) {
+                        m.hablar("Ya no tengo permiso para controlar la música.");
+                        return;
+                    }
+                    try {
+                        boolean accepted;
+                        switch (expected) {
+                            case PLAY: accepted = salve.devices.MusicController.play(m.context); break;
+                            case PAUSE: accepted = salve.devices.MusicController.pause(m.context); break;
+                            case NEXT: accepted = salve.devices.MusicController.next(m.context); break;
+                            case PREVIOUS: accepted = salve.devices.MusicController.previous(m.context); break;
+                            default: accepted = false; break;
+                        }
+                        m.hablar(accepted
+                                ? "He solicitado " + expected.name().toLowerCase(java.util.Locale.ROOT)
+                                        + " al reproductor. Comprueba que el cambio se refleje en la música."
+                                : "El reproductor no aceptó esa acción; no he confirmado ningún cambio.");
+                    } catch (RuntimeException unavailable) {
+                        m.hablar("Android no me dejó controlar la música. No hay resultado confirmado.");
+                    }
+                });
+                return CognitiveTurn.Receipt.handoff();
+            }
+            case "device.open_app":
+            case "device.navigate":
+            case "device.play_music":
+            case "device.search_music":
+            case "device.call": {
+                // The model proposes a target; only the current user request
+                // may authorize an external effect. Recheck after scheduling.
+                salve.core.cognition.DeviceActionIntent.Kind kind;
+                switch (name) {
+                    case "device.open_app":
+                        kind = salve.core.cognition.DeviceActionIntent.Kind.OPEN_APP; break;
+                    case "device.navigate":
+                        kind = salve.core.cognition.DeviceActionIntent.Kind.NAVIGATE; break;
+                    case "device.play_music":
+                        kind = salve.core.cognition.DeviceActionIntent.Kind.PLAY_MUSIC; break;
+                    case "device.search_music":
+                        kind = salve.core.cognition.DeviceActionIntent.Kind.SEARCH_MUSIC; break;
+                    default:
+                        kind = salve.core.cognition.DeviceActionIntent.Kind.CALL; break;
+                }
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Se necesita identidad verificada para controlar el móvil.");
+                String target = salve.core.cognition.DeviceActionIntent.checkedTarget(
+                        kind, input, CognitiveReply.string(args, "target"));
+                m.mesaAcciones.postConversationTask(() -> {
+                    if (m.closed) return;
+                    if (!salve.core.identity.IdentityManager.get(m.context).privateAccess()) {
+                        m.hablar("Ya no tengo autorización para esa acción. No la he realizado.");
+                        return;
+                    }
+                    try {
+                        boolean driving = salve.core.driving.DrivingModeManager.get(m.context).isActive();
+                        if (driving && (kind == salve.core.cognition.DeviceActionIntent.Kind.OPEN_APP
+                                || kind == salve.core.cognition.DeviceActionIntent.Kind.CALL)) {
+                            m.hablar("Mientras conduces no abriré un panel ajeno ni el formulario de llamadas. "
+                                    + "Cuando estés parado puedo prepararlo.");
+                            return;
+                        }
+                        boolean opened;
+                        switch (kind) {
+                            case OPEN_APP: {
+                                salve.devices.PhoneActions.InstalledApp app =
+                                        salve.devices.PhoneActions.findApp(m.context, target);
+                                opened = salve.devices.PhoneActions.openApp(m.context, app);
+                                m.hablar(opened
+                                        ? "Solicité abrir " + app.label + ". Comprueba que esté visible."
+                                        : "No encontré una aplicación instalada que coincida claramente con «"
+                                                + target + "». No la abrí.");
+                                break;
+                            }
+                            case NAVIGATE:
+                                opened = salve.devices.PhoneActions.navigate(m.context, target);
+                                m.hablar(opened ? "Solicité abrir la ruta hacia " + target
+                                        + ". Comprueba el destino en el mapa."
+                                        : "No pude iniciar una ruta a «" + target + "».");
+                                break;
+                            case PLAY_MUSIC:
+                                opened = driving
+                                        ? salve.devices.MusicController.playFromSearch(m.context, target, null)
+                                        : salve.devices.PhoneActions.playMusic(m.context, target);
+                                m.hablar(opened ? "Solicité reproducir «" + target
+                                        + "». Todavía no tengo confirmación de que esté sonando."
+                                        : driving ? "El reproductor no aceptó «" + target
+                                                + "». No abriré resultados en pantalla mientras conduces."
+                                        : "No pude iniciar la reproducción de «" + target + "».");
+                                break;
+                            case SEARCH_MUSIC: {
+                                // During driving, only talk to an existing media
+                                // session. Never launch a visual Spotify search.
+                                opened = driving ? salve.devices.MusicController.playFromSearch(m.context, target, null)
+                                        : salve.devices.PhoneActions.searchMusic(m.context, target);
+                                m.hablar(!opened ? "No pude solicitar esa música."
+                                        : driving ? "Mientras conduces he solicitado reproducir «" + target
+                                                + "», sin abrir resultados. Aún no he verificado que suene."
+                                        : "Solicité abrir la búsqueda de «" + target
+                                                + "» en Spotify. No he confirmado reproducción.");
+                                break;
+                            }
+                            case CALL:
+                                m.context.startActivity(new Intent(m.context,
+                                        salve.presentation.ui.DeviceControlActivity.class)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_CALL, target));
+                                m.hablar("Abrí la revisión de llamada a " + target
+                                        + ". La llamada aún necesita tu confirmación.");
+                                break;
+                            default:
+                                m.hablar("No tengo esa acción disponible.");
+                        }
+                    } catch (RuntimeException unavailable) {
+                        m.hablar("Android no permitió completar la solicitud. No hay resultado confirmado.");
+                    }
+                });
+                // Intent launch is not proof that an app opened, music played,
+                // navigation started, or a call connected. All remain handoffs.
+                return CognitiveTurn.Receipt.handoff();
+            }
             case "TAP": {
                 m.prepararAccion(PendingToolAction.tap(coordinate(args, "x"),
                         coordinate(args, "y"), System.currentTimeMillis()));

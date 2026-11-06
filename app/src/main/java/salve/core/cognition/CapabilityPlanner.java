@@ -52,6 +52,21 @@ public final class CapabilityPlanner {
         // «busca» o «modelo», y antes eso subía memory.lookup y web.search y el recorte del
         // catálogo dejaba fuera self.code justo cuando Bryan lo pedía.
         if (WhatsAppDraftIntent.offered(input)) prefer(available, first, "whatsapp.draft");
+        // Every device target is selected by the model from already-authorized
+        // adapters. Lexical checks only prioritize candidates; they do not act.
+        if (MediaActionIntent.offered(input))
+            prefer(available, first, "device.media_control");
+        if (DeviceActionIntent.offered(DeviceActionIntent.Kind.CALL, input))
+            prefer(available, first, "device.call");
+        if (DeviceActionIntent.offered(DeviceActionIntent.Kind.NAVIGATE, input))
+            prefer(available, first, "device.navigate");
+        if (DeviceActionIntent.offered(DeviceActionIntent.Kind.SEARCH_MUSIC, input))
+            prefer(available, first, "device.search_music");
+        if (DeviceActionIntent.offered(DeviceActionIntent.Kind.PLAY_MUSIC, input))
+            prefer(available, first, "device.play_music");
+        if (DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP, input))
+            prefer(available, first, "device.open_app");
+
         if (salve.core.mind.SelfCode.offered(input)) prefer(available, first, salve.core.mind.SelfCode.TOOL);
         if (salve.core.reports.SelfReport.requested(input)) prefer(available, first, salve.core.reports.SelfReport.TOOL);
         if (salve.core.mind.SelfCode.offered(input)) prefer(available, first, salve.core.mind.SelfSource.TOOL);
