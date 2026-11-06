@@ -91,9 +91,25 @@ public class SalveLLM {
     private volatile ModelCatalog.RuntimeSnapshot modelSnapshot = new ModelCatalog.RuntimeSnapshot(
             null, java.util.Collections.emptySet());
 
+    /** Fuera del hilo principal: si hay una respuesta en curso, espera a que termine. */
+    private static final java.util.concurrent.Executor trimExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private static void trimGgufCache() {
+        try { if (GgufLlm.isInitialized()) GgufLlm.trimCache(); }
+        catch (RuntimeException | LinkageError ignored) { }
+    }
+
     private SalveLLM(Context context) {
         this.appContext = context.getApplicationContext();
         this.distributed = new salve.core.compute.DistributedCompute(appContext);
+        // El motor GGUF conserva su contexto entre respuestas (para no releer lo que ya leyó). Con poca
+        // memoria se suelta: el modelo sigue cargado y la próxima respuesta recrea el contexto.
+        appContext.registerComponentCallbacks(new android.content.ComponentCallbacks2() {
+            @Override public void onTrimMemory(int level) {
+                if (level >= TRIM_MEMORY_RUNNING_LOW) trimExecutor.execute(SalveLLM::trimGgufCache);
+            }
+            @Override public void onLowMemory() { trimExecutor.execute(SalveLLM::trimGgufCache); }
+            @Override public void onConfigurationChanged(android.content.res.Configuration configuration) { }
+        });
         SharedPreferences startupPrefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         if (startupPrefs.getBoolean(LARGE_BUSY_KEY, false)) {
             startupPrefs.edit().remove(LARGE_BUSY_KEY).apply();
@@ -465,14 +481,15 @@ public class SalveLLM {
                 try {
                     try {
                         text = GgufLlm.generate(decorated, identity + "Responde en español. Conserva el contexto de la conversación.",
-                                ggufContextTokens, watch);
+                                ggufContextTokens, null, watch, onChunk);
                     } finally {
                         if (onGpu && ggufGpuUnconfirmed) gpuGuard().fine();
                         if (onNpu && ggufNpuUnconfirmed) npuGuard().fine();
                     }
                     if (onGpu) ggufGpuUnconfirmed = false;
                     if (onNpu) ggufNpuUnconfirmed = false;
-                    if (onChunk != null && text != null) onChunk.accept(text);
+                    // Si ya llegó por trozos según se escribía, no se entrega otra vez entera.
+                    if (onChunk != null && text != null && !GgufLlm.lastStreamed()) onChunk.accept(text);
                 }
                 catch (java.util.concurrent.CancellationException e) {
                     if (watch.hadPressure() && !installationCancelled.getAsBoolean() && !Thread.currentThread().isInterrupted())
@@ -490,7 +507,8 @@ public class SalveLLM {
                     engineInitialized = false;
                     String why = acceleratorFailure.getMessage() == null ? "" : acceleratorFailure.getMessage();
                     if (why.contains("tiempo")) throw acceleratorFailure;
-                    return generateLocalResult(prompt, role, onChunk);
+                    // Si ya se oyó parte por la gráfica, el reintento no la repite: llega entera al final.
+                    return generateLocalResult(prompt, role, GgufLlm.lastStreamed() ? null : onChunk);
                 }
                 finally {
                     ggufContextTokens = Math.min(ggufContextTokens, GgufLlm.getContextTokens());
