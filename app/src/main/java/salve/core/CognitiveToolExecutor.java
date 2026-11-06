@@ -161,6 +161,40 @@ final class CognitiveToolExecutor {
                 m.deliverResponse(result, AvatarMotionProtocol.parse(""), false, true, true);
                 return CognitiveTurn.Receipt.handoff();
             }
+            case "whatsapp.draft": {
+                // The language model chooses the capability but cannot invent who to
+                // contact or what to say. The user's actual current turn is authority.
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("WhatsApp requiere al usuario verificado.");
+                String contact = CognitiveReply.string(args, "contact").trim();
+                String message = CognitiveReply.string(args, "message").trim();
+                salve.core.cognition.WhatsAppDraftIntent.validate(input, contact, message);
+                final boolean byNumber = contact.startsWith("+");
+                final salve.devices.WhatsAppDraft draft = byNumber
+                        ? salve.devices.WhatsAppDraft.create(contact, message) : null;
+                m.mesaAcciones.postConversationTask(() -> {
+                    if (m.closed) return;
+                    Intent panel = new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_DIRECT_DRAFT, true);
+                    if (draft == null) {
+                        panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_WHATSAPP_CONTACT, contact)
+                                .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_MESSAGE, message);
+                    } else {
+                        panel.putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_PHONE, draft.getPhone())
+                                .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_MESSAGE, draft.getMessage());
+                    }
+                    try {
+                        m.context.startActivity(panel);
+                        m.hablar("He solicitado abrir el borrador de WhatsApp. Comprueba el contacto y el texto en WhatsApp. No he enviado nada.");
+                    } catch (RuntimeException unavailable) {
+                        m.hablar("Android no permitió abrir el borrador de WhatsApp. No se envió nada.");
+                    }
+                });
+                // The activity can still fail to resolve a contact or be cancelled.
+                // This is a handoff, NOT evidence of successful draft or delivery.
+                return CognitiveTurn.Receipt.handoff();
+            }
             case "TAP": {
                 m.prepararAccion(PendingToolAction.tap(coordinate(args, "x"),
                         coordinate(args, "y"), System.currentTimeMillis()));

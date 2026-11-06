@@ -51,6 +51,7 @@ public final class CapabilityPlanner {
         // Mirarse por dentro va primero: una petición sobre su código menciona de paso «memoria»,
         // «busca» o «modelo», y antes eso subía memory.lookup y web.search y el recorte del
         // catálogo dejaba fuera self.code justo cuando Bryan lo pedía.
+        if (WhatsAppDraftIntent.offered(input)) prefer(available, first, "whatsapp.draft");
         if (salve.core.mind.SelfCode.offered(input)) prefer(available, first, salve.core.mind.SelfCode.TOOL);
         if (salve.core.reports.SelfReport.requested(input)) prefer(available, first, salve.core.reports.SelfReport.TOOL);
         if (salve.core.mind.SelfCode.offered(input)) prefer(available, first, salve.core.mind.SelfSource.TOOL);

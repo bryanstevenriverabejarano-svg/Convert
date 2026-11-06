@@ -400,12 +400,32 @@ public final class DeviceControlActivity extends Activity {
 
     private void resolveDraftContact(String name, String body) {
         List<PhoneActions.Contact> found = PhoneActions.findContacts(this, name);
+        if (found.isEmpty()) {
+            // If the user says "mi madre", the address book may store "Mami".
+            // Search common labels without allowing the LLM to guess a contact
+            // or the app to send anything. Ambiguous matches still require a tap.
+            String family = java.text.Normalizer.normalize(name.toLowerCase(java.util.Locale.ROOT),
+                    java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "").trim();
+            String[] alternatives = null;
+            if (family.matches("(?:mi |la )?(?:madre|mama|mami)"))
+                alternatives = new String[] {"mami", "mama", "madre"};
+            else if (family.matches("(?:mi |el )?(?:padre|papa|papi)"))
+                alternatives = new String[] {"papi", "papa", "padre"};
+            if (alternatives != null) {
+                Map<String, PhoneActions.Contact> unique = new LinkedHashMap<>();
+                for (String variant : alternatives)
+                    for (PhoneActions.Contact candidate : PhoneActions.findContacts(this, variant))
+                        unique.putIfAbsent(candidate.number, candidate);
+                found = new ArrayList<>(unique.values());
+            }
+        }
         if (found.isEmpty()) { appStatus.setText("No encuentro a «" + name + "» en tus contactos."); return; }
-        if (found.size() == 1) { draftFor(found.get(0), body); return; }
-        String[] choices = new String[found.size()];
-        for (int i = 0; i < choices.length; i++) choices[i] = found.get(i).describe();
+        final List<PhoneActions.Contact> options = found;
+        if (options.size() == 1) { draftFor(options.get(0), body); return; }
+        String[] choices = new String[options.size()];
+        for (int i = 0; i < choices.length; i++) choices[i] = options.get(i).describe();
         new AlertDialog.Builder(this).setTitle("¿A quién le escribo?")
-                .setItems(choices, (d, which) -> draftFor(found.get(which), body))
+                .setItems(choices, (d, which) -> draftFor(options.get(which), body))
                 .setNegativeButton("Cancelar", null).show();
     }
 

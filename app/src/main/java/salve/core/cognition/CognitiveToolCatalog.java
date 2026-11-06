@@ -93,10 +93,19 @@ public final class CognitiveToolCatalog {
                 + "}}; enteros explícitos, <=14 elementos, capacidad<=100",
                 dispatch, "challenge");
 
-        // Both explicit user intent and a connected accessibility service are
-        // necessary to *propose* these calls; the Android executor requires
-        // independent per-action approval before dispatching any side effect.
-        if (accessibilityReady && request.matches("(?s).*(pantalla|teclado|pulsa|toca |escribe |whatsapp).*")) {
+        // A draft is a narrow, model-selected capability. The executor independently
+        // checks the original request and resolves the contact in the existing UI;
+        // opening a draft is NOT a verified delivery or permission to send it.
+        boolean whatsappDraft = verifiedCreator && WhatsAppDraftIntent.offered(safeInput);
+        if (whatsappDraft)
+            add(tools, "whatsapp.draft",
+                    "{contact:string,message:string}: prepara borrador de WhatsApp. contact debe figurar en USER_INPUT; message lo redactas tú de forma natural y fiel al objetivo del usuario, aunque no dicte palabras exactas. Si pide una excusa, propón una explicación prudente sin inventar hechos concretos. No uses datos de terceros no proporcionados. NUNCA envías; el usuario revisa destinatario y texto.",
+                    dispatch, "contact", "message");
+
+        // A WhatsApp draft must NOT additionally offer arbitrary screen touches or
+        // text injection. Those are separate high-risk, user-reviewed actions.
+        if (!whatsappDraft && accessibilityReady
+                && request.matches("(?s).*(pantalla|teclado|pulsa|toca |escribe ).*")) {
             add(tools, "TAP", "{x:entero,y:entero}: propone toque; requiere revisión",
                     dispatch, "x", "y");
             add(tools, "ESCRIBIR",
