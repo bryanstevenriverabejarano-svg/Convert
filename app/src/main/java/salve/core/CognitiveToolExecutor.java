@@ -195,6 +195,44 @@ final class CognitiveToolExecutor {
                 // This is a handoff, NOT evidence of successful draft or delivery.
                 return CognitiveTurn.Receipt.handoff();
             }
+            case "device.media_control": {
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Acceso privado requerido para controles multimedia.");
+                salve.core.voice.MusicControlCommand.Action expected =
+                        salve.core.cognition.MediaActionIntent.verifiedAction(
+                                input, CognitiveReply.string(args, "action"));
+                if (expected == salve.core.voice.MusicControlCommand.Action.NOW_PLAYING) {
+                    String observed = salve.devices.MusicController.hasAccess(m.context)
+                            ? salve.devices.MusicController.nowPlaying(m.context) : null;
+                    return new CognitiveTurn.Receipt(observed != null
+                            ? "REPRODUCTOR_INFORMA: " + observed
+                            : "REPRODUCTOR_SIN_DATOS: no puedo confirmar qué está sonando; revisa acceso a notificaciones.");
+                }
+                m.mesaAcciones.postConversationTask(() -> {
+                    if (m.closed) return;
+                    if (!salve.core.identity.IdentityManager.get(m.context).privateAccess()) {
+                        m.hablar("Ya no tengo permiso para controlar la música.");
+                        return;
+                    }
+                    try {
+                        boolean accepted;
+                        switch (expected) {
+                            case PLAY: accepted = salve.devices.MusicController.play(m.context); break;
+                            case PAUSE: accepted = salve.devices.MusicController.pause(m.context); break;
+                            case NEXT: accepted = salve.devices.MusicController.next(m.context); break;
+                            case PREVIOUS: accepted = salve.devices.MusicController.previous(m.context); break;
+                            default: accepted = false; break;
+                        }
+                        m.hablar(accepted
+                                ? "He solicitado " + expected.name().toLowerCase(java.util.Locale.ROOT)
+                                        + " al reproductor. Comprueba que el cambio se refleje en la música."
+                                : "El reproductor no aceptó esa acción; no he confirmado ningún cambio.");
+                    } catch (RuntimeException unavailable) {
+                        m.hablar("Android no me dejó controlar la música. No hay resultado confirmado.");
+                    }
+                });
+                return CognitiveTurn.Receipt.handoff();
+            }
             case "device.open_app":
             case "device.navigate":
             case "device.play_music":
