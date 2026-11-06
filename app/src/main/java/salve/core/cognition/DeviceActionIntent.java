@@ -40,7 +40,8 @@ public final class DeviceActionIntent {
 
     public static boolean offered(Kind kind, String userInput) {
         String s = normalize(userInput);
-        if (s.isEmpty() || s.length() > 450 || META.matcher(s).find()) return false;
+        if (s.isEmpty() || s.length() > 450
+                || (kind != Kind.NAVIGATE && META.matcher(s).find())) return false;
         switch (kind) {
             case OPEN_APP:
                 // Ordinary chat about opening apps does not authorize navigation.
