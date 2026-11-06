@@ -420,11 +420,12 @@ public final class DeviceControlActivity extends Activity {
             }
         }
         if (found.isEmpty()) { appStatus.setText("No encuentro a «" + name + "» en tus contactos."); return; }
-        if (found.size() == 1) { draftFor(found.get(0), body); return; }
-        String[] choices = new String[found.size()];
-        for (int i = 0; i < choices.length; i++) choices[i] = found.get(i).describe();
+        final List<PhoneActions.Contact> options = found;
+        if (options.size() == 1) { draftFor(options.get(0), body); return; }
+        String[] choices = new String[options.size()];
+        for (int i = 0; i < choices.length; i++) choices[i] = options.get(i).describe();
         new AlertDialog.Builder(this).setTitle("¿A quién le escribo?")
-                .setItems(choices, (d, which) -> draftFor(found.get(which), body))
+                .setItems(choices, (d, which) -> draftFor(options.get(which), body))
                 .setNegativeButton("Cancelar", null).show();
     }
 
