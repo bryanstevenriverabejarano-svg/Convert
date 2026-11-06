@@ -12,10 +12,9 @@ import java.util.regex.Pattern;
  */
 public final class WhatsAppDraftIntent {
     private static final Pattern MESSAGE_ACTION = Pattern.compile(
-            "\\b(?:dile|diles|digale|digas|cuentale|comunicale|avisa|avisale|"
-            + "escribe(?:le|les|me)?|redacta(?:le|les)?|prepara(?:le|les)?|"
-            + "manda(?:le|les)?|envia(?:le|les)?|responde(?:le|les)?|"
-            + "ponle|comenta(?:le)?|explica(?:le)?|contacta)\\b");
+            "\\b(?:dile|diles|digale|digas|cuentale|comunicale|avisa[a-z]*|"
+            + "escrib[a-z]*|redact[a-z]*|prepar[a-z]*|mand[a-z]*|envi[a-z]*|"
+            + "responde[a-z]*|ponle|comenta[a-z]*|explica[a-z]*|contacta[a-z]*)\\b");
     private static final Pattern TO_SOMEONE = Pattern.compile(
             "\\b(?:a|al|para|con)\\s+(?:(?:mi|mis|la|el|un|una)\\s+)?[a-z0-9+]{2,}");
     private WhatsAppDraftIntent() { }
