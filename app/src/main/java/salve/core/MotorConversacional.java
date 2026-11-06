@@ -835,7 +835,12 @@ public class MotorConversacional {
         if (voz != null) { hablar(cambioDeVoz(voz)); return; }
         salve.core.voice.ListenCommand listen = salve.core.voice.ListenCommand.parse(entrada);
         if (listen != null) { hablar(escuchar(listen)); return; }
-        String music = controlMusica(entrada);
+        // For a verified conversation, the LLM selects the existing music
+        // transport action. The direct parser remains an offline fallback.
+        boolean modelFirstMusic = llm != null
+                && salve.core.identity.IdentityManager.get(context).privateAccess()
+                && salve.core.cognition.MediaActionIntent.offered(entrada);
+        String music = modelFirstMusic ? null : controlMusica(entrada);
         if (music != null) { hablar(music); return; }
         String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
@@ -1318,7 +1323,8 @@ public class MotorConversacional {
         IntentRecognizer.Intent intent = intentRecognizer.recognize(entrada);
         TurnObjective objective = TurnObjective.understand(
                 entrada, hasPriorContext, intent.type == IntentType.BUSCAR_WEB);
-        if (!storyTurn && objective.needsClarification()) {
+        if (!storyTurn && objective.needsClarification()
+                && !salve.core.cognition.MediaActionIntent.offered(entrada)) {
             if (avatarSession != null) AvatarMotionController.get().clarification(avatarSession, currentAvatarTurn());
             hablar("¿Puedes concretar a qué te refieres? No tengo un turno anterior que me permita interpretarlo con seguridad.");
             return;
