@@ -128,6 +128,14 @@ public final class CognitiveTurn {
                 // No exception text or model-generated arguments become higher-priority instructions.
                 receipt.addProperty("status", "failed");
                 receipt.addProperty("data", "El controlador rechazó los argumentos o la operación falló. No hay éxito confirmado.");
+                if ("whatsapp.draft".equals(reply.name)) {
+                    // No second LLM response may reinterpret a rejected message draft
+                    // as delivered or prepared. The controller owns this statement.
+                    receipts.add(receipt);
+                    return new Outcome(ModelResult.success(
+                            "No preparé el borrador de WhatsApp: los datos no coincidían con tu orden o Android lo rechazó. No se envió nada.",
+                            last.getLatencyMillis()), false, receipts);
+                }
             }
             receipts.add(receipt);
         }
@@ -155,6 +163,7 @@ public final class CognitiveTurn {
     static String humanName(String tool) {
         switch (tool == null ? "" : tool) {
             case "memory.lookup": return "buscar en mis recuerdos";
+            case "whatsapp.draft": return "preparar el borrador de WhatsApp";
             case "web.search": return "buscar en internet";
             case "sketch.draw": return "dibujar";
             case "cloud.sync": return "sincronizar con pCloud";
