@@ -46,6 +46,19 @@ public class DeviceActionIntentTest {
                 "Redacta un informe de una aplicación"));
     }
 
+    @Test public void negatedRequestsDoNotBecomePermissions() {
+        assertFalse(DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP,
+                "No abras Spotify"));
+        assertFalse(DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP,
+                "Por favor no me abras WhatsApp"));
+        assertFalse(DeviceActionIntent.offered(DeviceActionIntent.Kind.CALL,
+                "No llama a mamá"));
+        assertFalse(DeviceActionIntent.offered(DeviceActionIntent.Kind.NAVIGATE,
+                "No navegues a casa"));
+        assertFalse(DeviceActionIntent.offered(DeviceActionIntent.Kind.PLAY_MUSIC,
+                "No reproduzcas música"));
+    }
+
     @Test public void modelChoosesAmongAuthorizedAdaptersNotRawAndroidPrimitives() {
         String input = "Abre Spotify, por favor";
         Map<String, CognitiveTurn.Tool> offered = CognitiveToolCatalog.build(
