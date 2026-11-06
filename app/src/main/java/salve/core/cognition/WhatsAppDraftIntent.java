@@ -17,6 +17,14 @@ public final class WhatsAppDraftIntent {
             + "responde[a-z]*|ponle|comenta[a-z]*|explica[a-z]*|contacta[a-z]*)\\b");
     private static final Pattern TO_SOMEONE = Pattern.compile(
             "\\b(?:a|al|para|con)\\s+(?:(?:mi|mis|la|el|un|una)\\s+)?[a-z0-9+]{2,}");
+    // Without an explicit app name, require a strongly directed communication
+    // request. Merely saying "redacta un informe" is NOT a message to someone.
+    private static final Pattern DIRECTED_MESSAGE = Pattern.compile(
+            "\\b(?:dile|diles|digale|cuentale|comunicale|avisale|escribele|"
+            + "redactale|mandale|enviale|respondele|explicale|comentale|contacta)\\b"
+            + "|\\b(?:escribe|redacta|prepara|manda|envia|redactar|mandar|enviar|preparar)"
+            + "\\s+(?:un\\s+)?(?:mensaje|texto|excusa)\\b"
+            + "|\\bdale\\s+una\\s+excusa\\b");
     private WhatsAppDraftIntent() { }
 
     /** Offers a draft tool; the LLM still decides if it actually needs to use it. */
@@ -25,9 +33,10 @@ public final class WhatsAppDraftIntent {
         boolean channel = contains(s, "whatsapp") || contains(s, "whats app")
                 || contains(s, "watsapp") || contains(s, "wasap") || contains(s, "guasap");
         boolean communication = MESSAGE_ACTION.matcher(s).find();
-        // Natural requests like "Dile a mi madre que no podré ir" don't have to
-        // repeat the application name. WhatsApp is merely the available draft route.
-        return communication && (channel || TO_SOMEONE.matcher(s).find());
+        // "Dile a mi madre..." can implicitly use WhatsApp, but instructions
+        // to redact an unrelated PDF/report must remain in their own tool route.
+        return (channel && communication)
+                || (DIRECTED_MESSAGE.matcher(s).find() && TO_SOMEONE.matcher(s).find());
     }
 
     /**
