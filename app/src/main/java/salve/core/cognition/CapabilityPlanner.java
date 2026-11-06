@@ -54,6 +54,8 @@ public final class CapabilityPlanner {
         if (WhatsAppDraftIntent.offered(input)) prefer(available, first, "whatsapp.draft");
         // Every device target is selected by the model from already-authorized
         // adapters. Lexical checks only prioritize candidates; they do not act.
+        if (MediaActionIntent.offered(input))
+            prefer(available, first, "device.media_control");
         if (DeviceActionIntent.offered(DeviceActionIntent.Kind.CALL, input))
             prefer(available, first, "device.call");
         if (DeviceActionIntent.offered(DeviceActionIntent.Kind.NAVIGATE, input))
