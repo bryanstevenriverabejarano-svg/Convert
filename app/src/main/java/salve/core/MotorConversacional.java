@@ -1037,13 +1037,24 @@ public class MotorConversacional {
                 + mesaFunciones.conocimientoPropio(entrada)
                 + estrategiaRespuesta() + mesaFunciones.misActualizaciones(entrada) + misHabilidades(entrada)
                 + tonoOido();
-        // A conversational messaging request belongs to the LLM: it decides
-        // whether to draft, and it writes the content in its own words.
-        // Keep the legacy direct parser only as a fallback without an LLM.
-        boolean routeDraftToModel = llm != null
+        // Model-first dispatch for already-implemented phone capabilities:
+        // the LLM decides which authorized adapter to use and its arguments.
+        // The existing explicit parser stays a fallback if no model / private
+        // authorization is available; no new Android capability is invented.
+        boolean modelFirstDevice = llm != null
                 && salve.core.identity.IdentityManager.get(context).privateAccess()
-                && salve.core.cognition.WhatsAppDraftIntent.offered(entrada);
-        if (!routeDraftToModel && mesaAcciones.procesarControlExplicito(entrada)) return;
+                && (salve.core.cognition.WhatsAppDraftIntent.offered(entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.OPEN_APP, entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.NAVIGATE, entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.PLAY_MUSIC, entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.SEARCH_MUSIC, entrada)
+                || salve.core.cognition.DeviceActionIntent.offered(
+                        salve.core.cognition.DeviceActionIntent.Kind.CALL, entrada));
+        if (!modelFirstDevice && mesaAcciones.procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
         if (BuscadorDescargadorModelos.esSolicitudExplicita(entrada)) {
