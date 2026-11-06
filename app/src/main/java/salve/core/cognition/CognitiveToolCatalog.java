@@ -99,7 +99,7 @@ public final class CognitiveToolCatalog {
         boolean whatsappDraft = verifiedCreator && WhatsAppDraftIntent.offered(safeInput);
         if (whatsappDraft)
             add(tools, "whatsapp.draft",
-                    "{contact:string,message:string}: prepara un borrador; ambos literales deben aparecer en la orden del usuario; NO envía; confirma destinatario en WhatsApp",
+                    "{contact:string,message:string}: prepara borrador de WhatsApp. contact debe figurar en USER_INPUT; message lo redactas tú de forma natural y fiel al objetivo del usuario, aunque no dicte palabras exactas. Si pide una excusa, propón una explicación prudente sin inventar hechos concretos. No uses datos de terceros no proporcionados. NUNCA envías; el usuario revisa destinatario y texto.",
                     dispatch, "contact", "message");
 
         // A WhatsApp draft must NOT additionally offer arbitrary screen touches or
