@@ -99,7 +99,9 @@ public final class GgufLlm {
                                                BooleanSupplier cancelled, java.util.function.Consumer<String> onChunk) {
         if (model == 0) throw new IllegalStateException("GGUF no está inicializado");
         if (media != null && vision == 0) throw new IllegalStateException("El modelo no tiene la visión cargada");
-        final long eyes = media == null ? 0 : vision;
+        // Los ojos se pasan siempre que estén cargados (aunque no haya foto): el motor usa entonces un
+        // único contexto para texto, fotos y audio y no pierde lo ya leído al alternar.
+        final long eyes = vision;
         streamed = false;
         BooleanSupplier stop = cancellation(cancelled);
         boolean cognitive = salve.core.cognition.CognitivePrompt.isCognitive(prompt);

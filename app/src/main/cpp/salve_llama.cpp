@@ -172,12 +172,17 @@ struct PromptCache {
     llama_context *ctx = nullptr;
     int n_ctx = 0;
     int n_batch = 0;
-    std::vector<llama_token> tokens; // exactamente lo que hay en la secuencia 0 de la caché KV
+    // Dos secuencias en la misma caché: 0 = conversación (texto), 1 = lo que entra por ojos y oídos.
+    // Así oír una frase o mirar una foto no borra lo ya leído de la conversación (en modo oídos cada
+    // frase pasa primero por el audio: antes la conversación se releía entera después de cada una).
+    // tokens[s] = el texto que hay al principio de la secuencia s, tal cual está en la caché.
+    std::vector<llama_token> tokens[2];
 
-    // La caché ya no corresponde a ningún texto conocido (fallo, foto, adaptador nuevo).
+    // La caché ya no corresponde a ningún texto conocido (fallo, adaptador nuevo).
     void forget() {
         if (ctx) llama_memory_clear(llama_get_memory(ctx), true);
-        tokens.clear();
+        tokens[0].clear();
+        tokens[1].clear();
     }
     // Libera el contexto: obligatorio antes de liberar el modelo al que pertenece.
     void drop() {
@@ -186,9 +191,27 @@ struct PromptCache {
         model = nullptr;
         n_ctx = 0;
         n_batch = 0;
-        tokens.clear();
+        tokens[0].clear();
+        tokens[1].clear();
     }
 };
+
+// Decodifica tokens de texto en una secuencia concreta, en posiciones explícitas.
+// Solo el último token del último lote pide su salida (es la que elige la primera palabra).
+int decode_text(llama_context *ctx, const llama_token *data, int size, llama_pos pos, llama_seq_id seq, bool last) {
+    llama_batch batch = llama_batch_init(size, 0, 1);
+    for (int i = 0; i < size; ++i) {
+        batch.token[i] = data[i];
+        batch.pos[i] = pos + i;
+        batch.n_seq_id[i] = 1;
+        batch.seq_id[i][0] = seq;
+        batch.logits[i] = last && i == size - 1;
+    }
+    batch.n_tokens = size;
+    const int status = llama_decode(ctx, batch);
+    llama_batch_free(batch);
+    return status;
+}
 PromptCache cache;
 
 // Cuántos tokens del principio coinciden: es lo que no hace falta volver a leer.
@@ -380,8 +403,10 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         }
         int length = static_cast<int>(prompt.size());
         const int outputTokens = repair ? 256 : 512;
-        // Con foto, un lote grande: los tokens de la imagen se leen juntos (atención no causal).
-        const int batchSize = withMedia ? 512 : contextSize == 2048 ? 128 : 256;
+        // Con ojos y oídos cargados, siempre lote grande: los tokens de una foto se leen juntos
+        // (atención no causal) y así texto y foto/audio comparten el mismo contexto y su caché.
+        // Antes, pasar de oír a contestar cambiaba el lote, se recreaba el contexto y se perdía todo.
+        const int batchSize = vision ? 512 : contextSize == 2048 ? 128 : 256;
         std::vector<llama_token> tokens;
         std::unique_ptr<mtmd_input_chunks, decltype(&mtmd_input_chunks_free)> chunks(nullptr, mtmd_input_chunks_free);
         int count = 0;
@@ -417,6 +442,9 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             params.n_ubatch = batchSize;
             params.n_threads = worker_threads();
             params.n_threads_batch = worker_threads();
+            // Caché unificada: las dos secuencias comparten las mismas celdas (no se parte el contexto).
+            params.n_seq_max = 2;
+            params.kv_unified = true;
             llama_context *created = llama_init_from_model(model, params);
             request.check();
             if (!created) throw ContextAllocationFailure();
@@ -433,7 +461,8 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             cache.model = model;
             cache.n_ctx = contextSize;
             cache.n_batch = batchSize;
-            cache.tokens.clear();
+            cache.tokens[0].clear();
+            cache.tokens[1].clear();
         }
         llama_context *ctx = cache.ctx;
         // La petición vive en esta pila: el contexto la consulta solo mientras dura esta llamada.
@@ -448,30 +477,51 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             }
         } session{ctx};
         auto *memory = llama_get_memory(ctx);
+        const llama_seq_id seq = withMedia ? 1 : 0, other = 1 - seq;
+        // Con foto o audio solo se compara el texto que va antes de ellos (sistema + inicio del turno).
+        const mtmd_input_chunk *head = nullptr;
+        if (withMedia && mtmd_input_chunks_size(chunks.get()) > 0
+                && mtmd_input_chunk_get_type(mtmd_input_chunks_get(chunks.get(), 0)) == MTMD_INPUT_CHUNK_TYPE_TEXT) {
+            head = mtmd_input_chunks_get(chunks.get(), 0);
+            size_t n = 0;
+            const llama_token *data = mtmd_input_chunk_get_tokens_text(head, &n);
+            tokens.assign(data, data + n);
+        }
+        const int comparable = static_cast<int>(tokens.size());
+        // Si no caben las dos secuencias juntas, se suelta la otra (la conversación se relee una vez).
+        const llama_pos other_used = llama_memory_seq_pos_max(memory, other) + 1;
+        if (other_used > 0 && other_used + count + outputTokens > contextSize) {
+            llama_memory_seq_rm(memory, other, -1, -1);
+            cache.tokens[other].clear();
+        }
         // Lo que ya está en la caché y coincide con el principio de este prompt no se vuelve a leer.
         int reused = 0;
-        if (!withMedia) {
-            // Al menos el último token se lee de nuevo: hace falta su salida para elegir la primera palabra.
-            const int common = static_cast<int>(std::min(common_prefix(cache.tokens, tokens), static_cast<size_t>(count - 1)));
+        {
+            // Sin foto, al menos el último token se lee de nuevo: hace falta su salida para la primera palabra.
+            const size_t limit = withMedia ? static_cast<size_t>(comparable) : static_cast<size_t>(count - 1);
+            const int common = static_cast<int>(std::min(common_prefix(cache.tokens[seq], tokens), limit));
             if (common > 0) {
                 // Modelos con ventana deslizante (Gemma): si la caché ya descartó posiciones que el primer
                 // token nuevo necesita, no sirve y se lee todo (como hace llama-server).
                 const int n_swa = llama_model_n_swa(model);
-                const llama_pos pos_min = llama_memory_seq_pos_min(memory, 0);
+                const llama_pos pos_min = llama_memory_seq_pos_min(memory, seq);
                 const llama_pos needed = n_swa > 0 ? std::max(0, common - n_swa + 1) : common;
-                if ((pos_min <= 0 || pos_min < needed) && llama_memory_seq_rm(memory, 0, common, -1)) reused = common;
+                if ((pos_min <= 0 || pos_min < needed) && llama_memory_seq_rm(memory, seq, common, -1)) reused = common;
             }
         }
-        if (reused == 0) llama_memory_clear(memory, true);
-        // Las fotos no se apuntan: sus tokens no son texto comparable con el próximo prompt.
-        const bool track = !withMedia;
-        cache.tokens.assign(tokens.begin(), tokens.begin() + reused);
-        auto decode = [&](llama_token *data, int size) {
+        if (reused == 0) llama_memory_seq_rm(memory, seq, -1, -1);
+        // Se apunta exactamente el texto que queda al principio de la secuencia. Con foto o audio, solo
+        // lo anterior a ellos: lo que viene detrás no es texto comparable con el próximo prompt.
+        cache.tokens[seq].assign(tokens.begin(), tokens.begin() + reused);
+        bool track = true;
+        llama_pos past = reused;
+        auto decode = [&](const llama_token *data, int size, bool last) {
             request.check();
-            int status = llama_decode(ctx, llama_batch_get_one(data, size));
+            int status = decode_text(ctx, data, size, past, seq, last);
             request.check();
             if (status != 0) throw std::runtime_error("Falló la inferencia GGUF");
-            if (track) cache.tokens.insert(cache.tokens.end(), data, data + size);
+            past += size;
+            if (track) cache.tokens[seq].insert(cache.tokens[seq].end(), data, data + size);
         };
         Stream stream(env, sink);
         const auto started = Clock::now();
@@ -489,15 +539,21 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             return last_stats;
         };
         try {
-            if (withMedia) {
-                llama_pos past = 0;
+            const size_t total = withMedia ? mtmd_input_chunks_size(chunks.get()) : 0;
+            // Texto que va delante (todo, si no hay foto ni audio), sin lo que ya estaba en la caché.
+            for (int offset = reused; offset < comparable; offset += batchSize) {
+                const int size = std::min(batchSize, comparable - offset);
+                decode(tokens.data() + offset, size, offset + size == comparable && total <= 1);
+            }
+            track = false;
+            for (size_t i = head ? 1 : 0; i < total; ++i) {
+                llama_pos next = past;
                 request.check();
-                int status = mtmd_helper_eval_chunks(vision, ctx, chunks.get(), 0, 0, batchSize, true, &past);
+                int status = mtmd_helper_eval_chunk_single(vision, ctx, mtmd_input_chunks_get(chunks.get(), i), past, seq,
+                                                           batchSize, i + 1 == total, &next);
                 request.check();
-                if (status != 0) throw std::runtime_error("Falló la lectura de la foto");
-            } else {
-                for (int offset = reused; offset < count; offset += batchSize)
-                    decode(tokens.data() + offset, std::min(batchSize, count - offset));
+                if (status != 0) throw std::runtime_error("Falló la lectura de la foto o el audio");
+                past = next;
             }
         } catch (const Cancelled &) { throw; }
           catch (const std::exception &e) {
@@ -573,13 +629,14 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             ++written;
             if (i + 1 < outputTokens) {
                 if (request.cancelled()) throw Cancelled();
-                int status = llama_decode(ctx, llama_batch_get_one(&token, 1));
+                int status = decode_text(ctx, &token, 1, past, seq, true);
                 if (status != 0) {
                     if (request.cancelled()) throw Cancelled();
                     if (request.expired()) { truncated = true; cache.forget(); break; }
                     throw std::runtime_error("Falló la inferencia GGUF");
                 }
-                if (track) cache.tokens.push_back(token);
+                ++past;
+                if (!withMedia) cache.tokens[seq].push_back(token);
             }
         }
         stats();
