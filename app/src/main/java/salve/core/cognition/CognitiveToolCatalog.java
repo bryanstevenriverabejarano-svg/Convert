@@ -102,9 +102,46 @@ public final class CognitiveToolCatalog {
                     "{contact:string,message:string}: prepara borrador de WhatsApp. contact debe figurar en USER_INPUT; message lo redactas tú de forma natural y fiel al objetivo del usuario, aunque no dicte palabras exactas. Si pide una excusa, propón una explicación prudente sin inventar hechos concretos. No uses datos de terceros no proporcionados. NUNCA envías; el usuario revisa destinatario y texto.",
                     dispatch, "contact", "message");
 
+        // Existing phone adapters are reusable capabilities, not new executors.
+        // The LLM selects a tool and its target; the controller checks both
+        // against USER_INPUT before touching an external Android app.
+        boolean deviceAction = false;
+        if (verifiedCreator && !whatsappDraft) {
+            if (DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP, safeInput)) {
+                add(tools, "device.open_app",
+                        "{target:string}: abre app instalada mencionada por el usuario. Nunca supone que el siguiente paso se haya completado.",
+                        dispatch, "target");
+                deviceAction = true;
+            }
+            if (DeviceActionIntent.offered(DeviceActionIntent.Kind.NAVIGATE, safeInput)) {
+                add(tools, "device.navigate",
+                        "{target:string}: solicita ruta en Maps al destino dicho por el usuario; abrir Maps no demuestra llegada.",
+                        dispatch, "target");
+                deviceAction = true;
+            }
+            if (DeviceActionIntent.offered(DeviceActionIntent.Kind.PLAY_MUSIC, safeInput)) {
+                add(tools, "device.play_music",
+                        "{target:string}: solicita reproducción de música mencionada; comprobar sonido queda pendiente.",
+                        dispatch, "target");
+                deviceAction = true;
+            }
+            if (DeviceActionIntent.offered(DeviceActionIntent.Kind.SEARCH_MUSIC, safeInput)) {
+                add(tools, "device.search_music",
+                        "{target:string}: busca música en Spotify sin afirmar que haya empezado a sonar.",
+                        dispatch, "target");
+                deviceAction = true;
+            }
+            if (DeviceActionIntent.offered(DeviceActionIntent.Kind.CALL, safeInput)) {
+                add(tools, "device.call",
+                        "{target:string}: abre revisión de llamada al contacto/número pedido; nunca llama sin confirmación.",
+                        dispatch, "target");
+                deviceAction = true;
+            }
+        }
+
         // A WhatsApp draft must NOT additionally offer arbitrary screen touches or
         // text injection. Those are separate high-risk, user-reviewed actions.
-        if (!whatsappDraft && accessibilityReady
+        if (!whatsappDraft && !deviceAction && accessibilityReady
                 && request.matches("(?s).*(pantalla|teclado|pulsa|toca |escribe ).*")) {
             add(tools, "TAP", "{x:entero,y:entero}: propone toque; requiere revisión",
                     dispatch, "x", "y");
