@@ -52,6 +52,8 @@ public final class CapabilityPlanner {
         // «busca» o «modelo», y antes eso subía memory.lookup y web.search y el recorte del
         // catálogo dejaba fuera self.code justo cuando Bryan lo pedía.
         if (WhatsAppDraftIntent.offered(input)) prefer(available, first, "whatsapp.draft");
+        // Her own functions asked for by name come before generic phone adapters.
+        if (SelfCommandIntent.offered(input)) prefer(available, first, SelfCommandIntent.TOOL);
         // Every device target is selected by the model from already-authorized
         // adapters. Lexical checks only prioritize candidates; they do not act.
         if (MediaActionIntent.offered(input))

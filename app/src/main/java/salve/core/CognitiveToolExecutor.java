@@ -330,6 +330,21 @@ final class CognitiveToolExecutor {
                 // navigation started, or a call connected. All remain handoffs.
                 return CognitiveTurn.Receipt.handoff();
             }
+            case salve.core.cognition.SelfCommandIntent.TOOL: {
+                // The model chooses WHICH of her own functions; the user's words decide
+                // the details. An id the user did not ask for in this turn is rejected.
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Mis funciones propias requieren a Bryan verificado.");
+                salve.core.cognition.SelfCommandIntent.Command command =
+                        salve.core.cognition.SelfCommandIntent.verified(input, CognitiveReply.string(args, "id"));
+                String reply = m.runSelfCommand(command, input);
+                salve.core.trace.ExecutionTrace.note("FUNCIÓN PROPIA ELEGIDA POR EL MODELO",
+                        command.name() + (command.readOnly ? " (lectura: el modelo lo explica)" : " (acción: entrega)"));
+                if (command.readOnly) return new CognitiveTurn.Receipt(command.name() + "_REAL: " + reply);
+                m.hablar(reply);
+                // Opening a screen or toggling a mode is a handoff, not a verified goal.
+                return CognitiveTurn.Receipt.handoff();
+            }
             case "TAP": {
                 m.prepararAccion(PendingToolAction.tap(coordinate(args, "x"),
                         coordinate(args, "y"), System.currentTimeMillis()));
