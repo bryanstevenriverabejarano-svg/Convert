@@ -107,6 +107,12 @@ public final class CognitiveToolCatalog {
         // against USER_INPUT before touching an external Android app.
         boolean deviceAction = false;
         if (verifiedCreator && !whatsappDraft) {
+            if (MediaActionIntent.offered(safeInput)) {
+                add(tools, "device.media_control",
+                        "{action:'PLAY'|'PAUSE'|'NEXT'|'PREVIOUS'|'NOW_PLAYING'}: controla la sesión multimedia o consulta el título. El controlador verifica que la acción coincida con la petición.",
+                        dispatch, "action");
+                deviceAction = true;
+            }
             if (DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP, safeInput)) {
                 add(tools, "device.open_app",
                         "{target:string}: abre app instalada mencionada por el usuario. Nunca supone que el siguiente paso se haya completado.",
