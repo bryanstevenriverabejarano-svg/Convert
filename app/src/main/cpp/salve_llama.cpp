@@ -5,6 +5,7 @@
 #include "mtmd-helper.h"
 #include <cstdlib>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -12,6 +13,7 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -58,9 +60,19 @@ struct Request {
         if (cancelled()) throw Cancelled();
         if (expired()) throw std::runtime_error("El modelo local agotó el tiempo de respuesta");
     }
+    // ggml llama a esto en CADA operación del grafo y desde los hilos de cálculo: preguntar a Java
+    // cada vez (adjuntar el hilo a la JVM, llamar, soltarlo) costaba más que el propio cálculo al
+    // escribir palabra a palabra. Se pregunta como mucho cada 50 ms y se recuerda la respuesta.
+    std::atomic<int64_t> asked_at{0};
+    std::atomic<bool> stop{false};
     static bool abort(void *data) {
         auto *request = static_cast<Request *>(data);
-        return request->expired() || request->cancelled();
+        if (request->stop.load(std::memory_order_relaxed) || request->expired()) return true;
+        const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now().time_since_epoch()).count();
+        int64_t last = request->asked_at.load(std::memory_order_relaxed);
+        if (now - last < 50 || !request->asked_at.compare_exchange_strong(last, now)) return false;
+        if (request->cancelled()) request->stop.store(true, std::memory_order_relaxed);
+        return request->stop.load(std::memory_order_relaxed);
     }
     static bool progress(float, void *data) { return !abort(data); }
 };
@@ -106,6 +118,13 @@ void load_backends(bool npu, bool gpu, const std::string &cache, const std::stri
     }
 }
 
+// 4 hilos en el móvil (sus núcleos grandes); nunca más que núcleos: con más, los hilos se esperan
+// unos a otros en cada operación y escribir cada palabra puede tardar cien veces más.
+int worker_threads() {
+    const unsigned cores = std::thread::hardware_concurrency();
+    return cores == 0 ? 4 : static_cast<int>(std::min(4u, cores));
+}
+
 // Prueba real en la gráfica (leer unos tokens y escribir uno) DENTRO de la carga, que tiene más margen:
 // el driver compila aquí los kernels que falten, y si algo no funciona se sabe antes de responder.
 template <typename R>
@@ -115,8 +134,8 @@ bool warm_up(llama_model *model, R &request) {
         params.n_ctx = 512;
         params.n_batch = 64;
         params.n_ubatch = 64;
-        params.n_threads = 4;
-        params.n_threads_batch = 4;
+        params.n_threads = worker_threads();
+        params.n_threads_batch = worker_threads();
         params.abort_callback = R::abort;
         params.abort_callback_data = &request;
         std::unique_ptr<llama_context, decltype(&llama_free)> ctx(llama_init_from_model(model, params), llama_free);
@@ -142,6 +161,84 @@ ggml_backend_dev_t named_device(const char *registration) {
 // Pertenece al modelo cargado: llama.cpp lo libera con él. GgufLlm serializa todo el acceso.
 llama_adapter_lora *active_adapter = nullptr;
 float active_scale = 0.0f;
+
+// Contexto que se conserva entre respuestas, con lo que ya leyó en su caché KV.
+// Antes cada respuesta creaba un contexto nuevo (reservar la caché y los búferes de la gráfica) y
+// releía el prompt entero desde el primer token, aunque las instrucciones de Salve y el comienzo del
+// mensaje fueran idénticos a la respuesta anterior. Ahora solo se lee lo que cambió.
+// GgufLlm (Java) serializa todas las llamadas: no hace falta otro cerrojo.
+struct PromptCache {
+    llama_model *model = nullptr;
+    llama_context *ctx = nullptr;
+    int n_ctx = 0;
+    int n_batch = 0;
+    std::vector<llama_token> tokens; // exactamente lo que hay en la secuencia 0 de la caché KV
+
+    // La caché ya no corresponde a ningún texto conocido (fallo, foto, adaptador nuevo).
+    void forget() {
+        if (ctx) llama_memory_clear(llama_get_memory(ctx), true);
+        tokens.clear();
+    }
+    // Libera el contexto: obligatorio antes de liberar el modelo al que pertenece.
+    void drop() {
+        if (ctx) llama_free(ctx);
+        ctx = nullptr;
+        model = nullptr;
+        n_ctx = 0;
+        n_batch = 0;
+        tokens.clear();
+    }
+};
+PromptCache cache;
+
+// Cuántos tokens del principio coinciden: es lo que no hace falta volver a leer.
+size_t common_prefix(const std::vector<llama_token> &a, const std::vector<llama_token> &b) {
+    size_t n = 0;
+    const size_t limit = std::min(a.size(), b.size());
+    while (n < limit && a[n] == b[n]) ++n;
+    return n;
+}
+
+// Bytes que forman caracteres UTF-8 completos: un token puede partir una «ñ» o un emoji en dos.
+size_t utf8_complete(const std::string &s) {
+    const size_t n = s.size();
+    for (size_t back = 1; back <= 4 && back <= n; ++back) {
+        const auto c = static_cast<unsigned char>(s[n - back]);
+        if ((c & 0xC0) == 0x80) continue; // byte de continuación: seguir buscando el inicio
+        const size_t need = c < 0x80 ? 1 : (c >> 5) == 0x6 ? 2 : (c >> 4) == 0xE ? 3 : (c >> 3) == 0x1E ? 4 : 1;
+        return back >= need ? n : n - back;
+    }
+    return n;
+}
+
+// Entrega a Java cada trozo escrito (texto libre: cuentos), para que la voz empiece antes de terminar.
+struct Stream {
+    JNIEnv *env;
+    jobject sink;
+    jmethodID accept = nullptr;
+    std::string pending;
+    Stream(JNIEnv *e, jobject s) : env(e), sink(s) {
+        if (!sink) return;
+        jclass cls = env->FindClass("java/util/function/Consumer");
+        accept = env->GetMethodID(cls, "accept", "(Ljava/lang/Object;)V");
+        env->DeleteLocalRef(cls);
+        if (!accept) { env->ExceptionClear(); sink = nullptr; }
+    }
+    void push(const char *data, size_t size) {
+        if (!sink) return;
+        pending.append(data, size);
+        const size_t ready = utf8_complete(pending);
+        if (ready == 0) return;
+        jbyteArray chunk = env->NewByteArray(static_cast<jsize>(ready));
+        if (!chunk) { env->ExceptionClear(); sink = nullptr; return; }
+        env->SetByteArrayRegion(chunk, 0, static_cast<jsize>(ready), reinterpret_cast<const jbyte *>(pending.data()));
+        env->CallVoidMethod(sink, accept, chunk);
+        env->DeleteLocalRef(chunk);
+        // Un fallo de la pantalla o de la voz nunca corta la respuesta: se deja de transmitir y ya.
+        if (env->ExceptionCheck()) { env->ExceptionClear(); sink = nullptr; }
+        pending.erase(0, ready);
+    }
+};
 }
 
 extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_load(
@@ -219,7 +316,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_salve_core_GgufLlm_loadVision(
         if (!model) throw std::invalid_argument("Modelo GGUF no cargado");
         auto params = mtmd_context_params_default();
         params.use_gpu = gpu_active; // en la misma gráfica que el modelo, o en el procesador
-        params.n_threads = 4;
+        params.n_threads = worker_threads();
         params.print_timings = false;
         params.warmup = false;
         params.image_max_tokens = 280; // cabe en un solo lote: la foto se lee entera de una vez
@@ -236,7 +333,7 @@ extern "C" JNIEXPORT void JNICALL Java_salve_core_GgufLlm_releaseVision(JNIEnv *
 
 extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         JNIEnv *env, jclass, jlong handle, jbyteArray input, jbyteArray systemInput, jbyteArray grammarInput, jint contextSize, jboolean repair,
-        jlong visionHandle, jbyteArray mediaInput, jobject cancelled) {
+        jlong visionHandle, jbyteArray mediaInput, jobject cancelled, jobject sink) {
     try {
         auto *vision = reinterpret_cast<mtmd_context *>(visionHandle);
         const bool withMedia = vision && mediaInput;
@@ -311,30 +408,72 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             if (llama_tokenize(vocab, prompt.data(), length, tokens.data(), count, true, true) != count)
                 throw std::runtime_error("No se pudo tokenizar el mensaje");
         }
-        auto params = llama_context_default_params();
-        params.n_ctx = contextSize;
-        params.n_batch = batchSize;
-        params.n_ubatch = batchSize;
-        params.n_threads = 4;
-        params.n_threads_batch = 4;
-        params.abort_callback = Request::abort;
-        params.abort_callback_data = &request;
-        std::unique_ptr<llama_context, decltype(&llama_free)> ctx(llama_init_from_model(model, params), llama_free);
-        request.check();
-        if (!ctx) throw ContextAllocationFailure();
-        if (active_adapter && active_scale > 0.0f) {
-            // llama.cpp ≥ 2026 aplica una lista de adaptadores; Salve usa uno.
-            llama_adapter_lora *adapters[] = {active_adapter};
-            float scales[] = {active_scale};
-            if (llama_set_adapters_lora(ctx.get(), adapters, 1, scales) != 0)
-                throw std::runtime_error("No se pudo aplicar el adaptador LoRA personal");
+        // El contexto (y su caché KV) se reutiliza mientras el modelo, el tamaño y el lote sean los mismos.
+        if (cache.ctx && (cache.model != model || cache.n_ctx != contextSize || cache.n_batch != batchSize)) cache.drop();
+        if (!cache.ctx) {
+            auto params = llama_context_default_params();
+            params.n_ctx = contextSize;
+            params.n_batch = batchSize;
+            params.n_ubatch = batchSize;
+            params.n_threads = worker_threads();
+            params.n_threads_batch = worker_threads();
+            llama_context *created = llama_init_from_model(model, params);
+            request.check();
+            if (!created) throw ContextAllocationFailure();
+            if (active_adapter && active_scale > 0.0f) {
+                // llama.cpp ≥ 2026 aplica una lista de adaptadores; Salve usa uno.
+                llama_adapter_lora *adapters[] = {active_adapter};
+                float scales[] = {active_scale};
+                if (llama_set_adapters_lora(created, adapters, 1, scales) != 0) {
+                    llama_free(created);
+                    throw std::runtime_error("No se pudo aplicar el adaptador LoRA personal");
+                }
+            }
+            cache.ctx = created;
+            cache.model = model;
+            cache.n_ctx = contextSize;
+            cache.n_batch = batchSize;
+            cache.tokens.clear();
         }
+        llama_context *ctx = cache.ctx;
+        // La petición vive en esta pila: el contexto la consulta solo mientras dura esta llamada.
+        llama_set_abort_callback(ctx, Request::abort, &request);
+        struct Session {
+            llama_context *ctx;
+            bool ok = false;
+            ~Session() {
+                llama_set_abort_callback(ctx, nullptr, nullptr);
+                // Si algo falló a medias, no se sabe qué quedó en la caché: se vacía.
+                if (!ok) cache.forget();
+            }
+        } session{ctx};
+        auto *memory = llama_get_memory(ctx);
+        // Lo que ya está en la caché y coincide con el principio de este prompt no se vuelve a leer.
+        int reused = 0;
+        if (!withMedia) {
+            // Al menos el último token se lee de nuevo: hace falta su salida para elegir la primera palabra.
+            const int common = static_cast<int>(std::min(common_prefix(cache.tokens, tokens), static_cast<size_t>(count - 1)));
+            if (common > 0) {
+                // Modelos con ventana deslizante (Gemma): si la caché ya descartó posiciones que el primer
+                // token nuevo necesita, no sirve y se lee todo (como hace llama-server).
+                const int n_swa = llama_model_n_swa(model);
+                const llama_pos pos_min = llama_memory_seq_pos_min(memory, 0);
+                const llama_pos needed = n_swa > 0 ? std::max(0, common - n_swa + 1) : common;
+                if ((pos_min <= 0 || pos_min < needed) && llama_memory_seq_rm(memory, 0, common, -1)) reused = common;
+            }
+        }
+        if (reused == 0) llama_memory_clear(memory, true);
+        // Las fotos no se apuntan: sus tokens no son texto comparable con el próximo prompt.
+        const bool track = !withMedia;
+        cache.tokens.assign(tokens.begin(), tokens.begin() + reused);
         auto decode = [&](llama_token *data, int size) {
             request.check();
-            int status = llama_decode(ctx.get(), llama_batch_get_one(data, size));
+            int status = llama_decode(ctx, llama_batch_get_one(data, size));
             request.check();
             if (status != 0) throw std::runtime_error("Falló la inferencia GGUF");
+            if (track) cache.tokens.insert(cache.tokens.end(), data, data + size);
         };
+        Stream stream(env, sink);
         const auto started = Clock::now();
         auto seconds = [](Clock::time_point from) {
             return std::chrono::duration<double>(Clock::now() - from).count();
@@ -343,8 +482,8 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         int written = 0;
         auto stats = [&]() {
             char text[200];
-            std::snprintf(text, sizeof(text), "%s: leyó %d tokens en %.1f s; escribió %d en %.1f s",
-                          npu_active ? "NPU Hexagon" : gpu_active ? "gráfica" : "procesador", count, prefill, written,
+            std::snprintf(text, sizeof(text), "%s: leyó %d tokens (+%d ya en caché) en %.1f s; escribió %d en %.1f s",
+                          npu_active ? "NPU Hexagon" : gpu_active ? "gráfica" : "procesador", count - reused, reused, prefill, written,
                           prefill > 0 ? seconds(started) - prefill : 0.0);
             last_stats = text;
             return last_stats;
@@ -353,11 +492,11 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
             if (withMedia) {
                 llama_pos past = 0;
                 request.check();
-                int status = mtmd_helper_eval_chunks(vision, ctx.get(), chunks.get(), 0, 0, batchSize, true, &past);
+                int status = mtmd_helper_eval_chunks(vision, ctx, chunks.get(), 0, 0, batchSize, true, &past);
                 request.check();
                 if (status != 0) throw std::runtime_error("Falló la lectura de la foto");
             } else {
-                for (int offset = 0; offset < count; offset += batchSize)
+                for (int offset = reused; offset < count; offset += batchSize)
                     decode(tokens.data() + offset, std::min(batchSize, count - offset));
             }
         } catch (const Cancelled &) { throw; }
@@ -383,7 +522,7 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         const int vocabSize = llama_vocab_n_tokens(vocab);
         std::vector<llama_token_data> candidates;
         auto fill = [&]() {
-            const float *logits = llama_get_logits_ith(ctx.get(), -1);
+            const float *logits = llama_get_logits_ith(ctx, -1);
             candidates.resize(vocabSize);
             for (llama_token id = 0; id < vocabSize; ++id) candidates[id] = {id, logits[id], 0.0f};
             return llama_token_data_array{candidates.data(), candidates.size(), -1, false};
@@ -392,7 +531,7 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
         // Si no encaja, se enmascara TODO el vocabulario ANTES de top-k/top-p y se vuelve a elegir.
         // Con los 248.000 tokens de Qwen 3.5, enmascarar siempre era lentísimo.
         auto sample = [&]() -> llama_token {
-            if (!constraint) return llama_sampler_sample(sampler.get(), ctx.get(), -1);
+            if (!constraint) return llama_sampler_sample(sampler.get(), ctx, -1);
             auto all = fill();
             llama_sampler_apply(sampler.get(), &all);
             llama_token token = all.data[all.selected].id;
@@ -426,21 +565,27 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
                 size = llama_token_to_piece(vocab, token, piece.data(), piece.size(), 0, true);
                 if (size < 0) throw std::runtime_error("Token GGUF inválido");
                 output.append(piece.data(), size);
-            } else output.append(local, size);
+                stream.push(piece.data(), size);
+            } else {
+                output.append(local, size);
+                stream.push(local, size);
+            }
             ++written;
             if (i + 1 < outputTokens) {
                 if (request.cancelled()) throw Cancelled();
-                int status = llama_decode(ctx.get(), llama_batch_get_one(&token, 1));
+                int status = llama_decode(ctx, llama_batch_get_one(&token, 1));
                 if (status != 0) {
                     if (request.cancelled()) throw Cancelled();
-                    if (request.expired()) { truncated = true; break; }
+                    if (request.expired()) { truncated = true; cache.forget(); break; }
                     throw std::runtime_error("Falló la inferencia GGUF");
                 }
+                if (track) cache.tokens.push_back(token);
             }
         }
         stats();
         if (truncated && output.empty())
             throw std::runtime_error("El modelo local agotó el tiempo de respuesta (" + last_stats + ")");
+        session.ok = true;
         auto result = env->NewByteArray(output.size());
         if (result) env->SetByteArrayRegion(result, 0, output.size(), reinterpret_cast<const jbyte *>(output.data()));
         return result;
@@ -456,6 +601,8 @@ extern "C" JNIEXPORT jboolean JNICALL Java_salve_core_GgufLlm_setAdapter(
     try {
         auto *model = reinterpret_cast<llama_model *>(handle);
         if (!model) throw std::invalid_argument("Modelo GGUF no cargado");
+        // El adaptador se aplica al crear el contexto: con otro adaptador, contexto y caché nuevos.
+        cache.drop();
         if (active_adapter) { llama_adapter_lora_free(active_adapter); active_adapter = nullptr; }
         active_scale = 0.0f;
         if (!path) return JNI_FALSE;
@@ -469,7 +616,14 @@ extern "C" JNIEXPORT jboolean JNICALL Java_salve_core_GgufLlm_setAdapter(
     return JNI_FALSE;
 }
 
+// Memoria baja: suelta el contexto y su caché; el modelo sigue cargado y la próxima respuesta lo recrea.
+extern "C" JNIEXPORT void JNICALL Java_salve_core_GgufLlm_releaseCache(JNIEnv *, jclass) {
+    cache.drop();
+}
+
 extern "C" JNIEXPORT void JNICALL Java_salve_core_GgufLlm_release(JNIEnv *, jclass, jlong handle) {
+    // El contexto pertenece al modelo: se libera antes que él.
+    cache.drop();
     // El modelo libera sus adaptadores; olvidar el puntero evita un doble free.
     active_adapter = nullptr;
     active_scale = 0.0f;

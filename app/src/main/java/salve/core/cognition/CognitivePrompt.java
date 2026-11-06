@@ -236,6 +236,23 @@ public final class CognitivePrompt {
         return new JsonPrimitive(value).toString().length() - 2;
     }
 
+    /**
+     * Separa las reglas fijas (política y contrato JSON) del resto del prompt cognitivo:
+     * {@code {reglas, SYSTEM_STATE + datos}}. Las reglas no cambian entre respuestas; puestas al
+     * principio, el motor local las conserva ya leídas en su caché y solo lee lo que cambió
+     * (estado, memoria, historial, mensaje). El contenido es el mismo: solo cambia el orden.
+     * Devuelve null si el prompt no tiene la forma esperada (se usa entero, como antes).
+     */
+    public static String[] splitStableRules(String prompt) {
+        if (!isCognitive(prompt)) return null;
+        int stateEnd = prompt.indexOf('\n', PREFIX.length());
+        int dataStart = prompt.lastIndexOf('\n') + 1;
+        if (stateEnd < 0 || dataStart <= stateEnd + 1) return null;
+        String rules = prompt.substring(stateEnd + 1, dataStart);
+        if (rules.trim().isEmpty() || !prompt.startsWith("{", dataStart)) return null;
+        return new String[] { rules, prompt.substring(0, stateEnd + 1) + prompt.substring(dataStart) };
+    }
+
     /** Called at the execution boundary, AFTER local initialization or when submitting to cloud.
      * Only the controller-owned first line is replaced; spoofed state inside quoted data is untouched. */
     public static String withEngine(String prompt, String provider, boolean loadConfirmed, Integer contextTokens) {

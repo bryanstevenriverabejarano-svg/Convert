@@ -83,30 +83,73 @@ public final class GgufLlm {
         return generate(prompt, system, requestedContext, null, cancelled);
     }
 
+    public static synchronized String generate(String prompt, String system, int requestedContext, byte[] media, BooleanSupplier cancelled) {
+        return generate(prompt, system, requestedContext, media, cancelled, null);
+    }
+
     /**
      * Con {@code media} (una foto JPEG/PNG) usa la visión cargada con {@link #ensureVision}; si no hay
      * visión cargada, falla en vez de contestar sin haber mirado la foto.
+     *
+     * @param onChunk recibe el texto según se escribe (sin el pensamiento), para que la voz empiece antes
+     *                de terminar. Solo en texto libre: la salida JSON de un turno cognitivo es interna y
+     *                nunca se transmite. Puede ser null.
      */
-    public static synchronized String generate(String prompt, String system, int requestedContext, byte[] media, BooleanSupplier cancelled) {
+    public static synchronized String generate(String prompt, String system, int requestedContext, byte[] media,
+                                               BooleanSupplier cancelled, java.util.function.Consumer<String> onChunk) {
         if (model == 0) throw new IllegalStateException("GGUF no está inicializado");
         if (media != null && vision == 0) throw new IllegalStateException("El modelo no tiene la visión cargada");
         final long eyes = media == null ? 0 : vision;
+        streamed = false;
         BooleanSupplier stop = cancellation(cancelled);
-        byte[] input = prompt.getBytes(StandardCharsets.UTF_8), identity = system.getBytes(StandardCharsets.UTF_8);
-        byte[] grammar = salve.core.cognition.CognitivePrompt.isCognitive(prompt)
+        boolean cognitive = salve.core.cognition.CognitivePrompt.isCognitive(prompt);
+        boolean repair = salve.core.cognition.CognitivePrompt.isFormatRepair(prompt);
+        // Las reglas fijas van al turno de sistema, detrás de la identidad (también fija): así el motor
+        // conserva leído en su caché todo ese principio y en cada respuesta solo lee lo que cambió.
+        String[] split = salve.core.cognition.CognitivePrompt.splitStableRules(prompt);
+        String user = split == null ? prompt : split[1];
+        String instructions = split == null ? system : system + "\n" + split[0];
+        byte[] input = user.getBytes(StandardCharsets.UTF_8), identity = instructions.getBytes(StandardCharsets.UTF_8);
+        byte[] grammar = cognitive
                 ? salve.core.cognition.CognitiveOutputConstraints.gbnf().getBytes(StandardCharsets.UTF_8) : new byte[0];
         GgufContextPolicy.Generation result = GgufContextPolicy.generate(requestedContext, selected -> {
             contextTokens = selected;
+            LiveText live = onChunk == null || cognitive || media != null ? null : new LiveText(onChunk);
             try {
                 return ThinkingFilter.strip(new String(infer(model, input, identity, grammar, selected,
-                        salve.core.cognition.CognitivePrompt.isFormatRepair(prompt), eyes, media, stop), StandardCharsets.UTF_8).trim());
+                        repair, eyes, media, stop, live), StandardCharsets.UTF_8).trim());
             } finally {
                 String measured = lastStats();
                 stats = measured == null ? "" : measured;
                 if (!stats.isEmpty()) android.util.Log.i("GgufLlm", stats);
+                if (live != null) streamed = live.emitted();
             }
         }, stop);
         return result.text;
+    }
+
+    private static boolean streamed;
+    /** ¿La última respuesta ya se entregó por trozos a quien la pidió? */
+    public static synchronized boolean lastStreamed() { return streamed; }
+
+    /**
+     * Recibe los bytes que escribe el motor y entrega solo texto nuevo y limpio: sin el bloque de
+     * pensamiento ni marcas de turno. Si la limpieza cambia algo ya entregado, espera al final.
+     */
+    static final class LiveText implements java.util.function.Consumer<Object> {
+        private final java.util.function.Consumer<String> target;
+        private final StringBuilder raw = new StringBuilder();
+        private String sent = "";
+        LiveText(java.util.function.Consumer<String> target) { this.target = target; }
+        @Override public void accept(Object chunk) {
+            raw.append(chunk instanceof byte[] ? new String((byte[]) chunk, StandardCharsets.UTF_8) : String.valueOf(chunk));
+            String clean = ThinkingFilter.strip(raw.toString());
+            if (clean == null || clean.length() <= sent.length() || !clean.startsWith(sent)) return;
+            String delta = clean.substring(sent.length());
+            sent = clean;
+            target.accept(delta);
+        }
+        boolean emitted() { return !sent.isEmpty(); }
     }
 
     private static BooleanSupplier cancellation(BooleanSupplier requested) {
@@ -159,7 +202,17 @@ public final class GgufLlm {
     /** Dónde se fue el tiempo de la última respuesta (leer el mensaje / escribir), y si fue por gráfica. */
     public static String getLastStats() { return stats; }
     private static native byte[] infer(long model, byte[] prompt, byte[] system, byte[] grammar, int contextTokens, boolean repair,
-                                       long vision, byte[] media, BooleanSupplier cancelled);
+                                       long vision, byte[] media, BooleanSupplier cancelled,
+                                       java.util.function.Consumer<Object> sink);
+    private static native void releaseCache();
+
+    /**
+     * Memoria baja: suelta el contexto que el motor conserva entre respuestas (y lo ya leído).
+     * El modelo sigue cargado; la próxima respuesta crea el contexto de nuevo y relee el prompt.
+     */
+    public static synchronized void trimCache() {
+        if (model != 0) releaseCache();
+    }
     private static native long loadVision(long model, byte[] mmprojPath);
     private static native void releaseVision(long vision);
     private static long vision;
