@@ -21,10 +21,11 @@ TurnObjective y ReasoningPlanner entienden el objetivo; CognitiveToolCatalog aut
 | Aplicaciones | device.open_app / PhoneActions | Esta PR: apertura solicitada, verificación externa pendiente |
 | Rutas | device.navigate / PhoneActions | Esta PR: ruta solicitada, destino verificado en la orden |
 | Música | device.play_music / device.search_music / PhoneActions | Esta PR: no confundir apertura con reproducción |
+| Controles multimedia | device.media_control / MusicControlCommand / MusicController | Esta PR: modelo elige acción; controlador impide invertir play, pausa, siguiente, anterior, información de título |
 | Llamadas | device.call / DeviceControlActivity | Esta PR: revisión antes de llamar |
 
 ## Siguientes grupos que necesitan integración y pruebas
-1. Multimedia completa: MusicControlCommand / MusicController (play, pausa, pistas, qué suena). Verificar reproducción con MediaSession cuando sea posible.
+1. Multimedia avanzada: ampliar la interpretación natural y verificar el estado real de la reproducción a través de MediaSession cuando esté disponible. Las acciones principales ya están incorporadas a esta PR.
 2. Accesibilidad y rutinas: SalveAccessibilityService. Planes de varios pasos con observación del foco/paquete y cancelación si cambia la pantalla.
 3. Sensores, cámaras, fotos, galería: sesiones efímeras, permisos, privacidad y resultados de modelos de visión.
 4. Objetivos y agentes persistentes: conectar AgentRuntime, ResearchTaskRuntime y GoalAutonomyRuntime al mismo contrato de resultados, sin segundo planificador.
@@ -43,4 +44,4 @@ Estas rutas NO se consideran migradas hasta tener código, pruebas de regresión
 7. Probar órdenes libres, erratas, variantes por voz, tareas múltiples, salidas inesperadas y cancelación. CI no equivale a validación física del Galaxy S24 Ultra.
 
 ## Pruebas de esta fase
-DeviceActionIntentTest comprueba selección, destinatarios y destinos basados en la orden real, acceso privado, rechazo de argumentos no declarados y handoff sin falso éxito.
+DeviceActionIntentTest y MediaActionIntentTest comprueban selección, destinatarios y destinos basados en la orden real, acceso privado, rechazo de argumentos no declarados y handoff sin falso éxito.
