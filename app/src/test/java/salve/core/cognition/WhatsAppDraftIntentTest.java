@@ -63,6 +63,9 @@ public class WhatsAppDraftIntentTest {
         assertFalse(WhatsAppDraftIntent.offered("¿Qué es WhatsApp?"));
         assertFalse(WhatsAppDraftIntent.offered("Abre mi WhatsApp"));
         assertFalse(WhatsAppDraftIntent.offered("Escribe hola en la pantalla"));
+        assertFalse(WhatsAppDraftIntent.offered(salve.core.reports.SelfReportTest.BRYAN));
+        assertFalse(WhatsAppDraftIntent.offered("Redacta un informe PDF y guárdalo"));
+        assertTrue(WhatsAppDraftIntent.offered("Dale una excusa a Daniel porque no puedo ir"));
         assertFalse(CognitiveToolCatalog.build("Mira este mensaje de WhatsApp", false, true, true,
                 (name, args) -> CognitiveTurn.Receipt.handoff()).containsKey("whatsapp.draft"));
         assertTrue(CognitiveToolCatalog.build(REQUEST, true, true, true,
