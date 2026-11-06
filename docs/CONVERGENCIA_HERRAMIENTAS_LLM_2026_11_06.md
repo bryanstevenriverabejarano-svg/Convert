@@ -23,6 +23,17 @@ TurnObjective y ReasoningPlanner entienden el objetivo; CognitiveToolCatalog aut
 | Música | device.play_music / device.search_music / PhoneActions | Esta PR: no confundir apertura con reproducción |
 | Controles multimedia | device.media_control / MusicControlCommand / MusicController | Esta PR: modelo elige acción; controlador impide invertir play, pausa, siguiente, anterior, información de título |
 | Llamadas | device.call / DeviceControlActivity | Esta PR: revisión antes de llamar |
+| Funciones propias de Salve | self.command / SelfCommandIntent / MotorConversacional.runSelfCommand | PR siguiente: memoria, núcleos, modelo, descarga, PR propios, propuestas de mejora, modo oídos, voz, escuchar, mapa de la mente, registro/biblioteca, cuerpo astral, palabra de activación, asistente predeterminado, ajedrez |
+
+## Funciones propias bajo el LLM (self.command)
+Antes, unas veinte órdenes literales («¿cómo está tu memoria?», «activa el modo oídos», «abre el mapa de tu mente», «parpadea»…) respondían ANTES de que el modelo viera el turno. Ahora, con modelo cargado y Bryan verificado:
+- El reconocedor de siempre solo **ofrece** `self.command` con los ids que pidió el usuario en este turno (`SelfCommandIntent.detected`).
+- El LLM decide si la usa o si basta con conversar.
+- El ejecutor vuelve a comprobar el id contra la frase real (`SelfCommandIntent.verified`); los detalles (encender/apagar, qué voz, qué pestaña, qué gesto) se sacan de lo que dijo el usuario, nunca de los argumentos del modelo.
+- Las funciones de lectura (memoria, núcleos, modelo, descarga, estado de PR, propuestas) devuelven su dato real al modelo como recibo y él lo explica con sus palabras. Las que tienen efecto (abrir pantallas, cambiar modo, mover el cuerpo, abrir un PR) son entrega (handoff), no objetivo verificado.
+- Una negación explícita («no abras…») no se ofrece al modelo y vuelve al parser antiguo.
+- Una sola implementación (`runSelfCommand`) sirve al LLM y al respaldo sin modelo.
+- No migradas a propósito: cambio de modelo (descarga/recarga el motor que está usando el propio turno), olvido/confirmaciones, protocolo de seguridad, historias y partidas en curso, gestos del avatar ligados a la sesión.
 
 ## Siguientes grupos que necesitan integración y pruebas
 1. Multimedia avanzada: ampliar la interpretación natural y verificar el estado real de la reproducción a través de MediaSession cuando esté disponible. Las acciones principales ya están incorporadas a esta PR.
@@ -44,4 +55,4 @@ Estas rutas NO se consideran migradas hasta tener código, pruebas de regresión
 7. Probar órdenes libres, erratas, variantes por voz, tareas múltiples, salidas inesperadas y cancelación. CI no equivale a validación física del Galaxy S24 Ultra.
 
 ## Pruebas de esta fase
-DeviceActionIntentTest y MediaActionIntentTest comprueban selección, destinatarios y destinos basados en la orden real, acceso privado, rechazo de argumentos no declarados y handoff sin falso éxito.
+SelfCommandIntentTest comprueba que las funciones propias se ofrecen solo a Bryan verificado, que el modelo no puede elegir una que no se pidió, que «abre el mapa de tu mente» no se trata como app instalada y que la mensajería sigue en whatsapp.draft. DeviceActionIntentTest y MediaActionIntentTest comprueban selección, destinatarios y destinos basados en la orden real, acceso privado, rechazo de argumentos no declarados y handoff sin falso éxito.

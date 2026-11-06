@@ -74,6 +74,13 @@ public final class AstralBodySense {
     private static final Pattern GLOW = Pattern.compile(
             "^(salve )?(brilla|brilla para mi|enciende tus (luces|circuitos)|ilumina tus circuitos|haz brillar tus circuitos|enciendete)$");
 
+    /** Sólo reconoce la orden, sin mover el cuerpo: el LLM decide si la usa (self.command). */
+    public static boolean isCommand(String input) {
+        String text = normalize(input);
+        if (text.isEmpty() || text.length() > 80) return false;
+        return BLINK.matcher(text).matches() || HAIR.matcher(text).matches() || GLOW.matcher(text).matches();
+    }
+
     /** Respuesta en primera persona si el mensaje es una orden directa al cuerpo; null si no lo es. */
     public static String command(String input) {
         String text = normalize(input);

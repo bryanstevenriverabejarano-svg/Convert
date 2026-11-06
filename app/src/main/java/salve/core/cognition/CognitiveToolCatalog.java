@@ -105,6 +105,14 @@ public final class CognitiveToolCatalog {
         // Existing phone adapters are reusable capabilities, not new executors.
         // The LLM selects a tool and its target; the controller checks both
         // against USER_INPUT before touching an external Android app.
+        // Salve's own functions: the same recognizers that used to answer before the
+        // model now only decide which of her functions the LLM may choose. Details
+        // (on/off, which voice, which tab) are re-derived from USER_INPUT later.
+        java.util.Set<SelfCommandIntent.Command> selfCommands = verifiedCreator && !whatsappDraft
+                ? SelfCommandIntent.detected(safeInput) : java.util.Collections.emptySet();
+        if (!selfCommands.isEmpty())
+            add(tools, SelfCommandIntent.TOOL, SelfCommandIntent.description(selfCommands), dispatch, "id");
+
         boolean deviceAction = false;
         if (verifiedCreator && !whatsappDraft) {
             if (MediaActionIntent.offered(safeInput)) {
@@ -113,7 +121,9 @@ public final class CognitiveToolCatalog {
                         dispatch, "action");
                 deviceAction = true;
             }
-            if (DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP, safeInput)) {
+            // «Abre el mapa de tu mente» is her own function, not an installed app.
+            if (selfCommands.isEmpty()
+                    && DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP, safeInput)) {
                 add(tools, "device.open_app",
                         "{target:string}: abre app instalada mencionada por el usuario. Nunca supone que el siguiente paso se haya completado.",
                         dispatch, "target");

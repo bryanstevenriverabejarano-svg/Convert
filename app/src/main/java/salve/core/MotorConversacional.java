@@ -804,17 +804,23 @@ public class MotorConversacional {
             } catch (java.io.IOException failure) { hablar("No he podido guardar lo que vi en la foto."); }
             return;
         }
-        if (salve.core.mind.MemoryHealth.isCommand(entrada)) {
-            hablar(creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.");
+        // Sus propias funciones las elige el LLM cuando hay modelo y Bryan está verificado:
+        // el reconocedor de siempre solo las ofrece (self.command) y el ejecutor vuelve a
+        // comprobarlas con lo que dijo Bryan. Sin modelo, siguen siendo órdenes directas.
+        final boolean modelFirstSelf = llm != null
+                && salve.core.identity.IdentityManager.get(context).privateAccess()
+                && salve.core.cognition.SelfCommandIntent.offered(entrada);
+        if (!modelFirstSelf && salve.core.mind.MemoryHealth.isCommand(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.MEMORY_HEALTH, entrada));
             return;
         }
-        if (salve.core.synergy.SynergyRequests.isStatus(entrada)) {
-            hablar(salve.core.synergy.SynergyRuntime.get(context).status());
+        if (!modelFirstSelf && salve.core.synergy.SynergyRequests.isStatus(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.SYNERGY_STATUS, entrada));
             return;
         }
         // «Abre un PR»: escribe su propio parche y lo manda a GitHub; las pruebas y la fusión son de Bryan.
-        if (SelfPrDesk.isCommand(entrada)) { hablar(selfPr.run()); return; }
-        if (SelfPrDesk.isStatusCommand(entrada)) { hablar(selfPr.status()); return; }
+        if (!modelFirstSelf && SelfPrDesk.isCommand(entrada)) { hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.SELF_PR_OPEN, entrada)); return; }
+        if (!modelFirstSelf && SelfPrDesk.isStatusCommand(entrada)) { hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.SELF_PR_STATUS, entrada)); return; }
         // Evidence questions are not answered by a literal command matcher.
         // They enter the same memory -> LLM -> tool -> verified receipt conversation cycle.
         // The creator gate remains authoritative even when the model requests a tool.
@@ -826,26 +832,34 @@ public class MotorConversacional {
             return;
         }
         // La auto-mejora antigua nunca funcionó en el móvil: ahora propone qué arreglar, con ejemplos.
-        if (salve.core.evaluation.ImprovementProposals.isCommand(entrada)) { hablar(examen.proposals()); return; }
+        if (!modelFirstSelf && salve.core.evaluation.ImprovementProposals.isCommand(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.IMPROVEMENT_PROPOSALS, entrada));
+            return;
+        }
         // Antes que vídeos/música: «pon la canción anterior» es la anterior, no buscar «anterior».
         // Oídos: «escucha esta canción», «oye este ruido»… (Gemma 4 sin censura con su mmproj).
-        salve.core.voice.EarMode.Command oidos = salve.core.voice.EarMode.parse(entrada);
-        if (oidos != null) { hablar(cambioModoOidos(oidos)); return; }
-        salve.core.voice.VoiceEngineCommand.Target voz = salve.core.voice.VoiceEngineCommand.parse(entrada);
-        if (voz != null) { hablar(cambioDeVoz(voz)); return; }
-        salve.core.voice.ListenCommand listen = salve.core.voice.ListenCommand.parse(entrada);
-        if (listen != null) { hablar(escuchar(listen)); return; }
+        if (!modelFirstSelf && salve.core.voice.EarMode.parse(entrada) != null) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.EAR_MODE, entrada)); return;
+        }
+        if (!modelFirstSelf && salve.core.voice.VoiceEngineCommand.parse(entrada) != null) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.VOICE_ENGINE, entrada)); return;
+        }
+        if (!modelFirstSelf && salve.core.voice.ListenCommand.parse(entrada) != null) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.LISTEN, entrada)); return;
+        }
         // For a verified conversation, the LLM selects the existing music
         // transport action. The direct parser remains an offline fallback.
         boolean modelFirstMusic = llm != null
                 && salve.core.identity.IdentityManager.get(context).privateAccess()
                 && salve.core.cognition.MediaActionIntent.offered(entrada);
-        String music = modelFirstMusic ? null : controlMusica(entrada);
+        // «Escucha esta canción» es su función de oír, no reproducir: si ya se la ofrecimos
+        // al modelo, el parser de música no se la adelanta (antes lo impedía el orden).
+        String music = modelFirstMusic || modelFirstSelf ? null : controlMusica(entrada);
         if (music != null) { hablar(music); return; }
-        String windowResponse = mesaInvestigacion.comandoMiniVentana(entrada);
+        String windowResponse = modelFirstSelf ? null : mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
-        if (salve.core.mind.MindMapCommand.matches(entrada)) { hablar(abrirMapaMente()); return; }
-        String mindResponse = salve.core.cognition.ConversationEvidenceIntent.classify(
+        if (!modelFirstSelf && salve.core.mind.MindMapCommand.matches(entrada)) { hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.MIND_MAP, entrada)); return; }
+        String mindResponse = !modelFirstSelf && salve.core.cognition.ConversationEvidenceIntent.classify(
                 entrada, conversationSession.snapshot())
                 == salve.core.cognition.ConversationEvidenceIntent.Scope.NONE
                 ? mind().handleCommand(entrada) : null;
@@ -855,24 +869,20 @@ public class MotorConversacional {
         }
         String modelSwitch = cambioDeModelo(entrada);
         if (modelSwitch != null) { hablar(modelSwitch); return; }
-        if (salve.core.voice.ModelSwitchCommand.asksDownloadStatus(entrada)) {
-            hablar(salve.work.ModelDownloadWorker.describe(context) + "\nModelo en uso: " + llm.getStatusDescription());
+        if (!modelFirstSelf && salve.core.voice.ModelSwitchCommand.asksDownloadStatus(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.DOWNLOAD_STATUS, entrada));
             return;
         }
-        if (creatorSide() && salve.core.voice.WakeWord.asksToEnable(entrada)) {
-            hablar(salve.services.WakeWordService.enable(context));
+        if (!modelFirstSelf && creatorSide() && salve.core.voice.WakeWord.asksToEnable(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.WAKE_WORD_ON, entrada));
             return;
         }
-        if (salve.core.voice.WakeWord.asksToDisable(entrada)) {
-            hablar(salve.services.WakeWordService.disable(context));
+        if (!modelFirstSelf && salve.core.voice.WakeWord.asksToDisable(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.WAKE_WORD_OFF, entrada));
             return;
         }
-        if (salve.core.voice.AssistantLaunch.asksToBecomeAssistant(entrada)) {
-            try {
-                context.startActivity(new android.content.Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
-                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
-            } catch (RuntimeException unavailable) { Log.w(TAG, "No se pudieron abrir las apps predeterminadas"); }
-            hablar(salve.core.voice.AssistantLaunch.HOW_TO);
+        if (!modelFirstSelf && salve.core.voice.AssistantLaunch.asksToBecomeAssistant(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.DEFAULT_ASSISTANT, entrada));
             return;
         }
         // «¿Qué has aprendido de mí?» / «olvida que X provoca Y»: solo Bryan gestiona su memoria causal.
@@ -888,8 +898,8 @@ public class MotorConversacional {
         }
         // Compara esta intervención con lo que Salve había anticipado (señal de sorpresa).
         mind().observeUserInput(entrada);
-        if (ModelRuntimeInfo.isStatusQuestion(entrada)) {
-            hablar(getModelStatusDescription());
+        if (!modelFirstSelf && ModelRuntimeInfo.isStatusQuestion(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.MODEL_STATUS, entrada));
             return;
         }
         if (salve.core.research.ResearchRecallCommand.matches(entrada)) {
@@ -998,15 +1008,8 @@ public class MotorConversacional {
 
         String inputLower = entrada.toLowerCase(Locale.ROOT);
         // «Abre el registro de ejecución», «registro de ejecución ábrelo», «abre tu biblioteca», «tus informes».
-        String openTab = salve.core.reports.ReportLibrary.openRequest(entrada);
-        if (openTab != null) {
-            boolean library = salve.core.reports.ReportLibrary.TAB_LIBRARY.equals(openTab);
-            toolHandler.post(() -> context.startActivity(new android.content.Intent(context,
-                    salve.presentation.ui.ExecutionJournalActivity.class)
-                    .putExtra(salve.presentation.ui.ExecutionJournalActivity.EXTRA_TAB, openTab)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)));
-            hablar(library ? "Abro mi biblioteca de informes: mis revisiones de código, investigaciones y lo que me pides en PDF."
-                    : "Abro el registro de ejecución con las notas completas de cada tarea.");
+        if (!modelFirstSelf && salve.core.reports.ReportLibrary.openRequest(entrada) != null) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.OPEN_JOURNAL, entrada));
             return;
         }
         AvatarMotionProtocol.Result gestureCommand = avatarSession == null ? null : AvatarMotionProtocol.parseCommand(entrada);
@@ -1020,11 +1023,8 @@ public class MotorConversacional {
             return;
         }
         // Cuerpo astral: acciones voluntarias sobre su propio cuerpo (parpadear, mover el pelo, brillar).
-        String bodyReply = salve.avatar.AstralBodySense.command(entrada);
-        if (bodyReply != null) {
-            registrarAccion(salve.core.mind.SelfActionLog.Kind.BODY, entrada.trim(),
-                    "me lo pidió Bryan y mi código de cuerpo lo ejecutó (parpadeo, pelo o luz de los circuitos)");
-            hablar(bodyReply);
+        if (!modelFirstSelf && salve.avatar.AstralBodySense.isCommand(entrada)) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.BODY_ACTION, entrada));
             return;
         }
         // Dibujo con epiciclos: empieza a trazar YA, mientras piensa qué decir.
@@ -1070,10 +1070,8 @@ public class MotorConversacional {
         }
 
         // 🟢 NUEVO: JUGAR AJEDREZ
-        if (inputLower.contains("jugar al ajedrez") || inputLower.contains("juguemos ajedrez") || inputLower.contains("jugar ajedrez")) {
-            jugandoAjedrez = true;
-            gestorAjedrez.iniciarJuego();
-            hablar("¡Me encanta la idea! He inicializado mi tablero interno de ajedrez. Tú juegas con las piezas blancas. Dime tu primer movimiento, por ejemplo: 'peón a e4'. ¡A ver si puedes ganarme!");
+        if (!modelFirstSelf && (inputLower.contains("jugar al ajedrez") || inputLower.contains("juguemos ajedrez") || inputLower.contains("jugar ajedrez"))) {
+            hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.CHESS_START, entrada));
             return;
         }
 
@@ -1324,7 +1322,8 @@ public class MotorConversacional {
         TurnObjective objective = TurnObjective.understand(
                 entrada, hasPriorContext, intent.type == IntentType.BUSCAR_WEB);
         if (!storyTurn && objective.needsClarification()
-                && !salve.core.cognition.MediaActionIntent.offered(entrada)) {
+                && !salve.core.cognition.MediaActionIntent.offered(entrada)
+                && !modelFirstSelf) {
             if (avatarSession != null) AvatarMotionController.get().clarification(avatarSession, currentAvatarTurn());
             hablar("¿Puedes concretar a qué te refieres? No tengo un turno anterior que me permita interpretarlo con seguridad.");
             return;
@@ -2491,6 +2490,73 @@ public class MotorConversacional {
         PendingToolAction pending = pendingToolAction;
         state.addProperty("pending_action", pending == null ? "none" : pending.getType().name());
         return state;
+    }
+
+    /**
+     * Una sola implementación de cada función propia, la usen las órdenes directas (sin modelo)
+     * o el LLM a través de self.command. Lo que hace (encender/apagar, qué voz, qué pestaña,
+     * qué gesto) sale siempre de lo que dijo Bryan, nunca de los argumentos del modelo.
+     */
+    String runSelfCommand(salve.core.cognition.SelfCommandIntent.Command command, String entrada) {
+        switch (command) {
+            case MEMORY_HEALTH:
+                return creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.";
+            case SYNERGY_STATUS: return salve.core.synergy.SynergyRuntime.get(context).status();
+            case MODEL_STATUS: return getModelStatusDescription();
+            case DOWNLOAD_STATUS:
+                return salve.work.ModelDownloadWorker.describe(context)
+                        + (llm == null ? "" : "\nModelo en uso: " + llm.getStatusDescription());
+            case SELF_PR_STATUS: return selfPr.status();
+            case SELF_PR_OPEN: return selfPr.run();
+            case IMPROVEMENT_PROPOSALS: return examen.proposals();
+            case EAR_MODE: {
+                salve.core.voice.EarMode.Command oidos = salve.core.voice.EarMode.parse(entrada);
+                return oidos == null ? "No entendí si activar o desactivar el modo oídos." : cambioModoOidos(oidos);
+            }
+            case VOICE_ENGINE: {
+                salve.core.voice.VoiceEngineCommand.Target voz = salve.core.voice.VoiceEngineCommand.parse(entrada);
+                return voz == null ? "No entendí qué voz quieres." : cambioDeVoz(voz);
+            }
+            case LISTEN: {
+                salve.core.voice.ListenCommand listen = salve.core.voice.ListenCommand.parse(entrada);
+                return listen == null ? "No entendí qué quieres que escuche." : escuchar(listen);
+            }
+            case MIND_MAP: return abrirMapaMente();
+            case OPEN_JOURNAL: {
+                String openTab = salve.core.reports.ReportLibrary.openRequest(entrada);
+                if (openTab == null) return "No entendí qué registro abrir.";
+                boolean library = salve.core.reports.ReportLibrary.TAB_LIBRARY.equals(openTab);
+                toolHandler.post(() -> context.startActivity(new android.content.Intent(context,
+                        salve.presentation.ui.ExecutionJournalActivity.class)
+                        .putExtra(salve.presentation.ui.ExecutionJournalActivity.EXTRA_TAB, openTab)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)));
+                return library ? "Abro mi biblioteca de informes: mis revisiones de código, investigaciones y lo que me pides en PDF."
+                        : "Abro el registro de ejecución con las notas completas de cada tarea.";
+            }
+            case BODY_ACTION: {
+                String bodyReply = salve.avatar.AstralBodySense.command(entrada);
+                if (bodyReply == null) return "No entendí qué movimiento quieres que haga.";
+                registrarAccion(salve.core.mind.SelfActionLog.Kind.BODY, entrada.trim(),
+                        "me lo pidió Bryan y mi código de cuerpo lo ejecutó (parpadeo, pelo o luz de los circuitos)");
+                return bodyReply;
+            }
+            case WAKE_WORD_ON:
+                return creatorSide() ? salve.services.WakeWordService.enable(context)
+                        : "Solo Bryan verificado puede activar que me despierten por mi nombre.";
+            case WAKE_WORD_OFF: return salve.services.WakeWordService.disable(context);
+            case DEFAULT_ASSISTANT:
+                try {
+                    context.startActivity(new android.content.Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (RuntimeException unavailable) { Log.w(TAG, "No se pudieron abrir las apps predeterminadas"); }
+                return salve.core.voice.AssistantLaunch.HOW_TO;
+            case CHESS_START:
+                jugandoAjedrez = true;
+                gestorAjedrez.iniciarJuego();
+                return "¡Me encanta la idea! He inicializado mi tablero interno de ajedrez. Tú juegas con las piezas blancas. Dime tu primer movimiento, por ejemplo: 'peón a e4'. ¡A ver si puedes ganarme!";
+            default:
+                return "No tengo esa función.";
+        }
     }
 
     /** Tool availability is owned by CognitiveToolCatalog, not by model text. */
