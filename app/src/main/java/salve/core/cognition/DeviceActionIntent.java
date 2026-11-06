@@ -16,7 +16,7 @@ public final class DeviceActionIntent {
     private DeviceActionIntent() { }
 
     private static final Pattern APP = Pattern.compile(
-            "\\b(?:abre|abrir|abreme|lanza|lanzar|inicia|iniciar|arranca|arrancar)\\b");
+            "\\b(?:abre|abrir|abreme|abrirme|abras|abrieras|lanza|lanzar|inicia|iniciar|arranca|arrancar)\\b");
     private static final Pattern MAP = Pattern.compile(
             "\\b(?:llevame|llevanos|guiame|navega|navegar|ruta|indicaciones|maps|gps)\\b"
             + "|\\b(?:como|por donde)\\s+(?:llego|llegamos|voy|ir|puedo llegar)\\b");
