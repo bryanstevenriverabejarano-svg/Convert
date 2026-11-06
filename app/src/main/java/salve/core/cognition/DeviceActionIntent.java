@@ -38,9 +38,17 @@ public final class DeviceActionIntent {
     private static final Pattern DANGEROUS = Pattern.compile(
             "\\b(?:envia|mandale|escribele|dile)\\b.*\\b(?:whatsapp|mensaje)\\b");
 
+    // Explicit prohibitions override otherwise matching action words. A phrase
+    // quoted inside a prohibition is not permission to execute that action.
+    private static final Pattern NEGATED = Pattern.compile(
+            "\\b(?:no|nunca|jamas)\\s+(?:(?:me|nos|le|les)\\s+)?"
+            + "(?:abras|abre|abrir|abreme|abrirme|inicia|lances|lanza|"
+            + "llama|llames|llamar|marques|marca|navegues|navega|llevame|"
+            + "pongas|pon|ponme|reproduzcas|reproduce|busques|busca)\\b");
+
     public static boolean offered(Kind kind, String userInput) {
         String s = normalize(userInput);
-        if (s.isEmpty() || s.length() > 450
+        if (s.isEmpty() || s.length() > 450 || NEGATED.matcher(s).find()
                 || (kind != Kind.NAVIGATE && META.matcher(s).find())) return false;
         switch (kind) {
             case OPEN_APP:
