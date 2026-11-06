@@ -1037,7 +1037,13 @@ public class MotorConversacional {
                 + mesaFunciones.conocimientoPropio(entrada)
                 + estrategiaRespuesta() + mesaFunciones.misActualizaciones(entrada) + misHabilidades(entrada)
                 + tonoOido();
-        if (mesaAcciones.procesarControlExplicito(entrada)) return;
+        // A conversational messaging request belongs to the LLM: it decides
+        // whether to draft, and it writes the content in its own words.
+        // Keep the legacy direct parser only as a fallback without an LLM.
+        boolean routeDraftToModel = llm != null
+                && salve.core.identity.IdentityManager.get(context).privateAccess()
+                && salve.core.cognition.WhatsAppDraftIntent.offered(entrada);
+        if (!routeDraftToModel && mesaAcciones.procesarControlExplicito(entrada)) return;
 
         // 🟢 NUEVO: DESCARGA AUTONOMA LLM
         if (BuscadorDescargadorModelos.esSolicitudExplicita(entrada)) {
