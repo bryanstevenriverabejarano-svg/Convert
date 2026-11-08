@@ -2339,6 +2339,11 @@ public class MotorConversacional {
                 + (asksHowSheIs(input) ? "\n" + estadoReal() : "")
                 + "\n" + (activePhoto == null ? "" : activePhoto.promptContext(mesaFotos.canAnalyzePhoto(activePhoto))
                         + "\n" + mesaFotos.sceneContext(activePhoto));
+        // Medición por inferencia (va al registro de ejecución): cuánto lee el motor, cuánto saca
+        // de su caché y cuánto tarda. Sirve para saber con datos dónde se va el tiempo en el móvil.
+        final long turnStarted = System.nanoTime();
+        final long[] modelNanos = {0L};
+        final int[] inferences = {0};
         CognitiveTurn.Outcome outcome = CognitiveTurn.run((results, repair, remaining) -> {
             int budget = llm == null ? 10500 : llm.getConversationPromptBudgetChars();
             // Solo para el mensaje de Bryan de este turno (no para fotos ni exámenes que reutilizan el turno cognitivo).
@@ -2347,8 +2352,22 @@ public class MotorConversacional {
             if (activePhoto != null && mesaFotos.canAnalyzePhoto(activePhoto)) budget = Math.min(budget, 6000);
             String prompt = CognitivePrompt.build(cognitiveCore(), input, cognitiveState(), mind().selfModelForPrompt(1700),
                     memory, details, turnHistory != null ? turnHistory : conversationSession.snapshot(), tools, results, repair, remaining, budget);
-            return generateWithConversationPhoto(prompt);
+            String engineBefore = GgufLlm.getLastStats();
+            long started = System.nanoTime();
+            try {
+                return generateWithConversationPhoto(prompt);
+            } finally {
+                long took = System.nanoTime() - started;
+                modelNanos[0] += took;
+                inferences[0]++;
+                String engine = GgufLlm.getLastStats();
+                salve.core.trace.ExecutionTrace.note("RENDIMIENTO DEL MODELO",
+                        salve.core.cognition.TurnTiming.inference(inferences[0], results.size(), repair, took,
+                                engine != null && !engine.equals(engineBefore) ? engine : null));
+            }
         }, tools, () -> closed || !isVoiceContextCurrent());
+        salve.core.trace.ExecutionTrace.note("TIEMPO DEL TURNO", salve.core.cognition.TurnTiming.turn(
+                inferences[0], modelNanos[0], System.nanoTime() - turnStarted));
         // A tool receipt is observable progress, never proof of the user's whole goal.
         salve.core.cognition.CognitiveToolAudit audit =
                 salve.core.cognition.CognitiveToolAudit.from(outcome);
