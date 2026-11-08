@@ -12,6 +12,9 @@ import salve.core.conversation.ChatMessage;
 public final class CognitivePrompt {
     private static final String PREFIX = "SALVE_COGNITIVE_V1\nSYSTEM_STATE: ";
     private static final int ENGINE_RESERVE = 256;
+    /** Room kept for TASK_STATE metadata (cycle, cohesion, frame), which changes between inferences. */
+    private static final int TASK_METADATA_ALLOWANCE = 800;
+    private static final int RECEIPTS_RESERVE_MAX = 900;
     static final String COMPACT =
             "Eres Salve: compañera con criterio, curiosidad útil y cuidado del usuario/familia. Protege privacidad y autonomía sin control, adulación ni dependencia. "
             + "Español cálido, primera persona y conclusión útil. Prohibido cerrar con disponibilidad genérica: 'Estoy aquí para ayudarte', 'Cuéntame más', 'Veamos qué encontramos juntos'. Termina al concluir. "
@@ -106,12 +109,16 @@ public final class CognitivePrompt {
     public static String build(String fullCore, String input, JsonObject state, String selfModel, String memory,
                                String context, List<ChatMessage> history, Map<String, CognitiveTurn.Tool> tools,
                                JsonArray results, boolean repair, int callsLeft, int maxChars) {
-        JsonObject catalog = new JsonObject();
-        if (callsLeft > 0) for (Map.Entry<String, CognitiveTurn.Tool> entry : tools.entrySet())
-            catalog.addProperty(entry.getKey(), entry.getValue().description);
+        // The whole turn's catalog decides the rules and budgets, even on the last inference
+        // (when it is hidden): otherwise the fixed prefix would change and the engine's cache
+        // would be thrown away just when the model has to give its final answer.
+        JsonObject turnCatalog = new JsonObject();
+        for (Map.Entry<String, CognitiveTurn.Tool> entry : tools.entrySet())
+            turnCatalog.addProperty(entry.getKey(), entry.getValue().description);
+        JsonObject catalog = callsLeft > 0 ? turnCatalog.deepCopy() : new JsonObject();
         String rules = COMPACT + CONTRACT;
         // Keep several thousand characters for evidence, the task and the current message.
-        if (fullCore != null && !fullCore.isEmpty() && fullCore.length() + catalog.toString().length() + 2600 < maxChars)
+        if (fullCore != null && !fullCore.isEmpty() && fullCore.length() + turnCatalog.toString().length() + 2600 < maxChars)
             rules = fullCore + "\n";
         String header = PREFIX + state + "\n" + rules;
         JsonObject data = new JsonObject();
@@ -125,18 +132,23 @@ public final class CognitivePrompt {
         if (tools.containsKey("evidence.inspect"))
             task.addProperty("evidence_policy", "Si pregunta por mi actividad pasada, usa evidence.inspect: scope sleep, execution o both. Nunca inventes hechos sin registro.");
         if (repair) task.addProperty("correction", "La salida anterior no cumplió el contrato; devuelve sólo el JSON exigido");
-        data.add("TASK_STATE", task);
-        data.add("TOOL_CATALOG", catalog);
+        // Order = how long each part stays the same. What does not change between the
+        // inferences of a turn goes first, so the local engine keeps it already read and
+        // only reads what is new; what changes every inference (task state, receipts) goes last.
         boolean hasSelf = selfModel != null && !selfModel.trim().isEmpty();
         if (hasSelf) data.addProperty("SELF_MODEL", "");
-        data.addProperty("MEMORY_CONTEXT", "");
-        data.addProperty("TOOL_RESULTS", "");
-        data.addProperty("CONTEXT", "");
         data.add("HISTORY", new JsonArray());
+        data.addProperty("MEMORY_CONTEXT", "");
+        data.addProperty("CONTEXT", "");
         data.addProperty("USER_INPUT", "");
+        data.add("TOOL_CATALOG", catalog);
+        data.add("TASK_STATE", task);
+        data.addProperty("TOOL_RESULTS", "");
         // Large tool schemas and format repairs must not crowd out the user's actual
         // request, history, receipts or the required output schema on 3k contexts.
-        if (maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1 < 550)
+        JsonObject skeleton = data.deepCopy();
+        skeleton.add("TOOL_CATALOG", turnCatalog);
+        if (maxChars - ENGINE_RESERVE - header.length() - skeleton.toString().length() - 1 < 550)
             header = PREFIX + state + "\n" + MINIMAL + CONTRACT;
         // Frame is optional; never displace the user message or required JSON contract.
         // This compact observation is recalculated as tool receipts arrive.
@@ -170,9 +182,28 @@ public final class CognitivePrompt {
 
         int remaining = maxChars - ENGINE_RESERVE - header.length() - data.toString().length() - 1;
         if (remaining < 120) throw new IllegalArgumentException("Catálogo o estado demasiado grande para el contexto");
-        remaining -= put(data, "USER_INPUT", input, Math.max(80, remaining * 2 / 5));
-        if (results.size() > 0) remaining -= put(data, "TOOL_RESULTS", results.toString(), remaining * 3 / 5);
-        if (hasSelf) remaining -= put(data, "SELF_MODEL", selfModel, Math.min(1700, remaining / 4));
+        // Stable budget: worked out only from what is the same in every inference of this
+        // turn (rules, the turn's catalog, a fixed allowance for task metadata). That way memory,
+        // self model and history are cut at the same place when the receipt arrives and the
+        // engine can reuse them. Receipts use the reserve plus anything the rest left unused.
+        skeleton = data.deepCopy();
+        skeleton.add("TOOL_CATALOG", turnCatalog);
+        skeleton.add("TASK_STATE", new JsonObject());
+        // SYSTEM_STATE varies (time, RAM): a fixed allowance stands in for its real length.
+        // Rounded up so a RAM figure with one more digit does not move every cut.
+        int stateRoom = (state.toString().length() / 32 + 2) * 32;
+        int fixedHeader = header.length() - state.toString().length() + stateRoom;
+        int stable = Math.min(remaining, maxChars - ENGINE_RESERVE - fixedHeader
+                - skeleton.toString().length() - 1 - taskAllowance(maxChars, task));
+        stable = Math.max(stable, Math.min(remaining, 120));
+        int userUsed = put(data, "USER_INPUT", input, Math.max(80, stable * 2 / 5));
+        remaining -= userUsed;
+        stable -= userUsed;
+        // Small fixed reserve for receipts: chat turns barely lose memory or history for it.
+        int receiptsReserve = tools.isEmpty() ? 0 : Math.max(0, Math.min(stable / 6, RECEIPTS_RESERVE_MAX));
+        int stableLeft = Math.max(0, Math.min(stable - receiptsReserve, remaining - receiptsReserve));
+        int stableStart = stableLeft;
+        if (hasSelf) stableLeft -= put(data, "SELF_MODEL", selfModel, Math.min(1700, stableLeft / 4));
         // Keep antecedents for follow-ups such as "¿Por qué estás bien?" even with dense memory.
         // Prioritise the latest two quoted turns when memory is dense: a follow-up
         // cannot be understood if its speaker and previous reply disappear.
@@ -192,9 +223,9 @@ public final class CognitivePrompt {
             }
         }
         int historyReserve = history.isEmpty() ? 0
-                : Math.min(remaining * 2 / 3, Math.max(remaining / 3, desiredHistory));
-        remaining -= put(data, "MEMORY_CONTEXT", memory, (remaining - historyReserve) * 3 / 5);
-        remaining -= put(data, "CONTEXT", context, (remaining - historyReserve) / 2);
+                : Math.min(stableLeft * 2 / 3, Math.max(stableLeft / 3, desiredHistory));
+        stableLeft -= put(data, "MEMORY_CONTEXT", memory, (stableLeft - historyReserve) * 3 / 5);
+        stableLeft -= put(data, "CONTEXT", context, (stableLeft - historyReserve) / 2);
         JsonArray recent = new JsonArray();
         for (int i = history.size() - 1; i >= 0; i--) {
             ChatMessage message = history.get(i);
@@ -203,21 +234,40 @@ public final class CognitivePrompt {
             item.addProperty("role", message.getRole().name());
             item.addProperty("at", message.getTimestamp());
             item.addProperty("content", message.getContent());
-            boolean truncated = item.toString().length() + 1 > remaining;
+            boolean truncated = item.toString().length() + 1 > stableLeft;
             if (truncated) {
                 // An oversized latest reply must not erase all conversational context.
                 item.addProperty("content", "");
-                int contentBudget = remaining - item.toString().length() - 1;
+                int contentBudget = stableLeft - item.toString().length() - 1;
                 if (contentBudget < 32) break;
                 put(item, "content", message.getContent(), contentBudget);
             }
-            remaining -= item.toString().length() + 1;
+            stableLeft -= item.toString().length() + 1;
             JsonArray next = new JsonArray(); next.add(item); next.addAll(recent); recent = next;
             if (truncated) break;
         }
         data.add("HISTORY", recent);
+        remaining -= stableStart - stableLeft;
+        // Receipts last: the reserve plus whatever the stable part did not use in this inference.
+        if (results.size() > 0) put(data, "TOOL_RESULTS", results.toString(), Math.max(0, remaining));
         return header + data;
     }
+    /**
+     * Room for TASK_STATE, fixed for the whole turn. Short contexts already drop the cycle and
+     * cohesion frames, so they keep only what the base task needs and do not lose history for it.
+     */
+    private static int taskAllowance(int maxChars, JsonObject task) {
+        if (maxChars >= 6000) return TASK_METADATA_ALLOWANCE;
+        JsonObject base = task.deepCopy();
+        base.remove("decision_frame");
+        base.remove("cohesion");
+        base.remove("cognitive_cycle");
+        base.remove("correction");
+        base.addProperty("tools_remaining", 99);
+        // The compact frames may return on later inferences; rounding absorbs small changes.
+        return ((base.toString().length() + 120) / 64 + 1) * 64;
+    }
+
     private static int put(JsonObject object, String key, String raw, int budget) {
         String value = raw == null ? "" : raw;
         String encoded = new JsonPrimitive(value).toString();
@@ -251,6 +301,22 @@ public final class CognitivePrompt {
         String rules = prompt.substring(stateEnd + 1, dataStart);
         if (rules.trim().isEmpty() || !prompt.startsWith("{", dataStart)) return null;
         return new String[] { rules, prompt.substring(0, stateEnd + 1) + prompt.substring(dataStart) };
+    }
+
+    /**
+     * Para el motor local con caché: SYSTEM_STATE (hora, RAM, fase) cambia en cada inferencia, así
+     * que pasa detrás de los datos. La caché se corta en el primer carácter distinto; con el estado
+     * delante se releía todo. Es la misma línea del controlador, sólo cambia su posición.
+     * Entrada y salida con la forma de {@link #splitStableRules}.
+     */
+    public static String[] cacheFriendly(String[] split) {
+        if (split == null || split.length != 2 || !isCognitive(split[1])) return split;
+        String rest = split[1];
+        int stateEnd = rest.indexOf('\n', PREFIX.length());
+        if (stateEnd < 0) return split;
+        String stateLine = rest.substring(PREFIX.length() - "SYSTEM_STATE: ".length(), stateEnd);
+        String head = PREFIX.substring(0, PREFIX.length() - "SYSTEM_STATE: ".length());
+        return new String[] { split[0], head + rest.substring(stateEnd + 1) + "\n" + stateLine };
     }
 
     /** Called at the execution boundary, AFTER local initialization or when submitting to cloud.

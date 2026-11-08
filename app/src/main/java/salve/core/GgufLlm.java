@@ -108,7 +108,10 @@ public final class GgufLlm {
         boolean repair = salve.core.cognition.CognitivePrompt.isFormatRepair(prompt);
         // Las reglas fijas van al turno de sistema, detrás de la identidad (también fija): así el motor
         // conserva leído en su caché todo ese principio y en cada respuesta solo lee lo que cambió.
-        String[] split = salve.core.cognition.CognitivePrompt.splitStableRules(prompt);
+        // Y lo que cambia en cada inferencia (SYSTEM_STATE: hora, RAM, fase) pasa al final: la caché
+        // se corta en el primer carácter distinto y con el estado delante se releía casi todo.
+        String[] split = salve.core.cognition.CognitivePrompt.cacheFriendly(
+                salve.core.cognition.CognitivePrompt.splitStableRules(prompt));
         String user = split == null ? prompt : split[1];
         String instructions = split == null ? system : system + "\n" + split[0];
         byte[] input = user.getBytes(StandardCharsets.UTF_8), identity = instructions.getBytes(StandardCharsets.UTF_8);
