@@ -60,23 +60,49 @@ class NeuralTtsService : TextToSpeechService() {
         if (text.isBlank()) { callback.done(); return }
         // Android da la velocidad en % (100 = normal); Piper la entiende como factor.
         val speed = (request.speechRate / 100f).coerceIn(0.6f, 1.6f)
+        // Este bloque lo llama el motor nativo por cada trozo de audio. Ningún error puede salir de
+        // aquí: el motor no lo comprueba, sigue con el siguiente trozo y Android cierra la app entera
+        // («JNI NewFloatArray called with pending exception»). Se para la voz y se apunta el motivo.
+        var failure: Throwable? = null
         try {
             engine.generateWithCallback(text, sid = NeuralVoice.FEMALE_SPEAKER, speed = speed) { samples ->
-                if (stopped) return@generateWithCallback 0
-                val pcm = NeuralVoice.toPcm16(samples)
-                var offset = 0
-                while (offset < pcm.size && !stopped) {
-                    val size = minOf(callback.maxBufferSize, pcm.size - offset)
-                    if (callback.audioAvailable(pcm, offset, size) != TextToSpeech.SUCCESS) { stopped = true; break }
-                    offset += size
+                try {
+                    if (stopped) return@generateWithCallback 0
+                    val pcm = NeuralVoice.toPcm16(samples)
+                    var offset = 0
+                    while (offset < pcm.size && !stopped) {
+                        val size = minOf(callback.maxBufferSize, pcm.size - offset)
+                        if (callback.audioAvailable(pcm, offset, size) != TextToSpeech.SUCCESS) { stopped = true; break }
+                        offset += size
+                    }
+                    if (stopped) 0 else 1
+                } catch (e: Throwable) {
+                    failure = e
+                    stopped = true
+                    0
                 }
-                if (stopped) 0 else 1
             }
-            if (!stopped) callback.done()
         } catch (e: Exception) {
-            Log.e(TAG, "Fallo generando la voz", e)
-            callback.error(TextToSpeech.ERROR_SYNTHESIS)
+            failure = failure ?: e
         }
+        val error = failure
+        if (error == null) {
+            if (!stopped) callback.done()
+            return
+        }
+        Log.e(TAG, "Fallo generando la voz", error)
+        recordFailure(error)
+        try { callback.error(TextToSpeech.ERROR_SYNTHESIS) } catch (ignored: RuntimeException) { }
+    }
+
+    /** Deja el fallo de la voz en el registro de ejecución, para saber qué lo provocó. */
+    private fun recordFailure(error: Throwable) {
+        try {
+            val journal = salve.core.trace.ExecutionTrace.journal(this)
+            val id = journal.begin("VOZ", "Fallo al generar la voz (Salve sigue abierta)")
+            journal.append(id, "ERROR DE LA VOZ", Log.getStackTraceString(error).take(6000))
+            journal.finish(id, "FALLO")
+        } catch (ignored: RuntimeException) { }
     }
 
     private companion object { const val TAG = "NeuralTtsService" }
