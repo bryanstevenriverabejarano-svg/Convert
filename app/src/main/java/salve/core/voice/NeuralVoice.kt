@@ -75,6 +75,13 @@ object NeuralVoice {
         return OfflineTts(config = config).also { engine = it }
     }
 
+    /**
+     * Una frase a audio (float [-1, 1]). Sin callback: el motor nativo no llama a Salve mientras
+     * genera. Sincronizado con {@link release} para no liberar el motor a mitad de una frase.
+     */
+    @JvmStatic @Synchronized fun synthesize(context: Context, sentence: String, speed: Float): FloatArray =
+        engine(context).generate(sentence, sid = FEMALE_SPEAKER, speed = speed).samples
+
     @JvmStatic @Synchronized fun release() {
         engine?.release()
         engine = null
