@@ -255,6 +255,9 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.14.0' // la misma que trae LiteRT-LM 0.18
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'com.squareup.okhttp3:okhttp:5.3.2'
+    // Ajustes del sistema (wifi, Bluetooth, brillo…) con identidad de shell, sin root: device.setting
+    implementation 'dev.rikka.shizuku:api:13.1.5'
+    implementation 'dev.rikka.shizuku:provider:13.1.5'
 
     // Gemini uses the REST API through the existing OkHttp/Gson dependencies.
 

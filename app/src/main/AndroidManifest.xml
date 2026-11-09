@@ -234,6 +234,14 @@
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="barcode_ui,subject_segment" />
 
+        <!-- Shizuku entrega aquí su binder; el permiso impide que otras apps normales usen este proveedor -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

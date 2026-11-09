@@ -130,6 +130,12 @@ public final class CognitiveToolCatalog {
                         dispatch, "action");
                 deviceAction = true;
             }
+            // Wifi, Bluetooth, datos, modo avión, no molestar y brillo, mediante Shizuku.
+            if (salve.core.devicecontrol.SystemSetting.offered(safeInput)) {
+                add(tools, salve.core.devicecontrol.SystemSetting.TOOL,
+                        salve.core.devicecontrol.SystemSetting.description(safeInput), dispatch, "accion");
+                deviceAction = true;
+            }
             // Linterna, volumen y vibración: el mando y su valor salen de la frase del usuario.
             if (DeviceControlIntent.offered(safeInput)) {
                 add(tools, DeviceControlIntent.TOOL, DeviceControlIntent.description(safeInput), dispatch, "accion");
