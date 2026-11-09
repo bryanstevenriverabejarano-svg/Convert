@@ -114,11 +114,13 @@ public final class GgufLlm {
                 salve.core.cognition.CognitivePrompt.splitStableRules(prompt));
         String user = split == null ? prompt : split[1];
         String instructions = split == null ? system : system + "\n" + split[0];
-        byte[] input = user.getBytes(StandardCharsets.UTF_8), identity = instructions.getBytes(StandardCharsets.UTF_8);
+        byte[] input = user.getBytes(StandardCharsets.UTF_8);
         byte[] grammar = cognitive
                 ? salve.core.cognition.CognitiveOutputConstraints.gbnf().getBytes(StandardCharsets.UTF_8) : new byte[0];
         GgufContextPolicy.Generation result = GgufContextPolicy.generate(requestedContext, selected -> {
             contextTokens = selected;
+            // Con 2048 tokens el inventario completo de capacidades no deja sitio: va el corto.
+            byte[] identity = ModelRuntimeInfo.forContext(instructions, selected).getBytes(StandardCharsets.UTF_8);
             LiveText live = onChunk == null || cognitive || media != null ? null : new LiveText(onChunk);
             try {
                 return ThinkingFilter.strip(new String(infer(model, input, identity, grammar, selected,

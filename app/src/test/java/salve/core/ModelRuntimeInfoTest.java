@@ -24,6 +24,22 @@ public class ModelRuntimeInfoTest {
         assertTrue(ModelRuntimeInfo.name("/models/imported-1.gguf").startsWith("Modelo importado"));
         assertEquals("ningún modelo local", ModelRuntimeInfo.name(null));
     }
+    @Test public void inventoryKnowsHerOwnFunctionsAndSpeaksToTheUser() {
+        String context = ModelRuntimeInfo.context("/models/gemma-4-E2B-it-6e5c4f1.litertlm");
+        for (String own : new String[] {"Fourier", "cuentos", "memoria", "modo oídos", "mapa de la mente",
+                "cuerpo astral", "vestuario", "ajedrez", "abrir PR", "WhatsApp", "Spotify"})
+            assertTrue(own, context.contains(own));
+        assertFalse("habla con Bryan, no de Bryan", context.contains("para que Bryan lo revise"));
+        assertTrue(context.contains("No recites tu misión"));
+    }
+    @Test public void compactContextGetsTheShortInventory() {
+        String context = ModelRuntimeInfo.context("/models/gemma-4-E2B-it-6e5c4f1.litertlm");
+        String compact = ModelRuntimeInfo.forContext(context, GgufContextPolicy.COMPACT);
+        assertTrue(compact.length() < context.length() - 900);
+        assertTrue(compact.contains("Fourier"));
+        assertEquals(context, ModelRuntimeInfo.forContext(context, GgufContextPolicy.STANDARD));
+        assertTrue(ModelRuntimeInfo.CAPABILITIES_SHORT.length() < 700);
+    }
     @Test public void providerIsCapturedWithTheResponseNotReadLaterFromPreferences() {
         ModelResult response = ModelResult.success("Hola", 7).withProvider(LocalModelPolicy.LIGHT);
         assertEquals(LocalModelPolicy.LIGHT, response.getProvider());
