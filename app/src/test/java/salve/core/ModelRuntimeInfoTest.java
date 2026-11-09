@@ -30,7 +30,7 @@ public class ModelRuntimeInfoTest {
                 "cuerpo astral", "vestuario", "ajedrez", "abrir PR", "WhatsApp", "Spotify"})
             assertTrue(own, context.contains(own));
         assertFalse("habla con Bryan, no de Bryan", context.contains("para que Bryan lo revise"));
-        assertTrue(context.contains("No recites tu misión"));
+        assertFalse("sin límites de longitud", context.contains("breve") || context.contains("una o dos frases"));
     }
     @Test public void compactContextGetsTheShortInventory() {
         String context = ModelRuntimeInfo.context("/models/gemma-4-E2B-it-6e5c4f1.litertlm");
