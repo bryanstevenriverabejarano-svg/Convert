@@ -2538,7 +2538,7 @@ public class MotorConversacional {
                 return salve.work.ModelDownloadWorker.describe(context)
                         + (llm == null ? "" : "\nModelo en uso: " + llm.getStatusDescription());
             case SELF_PR_STATUS: return selfPr.status();
-            case SELF_PR_OPEN: return selfPr.run();
+            case SELF_PR_OPEN: return selfPr.run(entrada);
             case IMPROVEMENT_PROPOSALS: return examen.proposals();
             case EAR_MODE: {
                 salve.core.voice.EarMode.Command oidos = salve.core.voice.EarMode.parse(entrada);

@@ -45,6 +45,24 @@ class ProposalValidationTest(unittest.TestCase):
     def test_accepts_single_core_java_target(self):
         runner.validate_proposal(self.proposal())
 
+    def test_rejects_the_parts_that_measure_or_authorize_her(self):
+        for inside in ("evaluation/ConversationExam.java", "selfpr/SelfPatch.java", "identity/IdentityManager.java",
+                       "privatefamily/Vault.java", "finance/Ledger.java", "SelfPrDesk.java", "ObjectiveGovernance.java"):
+            with self.subTest(inside=inside):
+                proposal = self.proposal()
+                path = "app/src/main/java/salve/core/" + inside
+                proposal["targetPath"] = path
+                proposal["patch"] = f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n"
+                with self.assertRaises(runner.ProposalError):
+                    runner.validate_proposal(proposal)
+        # Lo demás del núcleo sigue abierto, también en subcarpetas.
+        proposal = self.proposal()
+        path = "app/src/main/java/salve/core/sensors/DeviceSenses.java"
+        proposal["targetPath"] = path
+        proposal["targetClass"] = "DeviceSenses"
+        proposal["patch"] = f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n"
+        runner.validate_proposal(proposal)
+
     def test_rejects_truthy_non_boolean_gates(self):
         for field in ("syntheticValidationPassed", "ethicalReviewPassed"):
             for value in ("false", "true", 1, [True], {"ok": True}, None, False):

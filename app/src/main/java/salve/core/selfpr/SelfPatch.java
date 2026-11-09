@@ -100,8 +100,15 @@ public final class SelfPatch {
 
     public static String prompt(String problem, String idea, List<String> examples, String path, String excerpt,
                                 String previousError) {
+        return prompt(problem, idea, examples, path, excerpt, previousError, false);
+    }
+
+    /** {@code requested}: el cambio lo pidió Bryan con sus palabras, no salió del examen. */
+    public static String prompt(String problem, String idea, List<String> examples, String path, String excerpt,
+                                String previousError, boolean requested) {
         StringBuilder p = new StringBuilder();
-        p.append("Eres Salve y vas a mejorar tu propio código Java. Problema que mostró tu examen: ")
+        p.append("Eres Salve y vas a mejorar tu propio código Java. ")
+                .append(requested ? "Cambio que te pide Bryan: " : "Problema que mostró tu examen: ")
                 .append(problem).append(".\nIdea de arreglo: ").append(idea).append(".\n");
         if (examples != null && !examples.isEmpty()) {
             p.append("Ejemplos del fallo:\n");
