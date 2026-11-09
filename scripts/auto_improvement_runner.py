@@ -21,6 +21,10 @@ else:
 
 
 ALLOWED_SOURCE_ROOT = PurePosixPath("app/src/main/java/salve/core")
+# Una propuesta automática no puede reescribir a su propio juez: el examen, la puerta de los PR,
+# la identidad ni los datos privados. Debe coincidir con SelfChangeScope.PROTECTED en la app.
+PROTECTED_CORE = ("selfpr/", "identity/", "privatefamily/", "finance/", "evaluation/",
+                  "SelfPrDesk.java", "ObjectiveGovernance.java")
 JAVA_SOURCE_ROOT = PurePosixPath("app/src/main/java")
 JAVA_TEST_ROOT = PurePosixPath("app/src/test/java")
 MAX_PROPOSAL_BYTES = 1_000_000
@@ -77,6 +81,9 @@ def validate_proposal(proposal: dict) -> None:
         target.relative_to(ALLOWED_SOURCE_ROOT)
     except ValueError as error:
         raise ProposalError("La ruta queda fuera del núcleo permitido") from error
+    inside = target.relative_to(ALLOWED_SOURCE_ROOT).as_posix()
+    if any(inside.startswith(rule) if rule.endswith("/") else inside == rule for rule in PROTECTED_CORE):
+        raise ProposalError("La propuesta toca una zona protegida: lo que mide o autoriza a Salve")
     if target.suffix != ".java":
         raise ProposalError("La propuesta solo puede modificar código Java del núcleo")
     if proposal.get("syntheticValidationPassed") is not True:

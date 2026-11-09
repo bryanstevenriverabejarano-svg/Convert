@@ -32,5 +32,5 @@ Crea la variable de repositorio `SALVE_AUTOMERGE` con valor `false` en *Settings
 
 - El modelo del teléfono (Gemma 4 E2B) es pequeño y ve unas 2.000 letras de código. Es probable que muchas propuestas no compilen o no pasen las pruebas; el flujo lo dirá en la issue.
 - «Pasa las pruebas» no significa que mejore a Salve: las pruebas JVM no miden la calidad de la conversación. Lo que lo mide es repetir el examen en el teléfono tras actualizar.
-- Solo puede tocar los módulos de la lista de `SynergyEvolution`, siempre dentro de `app/src/main/java/salve/core`.
+- Por su examen solo toca los módulos de la lista de `SynergyEvolution`. Desde el 10-11-2026, si Bryan le da un objetivo («abre un PR para que…») puede proponer el cambio en casi cualquier archivo de `app/src/main/java/salve/core`, salvo su examen, la puerta de sus PR, la identidad y los datos privados: ver [cambio de estructura dirigido](CAMBIO_DE_ESTRUCTURA_DIRIGIDO.md).
 - No puede añadir procesos, carga de código, red, reflexión ni borrado de archivos, y las propuestas que se fusionan solas no pueden añadir suites de prueba generadas.

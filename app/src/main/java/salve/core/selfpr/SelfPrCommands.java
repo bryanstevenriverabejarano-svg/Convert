@@ -11,7 +11,9 @@ public final class SelfPrCommands {
         String t = clean(input);
         return t.matches("(?:abre|haz|hazte|crea|escribe|manda|envia|propon)(?: tu| un| una| tu propio| tus)? ?"
                 + "(?:pr|pull request|parche|propuesta de codigo|propuesta en github)(?: en github| para mejorarte| propio)?")
-                || t.matches("(?:programate|mejorate|automejorate) (?:y )?(?:abre|haz|crea|manda) (?:un )?(?:pr|pull request|parche)");
+                || t.matches("(?:programate|mejorate|automejorate) (?:y )?(?:abre|haz|crea|manda) (?:un )?(?:pr|pull request|parche)")
+                // Cambio dirigido: «abre un PR para que…», «cambia tu código para…».
+                || SelfChangeScope.goal(input) != null;
     }
 
     public static boolean isStatusCommand(String input) {
