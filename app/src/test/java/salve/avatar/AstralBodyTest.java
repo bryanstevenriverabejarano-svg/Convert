@@ -215,4 +215,65 @@ public class AstralBodyTest {
         assertEquals(3, rig(AvatarBodyVersions.OCT26).mouthFrames);
         assertEquals(rig(AvatarBodyVersions.TILTED).eyeTop, rig(AvatarBodyVersions.OPEN).eyeTop);
     }
+
+    @Test public void reliefPutsTheBodyInFrontOfTheHairInEveryVersion() throws Exception {
+        for (String folder : new String[]{AvatarBodyVersions.CURRENT, AvatarBodyVersions.V1,
+                "realistic_inclinada", "realistic_abierto", "realistic_2610"}) {
+            AstralBodyRig rig = rig(folder);
+            assertTrue(folder, rig.hasDepth());
+            // El corazón está en el torso: delante. La melena exterior, a la altura del pecho, detrás.
+            assertTrue(folder, rig.depthAt(rig.heartX, rig.heartY + 60) > 40f);
+            assertTrue(folder, rig.depthAt(rig.width * .08f, rig.height * .35f) < -40f);
+            assertTrue(folder, rig.depthAt(rig.width * .92f, rig.height * .35f) < -40f);
+        }
+    }
+
+    @Test public void tiltingThePhoneTurnsTheReliefAndItComesBack() throws Exception {
+        AstralBodyRig rig = rig(AvatarBodyVersions.CURRENT);
+        AstralBody body = new AstralBody(new Random(8));
+        body.advance(0, idle(), .5f, AvatarState.Pose.IDLE);
+        float[] front = rig.deform(body.snapshot(), null).clone();
+        assertEquals(0f, body.snapshot().viewYaw, 0f);
+        body.lookFrom(90, -90); // se acota: una ilustración no puede girar tanto
+        long t = 0;
+        for (int i = 0; i < 60; i++) body.advance(t += 16, idle(), .5f, AvatarState.Pose.IDLE);
+        AstralBody.Snapshot turned = body.snapshot();
+        assertEquals(AstralBody.MAX_VIEW_YAW, turned.viewYaw, .05f);
+        assertEquals(-AstralBody.MAX_VIEW_PITCH, turned.viewPitch, .05f);
+        float[] chest = rig.parallax(rig.heartX, rig.heartY + 60, turned, null).clone();
+        float[] hair = rig.parallax(rig.width * .08f, rig.height * .5f, turned, null).clone();
+        assertTrue("lo cercano se desplaza hacia un lado", chest[0] > 8f);
+        assertTrue("y el pelo, que está detrás, menos (o al contrario)", hair[0] < chest[0] - 8f);
+        // La malla no se pliega: en cada fila los vértices siguen ordenados de izquierda a derecha.
+        float[] mesh = rig.deform(turned, null);
+        for (int r = 0; r <= rig.rows; r++) for (int c = 1; c <= rig.cols; c++) {
+            int i = r * (rig.cols + 1) + c;
+            assertTrue("fila " + r + " col " + c, mesh[2 * i] > mesh[2 * (i - 1)] + 2f);
+        }
+        body.lookFrom(0, 0);
+        for (int i = 0; i < 120; i++) body.advance(t += 16, idle(), .5f, AvatarState.Pose.IDLE);
+        assertEquals(0f, body.snapshot().viewYaw, 0f);
+        assertEquals(0f, body.snapshot().viewPitch, 0f);
+        assertArrayEquals(new float[]{0, 0}, rig.parallax(rig.heartX, rig.heartY, body.snapshot(), null), 0f);
+        assertEquals(front.length, mesh.length);
+    }
+
+    @Test public void gyroscopeTurnsHerAndStillnessBringsHerBackToTheFront() {
+        AstralParallax parallax = new AstralParallax();
+        // Medio segundo girando el teléfono a 0,5 rad/s (unos 14°).
+        for (int i = 0; i < 25; i++) parallax.rotate(0f, .5f, .02f);
+        assertTrue(parallax.yaw() > 8f && parallax.yaw() <= AstralBody.MAX_VIEW_YAW);
+        assertEquals(0f, parallax.pitch(), 1e-6f);
+        // Un giro brusco no la saca de sus límites.
+        for (int i = 0; i < 100; i++) parallax.rotate(-9f, 9f, .02f);
+        assertEquals(AstralBody.MAX_VIEW_YAW, parallax.yaw(), 1e-4f);
+        assertEquals(-AstralBody.MAX_VIEW_PITCH, parallax.pitch(), 1e-4f);
+        // Quieto en cualquier postura: vuelve sola al frente.
+        for (int i = 0; i < 600; i++) parallax.rotate(0f, 0f, .02f);
+        assertEquals(0f, parallax.yaw(), .2f);
+        assertEquals(0f, parallax.pitch(), .2f);
+        parallax.rotate(Float.NaN, 1f, .02f);
+        parallax.rotate(1f, 1f, -1f);
+        assertEquals(0f, parallax.yaw(), .2f);
+    }
 }

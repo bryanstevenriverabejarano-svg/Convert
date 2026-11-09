@@ -72,6 +72,15 @@ public final class CognitiveToolCatalog {
                 "{}: sincronizas tú misma con pCloud (traes recuerdos, fotos, dibujos y tu mente; subes lo nuevo)",
                 dispatch);
         add(tools, "runtime.status", "{}: mide estado y RAM", dispatch);
+        // Sus sentidos físicos: solo lectura y solo cuando el turno pregunta por algo medible.
+        if (verifiedCreator && salve.core.sensors.DeviceSenses.offered(safeInput))
+            // El grupo es opcional: un modelo pequeño puede omitirlo y el ejecutor lo deduce de la pregunta.
+            tools.put(salve.core.sensors.DeviceSenses.TOOL, new CognitiveTurn.Tool(
+                    salve.core.sensors.DeviceSenses.description(), args -> {
+                        if (args.size() > 1 || args.size() == 1 && !args.has("grupo"))
+                            throw new IllegalArgumentException("Campos incorrectos");
+                        return dispatch.execute(salve.core.sensors.DeviceSenses.TOOL, args.deepCopy());
+                    }));
         if (salve.core.schema.Abstraction.offered(safeInput))
             add(tools, salve.core.schema.Abstraction.TOOL, salve.core.schema.Abstraction.toolDescription(), dispatch, "concepto");
         if (verifiedCreator && salve.core.mind.SelfCode.offered(safeInput))
@@ -119,6 +128,11 @@ public final class CognitiveToolCatalog {
                 add(tools, "device.media_control",
                         "{action:'PLAY'|'PAUSE'|'NEXT'|'PREVIOUS'|'NOW_PLAYING'}: controla la sesión multimedia o consulta el título. El controlador verifica que la acción coincida con la petición.",
                         dispatch, "action");
+                deviceAction = true;
+            }
+            // Linterna, volumen y vibración: el mando y su valor salen de la frase del usuario.
+            if (DeviceControlIntent.offered(safeInput)) {
+                add(tools, DeviceControlIntent.TOOL, DeviceControlIntent.description(safeInput), dispatch, "accion");
                 deviceAction = true;
             }
             // «Abre el mapa de tu mente» is her own function, not an installed app.

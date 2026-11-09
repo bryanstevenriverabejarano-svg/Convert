@@ -8,6 +8,9 @@ import com.google.gson.JsonParser;
  * Malla del cuerpo astral generada por scripts/build_astral_body.py a partir de base.png.
  * Calcula, sin Android, dónde va cada vértice: el pelo cuelga y ondea, la cabeza se inclina,
  * y brazos, torso y piernas permanecen fijos sobre la ilustración aprobada.
+ *
+ * Relieve 3D: si el rig trae profundidad por vértice (máscara del cuerpo inflada; el pelo, detrás),
+ * la malla gira como un relieve al mirarla desde un lado: lo cercano se desplaza más que lo lejano.
  */
 public final class AstralBodyRig {
     public final int width, height, cols, rows;
@@ -20,6 +23,8 @@ public final class AstralBodyRig {
     /** Recuadro de la boca (px de base.png) y nº de bocas dibujadas; 0 si esta versión no tiene. */
     public final int mouthLeft, mouthTop, mouthRight, mouthBottom, mouthFrames;
     private final float[] hair, head, rest;
+    /** Profundidad por vértice en px de base.png (+ hacia quien mira); null si esta versión no tiene relieve. */
+    private final float[] depth;
 
     private AstralBodyRig(JsonObject spec) {
         JsonArray size = spec.getAsJsonArray("size");
@@ -48,6 +53,12 @@ public final class AstralBodyRig {
         int count = (cols + 1) * (rows + 1);
         hair = floats(mesh.getAsJsonArray("hair"), count);
         head = floats(mesh.getAsJsonArray("head"), count);
+        if (mesh.has("depth") && mesh.has("depthRange")) {
+            float range = mesh.get("depthRange").getAsFloat();
+            if (!Float.isFinite(range) || range <= 0 || range > 1000) throw new IllegalArgumentException("Relieve inválido");
+            depth = floats(mesh.getAsJsonArray("depth"), count);
+            for (int i = 0; i < count; i++) depth[i] = (depth[i] - .5f) * 2f * range;
+        } else depth = null;
         rest = new float[count * 2];
         for (int r = 0; r <= rows; r++) for (int c = 0; c <= cols; c++) {
             int i = r * (cols + 1) + c;
@@ -94,6 +105,48 @@ public final class AstralBodyRig {
             out[2 * i] = x + dx;
             out[2 * i + 1] = y + dy;
         }
+        if (depth != null && body != null && (body.viewYaw != 0 || body.viewPitch != 0)) {
+            // Giro ortográfico del relieve alrededor del eje del cuerpo: x' = cx + (x-cx)·cos + z·sin.
+            double yaw = Math.toRadians(body.viewYaw), pitch = Math.toRadians(body.viewPitch);
+            float cy = (float) Math.cos(yaw), sy = (float) Math.sin(yaw);
+            float cp = (float) Math.cos(pitch), sp = (float) Math.sin(pitch);
+            float midY = height * .5f;
+            for (int i = 0, n = vertexCount(); i < n; i++) {
+                float z = depth[i];
+                out[2 * i] = neckX + (out[2 * i] - neckX) * cy + z * sy;
+                out[2 * i + 1] = midY + (out[2 * i + 1] - midY) * cp + z * sp;
+            }
+        }
+        return out;
+    }
+
+    /** ¿Trae esta versión del cuerpo su relieve 3D? */
+    public boolean hasDepth() { return depth != null; }
+
+    /** Profundidad (px, + hacia quien mira) en un punto de la ilustración; 0 si no hay relieve. */
+    public float depthAt(float x, float y) {
+        if (depth == null) return 0;
+        float fc = Math.max(0, Math.min(cols, x / width * cols)), fr = Math.max(0, Math.min(rows, y / height * rows));
+        int c = Math.min(cols - 1, (int) fc), r = Math.min(rows - 1, (int) fr);
+        float u = fc - c, v = fr - r;
+        int i = r * (cols + 1) + c;
+        float top = depth[i] * (1 - u) + depth[i + 1] * u;
+        float bottom = depth[i + cols + 1] * (1 - u) + depth[i + cols + 2] * u;
+        return top * (1 - v) + bottom * v;
+    }
+
+    /**
+     * Cuánto se desplaza por el relieve un punto en reposo (ojos, boca): así las capas dibujadas
+     * encima siguen a la cara. Devuelve {dx, dy} en px de base.png.
+     */
+    public float[] parallax(float x, float y, AstralBody.Snapshot body, float[] out) {
+        if (out == null || out.length < 2) out = new float[2];
+        out[0] = out[1] = 0;
+        if (depth == null || body == null || (body.viewYaw == 0 && body.viewPitch == 0)) return out;
+        double yaw = Math.toRadians(body.viewYaw), pitch = Math.toRadians(body.viewPitch);
+        float z = depthAt(x, y), midY = height * .5f;
+        out[0] = (float) ((x - neckX) * (Math.cos(yaw) - 1) + z * Math.sin(yaw));
+        out[1] = (float) ((y - midY) * (Math.cos(pitch) - 1) + z * Math.sin(pitch));
         return out;
     }
 

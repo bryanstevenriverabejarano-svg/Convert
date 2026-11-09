@@ -15,6 +15,8 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 
+import salve.core.cognition.DeviceControlIntent;
+import salve.core.sensors.DeviceSenses;
 import salve.core.sensors.SensorSnapshot;
 import salve.core.sensors.SessionPolicy;
 
@@ -179,19 +181,254 @@ public final class SistemaSensorial implements SensorEventListener {
     }
 
     /** Compatibility for explicit torch controls only; sensor sessions never call this method. */
-    public void alterarLuzFisica(boolean encender) {
+    public void alterarLuzFisica(boolean encender) { linterna(encender); }
+
+    /** @return true si Android aceptó la orden en una cámara con flash. */
+    private boolean linterna(boolean encender) {
         try {
             CameraManager cameras = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-            if (cameras == null) return;
+            if (cameras == null) return false;
             for (String id : cameras.getCameraIdList()) {
                 if (Boolean.TRUE.equals(cameras.getCameraCharacteristics(id)
                         .get(CameraCharacteristics.FLASH_INFO_AVAILABLE))) {
                     cameras.setTorchMode(id, encender);
-                    return;
+                    return true;
                 }
             }
         } catch (Exception error) {
             Log.w(TAG, "No se pudo controlar la linterna: " + error.getClass().getSimpleName());
+        }
+        return false;
+    }
+
+    // ---------------------------------------------------------------- percepción completa (ráfaga)
+
+    /** Lo que espera como mucho una ráfaga; el contador de pasos, que puede no contestar, menos. */
+    private static final long BURST_MS = 700L, STEP_ONLY_MS = 250L;
+
+    /**
+     * Mide una vez con todos los sensores del grupo y devuelve el texto interpretado. Es una ráfaga:
+     * registra, espera como mucho {@value #BURST_MS} ms, suelta los sensores y no conserva nada.
+     * Independiente de las sesiones de {@link #iniciarSesion(long)}. No debe llamarse desde el hilo principal
+     * (ahí solo devuelve lo que no necesita esperar).
+     */
+    public String percibir(DeviceSenses.Group requested) {
+        DeviceSenses.Group group = requested == null ? DeviceSenses.Group.TODO : requested;
+        DeviceSenses.Perception perception = new DeviceSenses.Perception();
+        boolean all = group == DeviceSenses.Group.TODO;
+        if (all || group == DeviceSenses.Group.ENTORNO || group == DeviceSenses.Group.MOVIMIENTO
+                || group == DeviceSenses.Group.ORIENTACION) burst(perception, group);
+        if (all || group == DeviceSenses.Group.ENERGIA) energy(perception);
+        if (all || group == DeviceSenses.Group.SISTEMA) system(perception);
+        if (all || group == DeviceSenses.Group.INVENTARIO) inventory(perception);
+        return perception.render(group);
+    }
+
+    private void burst(DeviceSenses.Perception perception, DeviceSenses.Group group) {
+        if (sensorManager == null) return;
+        boolean all = group == DeviceSenses.Group.TODO;
+        final java.util.Set<Integer> pending = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+        final Object lock = new Object();
+        SensorEventListener listener = new SensorEventListener() {
+            @Override public void onSensorChanged(SensorEvent event) {
+                if (event == null || event.sensor == null || event.values == null) return;
+                int type = event.sensor.getType();
+                if (type == Sensor.TYPE_ROTATION_VECTOR) {
+                    try {
+                        float[] rotation = new float[9], angles = new float[3];
+                        float[] vector = event.values.length > 4 ? java.util.Arrays.copyOf(event.values, 4) : event.values;
+                        SensorManager.getRotationMatrixFromVector(rotation, vector);
+                        SensorManager.getOrientation(rotation, angles);
+                        perception.heading(true, (float) Math.toDegrees(angles[0]));
+                    } catch (RuntimeException invalid) { return; }
+                } else perception.sample(DeviceSenses.Kind.of(type), event.values);
+                pending.remove(type);
+                synchronized (lock) { lock.notifyAll(); }
+            }
+            @Override public void onAccuracyChanged(Sensor sensor, int accuracy) { }
+        };
+        android.os.HandlerThread thread = new android.os.HandlerThread("salve-sentidos");
+        thread.start();
+        Handler handler = new Handler(thread.getLooper());
+        try {
+            for (DeviceSenses.Kind kind : DeviceSenses.Kind.values()) {
+                if (!all && kind.group != group) continue;
+                perception.present(kind, register(listener, kind.type, handler, pending));
+            }
+            if (all || group == DeviceSenses.Group.ORIENTACION)
+                perception.heading(register(listener, Sensor.TYPE_ROTATION_VECTOR, handler, pending), Float.NaN);
+            if (Looper.myLooper() != Looper.getMainLooper()) {
+                long start = SystemClock.elapsedRealtime();
+                synchronized (lock) {
+                    while (!pending.isEmpty()) {
+                        long waited = SystemClock.elapsedRealtime() - start;
+                        boolean onlySteps = pending.size() == 1 && pending.contains(Sensor.TYPE_STEP_COUNTER);
+                        long left = (onlySteps ? STEP_ONLY_MS : BURST_MS) - waited;
+                        if (left <= 0) break;
+                        try { lock.wait(left); }
+                        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); break; }
+                    }
+                }
+            }
+        } finally {
+            try { sensorManager.unregisterListener(listener); }
+            catch (RuntimeException error) { Log.w(TAG, "No se pudo soltar la ráfaga: " + error.getClass().getSimpleName()); }
+            thread.quitSafely();
+        }
+    }
+
+    private boolean register(SensorEventListener listener, int type, Handler handler, java.util.Set<Integer> pending) {
+        try {
+            Sensor sensor = sensorManager.getDefaultSensor(type);
+            if (sensor == null) return false;
+            pending.add(type);
+            if (sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME, handler)) return true;
+            pending.remove(type);
+        } catch (RuntimeException error) {
+            pending.remove(type);
+            Log.w(TAG, "Sensor no registrado en la ráfaga: " + error.getClass().getSimpleName());
+        }
+        return false;
+    }
+
+    private void energy(DeviceSenses.Perception perception) {
+        try {
+            Intent state = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (state == null) { perception.fact(DeviceSenses.Group.ENERGIA, "Batería: Android no entregó su estado."); return; }
+            int level = state.getIntExtra(BatteryManager.EXTRA_LEVEL, -1), scale = state.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            int plugged = state.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+            int status = state.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN);
+            String source = plugged == BatteryManager.BATTERY_PLUGGED_AC ? "enchufado a la corriente"
+                    : plugged == BatteryManager.BATTERY_PLUGGED_USB ? "conectado por USB"
+                    : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "en carga inalámbrica" : "sin enchufar";
+            String charge = status == BatteryManager.BATTERY_STATUS_FULL ? "llena"
+                    : status == BatteryManager.BATTERY_STATUS_CHARGING ? "cargando" : "descargándose";
+            if (level >= 0 && scale > 0) perception.fact(DeviceSenses.Group.ENERGIA,
+                    "Batería: " + Math.round(level * 100f / scale) + " % (" + charge + ", " + source + ").");
+            int tenths = state.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Integer.MIN_VALUE);
+            if (tenths != Integer.MIN_VALUE) perception.fact(DeviceSenses.Group.ENERGIA,
+                    String.format(java.util.Locale.ROOT, "Temperatura de la batería: %.1f °C.", tenths / 10f));
+            int millivolts = state.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
+            if (millivolts > 0) perception.fact(DeviceSenses.Group.ENERGIA,
+                    String.format(java.util.Locale.ROOT, "Voltaje: %.2f V.", millivolts / 1000f));
+            android.os.PowerManager power = (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (power != null && power.isPowerSaveMode()) perception.fact(DeviceSenses.Group.ENERGIA, "Ahorro de energía activado.");
+        } catch (RuntimeException error) {
+            Log.w(TAG, "No se pudo leer la energía: " + error.getClass().getSimpleName());
+        }
+    }
+
+    private void system(DeviceSenses.Perception perception) {
+        DeviceSenses.Group g = DeviceSenses.Group.SISTEMA;
+        perception.fact(g, "Teléfono: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+                + ", Android " + android.os.Build.VERSION.RELEASE + ".");
+        try {
+            android.app.ActivityManager activity = (android.app.ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            android.app.ActivityManager.MemoryInfo memory = new android.app.ActivityManager.MemoryInfo();
+            if (activity != null) {
+                activity.getMemoryInfo(memory);
+                perception.fact(g, String.format(java.util.Locale.ROOT, "RAM libre: %.1f de %.1f GB%s.",
+                        memory.availMem / 1e9, memory.totalMem / 1e9, memory.lowMemory ? " (Android avisa de poca memoria)" : ""));
+            }
+        } catch (RuntimeException error) { Log.w(TAG, "RAM no disponible"); }
+        try {
+            android.os.StatFs disk = new android.os.StatFs(context.getFilesDir().getPath());
+            perception.fact(g, String.format(java.util.Locale.ROOT, "Almacenamiento libre: %.1f de %.1f GB.",
+                    disk.getAvailableBytes() / 1e9, disk.getTotalBytes() / 1e9));
+        } catch (RuntimeException error) { Log.w(TAG, "Almacenamiento no disponible"); }
+        try {
+            android.net.ConnectivityManager net = (android.net.ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            android.net.NetworkCapabilities caps = net == null ? null : net.getNetworkCapabilities(net.getActiveNetwork());
+            if (caps == null) perception.fact(g, "Red: sin conexión.");
+            else perception.fact(g, "Red: " + (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ? "wifi"
+                    : caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ? "datos móviles"
+                    : caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET) ? "cable" : "otra")
+                    + (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) ? " con VPN" : "")
+                    + (caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                    ? ", con salida a internet." : ", sin salida a internet comprobada."));
+        } catch (RuntimeException error) { Log.w(TAG, "Red no disponible"); }
+        try {
+            android.media.AudioManager audio = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            if (audio != null) {
+                int max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+                int mode = audio.getRingerMode();
+                perception.fact(g, "Volumen multimedia: " + percent(audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC), max)
+                        + " %; timbre " + (mode == android.media.AudioManager.RINGER_MODE_SILENT ? "en silencio"
+                        : mode == android.media.AudioManager.RINGER_MODE_VIBRATE ? "en vibración" : "con sonido") + ".");
+            }
+        } catch (RuntimeException error) { Log.w(TAG, "Volumen no disponible"); }
+        try {
+            android.content.ContentResolver settings = context.getContentResolver();
+            int brightness = android.provider.Settings.System.getInt(settings, android.provider.Settings.System.SCREEN_BRIGHTNESS, -1);
+            boolean automatic = android.provider.Settings.System.getInt(settings, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+                    == android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC;
+            if (brightness >= 0) perception.fact(g, "Brillo de pantalla: nivel " + brightness + " de 255 aprox."
+                    + (automatic ? " (automático)" : "") + ".");
+        } catch (RuntimeException error) { Log.w(TAG, "Brillo no disponible"); }
+        try {
+            android.os.PowerManager power = (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (power != null) {
+                if (android.os.Build.VERSION.SDK_INT >= 29) {
+                    int thermal = power.getCurrentThermalStatus();
+                    perception.fact(g, "Calor: " + (thermal <= android.os.PowerManager.THERMAL_STATUS_NONE ? "sin estrés térmico"
+                            : thermal == android.os.PowerManager.THERMAL_STATUS_LIGHT ? "estrés térmico ligero"
+                            : thermal == android.os.PowerManager.THERMAL_STATUS_MODERATE ? "estrés térmico moderado"
+                            : "estrés térmico alto: conviene dejarlo descansar") + ".");
+                }
+                perception.fact(g, power.isInteractive() ? "Pantalla encendida." : "Pantalla apagada.");
+            }
+        } catch (RuntimeException error) { Log.w(TAG, "Estado térmico no disponible"); }
+        perception.fact(g, String.format(java.util.Locale.ROOT, "Encendido desde hace %.1f h.",
+                SystemClock.elapsedRealtime() / 3_600_000.0));
+    }
+
+    private void inventory(DeviceSenses.Perception perception) {
+        if (sensorManager == null) return;
+        try {
+            for (Sensor sensor : sensorManager.getSensorList(Sensor.TYPE_ALL)) perception.inventory(sensor.getName());
+        } catch (RuntimeException error) { Log.w(TAG, "Inventario de sensores no disponible"); }
+    }
+
+    private static int percent(int value, int max) { return max <= 0 ? 0 : Math.round(value * 100f / max); }
+
+    // ---------------------------------------------------------------- mandos físicos
+
+    /**
+     * Acciona un mando local y reversible (linterna, volumen, vibración) y devuelve lo que Android
+     * informa después. El llamador ya verificó identidad y que la acción sale de la frase del usuario.
+     */
+    public String accionar(DeviceControlIntent.Command command) {
+        if (command == null) return "MANDO_RECHAZADO: sin orden.";
+        try {
+            switch (command.action) {
+                case TORCH_ON:
+                case TORCH_OFF: {
+                    boolean on = command.action == DeviceControlIntent.Action.TORCH_ON;
+                    return linterna(on) ? "LINTERNA: Android aceptó " + (on ? "encenderla" : "apagarla") + "."
+                            : "LINTERNA_SIN_CAMBIO: Android no me dejó usar el flash (¿la cámara está en uso?).";
+                }
+                case VIBRATE: {
+                    android.os.Vibrator vibrator = (android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                    if (vibrator == null || !vibrator.hasVibrator()) return "VIBRACION_SIN_MOTOR: este teléfono no tiene vibrador.";
+                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(350L, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+                    return "VIBRACION: pedí una vibración de 0,35 s; en modo no molestar Android puede silenciarla.";
+                }
+                default: {
+                    android.media.AudioManager audio = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+                    if (audio == null || audio.isVolumeFixed()) return "VOLUMEN_FIJO: este dispositivo no deja cambiar el volumen.";
+                    int stream = android.media.AudioManager.STREAM_MUSIC, max = audio.getStreamMaxVolume(stream);
+                    int before = audio.getStreamVolume(stream);
+                    audio.setStreamVolume(stream, DeviceControlIntent.targetVolume(command, before, max),
+                            android.media.AudioManager.FLAG_SHOW_UI);
+                    int after = audio.getStreamVolume(stream);
+                    return "VOLUMEN_REAL: multimedia antes " + percent(before, max) + " %, ahora " + percent(after, max) + " %"
+                            + (after == before ? " (sin cambio: ya estaba en ese nivel o Android lo impidió)." : ".");
+                }
+            }
+        } catch (RuntimeException error) {
+            Log.w(TAG, "Mando no ejecutado: " + error.getClass().getSimpleName());
+            return "MANDO_FALLIDO: Android rechazó la orden; no hay cambio confirmado.";
         }
     }
 }

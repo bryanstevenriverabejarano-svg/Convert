@@ -602,6 +602,18 @@ public class MotorConversacional {
 
     public synchronized void detenerSensores() { sensores.detenerSesion(); }
 
+    /** Ráfaga de solo lectura pedida en este turno (device.sense); no abre ni alarga sesiones. */
+    String percibirDispositivo(salve.core.sensors.DeviceSenses.Group group) {
+        if (closed) return "Sin lecturas: la conversación se cerró.";
+        return sensores.percibir(group);
+    }
+
+    /** Mando local ya verificado contra la frase del usuario (device.control). */
+    String accionarDispositivo(salve.core.cognition.DeviceControlIntent.Command command) {
+        if (closed) return "MANDO_RECHAZADO: la conversación se cerró.";
+        return sensores.accionar(command);
+    }
+
     private synchronized String sensorResponse(salve.core.sensors.SensorCommand command) {
         if (command.action == salve.core.sensors.SensorCommand.Action.STOP) {
             sensores.detenerSesion();

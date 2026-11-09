@@ -80,6 +80,11 @@ La nueva base utiliza sprites realistas transparentes, con vistas, caminata y ba
 El visor y las entregas 3D anteriores se retiran del árbol actual.
 Consulta [alcance y validación del avatar 2D](docs/SALVE_AVATAR_2D.md).
 
+De frente, su figura tiene **relieve 3D**: una máscara de profundidad (cuerpo delante, pelo detrás) la hace
+girar unos grados al inclinar el teléfono. Y puede medir con todos los sensores del teléfono y accionar
+linterna, volumen y vibración cuando se le pide.
+Consulta [relieve 3D y sentidos del teléfono](docs/RELIEVE_3D_Y_SENTIDOS.md).
+
 ## Instalar desde el móvil
 
 En una ejecución correcta de **Actions → Android tests and APK**, descarga el
