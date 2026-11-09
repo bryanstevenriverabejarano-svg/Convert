@@ -31,6 +31,11 @@ public final class AstralBody {
         public final float flow, flowStrength;
         /** Grados de inclinación de cabeza y de balanceo del cuerpo; desplazamientos de cabeza en px. */
         public final float headTilt, headShiftX, headShiftY, sway;
+        /**
+         * Desde dónde se la mira (grados): el relieve 3D gira con ello. Positivo = lo cercano se desplaza
+         * a la derecha / hacia abajo. Lo pone la inclinación del teléfono; 0 si nadie lo mueve.
+         */
+        public final float viewYaw, viewPitch;
         public final boolean drawing, speaking, thinking, listening, moving;
         public final String drawingSubject;
         public final long blinks;
@@ -45,6 +50,7 @@ public final class AstralBody {
             blink = b.blink; hairSwing = b.hairAngle; hairWave = b.wavePhase; glow = b.glow; glowRing = b.ring;
             flow = b.flow; flowStrength = b.flowStrength;
             headTilt = b.headTilt; headShiftX = b.headX; headShiftY = b.headY; sway = b.sway;
+            viewYaw = b.viewYaw; viewPitch = b.viewPitch;
             drawing = b.drawingSubject != null; drawingSubject = b.drawingSubject;
             speaking = b.speaking; thinking = b.thinking; listening = b.listening; moving = b.moving;
             blinks = b.blinkCount; hairEnergy = Math.min(1f, Math.abs(b.hairAngle) / 24f + Math.abs(b.hairVelocity) / 120f);
@@ -65,6 +71,10 @@ public final class AstralBody {
     private float flow, flowStrength = .75f;
     private float headTilt, headX, headY, sway, lastBodyX = Float.NaN, bodyVelocity;
     private boolean speaking, thinking, listening, moving;
+    /** Punto de vista del relieve: actual y hacia dónde va (grados). */
+    private float viewYaw, viewPitch, targetYaw, targetPitch;
+    /** Giro máximo del relieve: más allá, una ilustración plana empieza a deformarse. */
+    public static final float MAX_VIEW_YAW = 14f, MAX_VIEW_PITCH = 9f;
     private String drawingSubject;
     private float drawingAge;
     private long drawingUntilNanos;
@@ -88,6 +98,15 @@ public final class AstralBody {
     public synchronized void flickHair(float direction) {
         float d = Float.isFinite(direction) ? Math.max(-1f, Math.min(1f, direction)) : 0f;
         pendingFlick += (d == 0 ? (random.nextBoolean() ? 1 : -1) : d) * 150f;
+    }
+
+    /**
+     * Desde dónde se la mira (grados, acotados): lo llama el sensor de giro del teléfono mientras su
+     * figura está en pantalla. El cuerpo llega ahí con suavidad en los siguientes fotogramas.
+     */
+    public synchronized void lookFrom(float yaw, float pitch) {
+        targetYaw = Float.isFinite(yaw) ? Math.max(-MAX_VIEW_YAW, Math.min(MAX_VIEW_YAW, yaw)) : 0;
+        targetPitch = Float.isFinite(pitch) ? Math.max(-MAX_VIEW_PITCH, Math.min(MAX_VIEW_PITCH, pitch)) : 0;
     }
 
     /** Enciende los circuitos un instante. */
@@ -171,6 +190,11 @@ public final class AstralBody {
         headTilt += (targetTilt - headTilt) * blend;
         headX += (targetX - headX) * blend;
         headY += (targetY - headY) * blend;
+        float turn = 1f - (float) Math.exp(-dt * 12f);
+        viewYaw += (targetYaw - viewYaw) * turn;
+        viewPitch += (targetPitch - viewPitch) * turn;
+        if (Math.abs(viewYaw) < .01f && targetYaw == 0) viewYaw = 0;
+        if (Math.abs(viewPitch) < .01f && targetPitch == 0) viewPitch = 0;
         float bodyTilt = motion == null ? 0 : motion.bodyTilt;
         sway = (float) Math.sin(time * .47) * .32f + bodyTilt * .5f;
 

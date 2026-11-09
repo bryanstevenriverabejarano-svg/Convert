@@ -195,6 +195,29 @@ final class CognitiveToolExecutor {
                 // This is a handoff, NOT evidence of successful draft or delivery.
                 return CognitiveTurn.Receipt.handoff();
             }
+            case salve.core.sensors.DeviceSenses.TOOL: {
+                // Solo lectura, pero de su teléfono: identidad verificada y pregunta real en este turno.
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Acceso privado requerido para los sensores.");
+                if (!salve.core.sensors.DeviceSenses.offered(input))
+                    throw new IllegalArgumentException("La petición actual no pregunta por los sensores.");
+                String proposed = args.has("grupo") && args.get("grupo").isJsonPrimitive()
+                        ? args.get("grupo").getAsString() : null;
+                salve.core.sensors.DeviceSenses.Group group = salve.core.sensors.DeviceSenses.resolve(input, proposed);
+                String measured = m.percibirDispositivo(group);
+                salve.core.trace.ExecutionTrace.note("SENTIDOS DEL TELÉFONO",
+                        "Ráfaga de sensores (" + group.name() + "); lecturas no guardadas.");
+                return new CognitiveTurn.Receipt("PERCEPCION_REAL (medido ahora, no guardado):\n" + measured);
+            }
+            case salve.core.cognition.DeviceControlIntent.TOOL: {
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Acceso privado requerido para los mandos del teléfono.");
+                salve.core.cognition.DeviceControlIntent.Command command =
+                        salve.core.cognition.DeviceControlIntent.verified(input, CognitiveReply.string(args, "accion"));
+                String observed = m.accionarDispositivo(command);
+                salve.core.trace.ExecutionTrace.note("MANDO DEL TELÉFONO", command.action.name() + " → " + observed);
+                return new CognitiveTurn.Receipt(observed);
+            }
             case "device.media_control": {
                 if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
                     throw new IllegalArgumentException("Acceso privado requerido para controles multimedia.");

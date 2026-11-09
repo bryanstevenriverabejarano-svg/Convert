@@ -181,6 +181,8 @@ final class RealisticSpriteRenderer {
     private final RectF eyeDestination = new RectF();
     private final android.graphics.Path ring = new android.graphics.Path();
     private float[] vertices;
+    /** Desplazamiento del relieve en la cara: ojos y boca lo siguen. */
+    private final float[] faceShift = new float[2];
     private static final android.graphics.ColorFilter CIRCUIT =
             new android.graphics.PorterDuffColorFilter(0xFFA6F4FF, android.graphics.PorterDuff.Mode.SRC_IN);
     private static final android.graphics.ColorFilter WAVE =
@@ -476,8 +478,9 @@ final class RealisticSpriteRenderer {
             int h = rig.eyeBottom - rig.eyeTop;
             eyeSource.set(0, frame * h, rig.eyeRight - rig.eyeLeft, (frame + 1) * h);
             eyeDestination.set(rig.eyeLeft, rig.eyeTop, rig.eyeRight, rig.eyeBottom);
+            rig.parallax((rig.eyeLeft + rig.eyeRight) * .5f, (rig.eyeTop + rig.eyeBottom) * .5f, body, faceShift);
             canvas.save();
-            canvas.translate(body.headShiftX, body.headShiftY);
+            canvas.translate(body.headShiftX + faceShift[0], body.headShiftY + faceShift[1]);
             canvas.rotate(body.headTilt, rig.neckX, rig.neckY);
             canvas.drawBitmap(living.eyes, eyeSource, eyeDestination, eyePaint);
             canvas.restore();
@@ -521,8 +524,9 @@ final class RealisticSpriteRenderer {
         eyeSource.set(0, frame * h, rig.mouthRight - rig.mouthLeft, (frame + 1) * h);
         eyeDestination.set(rig.mouthLeft, rig.mouthTop, rig.mouthRight, rig.mouthBottom);
         mouthPaint.setAlpha(Math.round(255 * open * open * (3 - 2 * open)));
+        rig.parallax((rig.mouthLeft + rig.mouthRight) * .5f, (rig.mouthTop + rig.mouthBottom) * .5f, body, faceShift);
         canvas.save();
-        canvas.translate(body.headShiftX, body.headShiftY);
+        canvas.translate(body.headShiftX + faceShift[0], body.headShiftY + faceShift[1]);
         canvas.rotate(body.headTilt, rig.neckX, rig.neckY);
         canvas.drawBitmap(living.mouth, eyeSource, eyeDestination, mouthPaint);
         canvas.restore();

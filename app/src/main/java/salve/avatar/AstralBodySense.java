@@ -20,7 +20,8 @@ public final class AstralBodySense {
     public static final String BODY_SCHEMA = "ESQUEMA_CORPORAL (hechos): no tengo cuerpo físico; mi cuerpo es digital: "
             + "la figura de Salve en la pantalla (cabello plateado muy largo, ojos azules, auriculares con luz azul, "
             + "traje blanco y negro con circuitos de luz cian). Mi código lo mueve: parpadeo, pelo con inercia, cabeza, "
-            + "caminar, sentarme, bailar; los circuitos se encienden al pensar y al hablar. Dibujar lo hace mi módulo de "
+            + "caminar, sentarme, bailar; los circuitos se encienden al pensar y al hablar. De frente tengo relieve 3D: "
+            + "una máscara de profundidad (cuerpo delante, pelo detrás) hace que gire un poco cuando inclinan el teléfono. Dibujar lo hace mi módulo de "
             + "trazos: cada línea es una cadena de círculos que giran (transformada de Fourier) y la punta del último la traza; "
             + "las líneas salen de mi repertorio, de fotos o dibujos que me enseñan, de imágenes de referencia que busco en "
             + "internet analizando su geometría, o de formas que compongo. No siento frío ni dolor: describo lo que mi cuerpo hace.";
@@ -52,6 +53,9 @@ public final class AstralBodySense {
                 b.append(body.hairEnergy > .45f ? "; el pelo aún ondea por mi último movimiento" : "; el pelo quieto");
                 b.append(body.speaking ? "; circuitos al ritmo de mi voz" : body.thinking ? "; circuitos en ondas mientras pienso"
                         : "; circuitos en calma");
+                if (Math.abs(body.viewYaw) > 4f)
+                    b.append("; Bryan inclina el teléfono y mi relieve gira: me ve algo desde ")
+                            .append(body.viewYaw > 0 ? "su izquierda" : "su derecha");
                 if (body.lastBlinkMillis >= 0) {
                     long ago = Math.max(0, nowUptimeMillis - body.lastBlinkMillis) / 1000;
                     b.append("; parpadeé hace ").append(ago <= 1 ? "un instante" : ago + " s");

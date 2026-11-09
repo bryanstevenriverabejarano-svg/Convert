@@ -4,7 +4,7 @@
 Salidas (todas derivadas del PNG aprobado, que no se modifica):
   astral_eyes.png  - parpados entrecerrado / cerrado para el recuadro de los ojos
   astral_glow.png  - mascara de los circuitos cian (media resolucion) para el pulso de luz
-  astral.json      - recuadro de ojos, pivotes, inicio del pelo y pesos de malla (pelo y cabeza)
+  astral.json      - recuadro de ojos, pivotes, inicio del pelo y pesos de malla (pelo, cabeza y relieve)
 
 Cuerpos (avatar/<cuerpo>/):
   realistic           - Salve actual: pecho cubierto y cabeza recta (27-10-2026)
@@ -14,6 +14,8 @@ Cuerpos (avatar/<cuerpo>/):
   realistic_v1  - Salve v1 (referencia aprobada el 12-10-2026), conservada en Vestuario
 
 Uso: python3 scripts/build_astral_body.py [realistic|realistic_v1]   (requiere numpy y opencv-python)
+     python3 scripts/build_astral_body.py <cuerpo> --solo-relieve   (solo añade el relieve 3D a astral.json;
+                                                                     no toca los PNG ni el resto del rig)
 """
 import json, math, os, sys
 import numpy as np
@@ -278,9 +280,53 @@ def mesh_weights(w, h):
     head = 1 - smoothstep(*BODY["head"], Y)
     return np.round(hair, 3), np.round(head, 3)
 
+# Relieve 3D: profundidad máxima (px de base.png) que cabe en un peso 0..1 (0,5 = plano de la ilustración).
+DEPTH_RANGE = 160.0
+# El pelo y las colas del traje quedan por detrás del cuerpo a esta distancia (px).
+HAIR_BACK = 62.0
+
+def depth_field(px, py):
+    """Profundidad (px, + hacia quien mira) en cada punto: máscara del cuerpo inflada como relieve.
+
+    Las mismas cápsulas que separan cuerpo y pelo sirven de máscara: dentro, cada una es un volumen
+    redondeado (un cilindro algo aplanado: la figura es una ilustración, no un maniquí); fuera, el pelo
+    cae hacia atrás con una transición suave para que la malla no se rasgue en el contorno.
+    """
+    px = np.asarray(px, dtype=np.float64); py = np.asarray(py, dtype=np.float64)
+    body = np.zeros(px.shape)
+    for (ax, ay), (bx, by), r in BODY["capsules"]:
+        dx, dy = bx - ax, by - ay
+        t = np.clip(((px - ax) * dx + (py - ay) * dy) / max(1e-9, dx * dx + dy * dy), 0, 1)
+        d = np.hypot(px - (ax + t * dx), py - (ay + t * dy)) / r
+        body = np.maximum(body, 0.62 * r * np.sqrt(np.clip(1 - d * d, 0, 1)))
+    back = -HAIR_BACK * smoothstep(0, 56, capsule_distance(px, py))
+    return np.where(body > 0, body, back)
+
+def depth_weights(w, h):
+    cols, rows = BODY["mesh"]
+    X, Y = np.meshgrid(np.linspace(0, w, cols + 1), np.linspace(0, h, rows + 1))
+    z = depth_field(X, Y)
+    # Un vértice representa su celda: se promedia con sus vecinos para no dejar escalones.
+    z = cv2.GaussianBlur(z, (0, 0), 0.8, borderType=cv2.BORDER_REPLICATE)
+    return np.round(np.clip(z / DEPTH_RANGE * 0.5 + 0.5, 0, 1), 3)
+
+def add_depth(name, assets, w, h):
+    """Añade (o renueva) el relieve en un astral.json ya generado, sin tocar nada más."""
+    path = os.path.join(assets, "astral.json")
+    with open(path) as f:
+        spec = json.load(f)
+    cols, rows = BODY["mesh"]
+    if spec["size"] != [w, h] or spec["mesh"]["cols"] != cols or spec["mesh"]["rows"] != rows:
+        sys.exit("astral.json no corresponde a este cuerpo: " + name)
+    spec["mesh"]["depth"] = depth_weights(w, h).flatten().tolist()
+    spec["mesh"]["depthRange"] = DEPTH_RANGE
+    with open(path, "w") as f:
+        json.dump(spec, f, separators=(",", ":"))
+    print("relieve", name, "vertices:", (cols + 1) * (rows + 1))
+
 def main():
     global BODY
-    name = sys.argv[1] if len(sys.argv) > 1 else "realistic"
+    name = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else "realistic"
     if name not in BODIES:
         sys.exit("cuerpo desconocido: " + name)
     BODY = BODIES[name]
@@ -289,6 +335,9 @@ def main():
     if base is None or base.shape[2] != 4:
         sys.exit("base.png ausente o sin alfa")
     h, w = base.shape[:2]
+    if "--solo-relieve" in sys.argv:
+        add_depth(name, assets, w, h)
+        return
     cv2.imwrite(os.path.join(assets, "astral_eyes.png"), eye_frames(base))
     glow, _ = glow_mask(base)
     cv2.imwrite(os.path.join(assets, "astral_glow.png"), glow)
@@ -309,7 +358,8 @@ def main():
         **({"mouthBox": list(BODY["mouth_box"]), "mouthFrames": ["a", "o"]} if BODY.get("mouths") else {}),
         **({"mouthBox": list(BODY["mouth_box"]), "mouthFrames": ["h1", "h2", "h3"]} if BODY.get("synth_mouths") else {}),
         "mesh": {"cols": cols, "rows": rows,
-                 "hair": hair.flatten().tolist(), "head": head.flatten().tolist()},
+                 "hair": hair.flatten().tolist(), "head": head.flatten().tolist(),
+                 "depth": depth_weights(w, h).flatten().tolist(), "depthRange": DEPTH_RANGE},
     }
     with open(os.path.join(assets, "astral.json"), "w") as f:
         json.dump(spec, f, separators=(",", ":"))

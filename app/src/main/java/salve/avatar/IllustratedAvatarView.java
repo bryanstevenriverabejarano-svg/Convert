@@ -26,6 +26,8 @@ class IllustratedAvatarView extends View {
     private boolean immersive;
     private boolean overlay, animationEnabled = true, attached;
     private boolean rotating;
+    /** ¿Tiene esta vista encendido el sensor de giro para el relieve 3D? */
+    private boolean tilting;
     private final int touchSlop;
     private Runnable frameListener;
     private float phase;
@@ -83,20 +85,28 @@ class IllustratedAvatarView extends View {
         updateDescription();
     }
     public void setImmersiveMode(boolean value) { immersive = value; updateDescription(); invalidate(); }
-    public void setOverlayMode(boolean value) { overlay = value; invalidate(); }
+    public void setOverlayMode(boolean value) { overlay = value; restartFrames(); invalidate(); }
     public void setFrameListener(Runnable listener) { frameListener = listener; }
     public void setAnimationEnabled(boolean value) { animationEnabled = value; restartFrames(); }
     private void restartFrames() {
         if (frame == null) return;
         removeCallbacks(frame);
-        if (attached && animationEnabled && isShown() && getWindowVisibility() == VISIBLE) post(frame);
+        boolean running = attached && animationEnabled && isShown() && getWindowVisibility() == VISIBLE;
+        if (running) post(frame);
+        // Relieve 3D: el giroscopio solo está encendido mientras su figura se ve (y no en la burbuja flotante).
+        boolean tilt = running && !overlay;
+        if (tilt != tilting) {
+            tilting = tilt;
+            if (tilt) AvatarTiltSensor.acquire(getContext()); else AvatarTiltSensor.release();
+        }
     }
     @Override protected void onAttachedToWindow() {
         super.onAttachedToWindow(); attached = true; store.addListener(changed); motion.addListener(changed);
         wardrobe.addListener(changed);portrait.addListener(changed);poses.attach();realistic.addListener(changed);restartFrames();
     }
     @Override protected void onDetachedFromWindow() {
-        attached = false; removeCallbacks(frame); store.removeListener(changed); motion.removeListener(changed);
+        attached = false; removeCallbacks(frame); store.removeListener(changed);
+        if (tilting) { tilting = false; AvatarTiltSensor.release(); } motion.removeListener(changed);
         wardrobe.removeListener(changed);portrait.removeListener(changed);poses.detach();realistic.removeListener(changed);store.save();
         super.onDetachedFromWindow();
     }
