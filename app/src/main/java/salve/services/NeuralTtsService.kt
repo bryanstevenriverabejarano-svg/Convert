@@ -8,6 +8,7 @@ import android.speech.tts.TextToSpeechService
 import android.speech.tts.Voice
 import android.util.Log
 import salve.core.voice.NeuralVoice
+import salve.core.voice.SpeechSentences
 import java.util.Locale
 
 /**
@@ -60,30 +61,30 @@ class NeuralTtsService : TextToSpeechService() {
         if (text.isBlank()) { callback.done(); return }
         // Android da la velocidad en % (100 = normal); Piper la entiende como factor.
         val speed = (request.speechRate / 100f).coerceIn(0.6f, 1.6f)
-        // Este bloque lo llama el motor nativo por cada trozo de audio. Ningún error puede salir de
-        // aquí: el motor no lo comprueba, sigue con el siguiente trozo y Android cierra la app entera
-        // («JNI NewFloatArray called with pending exception»). Se para la voz y se apunta el motivo.
+        // Salve parte el texto en frases y pide al motor una cada vez: el motor solo devuelve audio y
+        // nunca ejecuta código de Salve a mitad de generar. Antes el motor llamaba a Salve por cada
+        // trozo y, si algo fallaba ahí, Android cerraba la app entera («JNI NewFloatArray called
+        // with pending exception»). Entre frase y frase se comprueba si hay que parar.
         var failure: Throwable? = null
         try {
-            engine.generateWithCallback(text, sid = NeuralVoice.FEMALE_SPEAKER, speed = speed) { samples ->
-                try {
-                    if (stopped) return@generateWithCallback 0
-                    val pcm = NeuralVoice.toPcm16(samples)
-                    var offset = 0
-                    while (offset < pcm.size && !stopped) {
-                        val size = minOf(callback.maxBufferSize, pcm.size - offset)
-                        if (callback.audioAvailable(pcm, offset, size) != TextToSpeech.SUCCESS) { stopped = true; break }
-                        offset += size
-                    }
-                    if (stopped) 0 else 1
-                } catch (e: Throwable) {
-                    failure = e
-                    stopped = true
-                    0
+            var frames = 0
+            for (piece in SpeechSentences.split(text)) {
+                if (stopped) break
+                val audio = NeuralVoice.synthesize(this, piece.text, speed)
+                if (stopped) break
+                // Qué frase suena ahora: el avatar mueve la boca con ella.
+                callback.rangeStart(frames, piece.start, piece.end)
+                val pcm = NeuralVoice.toPcm16(audio)
+                var offset = 0
+                while (offset < pcm.size && !stopped) {
+                    val size = minOf(callback.maxBufferSize, pcm.size - offset)
+                    if (callback.audioAvailable(pcm, offset, size) != TextToSpeech.SUCCESS) { stopped = true; break }
+                    offset += size
                 }
+                frames += audio.size
             }
         } catch (e: Exception) {
-            failure = failure ?: e
+            failure = e
         }
         val error = failure
         if (error == null) {
