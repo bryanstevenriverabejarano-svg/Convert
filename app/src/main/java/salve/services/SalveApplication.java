@@ -21,11 +21,14 @@ public class SalveApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // Lo primero: si algo la tumba, que quede escrito por qué.
+        CrashReport.install(this);
         CloudLogger.initialize(this);
         ttsManager = new TTSManager(this);
         // Sólo escucha el estado de proyección mientras el proceso vive; nunca enciende el micrófono.
         salve.core.driving.DrivingModeManager.get(this).start();
         salve.core.tasks.ResearchTaskRuntime.CONTROLS.execute(() -> {
+            CrashReport.recordPrevious(this);
             try {
                 salve.core.tasks.ResearchTaskRuntime.get(this).recover();
                 salve.core.agent.AgentRuntime.get(this).recover();
