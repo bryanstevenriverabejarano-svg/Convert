@@ -96,8 +96,17 @@ public final class CrashReport {
             StringBuilder text = new StringBuilder(reason).append('\n')
                     .append(ExecutionJournal.date(exit.getTimestamp()))
                     .append(" · proceso ").append(exit.getProcessName())
-                    .append(" · memoria usada ").append(exit.getPss() / 1024).append(" MB");
-            if (exit.getDescription() != null) text.append("\nAndroid: ").append(exit.getDescription());
+                    .append(" · memoria usada ").append(exit.getPss() / 1024).append(" MB")
+                    .append(" (residente ").append(exit.getRss() / 1024).append(" MB)");
+            String described = exit.getDescription();
+            if (described != null && !described.trim().isEmpty()) text.append("\nAndroid: ").append(described.trim());
+            if (exit.getReason() == ApplicationExitInfo.REASON_SIGNALED
+                    || exit.getReason() == ApplicationExitInfo.REASON_LOW_MEMORY) {
+                ActivityManager.MemoryInfo memory = new ActivityManager.MemoryInfo();
+                manager.getMemoryInfo(memory);
+                text.append('\n').append(signalDetail(exit.getStatus(), exit.getImportance(), exit.getPss() / 1024,
+                        memory.totalMem / (1024 * 1024), ActivityManager.isLowMemoryKillReportSupported()));
+            }
             if (exit.getReason() == ApplicationExitInfo.REASON_CRASH_NATIVE
                     || exit.getReason() == ApplicationExitInfo.REASON_ANR) {
                 try (InputStream trace = exit.getTraceInputStream()) {
@@ -123,6 +132,32 @@ public final class CrashReport {
             case ApplicationExitInfo.REASON_SIGNALED: return "CERRADA POR SEÑAL DEL SISTEMA";
             default: return null; // salida normal, cerrada por el usuario o actualización
         }
+    }
+
+    /**
+     * Qué dice de verdad un cierre por señal: el número de la señal, si Salve estaba a la vista y cuánta
+     * memoria ocupaba frente a la del teléfono. Lo que es deducción se marca como probable.
+     * {@code importance}: 100 = en pantalla, 125 = servicio en primer plano; más alto = en segundo plano.
+     */
+    static String signalDetail(int signal, int importance, long usedMb, long totalMb, boolean lowMemoryReported) {
+        String name = signal == 9 ? "SIGKILL: la mató el sistema, no falló su código"
+                : signal == 6 ? "SIGABRT: una librería nativa abortó"
+                : signal == 11 ? "SIGSEGV: acceso inválido a memoria en código nativo"
+                : signal == 15 ? "SIGTERM: se le pidió terminar" : "señal poco habitual";
+        String where = importance <= 100 ? "estaba en pantalla" : importance <= 125 ? "tenía un servicio en primer plano"
+                : "estaba en segundo plano";
+        StringBuilder out = new StringBuilder("Señal ").append(signal).append(" (").append(name).append("); Salve ")
+                .append(where).append(". Ocupaba ").append(usedMb).append(" MB de ").append(totalMb).append(" MB del teléfono");
+        if (totalMb > 0) out.append(" (").append(Math.round(usedMb * 100f / totalMb)).append(" %)");
+        out.append('.');
+        if (signal == 9) {
+            if (totalMb > 0 && usedMb * 4 >= totalMb) out.append(" Probable: Android la cerró para recuperar memoria"
+                    + (lowMemoryReported ? ", aunque este teléfono suele avisarlo como «falta de memoria»; también puede haber sido "
+                    + "el cuidado del dispositivo de Samsung." : " (este teléfono no distingue ese caso en su informe)."));
+            else out.append(" Con tan poca memoria en uso no parece falta de memoria: pudo ser el ahorro de batería o el "
+                    + "cuidado del dispositivo.");
+        }
+        return out.toString();
     }
 
     private static String read(File file) {
