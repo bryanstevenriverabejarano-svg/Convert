@@ -1480,6 +1480,9 @@ public class MotorConversacional {
         boolean creativeTurn = activePhoto == null && !evidenceRequested
                 && (storyTurn || salve.core.conversation.CreativeRequest.isCreative(entrada, recentAssistantReplies(2)));
         int creativeParts = storyTurn ? 1 : salve.core.conversation.CreativeRequest.parts(entrada);
+        // La sesión de conversación termina en el finally del worker. Esta traza paralela
+        // conserva sólo latencias y backend; no sustituye los registros de dibujo/investigación.
+        salve.core.trace.ExecutionTrace.beginConversationMetrics(context);
         LiveWriting live = creativeTurn ? new LiveWriting(creativeParts, storyTurn ? entrada : null) : null;
         ModelResult creativeResult = creativeTurn ? generarTextoCreativo(entrada, storyTurn ? story : null, creativeParts, live) : null;
         boolean creativeOk = creativeUsable(creativeResult);
