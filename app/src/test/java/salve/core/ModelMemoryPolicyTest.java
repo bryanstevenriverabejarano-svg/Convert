@@ -97,4 +97,17 @@ public class ModelMemoryPolicyTest {
         assertEquals(ModelMemoryPolicy.required(LocalModelPolicy.FALLBACK, false, 0, 4096),
                 ModelMemoryPolicy.required(LocalModelPolicy.FALLBACK, false, 0, 2048));
     }
+
+    @Test public void eyesAndEarsAreReleasedBeforeAndroidStartsKilling() {
+        long gib = 1024 * ModelMemoryPolicy.MIB;
+        // Con holgura no se toca nada.
+        assertFalse(ModelMemoryPolicy.shouldReleaseVision(ram(4 * gib, false)));
+        // Cerca de la presión (reserva de 768 MiB + 1 GiB de margen) sí, antes de llegar a ella.
+        assertTrue(ModelMemoryPolicy.shouldReleaseVision(ram(gib + 512 * ModelMemoryPolicy.MIB, false)));
+        assertFalse("todavía no hay presión", ModelMemoryPolicy.underPressure(ram(gib + 512 * ModelMemoryPolicy.MIB, false)));
+        // Si Android avisa de memoria baja, siempre.
+        assertTrue(ModelMemoryPolicy.shouldReleaseVision(ram(6 * gib, true)));
+        // Sin medición fiable no se suelta a ciegas.
+        assertFalse(ModelMemoryPolicy.shouldReleaseVision(new ModelMemoryPolicy.Snapshot(0, 0, 0, true)));
+    }
 }

@@ -181,6 +181,17 @@ public final class GgufLlm {
         visionPath = mmprojPath;
     }
     public static synchronized boolean hasVision() { return vision != 0; }
+    /**
+     * Suelta los ojos y oídos (≈1 GB) y el contexto que los usaba; el modelo de texto sigue cargado.
+     * Espera a que termine la respuesta en curso. La próxima foto o audio los vuelve a cargar.
+     * @return true si había algo que soltar
+     */
+    public static synchronized boolean releaseVisionForMemory() {
+        if (model == 0 || vision == 0) return false;
+        releaseCache();
+        releaseVisionIfLoaded();
+        return true;
+    }
     private static void releaseVisionIfLoaded() {
         if (vision != 0) releaseVision(vision);
         vision = 0;
