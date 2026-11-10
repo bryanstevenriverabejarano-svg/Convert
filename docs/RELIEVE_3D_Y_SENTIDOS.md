@@ -60,6 +60,26 @@ frase, no del modelo. El recibo trae el estado real después (p. ej. volumen ant
 
 Lo que envía, llama, compra, borra o toca la pantalla sigue por sus rutas con revisión; esto no las cambia.
 
+## 4. Ajustes del sistema: `device.setting` (Shizuku, sin root) — 10 de noviembre de 2026
+
+Wifi, Bluetooth, datos móviles, modo avión, no molestar, brillo (porcentaje, máximo, mínimo) y brillo
+automático. Una app normal no puede cambiarlos; con [Shizuku](https://shizuku.rikka.app/) Salve los acciona
+con identidad de shell (la de ADB), sin desbloquear el bootloader ni tocar Knox.
+
+- **Lista cerrada.** `SystemSetting` reconoce el ajuste en la frase de Bryan y lo traduce a órdenes fijas
+  (`svc wifi enable`, `settings put system screen_brightness N`…). El modelo decide usarlo; no puede
+  invertirlo ni cambiar de ajuste, y nadie envía texto de shell.
+- **Proceso privilegiado mínimo.** `ShizukuSettingsService` solo acepta «ajuste nº N, valor V» y vuelve a
+  consultar la tabla en su propio proceso; después lee el estado con `settings get` y eso es el recibo
+  (`AJUSTE_REAL`).
+- **Sin Shizuku no finge.** Si no está instalada, no está en marcha o falta el permiso, lo dice y no cambia
+  nada; la primera vez pide el permiso en Shizuku.
+- **Puesta en marcha (una vez):** instalar Shizuku, activar *Opciones de desarrollador → Depuración
+  inalámbrica*, emparejar y pulsar *Iniciar* en Shizuku. Sin root hay que volver a iniciarla tras cada
+  reinicio del teléfono. Luego, la primera orden («activa el wifi») mostrará el diálogo de permiso.
+- Pendiente en el S24 Ultra: todo el camino real (enlace con Shizuku, cada orden y su lectura). One UI
+  puede tratar algún ajuste de forma distinta; el recibo dirá lo que el sistema informe.
+
 ## Validación
 
 - JVM: `AstralBodyTest` (relieve en los cinco cuerpos, giro acotado, malla sin pliegues, retorno al frente,

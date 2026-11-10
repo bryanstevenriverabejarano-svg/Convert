@@ -25,6 +25,7 @@ TurnObjective y ReasoningPlanner entienden el objetivo; CognitiveToolCatalog aut
 | Llamadas | device.call / DeviceControlActivity | Esta PR: revisión antes de llamar |
 | Sentidos del teléfono | device.sense / DeviceSenses / SistemaSensorial.percibir | 2026-11-09: ráfaga de solo lectura de todos los sensores y del estado del dispositivo; ver [relieve 3D y sentidos](RELIEVE_3D_Y_SENTIDOS.md) |
 | Mandos físicos | device.control / DeviceControlIntent / SistemaSensorial.accionar | 2026-11-09: linterna, volumen y vibración; la acción y el valor salen de la frase del usuario |
+| Ajustes del sistema | device.setting / SystemSetting / ShizukuBridge | 2026-11-10: wifi, Bluetooth, datos, modo avión, no molestar y brillo mediante Shizuku; lista cerrada de órdenes fijas |
 | Funciones propias de Salve | self.command / SelfCommandIntent / MotorConversacional.runSelfCommand | PR siguiente: memoria, núcleos, modelo, descarga, PR propios, propuestas de mejora, modo oídos, voz, escuchar, mapa de la mente, registro/biblioteca, cuerpo astral, palabra de activación, asistente predeterminado, ajedrez |
 
 ## Funciones propias bajo el LLM (self.command)

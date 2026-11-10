@@ -56,6 +56,8 @@ public final class CapabilityPlanner {
         if (SelfCommandIntent.offered(input)) prefer(available, first, SelfCommandIntent.TOOL);
         // Every device target is selected by the model from already-authorized
         // adapters. Lexical checks only prioritize candidates; they do not act.
+        if (salve.core.devicecontrol.SystemSetting.offered(input))
+            prefer(available, first, salve.core.devicecontrol.SystemSetting.TOOL);
         if (DeviceControlIntent.offered(input)) prefer(available, first, DeviceControlIntent.TOOL);
         if (salve.core.sensors.DeviceSenses.offered(input)) prefer(available, first, salve.core.sensors.DeviceSenses.TOOL);
         if (MediaActionIntent.offered(input))

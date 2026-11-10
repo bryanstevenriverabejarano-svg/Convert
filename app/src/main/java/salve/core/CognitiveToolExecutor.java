@@ -209,6 +209,16 @@ final class CognitiveToolExecutor {
                         "Ráfaga de sensores (" + group.name() + "); lecturas no guardadas.");
                 return new CognitiveTurn.Receipt("PERCEPCION_REAL (medido ahora, no guardado):\n" + measured);
             }
+            case salve.core.devicecontrol.SystemSetting.TOOL: {
+                if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
+                    throw new IllegalArgumentException("Acceso privado requerido para los ajustes del sistema.");
+                salve.core.devicecontrol.SystemSetting.Command setting =
+                        salve.core.devicecontrol.SystemSetting.verified(input, CognitiveReply.string(args, "accion"));
+                String state = m.closed ? "AJUSTE_RECHAZADO: la conversación se cerró."
+                        : salve.devices.ShizukuBridge.apply(m.context, setting);
+                salve.core.trace.ExecutionTrace.note("AJUSTE DEL SISTEMA", setting.action.name() + " → " + state);
+                return new CognitiveTurn.Receipt(state);
+            }
             case salve.core.cognition.DeviceControlIntent.TOOL: {
                 if (!salve.core.identity.IdentityManager.get(m.context).privateAccess())
                     throw new IllegalArgumentException("Acceso privado requerido para los mandos del teléfono.");
