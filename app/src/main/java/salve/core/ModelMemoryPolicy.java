@@ -191,6 +191,16 @@ public final class ModelMemoryPolicy {
     public static boolean underPressure(Snapshot ram) {
         return !ram.known() || ram.low || ram.available < Math.max(RESERVE, ram.threshold);
     }
+    /** Margen por encima de la presión a partir del cual ya conviene soltar lo que no se está usando. */
+    static final long TIGHT_MARGIN = 1024 * MIB;
+    /**
+     * ¿Conviene soltar los ojos y oídos del modelo (≈1 GB) antes de una respuesta de solo texto?
+     * Sí cuando la memoria libre se acerca al punto en que Android empieza a cerrar apps. Se vuelven a
+     * cargar solos con la próxima foto o audio. Sin medición fiable no se suelta nada.
+     */
+    public static boolean shouldReleaseVision(Snapshot ram) {
+        return ram.known() && (ram.low || ram.available < Math.max(RESERVE, ram.threshold) + TIGHT_MARGIN);
+    }
     public static class PressureException extends IllegalStateException {
         public PressureException(String message) { super(message); }
     }

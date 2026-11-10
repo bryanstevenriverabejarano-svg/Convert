@@ -467,6 +467,12 @@ public class SalveLLM {
             String identity = role == Role.SALVENTE ? ModelRuntimeInfo.neutralContext(modelPath) : ModelRuntimeInfo.context(modelPath);
             String text;
             if (isGguf) {
+                // Respuesta de solo texto con la memoria justa: los ojos y oídos (≈1 GB) no hacen falta
+                // ahora y son lo primero que se puede soltar antes de que Android cierre la app.
+                if (GgufLlm.hasVision() && ModelMemoryPolicy.shouldReleaseVision(DeviceModelMemory.read(appContext))
+                        && GgufLlm.releaseVisionForMemory())
+                    salve.core.trace.ExecutionTrace.note("MEMORIA JUSTA", "Solté mis ojos y oídos (≈1 GB) para responder; "
+                            + "se vuelven a cargar con la próxima foto o audio. " + DeviceModelMemory.describe(DeviceModelMemory.read(appContext)));
                 ggufContextTokens = Math.min(ggufContextTokens, DeviceModelMemory.contextFor(appContext, modelPath, true));
                 decorated = salve.core.cognition.CognitivePrompt.withEngine(decorated,
                         ModelRuntimeInfo.name(modelPath), true, ggufContextTokens);
