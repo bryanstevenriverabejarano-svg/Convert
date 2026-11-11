@@ -46,7 +46,21 @@ public final class CognitiveTurn {
     }
     private CognitiveTurn() { }
     public static Outcome run(Model model, Map<String, Tool> available, BooleanSupplier cancelled) {
+        return run(model, available, cancelled, null);
+    }
+
+    /**
+     * Cross-mode action contract. In a turn with one explicit authorized goal,
+     * merely replying "I did it" cannot count as execution. One semantic retry
+     * is allowed; no tool may be invented or repeated to satisfy this contract.
+     */
+    public static Outcome run(Model model, Map<String, Tool> available, BooleanSupplier cancelled,
+                              String requiredTool) {
         Map<String, Tool> tools = new LinkedHashMap<>(available);
+        if (requiredTool != null && !tools.containsKey(requiredTool))
+            requiredTool = null; // never expand the controller's allowlist
+        final String mustRun = requiredTool;
+        boolean requiredSucceeded = false;
         JsonArray receipts = new JsonArray();
         Set<String> used = new HashSet<>(); // side-effecting tools never repeat in a turn
         Set<String> webQueries = new HashSet<>(); // only changed public searches may repeat
@@ -76,8 +90,22 @@ public final class CognitiveTurn {
                 repaired = true; repair = true; continue;
             }
             repair = false;
-            if (reply.name == null) return new Outcome(ModelResult.success(reply.message, last.getLatencyMillis())
-                    .withProvider(last.getProvider()), false, receipts);
+            if (reply.name == null) {
+                if (mustRun != null && !requiredSucceeded) {
+                    // The small local model may choose normal prose for an action.
+                    // Retry once with TASK_STATE.required_action, then fail honestly.
+                    if (!repaired && call < MAX_INFERENCES - 1) {
+                        repaired = true;
+                        repair = true;
+                        continue;
+                    }
+                    return stopped(ModelResult.Status.ERROR,
+                            "Entendí la petición, pero no he ejecutado la herramienta necesaria. "
+                            + "Consulta Registro de ejecución o revisa los permisos", receipts);
+                }
+                return new Outcome(ModelResult.success(reply.message, last.getLatencyMillis())
+                        .withProvider(last.getProvider()), false, receipts);
+            }
             if (System.nanoTime() >= deadline) return stopped(ModelResult.Status.TIMEOUT, "Me quedé sin tiempo antes de hacerlo, así que no lo hice", receipts);
             Tool tool = tools.get(reply.name);
             if (tool == null) return stopped(ModelResult.Status.ERROR, "Intenté hacer algo que ahora no tengo disponible, así que no lo hice", receipts);
@@ -117,6 +145,7 @@ public final class CognitiveTurn {
             try {
                 Receipt result = tool.operation.execute(reply.arguments.deepCopy());
                 if (result.handoff) {
+                    if (reply.name.equals(mustRun)) requiredSucceeded = true;
                     receipt.addProperty("status", "handoff");
                     receipt.addProperty("data", "Pendiente de aprobación o resultado externo.");
                     receipts.add(receipt);
@@ -124,10 +153,16 @@ public final class CognitiveTurn {
                 }
                 receipt.addProperty("status", "completed");
                 receipt.addProperty("data", result.data);
+                if (reply.name.equals(mustRun)) requiredSucceeded = true;
             } catch (RuntimeException failure) {
                 // No exception text or model-generated arguments become higher-priority instructions.
                 receipt.addProperty("status", "failed");
                 receipt.addProperty("data", "El controlador rechazó los argumentos o la operación falló. No hay éxito confirmado.");
+                if (reply.name.equals(mustRun)) {
+                    receipts.add(receipt);
+                    return stopped(ModelResult.Status.ERROR,
+                            "El controlador rechazó la operación solicitada. No la he realizado", receipts);
+                }
                 if ("whatsapp.draft".equals(reply.name)) {
                     // No second LLM response may reinterpret a rejected message draft
                     // as delivered or prepared. The controller owns this statement.
