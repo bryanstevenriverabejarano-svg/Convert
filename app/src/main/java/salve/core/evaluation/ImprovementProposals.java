@@ -25,8 +25,26 @@ public final class ImprovementProposals {
                 .replaceAll("\\p{M}+", "").replaceAll("[¿?¡!.,;:]+", " ").replaceAll("\\s+", " ").trim().replaceFirst("^salve ", "");
         return t.matches("(?:auto ?)?programate|evoluciona(?: y crea| tu codigo)?|mejorate|automejorate|auto ?mejora|"
                 + "(?:dame |hazme |tus |escribe )?(?:las |unas )?propuestas de mejora|que (?:deberias|debes|tienes que) mejorar|"
-                + "escribe un nuevo modulo|como puedo mejorarte|que te falla");
+                + "escribe un nuevo modulo|como puedo mejorarte|que te falla")
+                || ASKS_HER.matcher(t).find();
     }
+
+    /**
+     * La misma pregunta dicha con naturalidad: «¿hay alguna mejora que efectuarías en ti misma?»,
+     * «¿qué mejorarías de ti?», «¿qué cambiarías de ti?», «¿en qué puedes mejorar?». Sin esto el modelo
+     * contestaba de memoria, con frases bonitas y sin sus datos (examen, correcciones de Bryan).
+     * Exige que la mejora sea de ella («ti», «te», «tu código»…): «¿qué mejorarías de mi currículum?» no entra.
+     */
+    private static final java.util.regex.Pattern ASKS_HER = java.util.regex.Pattern.compile(
+            "^(?:oye |dime |y |a ver |cuentame )?(?:"
+            + "(?:hay |tienes |ves |se te ocurre )?(?:alguna|algunas|que) (?:mejora|mejoras|cosa|cosas) (?:que )?"
+            + "(?:te )?(?:harias|efectuarias|aplicarias|realizarias|cambiarias|mejorarias|pondrias)"
+            + "(?: (?:en|de|a|sobre) (?:ti|ti misma|tu codigo|tu programacion|tu estructura))?"
+            + "|que (?:mejorarias|cambiarias|arreglarias|modificarias) (?:de|en) (?:ti|ti misma|tu codigo|tu programacion|tu estructura)"
+            + "|que te (?:mejorarias|cambiarias|arreglarias|gustaria mejorar|gustaria cambiar)(?: (?:de|en) ti(?: misma)?)?"
+            + "|en que (?:puedes|podrias|crees que puedes|deberias|necesitas) mejorar"
+            + "|como (?:te )?(?:mejorarias|podrias mejorar)(?: a ti misma)?"
+            + ")$");
 
     private static final Map<String, String[]> PROBLEMS = new LinkedHashMap<>();
     static {
@@ -128,8 +146,8 @@ public final class ImprovementProposals {
                         .append(shorten(l.expected, 120)).append(l.times > 1 ? " (" + l.times + " veces)" : "");
             }
         }
-        out.append("\n\nPuedo escribir yo misma un parche: dime «abre un PR». GitHub lo probará y solo tú decides si se fusiona. "
-                + "Luego repite el examen para comprobarlo.");
+        out.append("\n\nPuedo escribir yo misma un parche: dime «abre un PR» (para el fallo que más se repite) o «abre un PR para que…» "
+                + "con el cambio que quieras. GitHub lo prueba y solo se fusiona si todo sale en verde. Luego repite el examen para comprobarlo.");
         return out.toString();
     }
 
