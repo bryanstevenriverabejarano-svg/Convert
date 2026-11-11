@@ -878,7 +878,8 @@ public class MotorConversacional {
         if (!modelFirstSelf && salve.core.voice.EarMode.parse(entrada) != null) {
             hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.EAR_MODE, entrada)); return;
         }
-        if (!modelFirstSelf && salve.core.voice.VoiceEngineCommand.parse(entrada) != null) {
+        // Explicit voice-engine settings are deterministic device controls; do not depend on LLM tool selection.
+        if (salve.core.voice.VoiceEngineCommand.parse(entrada) != null) {
             hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.VOICE_ENGINE, entrada)); return;
         }
         if (!modelFirstSelf && salve.core.voice.ListenCommand.parse(entrada) != null) {
