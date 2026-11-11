@@ -298,12 +298,9 @@ final class CognitiveToolExecutor {
                     }
                     try {
                         boolean driving = salve.core.driving.DrivingModeManager.get(m.context).isActive();
-                        if (driving && (kind == salve.core.cognition.DeviceActionIntent.Kind.OPEN_APP
-                                || kind == salve.core.cognition.DeviceActionIntent.Kind.CALL)) {
-                            m.hablar("Mientras conduces no abriré un panel ajeno ni el formulario de llamadas. "
-                                    + "Cuando estés parado puedo prepararlo.");
-                            return;
-                        }
+                        // Voice, car and typed mode use the same app/screen launcher.
+                        // Android itself may reject an activity, but Salve does not
+                        // refuse the user's requested screen because of mode coche.
                         boolean opened;
                         switch (kind) {
                             case OPEN_APP: {
@@ -328,20 +325,14 @@ final class CognitiveToolExecutor {
                                         : salve.devices.PhoneActions.playMusic(m.context, target);
                                 m.hablar(opened ? "Solicité reproducir «" + target
                                         + "». Todavía no tengo confirmación de que esté sonando."
-                                        : driving ? "El reproductor no aceptó «" + target
-                                                + "». No abriré resultados en pantalla mientras conduces."
-                                        : "No pude iniciar la reproducción de «" + target + "».");
+                                        : "No pude iniciar la reproducción de «" + target
+                                                + "». No tengo confirmación de reproducción.");
                                 break;
                             case SEARCH_MUSIC: {
-                                // During driving, only talk to an existing media
-                                // session. Never launch a visual Spotify search.
-                                opened = driving ? salve.devices.MusicController.playFromSearch(m.context, target, null)
-                                        : salve.devices.PhoneActions.searchMusic(m.context, target);
-                                m.hablar(!opened ? "No pude solicitar esa música."
-                                        : driving ? "Mientras conduces he solicitado reproducir «" + target
-                                                + "», sin abrir resultados. Aún no he verificado que suene."
-                                        : "Solicité abrir la búsqueda de «" + target
-                                                + "» en Spotify. No he confirmado reproducción.");
+                                opened = salve.devices.PhoneActions.searchMusic(m.context, target);
+                                m.hablar(opened ? "Solicité abrir la búsqueda de «" + target
+                                        + "» en Spotify. No he confirmado reproducción."
+                                        : "No pude abrir la búsqueda de música.");
                                 break;
                             }
                             case CALL:
