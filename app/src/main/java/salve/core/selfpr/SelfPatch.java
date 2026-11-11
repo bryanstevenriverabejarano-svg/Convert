@@ -77,6 +77,12 @@ public final class SelfPatch {
      * El modelo del móvil tiene un contexto pequeño: se le enseña la ventana de líneas completas,
      * de como mucho {@code maxChars}, que más palabras relacionadas contiene.
      */
+    /**
+     * Ventana de código cuando el parche lo escribe un nodo propio: unas 12.000 letras (≈300 líneas) frente
+     * a las ~2.000 del teléfono. El límite del parche (60 líneas, un archivo) no cambia.
+     */
+    public static final int NODE_WINDOW_CHARS = 12000;
+
     public static String excerpt(String source, List<String> keywords, int maxChars) {
         String[] lines = source.split("\n", -1);
         int bestStart = 0, bestEnd = 0, bestScore = -1;
