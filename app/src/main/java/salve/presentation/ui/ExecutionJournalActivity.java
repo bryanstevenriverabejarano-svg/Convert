@@ -106,7 +106,7 @@ public class ExecutionJournalActivity extends Activity {
     private void showTab(String key) {
         tab = "evolucion".equals(key) ? "evolucion" : ReportLibrary.TAB_LIBRARY.equals(key) ? ReportLibrary.TAB_LIBRARY : ReportLibrary.TAB_EXECUTION;
         boolean library = tab.equals(ReportLibrary.TAB_LIBRARY);
-        styleTab(executionTab, !library);
+        styleTab(executionTab, ReportLibrary.TAB_EXECUTION.equals(tab));
         styleTab(libraryTab, library);
         styleTab(evolutionTab, "evolucion".equals(tab));
         executionPanel.setVisibility(ReportLibrary.TAB_EXECUTION.equals(tab) ? View.VISIBLE : View.GONE);
@@ -379,13 +379,16 @@ public class ExecutionJournalActivity extends Activity {
         worker.execute(() -> {
             List<ReportLibrary.Entry> reports = ReportLibrary.list(reportDirectory(), null);
             List<ExecutionJournal.Task> recent = ExecutionTrace.journal(this).recent();
+            List<com.google.gson.JsonObject> lineage = salve.core.selfpr.SelfLineage.read(
+                    new File(new File(getFilesDir(), "selfpr"), "linaje.jsonl"), 15);
             main.post(() -> {
-                if (!isDestroyed() && "evolucion".equals(tab)) renderEvolution(reports, recent);
+                if (!isDestroyed() && "evolucion".equals(tab)) renderEvolution(reports, recent, lineage);
             });
         });
     }
 
-    private void renderEvolution(List<ReportLibrary.Entry> reports, List<ExecutionJournal.Task> recent) {
+    private void renderEvolution(List<ReportLibrary.Entry> reports, List<ExecutionJournal.Task> recent,
+                                 List<com.google.gson.JsonObject> lineage) {
         evolutionList.removeAllViews();
         int errors = 0;
         for (ExecutionJournal.Task task : recent) {
@@ -404,6 +407,27 @@ public class ExecutionJournalActivity extends Activity {
         if (reports.isEmpty() && recent.isEmpty()) {
             text(evolutionList, "Aún no hay observaciones ni informes para mostrar.", 15);
             return;
+        }
+        if (!lineage.isEmpty()) {
+            TextView heading = text(evolutionList, "Propuestas de código registradas: " + lineage.size(), 17);
+            heading.setTypeface(Typeface.DEFAULT_BOLD);
+            for (int i = lineage.size() - 1; i >= 0; i--) {
+                com.google.gson.JsonObject e = lineage.get(i);
+                String goal = safeLineage(e, "objetivo");
+                String file = safeLineage(e, "archivo");
+                String issue = safeLineage(e, "issue");
+                TextView item = text(evolutionList,
+                        "OBSERVAR / REGISTRAR · Propuesta enviada, verificación no confirmada\\n"
+                        + (goal.isEmpty() ? "Cambio de código" : goal) + "\\n"
+                        + (file.isEmpty() ? "" : "Módulo: " + file + "\\n")
+                        + (issue.isEmpty() ? "Sin enlace de GitHub" : issue), 14);
+                item.setPadding(dp(8), dp(12), dp(8), dp(12));
+                if (issue.startsWith("https://github.com/")) {
+                    item.setTextColor(ACCENT);
+                    item.setOnClickListener(v -> startActivity(
+                            new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(issue))));
+                }
+            }
         }
         int count = 0;
         for (ReportLibrary.Entry entry : reports) {
@@ -431,6 +455,12 @@ public class ExecutionJournalActivity extends Activity {
         if (reports.isEmpty()) {
             text(evolutionList, "Todavía no hay informes. Puedes crear uno desde Ejecución.", 14);
         }
+    }
+
+    private static String safeLineage(com.google.gson.JsonObject e, String key) {
+        if (e == null || !e.has(key) || !e.get(key).isJsonPrimitive()) return "";
+        String value = e.get(key).getAsString();
+        return value.length() > 220 ? value.substring(0, 220) : value;
     }
 
     // ───────────────────────── comunes ─────────────────────────
