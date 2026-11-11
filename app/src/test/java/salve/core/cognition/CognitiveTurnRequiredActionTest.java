@@ -50,7 +50,7 @@ public class CognitiveTurnRequiredActionTest {
         assertFalse(result.handedOff);
         assertTrue(result.receipts().isEmpty());
         assertFalse(result.result.isSuccess());
-        assertTrue(result.result.getText().contains("no he ejecutado"));
+        assertTrue(result.result.getError().contains("no he ejecutado"));
     }
 
     @Test public void explicitRejectionDoesNotTurnIntoFalseSuccess() {
