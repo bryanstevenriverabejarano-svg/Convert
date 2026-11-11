@@ -136,6 +136,9 @@ public final class SleepFocusWorker extends Worker {
             }
             journal.append(traceId, "INFORME", SleepImprovementCycle.describe(SleepImprovementRuntime.last(app)));
             if (stop.getAsBoolean()) return Result.success();
+            // Ciclo de sus propios cambios: de noche solo se anota si queda alguno sin comprobar (sin inferencia).
+            String unverified = salve.core.selfpr.SelfVerification.state(app);
+            if (!unverified.isEmpty()) journal.append(traceId, "MIS CAMBIOS", unverified);
             // Weekly local holdout, independent from the model and the practice samples.
             // Never installs learned skills or edits Android/GitHub, and yields on cancellation.
             String transfer = salve.core.evaluation.NightTransferTrial.runIfDue(app, stop);

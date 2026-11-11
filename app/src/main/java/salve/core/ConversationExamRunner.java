@@ -73,6 +73,14 @@ final class ConversationExamRunner {
         String report = ConversationExam.report(grades, previous, millis);
         double mark = ConversationExam.mark(grades);
         save(context, prefs, mark, report, grades, attempts);
+        // Si tenía un cambio propio instalado sin comprobar, este examen es su veredicto.
+        int failedCases = 0;
+        for (ConversationExam.Grade g : grades) if (!g.ok()) failedCases++;
+        String verdict = salve.core.selfpr.SelfVerification.afterExam(context, failedCases, System.currentTimeMillis());
+        if (!verdict.isEmpty()) {
+            salve.core.trace.ExecutionTrace.note("VEREDICTO DE MI CAMBIO", verdict);
+            report = report + "\n\n" + verdict;
+        }
         return report + "\n(Para ver lo que contesté en cada fallo, dime «respuestas del examen». Vuelve a pedírmelo tras cada actualización para comparar.)";
     }
 

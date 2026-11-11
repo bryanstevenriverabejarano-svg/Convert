@@ -44,10 +44,26 @@ fusión solo con todo en verde sobre el commit probado, y `SALVE_AUTOMERGE=false
   único gran ciclo de dependencias que une casi todo `core`. Partirlos a ciegas, sin compilar ni probar en el
   teléfono, rompería más de lo que arregla; es trabajo para hacer por piezas con el examen como red.
 
+## Veredicto de cada cambio (11 de noviembre de 2026)
+
+El linaje decía qué propuso; faltaba cerrar el ciclo. `SelfVerification`:
+
+- Un cambio suyo está **sin comprobar** si la app se actualizó después de proponerlo y no se ha examinado con
+  esa versión. Lo dice en «¿cómo van tus PR?» y lo anota en el registro del sueño (sin inferencia).
+- El primer examen que haga a partir de ahí lo compara con el que tenía al proponerlo y guarda un **veredicto**
+  (`files/selfpr/veredictos.jsonl`, solo se añade): mejor, igual o peor. Sale al final del informe del examen
+  y en el registro de ejecución. Si empeoró, recomienda revertir el commit y da el issue donde encontrarlo.
+- No afirma más de lo que mide: que la app se actualizara no prueba que la propuesta se fusionara, y entre dos
+  exámenes pueden cambiar más cosas. El texto lo dice.
+- Vive en `selfpr/`, zona que ella no puede reescribir.
+
+Lo que **no** hace todavía: examinarse sola. El examen necesita el motor de conversación (minutos de
+inferencia, bloquea el chat), y el sueño corre en otro proceso de trabajo sin él. Hoy el examen lo pide Bryan.
+
 ## Siguientes pasos, por efecto esperado
 
-1. Puerta de regresión automática: tras instalar un cambio propio, repetir el examen sola durante el sueño y
-   abrir la propuesta de reversión si empeora (hoy lo avisa; no lo hace).
+1. Que se examine sola: separar el examen del motor de conversación para poder lanzarlo en el sueño, y que
+   con un veredicto «peor» abra ella la propuesta de reversión (hoy da el veredicto y la recomendación).
 2. Reescritura de la consulta de memoria en 2–3 consultas hipotéticas (LightMem) dentro del presupuesto de 7k.
 3. La misma puerta «arregla más de lo que rompe» para lecciones y habilidades aprendidas en el sueño.
 4. Ampliar el examen: hoy mide conversación; no mide herramientas del teléfono, sentidos ni dibujo.

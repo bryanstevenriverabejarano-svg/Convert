@@ -146,6 +146,8 @@ final class SelfPrDesk {
             String lineage = salve.core.selfpr.SelfLineage.describe(salve.core.selfpr.SelfLineage.read(lineageFile(), 5),
                     salve.core.selfpr.SelfLineage.failedCases(lastExam()));
             if (!lineage.isEmpty()) out.append("\n\n").append(lineage);
+            String verification = salve.core.selfpr.SelfVerification.state(motor.context);
+            if (!verification.isEmpty()) out.append("\n\n").append(verification);
             return out.toString();
         } catch (java.io.IOException failed) {
             return "No pude consultar GitHub: " + failed.getMessage() + ".";
