@@ -185,44 +185,32 @@ final class PhoneActionsDesk {
                         break;
                     }
                     case MUSIC_SEARCH: {
-                        if (driving) {
-                            m.hablar(drivingMusic(action.target, action.type.name()));
-                        } else {
-                            boolean accepted = salve.devices.PhoneActions.searchMusic(m.context, action.target);
-                            recordControl(action.type.name(), accepted ? "SEARCH_OPENED" : "FAILED", false);
-                            m.hablar(accepted ? "Abrí una búsqueda en Spotify para «" + action.target
-                                    + "». No he iniciado ninguna canción."
-                                    : "No pude abrir la búsqueda en Spotify.");
-                        }
+                        boolean accepted = salve.devices.PhoneActions.searchMusic(m.context, action.target);
+                        recordControl(action.type.name(), accepted ? "SEARCH_OPENED" : "FAILED", driving);
+                        m.hablar(accepted ? "Solicité abrir una búsqueda en Spotify para «" + action.target
+                                + "». No he iniciado ninguna canción."
+                                : "No pude abrir la búsqueda en Spotify.");
                         break;
                     }
                     case CALL:
-                        if (driving) {
-                            recordControl(action.type.name(), "DRIVING_BLOCKED", true);
-                            m.hablar("No abriré un formulario de llamadas mientras conduces. "
-                                    + "Cuando estés detenido podrás confirmar a quién llamar.");
-                            break;
-                        }
+                        // The requested review screen may open in every voice mode.
+                        // Placing the call still requires the existing explicit confirmation.
                         try {
                             m.context.startActivity(new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class)
                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_CALL, action.target));
-                            recordControl(action.type.name(), "REVIEW_OPENED", false);
+                            recordControl(action.type.name(), "REVIEW_OPENED", driving);
                             m.hablar("Busco a " + action.target + ". Confirma en pantalla antes de que llame.");
                         } catch (RuntimeException unavailable) {
-                            recordControl(action.type.name(), "FAILED", false);
+                            recordControl(action.type.name(), "FAILED", driving);
                             m.hablar("No pude abrir el panel de llamadas.");
                         }
                         break;
                     case OPEN_APP:
-                        if (driving) {
-                            recordControl(action.type.name(), "DRIVING_BLOCKED", true);
-                            m.hablar("Mientras conduces no voy a abrir una aplicación en la pantalla del móvil. "
-                                    + "Para controlar Spotify por voz, dime qué música quieres o di «siguiente».");
-                            break;
-                        }
+                        // No additional Salve-level screen ban based on the car mode.
+                        // The target app and Android remain responsible for their UI limits.
                         boolean opened = salve.devices.PhoneActions.openApp(m.context, appToOpen);
-                        recordControl(action.type.name(), opened ? "OPEN_REQUESTED" : "FAILED", false);
+                        recordControl(action.type.name(), opened ? "OPEN_REQUESTED" : "FAILED", driving);
                         m.hablar(opened ? "Solicité abrir " + appToOpen.label + "."
                                 : "Android no me dejó abrir " + appToOpen.label + ".");
                         break;
@@ -232,13 +220,6 @@ final class PhoneActionsDesk {
         }
         salve.core.devicecontrol.MobileCommand mobile = salve.core.devicecontrol.MobileCommand.parse(original);
         if (mobile != null) {
-            if (isDriving()) {
-                recordControl("MOBILE_PANEL", "DRIVING_BLOCKED", true);
-                m.hablar("Puedo seguir hablándote y usando herramientas por voz, "
-                        + "pero no abriré una pantalla que requiera atención mientras conduces. "
-                        + "Podrás abrirla cuando estés estacionado.");
-                return true;
-            }
             postConversationTask(() -> {
                 if (m.closed) return;
                 Intent panel = new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -581,20 +562,13 @@ final class PhoneActionsDesk {
     private void openInternalPanel(Class<?> activity, String label) {
         postConversationTask(() -> {
             if (m.closed) return;
-            if (isDriving()) {
-                recordControl("SALVE_PANEL", "DRIVING_BLOCKED", true);
-                m.hablar("El panel " + label + " requiere mirar la pantalla. "
-                        + "Durante la conducción puedo seguir con las funciones por voz; "
-                        + "abre la pantalla cuando estés estacionado.");
-                return;
-            }
             try {
                 m.context.startActivity(new Intent(m.context, activity)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                recordControl("SALVE_PANEL", "OPEN_REQUESTED", false);
+                recordControl("SALVE_PANEL", "OPEN_REQUESTED", isDriving());
                 m.hablar("He solicitado abrir " + label + ".");
             } catch (RuntimeException unavailable) {
-                recordControl("SALVE_PANEL", "FAILED", false);
+                recordControl("SALVE_PANEL", "FAILED", isDriving());
                 m.hablar("Android no me dejó abrir " + label + ".");
             }
         });
