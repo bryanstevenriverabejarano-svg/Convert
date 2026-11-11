@@ -325,7 +325,8 @@ final class ConversationExamRunner {
         }
         return salve.core.evaluation.ImprovementProposals.report(exam, motor.mind().lessons().all())
                 + salve.core.synergy.SynergyEvolution.describe(exam)
-                + salve.core.cognition.ReadOnlyEvidenceDesk.recentVoiceFailures(motor.context, 2);
+                + (salve.core.identity.IdentityManager.get(motor.context).privateAccess()
+                    ? salve.core.cognition.ReadOnlyEvidenceDesk.recentVoiceFailures(motor.context, 2) : "");
     }
 
     /** Para las pruebas: ¿qué historial ve el modelo en un caso? (sin modelo ni Android). */
