@@ -2407,6 +2407,33 @@ public class MotorConversacional {
                                 engine != null && !engine.equals(engineBefore) ? engine : null));
             }
         }, tools, () -> closed || !isVoiceContextCurrent(), requiredAction);
+        // If the model refuses a simple, unambiguous action even after the
+        // semantic retry, the controller can use EXACTLY the same authorized
+        // executor and current-user intent. No duplicate tool implementations,
+        // no unreviewed messaging, calls, system settings, or arbitrary targets.
+        if (requiredAction != null && tools.containsKey(requiredAction)
+                && !outcome.handedOff && !outcome.result.isSuccess()
+                && outcome.result.getStatus() != ModelResult.Status.CANCELLED
+                && outcome.receipts().size() == 0
+                && !closed && isVoiceContextCurrent()) {
+            com.google.gson.JsonObject fallbackArgs =
+                    salve.core.cognition.ActionToolExpectation.directFallbackArguments(input, requiredAction);
+            if (fallbackArgs != null) {
+                try {
+                    CognitiveTurn.Receipt performed =
+                            herramientas.executeCognitiveTool(requiredAction, fallbackArgs, input);
+                    salve.core.trace.ExecutionTrace.note("RESPALDO DE HERRAMIENTA",
+                            "La selección del modelo falló; el controlador usó la herramienta autorizada "
+                                    + requiredAction + " sin repetir operaciones.");
+                    outcome = performed.handoff
+                            ? CognitiveTurn.Outcome.controllerHandoff(requiredAction)
+                            : CognitiveTurn.Outcome.groundedText(performed.data);
+                } catch (RuntimeException rejected) {
+                    salve.core.trace.ExecutionTrace.note("RESPALDO DE HERRAMIENTA",
+                            "El controlador rechazó " + requiredAction + "; no se ejecutó.");
+                }
+            }
+        }
         if (requiredAction != null) {
             boolean requestedActionAttempted = false;
             for (com.google.gson.JsonElement item : outcome.receipts()) {
