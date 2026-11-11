@@ -30,6 +30,25 @@ public class ActionToolExpectationTest {
                 "busca en internet nuevos artículos de robótica", tools("web.search")));
     }
 
+    @Test public void fallbackOnlyUsesExactLowRiskValidatedArgs() {
+        assertEquals("TORCH_ON",
+                ActionToolExpectation.directFallbackArguments(
+                        "enciende la linterna", "device.control").get("accion").getAsString());
+        assertEquals("PAUSE",
+                ActionToolExpectation.directFallbackArguments(
+                        "pausa la música", "device.media_control").get("action").getAsString());
+        assertEquals("OPEN_JOURNAL",
+                ActionToolExpectation.directFallbackArguments(
+                        "abre tu biblioteca de informes", "self.command").get("id").getAsString());
+        assertNull(ActionToolExpectation.directFallbackArguments("activa el wifi", "device.setting"));
+        assertNull(ActionToolExpectation.directFallbackArguments(
+                "dile a mamá por whatsapp que la quiero", "whatsapp.draft"));
+        assertNull(ActionToolExpectation.directFallbackArguments(
+                "abre Spotify", "device.open_app"));
+        assertNull(ActionToolExpectation.directFallbackArguments(
+                "abre tu PR", "self.command"));
+    }
+
     @Test public void doesNotExpandPermissionOrActOnNegationsAndOrdinaryChat() {
         assertNull(ActionToolExpectation.requiredTool(
                 "enciende la linterna", tools("web.search")));
