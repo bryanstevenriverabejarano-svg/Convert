@@ -36,6 +36,7 @@ import salve.core.MotorConversacional;
 import salve.core.voice.VoiceConversationLoop;
 import salve.core.voice.VoiceBargeInMonitor;
 import salve.core.voice.VoiceTurnMetrics;
+import salve.core.voice.VoiceDiagnosticLog;
 
 /** Foreground voice turns, with guarded echo-cancelled interruption during TTS. */
 public final class LiveVoiceSession implements MotorConversacional.VoiceConversationListener {
@@ -53,6 +54,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     /** Manos libres: tras cada respuesta vuelve a escuchar sola hasta «adiós, Salve» o 3 minutos de silencio. */
     private final VoiceConversationLoop loop = new VoiceConversationLoop(true);
     private final VoiceTurnMetrics metrics = new VoiceTurnMetrics();
+    private final VoiceDiagnosticLog diagnostics;
     private final VoiceLabReport voiceLab = new VoiceLabReport();
     /** AEC-only one-shot detector; the existing SpeechRecognizer still owns transcribed input. */
     private final VoiceBargeInMonitor bargeIn = new VoiceBargeInMonitor();
@@ -60,6 +62,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     private final Runnable watchdog = () -> apply(loop.tick(now()));
     private final AudioManager audioManager;
     private final AudioManager.OnAudioFocusChangeListener audioFocusListener = change -> {
+        diagnostics.event(metrics.token(), VoiceDiagnosticLog.Event.AUDIO_FOCUS_CHANGE, change);
         if (change == AudioManager.AUDIOFOCUS_LOSS
                 || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
                 || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
@@ -105,6 +108,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         this.motor = motor;
         this.stage = stage;
         this.audioManager = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
+        this.diagnostics = new VoiceDiagnosticLog(activity);
         controls = activity.findViewById(R.id.voiceStageControls);
         caption = activity.findViewById(R.id.salveCaption);
         status = activity.findViewById(R.id.voiceStageStatus);
@@ -130,7 +134,10 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 return;
             }
             bargeIn.stop();
-            if (!automaticInterruptDispatch) voiceLab.event(metrics.token(), "interrupt", "manual_button");
+            if (!automaticInterruptDispatch) {
+                voiceLab.event(metrics.token(), "interrupt", "manual_button");
+                diagnostics.event(metrics.token(), VoiceDiagnosticLog.Event.INTERRUPT_MANUAL, 0);
+            }
             long timestamp = now();
             VoiceConversationLoop.Step step = loop.interrupt(timestamp);
             if (step.action != VoiceConversationLoop.Action.NONE) {
@@ -217,6 +224,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     public void show() {
         if (started || dismissed) return;
         started = true;
+        diagnostics.start();
         stage.closePanels();
         controls.setVisibility(View.VISIBLE);
         activity.findViewById(R.id.salveGestureHint).setVisibility(View.GONE);
@@ -277,6 +285,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         salve.services.WakeWordService.resumeAfterConversation();
         stage.setVoicePresence(null);
         releaseResources();
+        diagnostics.finish(metrics.token());
         controls.setVisibility(View.GONE);
         activity.findViewById(R.id.salveGestureHint).setVisibility(View.VISIBLE);
         back.remove();
@@ -288,6 +297,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         switch (step.action) {
             case LISTEN:
                 bargeIn.stop();
+                diagnostics.event(step.token, VoiceDiagnosticLog.Event.LISTEN_STARTED, 0);
                 beginRecognition(step.token);
                 break;
             case CONTINUE:
@@ -328,10 +338,13 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 }
                 break;
             case STOP:
+                diagnostics.event(metrics.token(), VoiceDiagnosticLog.Event.LOOP_STOP,
+                        loop.stopReason() == null ? -1 : loop.stopReason().ordinal());
                 bargeIn.stop();
                 metrics.stop(metrics.token(), now(), loop.stopReason());
                 reportMetrics();
                 releaseResources();
+                diagnostics.finish(metrics.token());
                 break;
             default: break;
         }
@@ -392,6 +405,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                     if (!current()) return;
                     long timestamp = now();
                     voiceLab.event(token, "asr", "error=" + error);
+                    diagnostics.event(token, VoiceDiagnosticLog.Event.RECOGNITION_ERROR, error);
                     VoiceConversationLoop.RecognitionFailure failure = recognitionFailure(error);
                     // When a previous clause is held, a no-speech result finishes that same
                     // user turn. Record it as successful ASR, never as a failed/double turn.
@@ -763,6 +777,9 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         // A very short utterance can finish before its reply callback; still show its text once.
         metrics.replied(token, timestamp);
         voiceLab.event(token, "llm", "reply_chars=" + (text == null ? 0 : text.length()) + " audio=" + audioQueued);
+        diagnostics.event(token, audioQueued
+                ? VoiceDiagnosticLog.Event.REPLY_READY : VoiceDiagnosticLog.Event.REPLY_WITHOUT_AUDIO,
+                text == null ? 0 : text.length());
         // The engine already publishes the final reply to the shared chat listener.
         // Keep the on-stage subtitle current without adding a duplicate chat message.
         if (text != null && !text.isEmpty()) caption.setText(text);
@@ -776,7 +793,12 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             apply(loop.speechStarted(token, timestamp));
             if (!dismissed && loop.owns(token)
                     && loop.state() == VoiceConversationLoop.State.SPEAKING) {
-                bargeIn.start(token, this::onBargeInDetected);
+                bargeIn.start(token, new VoiceBargeInMonitor.Listener() {
+                    @Override public void onSpeechDetected(long activeToken) { onBargeInDetected(activeToken); }
+                    @Override public void onStatus(long activeToken, VoiceDiagnosticLog.Event event, long code) {
+                        diagnostics.event(activeToken, event, code);
+                    }
+                });
             }
         }
     }
@@ -788,6 +810,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         bargeIn.stop();
         Log.i("Salve/Voice", "voice_barge_in detected=true");
         voiceLab.event(token, "interrupt", "automatic_detector");
+        diagnostics.event(token, VoiceDiagnosticLog.Event.INTERRUPT_AUTOMATIC, 0);
         automaticInterruptDispatch = true;
         try { interrupt.performClick(); } finally { automaticInterruptDispatch = false; }
     }
@@ -798,6 +821,8 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         long timestamp = now();
         if (!metrics.speechFinished(token, timestamp)) return;
         voiceLab.event(token, "tts", "finished completed=" + completed);
+        diagnostics.event(token, completed ? VoiceDiagnosticLog.Event.TTS_FINISHED_OK
+                : VoiceDiagnosticLog.Event.TTS_FINISHED_FAILED, 0);
         VoiceConversationLoop.Step step = loop.speechFinished(token, completed, timestamp);
         if (step.action == VoiceConversationLoop.Action.WAIT && completed) {
             metrics.complete(token, timestamp);
@@ -806,11 +831,16 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         apply(step);
     }
 
+    @Override public void onDiagnostic(long token, VoiceDiagnosticLog.Event event, long code) {
+        if (!dismissed && loop.owns(token)) diagnostics.event(token, event, code);
+    }
+
     private void reportMetrics() {
         String line = metrics.takeLogLine();
         if (line != null) {
             Log.i("Salve/Voice", line);
             voiceLab.event(metrics.token(), "metrics", line);
+            diagnostics.metrics(line);
         }
     }
 
