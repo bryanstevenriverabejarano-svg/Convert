@@ -232,6 +232,13 @@ final class PhoneActionsDesk {
         }
         salve.core.devicecontrol.MobileCommand mobile = salve.core.devicecontrol.MobileCommand.parse(original);
         if (mobile != null) {
+            if (isDriving()) {
+                recordControl("MOBILE_PANEL", "DRIVING_BLOCKED", true);
+                m.hablar("Puedo seguir hablándote y usando herramientas por voz, "
+                        + "pero no abriré una pantalla que requiera atención mientras conduces. "
+                        + "Podrás abrirla cuando estés estacionado.");
+                return true;
+            }
             postConversationTask(() -> {
                 if (m.closed) return;
                 Intent panel = new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -261,15 +268,25 @@ final class PhoneActionsDesk {
         if (command == null) return false;
         switch (command.type) {
             case FINANCES:
-                abrirPanel(salve.presentation.ui.BusinessFinanceActivity.class);
-                m.hablar("Abro el análisis local de costes, margen y punto de equilibrio. Introduce las cifras de tu negocio.");
+                openInternalPanel(salve.presentation.ui.BusinessFinanceActivity.class, "Finanzas");
                 return true;
             case DEVICES:
-                abrirPanel(salve.presentation.ui.DeviceControlActivity.class);
-                m.hablar("Abro Mi móvil: aplicaciones, borradores de WhatsApp y dispositivos.");
+                openInternalPanel(salve.presentation.ui.DeviceControlActivity.class, "Mi móvil");
                 return true;
             case ROOM:
-                abrirPanel(salve.presentation.ui.AvatarRoomActivity.class);
+                openInternalPanel(salve.presentation.ui.AvatarRoomActivity.class, "Mi habitación");
+                return true;
+            case PLANS:
+                openInternalPanel(salve.presentation.ui.AgentPlansActivity.class, "Planes y resultados");
+                return true;
+            case SALVENTES:
+                openInternalPanel(salve.presentation.ui.SalventeGenesisActivity.class, "Salventes");
+                return true;
+            case CONTINUITY:
+                openInternalPanel(salve.presentation.ui.ContinuityActivity.class, "Continuidad");
+                return true;
+            case HOME:
+                openInternalPanel(salve.presentation.ui.HomeActivity.class, "Mi casa");
                 return true;
             case LIST_RECIPES:
                 List<String> names = m.cerebelo.listarHabilidades();
@@ -559,6 +576,28 @@ final class PhoneActionsDesk {
         } else {
             m.hablar("No encontré un dato de perfil etiquetado como " + request.getDescription() + ". No he borrado otros recuerdos.");
         }
+    }
+
+    private void openInternalPanel(Class<?> activity, String label) {
+        postConversationTask(() -> {
+            if (m.closed) return;
+            if (isDriving()) {
+                recordControl("SALVE_PANEL", "DRIVING_BLOCKED", true);
+                m.hablar("El panel " + label + " requiere mirar la pantalla. "
+                        + "Durante la conducción puedo seguir con las funciones por voz; "
+                        + "abre la pantalla cuando estés estacionado.");
+                return;
+            }
+            try {
+                m.context.startActivity(new Intent(m.context, activity)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                recordControl("SALVE_PANEL", "OPEN_REQUESTED", false);
+                m.hablar("He solicitado abrir " + label + ".");
+            } catch (RuntimeException unavailable) {
+                recordControl("SALVE_PANEL", "FAILED", false);
+                m.hablar("Android no me dejó abrir " + label + ".");
+            }
+        });
     }
 
     void abrirPanel(Class<?> activity) {
