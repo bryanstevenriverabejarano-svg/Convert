@@ -62,6 +62,12 @@ import salve.services.VideoAnalysisManager;
  */
 final class PhoneActionsDesk {
     private final MotorConversacional m;
+    private static final java.util.concurrent.ExecutorService ACTION_LOG =
+            java.util.concurrent.Executors.newSingleThreadExecutor(task -> {
+                Thread worker = new Thread(task, "salve-mobile-action-journal");
+                worker.setDaemon(true);
+                return worker;
+            });
 
     PhoneActionsDesk(MotorConversacional m) { this.m = m; }
 
@@ -85,13 +91,17 @@ final class PhoneActionsDesk {
     }
 
     private void recordControl(String action, String outcome, boolean driving) {
-        // Keep an execution receipt, not lyrics, user text, artist, package names or tool arguments.
-        salve.core.trace.ExecutionJournal journal = salve.core.trace.ExecutionTrace.journal(m.context);
-        String id = journal.begin("Control móvil", "Resultado técnico de orden; sin texto personal.");
-        if (id == null) return;
-        journal.append(id, "RESULTADO", "action=" + action + " outcome=" + outcome
-                + " driving=" + driving);
-        journal.finish(id, "TERMINADA");
+        // One fixed-schema receipt on a background I/O queue: no recording, speech text,
+        // song names, personal messages, contacts, tool arguments or blocking on the UI thread.
+        final android.content.Context app = m.context.getApplicationContext();
+        ACTION_LOG.execute(() -> {
+            salve.core.trace.ExecutionJournal journal = salve.core.trace.ExecutionTrace.journal(app);
+            String id = journal.begin("Control móvil", "Resultado técnico de orden; sin texto personal.");
+            if (id == null) return;
+            journal.append(id, "RESULTADO", "action=" + action + " outcome=" + outcome
+                    + " driving=" + driving);
+            journal.finish(id, "TERMINADA");
+        });
     }
 
     boolean procesarContinuacionMusical(String text,
