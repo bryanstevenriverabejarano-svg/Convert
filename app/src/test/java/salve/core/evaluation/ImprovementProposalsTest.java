@@ -44,4 +44,16 @@ public class ImprovementProposalsTest {
         for (String s : new String[]{"evoluciona tu corazón", "el inglés evoluciona", "programa una alarma"})
             assertFalse(s, ImprovementProposals.isCommand(s));
     }
+
+    @Test public void theSameQuestionAskedNaturallyAlsoUsesHerRealData() {
+        for (String s : new String[]{"Salve hay alguna mejora que efectuarías ?? En ti misma?", "¿Hay alguna mejora que te harías?",
+                "¿Qué mejorarías de ti misma?", "¿Qué cambiarías de ti?", "¿En qué puedes mejorar?", "dime qué mejorarías en tu código",
+                "¿qué te gustaría mejorar?", "¿Cómo te mejorarías?"})
+            assertTrue(s, ImprovementProposals.isCommand(s));
+        // La mejora tiene que ser de ella, y tiene que ser la pregunta entera.
+        for (String s : new String[]{"¿qué mejorarías de mi currículum?", "¿qué cambiarías de este texto?", "¿en qué puedo mejorar yo?",
+                "hay alguna mejora que harías en la web de la empresa", "¿qué te gustaría mejorar del dibujo que hiciste?",
+                "cuéntame un cuento sobre alguien que quería mejorar"})
+            assertFalse(s, ImprovementProposals.isCommand(s));
+    }
 }
