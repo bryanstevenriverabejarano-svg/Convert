@@ -404,28 +404,48 @@ public class ExecutionJournalActivity extends Activity {
                 + "PR: consulta el estado real desde las herramientas de PR de Salve.", 13);
         note.setTextColor(MUTED);
         note.setPadding(0, dp(10), 0, dp(12));
-        if (reports.isEmpty() && recent.isEmpty()) {
-            text(evolutionList, "Aún no hay observaciones ni informes para mostrar.", 15);
+        if (reports.isEmpty() && recent.isEmpty() && lineage.isEmpty()) {
+            text(evolutionList, "Aún no hay observaciones, propuestas ni informes para mostrar.", 15);
             return;
         }
         if (!lineage.isEmpty()) {
-            TextView heading = text(evolutionList, "Propuestas de código registradas: " + lineage.size(), 17);
+            TextView heading = text(evolutionList, "Propuestas registradas: " + lineage.size(), 17);
             heading.setTypeface(Typeface.DEFAULT_BOLD);
             for (int i = lineage.size() - 1; i >= 0; i--) {
                 com.google.gson.JsonObject e = lineage.get(i);
                 String goal = safeLineage(e, "objetivo");
                 String file = safeLineage(e, "archivo");
                 String issue = safeLineage(e, "issue");
-                TextView item = text(evolutionList,
-                        "OBSERVAR / REGISTRAR · Propuesta enviada, verificación no confirmada\\n"
-                        + (goal.isEmpty() ? "Cambio de código" : goal) + "\\n"
-                        + (file.isEmpty() ? "" : "Módulo: " + file + "\\n")
-                        + (issue.isEmpty() ? "Sin enlace de GitHub" : issue), 14);
-                item.setPadding(dp(8), dp(12), dp(8), dp(12));
+                String revision = safeLineage(e, "revision");
+                String origin = safeLineage(e, "origen");
+                String failures = safeLineage(e, "fallos_examen");
+                LinearLayout proposal = new LinearLayout(this);
+                proposal.setOrientation(LinearLayout.VERTICAL);
+                proposal.setPadding(dp(12), dp(10), dp(12), dp(10));
+                GradientDrawable background = new GradientDrawable();
+                background.setColor(CARD);
+                background.setCornerRadius(dp(12));
+                background.setStroke(dp(1), LINE);
+                proposal.setBackground(background);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+                params.setMargins(0, dp(5), 0, dp(5));
+                evolutionList.addView(proposal, params);
+                TextView phase = text(proposal, "REGISTRADA · Verificación pendiente", 12);
+                phase.setTextColor(ACCENT);
+                TextView name = text(proposal, goal.isEmpty() ? "Propuesta sin título" : goal, 16);
+                name.setTypeface(Typeface.DEFAULT_BOLD);
+                TextView details = text(proposal,
+                        "Origen: " + (origin.isEmpty() ? "No indicado" : origin)
+                        + "\nArchivo: " + (file.isEmpty() ? "No indicado" : file)
+                        + "\nRevisión: " + (revision.isEmpty() ? "No indicada" : revision)
+                        + "\nFallos del examen al registrar: " + (failures.isEmpty() || "-1".equals(failures) ? "Sin datos" : failures), 13);
+                details.setTextColor(MUTED);
                 if (issue.startsWith("https://github.com/")) {
-                    item.setTextColor(ACCENT);
-                    item.setOnClickListener(v -> startActivity(
+                    link(proposal, "Abrir referencia en GitHub", v -> startActivity(
                             new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(issue))));
+                } else {
+                    TextView missing = text(proposal, "PR/issue: sin enlace registrado", 13);
+                    missing.setTextColor(MUTED);
                 }
             }
         }
