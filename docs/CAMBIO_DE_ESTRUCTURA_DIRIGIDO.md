@@ -71,6 +71,16 @@ El linaje decía qué propuso; faltaba cerrar el ciclo. `SelfVerification`:
   si no, lo dice y no hace nada.
 - No abre PR ni revierte: mide y deja el veredicto.
 
+### El examen mide lo mismo de día y de noche, y ahora también sus herramientas del teléfono
+
+- El catálogo del examen dependía de si Bryan estaba verificado en ese instante: de día tenía más
+  herramientas que de noche, así que dos exámenes no eran comparables y un veredicto nocturno podía salir
+  «peor» sin motivo. `ConversationExamRunner.examCatalog` lo fija siempre al de Bryan verificado, todo simulado.
+- Seis casos nuevos (44 en total): batería y luz (`device.sense`), linterna y volumen (`device.control`),
+  wifi (`device.setting`) y «¿hay alguna mejora que efectuarías en ti misma?» (`self.command`). Nada se
+  ejecuta en el teléfono durante el examen.
+- Al cambiar el tamaño del examen, el primer veredicto pendiente saldrá «no comparable»: es lo correcto.
+
 
 ## Siguientes pasos, por efecto esperado
 

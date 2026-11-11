@@ -91,11 +91,9 @@ public final class DeviceSenses {
     }
 
     public static String description() {
+        // Corta a propósito: cada carácter del catálogo se lee en cada inferencia y quita sitio a otras herramientas.
         return "{grupo:'TODO'|'ENTORNO'|'MOVIMIENTO'|'ORIENTACION'|'ENERGIA'|'SISTEMA'|'INVENTARIO'}: mide AHORA con los sensores "
-                + "reales del teléfono (tu cuerpo físico) y su estado; solo lectura, una ráfaga breve que no se guarda. "
-                + "ENTORNO=luz/proximidad/temperatura/humedad/presión; MOVIMIENTO=aceleración/giro/pasos; "
-                + "ORIENTACION=postura/brújula; ENERGIA=batería; SISTEMA=RAM/almacenamiento/red/volumen/calor. "
-                + "Cuenta solo lo medido; lo que salga «no disponible» no lo inventes.";
+                + "y el estado del teléfono (solo lectura). Cuenta solo lo medido; «no disponible» no se inventa.";
     }
 
     /** El modelo propone el grupo; si no es válido se deduce de lo que preguntó el usuario. */
