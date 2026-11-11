@@ -9,7 +9,9 @@ import android.speech.tts.Voice
 import android.util.Log
 import salve.core.voice.NeuralVoice
 import salve.core.voice.SpeechSentences
+import salve.core.voice.VoicePlaybackJournal
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Motor de texto a voz propio de Salve con su voz neuronal. Salve crea su TextToSpeech con este
@@ -17,6 +19,8 @@ import java.util.Locale
  */
 class NeuralTtsService : TextToSpeechService() {
     @Volatile private var stopped = false
+    @Volatile private var currentTrace: String? = null
+    private val utteranceCounter = AtomicLong(0L)
 
     private fun spanish(lang: String?) = lang != null && (lang.equals("spa", true) || lang.equals("es", true))
 
@@ -42,58 +46,114 @@ class NeuralTtsService : TextToSpeechService() {
     override fun onGetDefaultVoiceNameFor(lang: String?, country: String?, variant: String?): String? =
         if (spanish(lang)) NeuralVoice.VOICE_NAME else null
 
-    override fun onStop() { stopped = true }
+    override fun onStop() {
+        stopped = true
+        currentTrace?.let { VoicePlaybackJournal.event(it, "ENGINE_STOP_REQUESTED", 0) }
+    }
 
     override fun onSynthesizeText(request: SynthesisRequest?, callback: SynthesisCallback?) {
         if (request == null || callback == null) return
-        stopped = false
         val text = request.charSequenceText?.toString().orEmpty()
-        val engine = try { NeuralVoice.engine(this) } catch (e: Exception) {
-            Log.e(TAG, "La voz neuronal no pudo arrancar", e)
-            callback.error(TextToSpeech.ERROR_SYNTHESIS)
-            return
-        } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "Este APK no trae el motor de la voz neuronal", e)
-            callback.error(TextToSpeech.ERROR_SYNTHESIS)
-            return
-        }
-        if (callback.start(engine.sampleRate(), AudioFormat.ENCODING_PCM_16BIT, 1) != TextToSpeech.SUCCESS) return
-        if (text.isBlank()) { callback.done(); return }
-        // Android da la velocidad en % (100 = normal); Piper la entiende como factor.
-        val speed = (request.speechRate / 100f).coerceIn(0.6f, 1.6f)
-        // Salve parte el texto en frases y pide al motor una cada vez: el motor solo devuelve audio y
-        // nunca ejecuta código de Salve a mitad de generar. Antes el motor llamaba a Salve por cada
-        // trozo y, si algo fallaba ahí, Android cerraba la app entera («JNI NewFloatArray called
-        // with pending exception»). Entre frase y frase se comprueba si hay que parar.
-        var failure: Throwable? = null
+        val trace = "neural_" + utteranceCounter.incrementAndGet()
+        currentTrace = trace
+        stopped = false
+        VoicePlaybackJournal.begin(this, trace, "síntesis neuronal", text.length)
         try {
-            var frames = 0
-            for (piece in SpeechSentences.split(text)) {
-                if (stopped) break
-                val audio = NeuralVoice.synthesize(this, piece.text, speed)
-                if (stopped) break
-                // Qué frase suena ahora: el avatar mueve la boca con ella.
-                callback.rangeStart(frames, piece.start, piece.end)
-                val pcm = NeuralVoice.toPcm16(audio)
-                var offset = 0
-                while (offset < pcm.size && !stopped) {
-                    val size = minOf(callback.maxBufferSize, pcm.size - offset)
-                    if (callback.audioAvailable(pcm, offset, size) != TextToSpeech.SUCCESS) { stopped = true; break }
-                    offset += size
-                }
-                frames += audio.size
+            val engine = try {
+                NeuralVoice.engine(this)
+            } catch (e: Exception) {
+                Log.e(TAG, "La voz neuronal no pudo arrancar", e)
+                VoicePlaybackJournal.event(trace, "ENGINE_START_ERROR", 0)
+                callback.error(TextToSpeech.ERROR_SYNTHESIS)
+                VoicePlaybackJournal.finish(trace, "ERROR")
+                return
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Este APK no trae el motor de la voz neuronal", e)
+                VoicePlaybackJournal.event(trace, "ENGINE_LINK_ERROR", 0)
+                callback.error(TextToSpeech.ERROR_SYNTHESIS)
+                VoicePlaybackJournal.finish(trace, "ERROR")
+                return
             }
-        } catch (e: Exception) {
-            failure = e
+            val result = callback.start(engine.sampleRate(), AudioFormat.ENCODING_PCM_16BIT, 1)
+            if (result != TextToSpeech.SUCCESS) {
+                VoicePlaybackJournal.event(trace, "CALLBACK_START_REJECTED", result.toLong())
+                VoicePlaybackJournal.finish(trace, "ERROR")
+                return
+            }
+            VoicePlaybackJournal.event(trace, "CALLBACK_STARTED", engine.sampleRate().toLong())
+            if (text.isBlank()) {
+                val end = callback.done()
+                VoicePlaybackJournal.event(trace, "CALLBACK_DONE", end.toLong())
+                VoicePlaybackJournal.finish(trace, if (end == TextToSpeech.SUCCESS) "COMPLETADA" else "ERROR")
+                return
+            }
+            val speed = (request.speechRate / 100f).coerceIn(0.6f, 1.6f)
+            var failure: Throwable? = null
+            var rejectedOutput: Int? = null
+            var frames = 0
+            var piecesDone = 0
+            try {
+                for (piece in SpeechSentences.split(text)) {
+                    if (stopped) break
+                    VoicePlaybackJournal.event(trace, "PIECE_STARTED", piecesDone.toLong())
+                    val audio = NeuralVoice.synthesize(this, piece.text, speed)
+                    if (stopped) break
+                    callback.rangeStart(frames, piece.start, piece.end)
+                    val pcm = NeuralVoice.toPcm16(audio)
+                    var offset = 0
+                    while (offset < pcm.size && !stopped) {
+                        val size = minOf(callback.maxBufferSize, pcm.size - offset)
+                        if (size <= 0) {
+                            rejectedOutput = TextToSpeech.ERROR_OUTPUT
+                            break
+                        }
+                        val accepted = callback.audioAvailable(pcm, offset, size)
+                        if (accepted != TextToSpeech.SUCCESS) {
+                            rejectedOutput = accepted
+                            break
+                        }
+                        offset += size
+                    }
+                    if (rejectedOutput != null || stopped) break
+                    frames += audio.size
+                    piecesDone++
+                    VoicePlaybackJournal.event(trace, "PIECE_WRITTEN", frames.toLong())
+                }
+            } catch (e: Exception) {
+                failure = e
+            } catch (e: LinkageError) {
+                failure = e
+            }
+            when {
+                stopped -> {
+                    VoicePlaybackJournal.event(trace, "SYNTH_INTERRUPTED", piecesDone.toLong())
+                    VoicePlaybackJournal.finish(trace, "INTERRUMPIDA")
+                }
+                rejectedOutput != null -> {
+                    // Before: silently returned without callback.done() OR callback.error().
+                    // Android could leave the chat text complete but cut the audio abruptly.
+                    VoicePlaybackJournal.event(trace, "OUTPUT_BUFFER_REJECTED", rejectedOutput!!.toLong())
+                    try { callback.error(TextToSpeech.ERROR_OUTPUT) }
+                    catch (ignored: RuntimeException) { }
+                    VoicePlaybackJournal.finish(trace, "ERROR")
+                }
+                failure != null -> {
+                    Log.e(TAG, "Fallo generando la voz", failure)
+                    VoicePlaybackJournal.event(trace, "SYNTH_EXCEPTION", piecesDone.toLong())
+                    recordFailure(failure)
+                    try { callback.error(TextToSpeech.ERROR_SYNTHESIS) }
+                    catch (ignored: RuntimeException) { }
+                    VoicePlaybackJournal.finish(trace, "ERROR")
+                }
+                else -> {
+                    val end = callback.done()
+                    VoicePlaybackJournal.event(trace, "CALLBACK_DONE", end.toLong())
+                    VoicePlaybackJournal.finish(trace, if (end == TextToSpeech.SUCCESS) "COMPLETADA" else "ERROR")
+                }
+            }
+        } finally {
+            if (currentTrace == trace) currentTrace = null
         }
-        val error = failure
-        if (error == null) {
-            if (!stopped) callback.done()
-            return
-        }
-        Log.e(TAG, "Fallo generando la voz", error)
-        recordFailure(error)
-        try { callback.error(TextToSpeech.ERROR_SYNTHESIS) } catch (ignored: RuntimeException) { }
     }
 
     /** Deja el fallo de la voz en el registro de ejecución, para saber qué lo provocó. */
