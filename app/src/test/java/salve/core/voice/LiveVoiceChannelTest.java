@@ -18,6 +18,24 @@ public class LiveVoiceChannelTest {
         channel.reply(ticket, "Hola", true); channel.started(ticket); channel.finished(ticket, false);
         assertEquals(java.util.Arrays.asList("1:Hola:true", "1:start", "1:end:false"), observer.events);
     }
+    @Test public void diagnosticsFollowTicketOwnershipWithoutLeakingStaleEvents() {
+        LiveVoiceChannel channel = new LiveVoiceChannel();
+        final java.util.List<String> events = new java.util.ArrayList<>();
+        LiveVoiceChannel.Listener listener = new LiveVoiceChannel.Listener() {
+            @Override public void onReply(long token, String text, boolean queued) { }
+            @Override public void onSpeechStarted(long token) { }
+            @Override public void onSpeechFinished(long token, boolean completed) { }
+            @Override public void onDiagnostic(long token, VoiceDiagnosticLog.Event event, long code) {
+                events.add(token + ":" + event.name() + ":" + code);
+            }
+        };
+        LiveVoiceChannel.Ticket old = channel.open(1, listener);
+        LiveVoiceChannel.Ticket current = channel.open(2, listener);
+        channel.diagnostic(old, VoiceDiagnosticLog.Event.TTS_ERROR_CODE, 7);
+        channel.diagnostic(current, VoiceDiagnosticLog.Event.TTS_STOPPED, 1);
+        assertEquals(java.util.Collections.singletonList("2:TTS_STOPPED:1"), events);
+    }
+
     @Test public void stoppingRevokesLateReplyAndAudioCallbacks() {
         LiveVoiceChannel channel = new LiveVoiceChannel(); Observer observer = new Observer();
         LiveVoiceChannel.Ticket ticket = channel.open(1, observer); channel.cancel();

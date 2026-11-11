@@ -112,10 +112,18 @@ public class MotorConversacional {
                     @Override public void onRangeStart(String id, int start, int end, int frame) {
                         dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechRange(avatarSession, id, start, end), 0);
                     }
-                    @Override public void onDone(String id) { finishSpeech(id, true); }
-                    @Override public void onError(String id) { finishSpeech(id, false); }
-                    @Override public void onError(String id, int errorCode) { finishSpeech(id, false); }
-                    @Override public void onStop(String id, boolean interrupted) { finishSpeech(id, false); }
+                    @Override public void onDone(String id) {
+                        finishSpeech(id, true, salve.core.voice.VoiceDiagnosticLog.Event.TTS_DONE, 0);
+                    }
+                    @Override public void onError(String id) {
+                        finishSpeech(id, false, salve.core.voice.VoiceDiagnosticLog.Event.TTS_ERROR, 0);
+                    }
+                    @Override public void onError(String id, int errorCode) {
+                        finishSpeech(id, false, salve.core.voice.VoiceDiagnosticLog.Event.TTS_ERROR_CODE, errorCode);
+                    }
+                    @Override public void onStop(String id, boolean interrupted) {
+                        finishSpeech(id, false, salve.core.voice.VoiceDiagnosticLog.Event.TTS_STOPPED, interrupted ? 1 : 0);
+                    }
                 });
                 applyConfiguredVoice();
             } else if (usingNeuralVoice) {
@@ -2924,8 +2932,14 @@ public class MotorConversacional {
                 activeUtterance = null;
                 activeUtteranceOwner = null;
                 if (session != null) AvatarMotionController.get().speechEnd(session, utteranceId);
-                if (owner != null) toolHandler.post(() -> liveVoiceChannel.finished(owner, false));
+                if (owner != null) toolHandler.post(() -> {
+                    liveVoiceChannel.diagnostic(owner, salve.core.voice.VoiceDiagnosticLog.Event.TTS_ENQUEUE_FAILED, TextToSpeech.ERROR);
+                    liveVoiceChannel.finished(owner, false);
+                });
                 Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
+            } else if (owner != null) {
+                toolHandler.post(() -> liveVoiceChannel.diagnostic(owner,
+                        salve.core.voice.VoiceDiagnosticLog.Event.TTS_ENQUEUE_OK, TextToSpeech.SUCCESS));
             }
         }
         if (publishUi && listener != null) listener.onHablar(withSketches(visibleText + sourcesNote));
@@ -3152,14 +3166,21 @@ public class MotorConversacional {
         try { if (am != null) am.abandonAudioFocusRequest(request); } catch (RuntimeException ignored) { }
     }
 
-    private void finishSpeech(String utteranceId, boolean completed) {
+    private void finishSpeech(String utteranceId, boolean completed,
+                              salve.core.voice.VoiceDiagnosticLog.Event reason, long detail) {
         scheduleCarFocusRelease();
         dispatchSpeechEvent(utteranceId,
-                () -> AvatarMotionController.get().speechEnd(avatarSession, utteranceId), completed ? 2 : 3);
+                () -> AvatarMotionController.get().speechEnd(avatarSession, utteranceId),
+                completed ? 2 : 3, reason, detail);
     }
 
     /** event: 0 range, 1 started, 2 completed, 3 stopped/failed. */
     private void dispatchSpeechEvent(String utteranceId, Runnable callback, int event) {
+        dispatchSpeechEvent(utteranceId, callback, event, null, 0);
+    }
+
+    private void dispatchSpeechEvent(String utteranceId, Runnable callback, int event,
+                                     salve.core.voice.VoiceDiagnosticLog.Event reason, long detail) {
         if (utteranceId == null) return;
         toolHandler.post(() -> {
             salve.core.voice.LiveVoiceChannel.Ticket owner;
@@ -3181,8 +3202,13 @@ public class MotorConversacional {
                 if (avatarSession != null) callback.run();
             }
             // These lifecycle events do not depend on a visible avatar session.
-            if (event == 1) liveVoiceChannel.started(owner);
-            else if (event >= 2) liveVoiceChannel.finished(owner, event == 2);
+            if (event == 1) {
+                liveVoiceChannel.diagnostic(owner, salve.core.voice.VoiceDiagnosticLog.Event.TTS_STARTED, 0);
+                liveVoiceChannel.started(owner);
+            } else if (event >= 2) {
+                if (reason != null) liveVoiceChannel.diagnostic(owner, reason, detail);
+                liveVoiceChannel.finished(owner, event == 2);
+            }
         });
     }
 
