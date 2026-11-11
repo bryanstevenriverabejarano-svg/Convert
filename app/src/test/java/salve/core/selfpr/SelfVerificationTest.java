@@ -1,0 +1,57 @@
+package salve.core.selfpr;
+
+import static org.junit.Assert.*;
+
+import com.google.gson.JsonObject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import org.junit.Test;
+
+/** Un cambio suyo no es una mejora hasta que el examen lo dice. */
+public class SelfVerificationTest {
+    private static JsonObject change(long t, String issue, int failures) {
+        return SelfLineage.entry(t, "bryan", "leer mejor los sensores", SelfChangeScope.ROOT + "sensors/DeviceSenses.java",
+                "0123456789abcdef0123456789abcdef01234567", issue, failures);
+    }
+
+    @Test public void aChangeIsPendingOnlyAfterTheAppWasUpdatedAndUntilItsVerdict() {
+        List<JsonObject> lineage = Arrays.asList(change(1_000, "https://github.com/o/r/issues/1", 3), change(5_000, "https://github.com/o/r/issues/2", 2));
+        List<JsonObject> none = Collections.emptyList();
+        assertNull("la app aún no se ha actualizado", SelfVerification.pending(lineage, none, 4_000));
+        assertNull("Android no dijo cuándo se instaló", SelfVerification.pending(lineage, none, 0));
+        JsonObject waiting = SelfVerification.pending(lineage, none, 9_000);
+        assertEquals("solo el último cambio", "https://github.com/o/r/issues/2", waiting.get("issue").getAsString());
+        JsonObject verdict = SelfVerification.verdict(waiting, 1, 10_000);
+        assertNull("con veredicto ya no está pendiente", SelfVerification.pending(lineage, Collections.singletonList(verdict), 9_000));
+        assertNull(SelfVerification.pending(new ArrayList<>(), none, 9_000));
+        assertNull(SelfVerification.pending(null, none, 9_000));
+        assertTrue(SelfVerification.pendingNotice(waiting).contains("cambio mío sin comprobar (DeviceSenses.java)"));
+        assertEquals("", SelfVerification.pendingNotice(null));
+    }
+
+    @Test public void theVerdictComparesTheExamBeforeAndAfter() {
+        JsonObject better = SelfVerification.verdict(change(5_000, "https://github.com/o/r/issues/2", 2), 1, 10_000);
+        assertEquals("mejor", better.get("resultado").getAsString());
+        assertTrue(SelfVerification.sentence(better).contains("el examen mejoró, de 2 a 1 casos fallidos. Lo doy por bueno."));
+
+        JsonObject worse = SelfVerification.verdict(change(5_000, "https://github.com/o/r/issues/2", 2), 4, 10_000);
+        assertEquals("peor", worse.get("resultado").getAsString());
+        String text = SelfVerification.sentence(worse);
+        assertTrue(text, text.contains("el examen empeoró, de 2 a 4 casos fallidos"));
+        assertTrue(text, text.contains("recomiendo revertir su commit (lo encuentras en https://github.com/o/r/issues/2)"));
+        assertTrue("no afirma una causa que no puede probar", text.contains("es un indicio, no una prueba"));
+
+        JsonObject same = SelfVerification.verdict(change(5_000, "https://github.com/o/r/issues/2", 2), 2, 10_000);
+        assertEquals("igual", same.get("resultado").getAsString());
+        assertTrue(SelfVerification.sentence(same).contains("tampoco demuestra que ayudara"));
+    }
+
+    @Test public void withoutBothMeasurementsThereIsNoVerdict() {
+        assertNull("no había examen al proponerlo", SelfVerification.verdict(change(5_000, "https://github.com/o/r/issues/2", -1), 1, 10_000));
+        assertNull("el examen de ahora no se pudo contar", SelfVerification.verdict(change(5_000, "https://github.com/o/r/issues/2", 2), -1, 10_000));
+        assertNull(SelfVerification.verdict(null, 1, 10_000));
+        assertEquals("", SelfVerification.sentence(null));
+    }
+}
