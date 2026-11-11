@@ -90,7 +90,17 @@ final class SelfPrDesk {
         for (int attempt = 1; attempt <= ATTEMPTS; attempt++) {
             if (motor.closed) return "Lo dejé a medias porque se cerró la sesión.";
             motor.estado("Escribiendo mi parche para «" + problem + "» (intento " + attempt + " de " + ATTEMPTS + ")…");
-            ModelResult result = motor.llm.generateResult(
+            // Con un nodo propio (un modelo mayor en el PC) le enseño mucho más de mi código y el parche lo
+            // escribe él; si no hay nodo o falla, lo escribo yo en el teléfono con la ventana pequeña de siempre.
+            ModelResult result = null;
+            if (motor.llm.isDistributedEnabled()) {
+                String wide = SelfPatch.excerpt(source, SelfPatch.keywords(issueId,
+                        goal != null ? java.util.Collections.singletonList(goal) : examples), SelfPatch.NODE_WINDOW_CHARS);
+                result = motor.llm.generateOnNodeOnly(
+                        SelfPatch.prompt(problem, idea, examples, path, wide, error, goal != null), SalveLLM.Role.PLANIFICADOR);
+                if (!result.isSuccess()) result = null;
+            }
+            if (result == null) result = motor.llm.generateResult(
                     SelfPatch.prompt(problem, idea, examples, path, excerpt, error, goal != null), SalveLLM.Role.PLANIFICADOR);
             if (result == null || !result.isSuccess()) {
                 error = "mi modelo no respondió" + (result == null || result.getError() == null ? "" : ": " + result.getError());

@@ -442,6 +442,17 @@ public class SalveLLM {
         return generateLocalResult(prompt, role, onChunk);
     }
 
+    /**
+     * Solo en un nodo propio; si no hay ninguno utilizable devuelve un fallo y NO usa el modelo del teléfono.
+     * No toma el cerrojo del motor local: mientras el nodo trabaja, el teléfono puede seguir conversando.
+     */
+    public ModelResult generateOnNodeOnly(String prompt, Role role) {
+        Role chosen = role == null ? Role.CONVERSACIONAL : role;
+        if (activationInProgress || isLocalOnly() || !distributed.enabled())
+            return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Nodos desactivados", 0);
+        return distributed.generateOnNode(decoratePrompt(prompt, chosen), chosen.name());
+    }
+
     /** Explicit phone-only entry point for activation, diagnostics and fallback. Never contacts nodes. */
     public synchronized ModelResult generateLocalResult(String prompt, Role role, java.util.function.Consumer<String> onChunk) {
         long start = System.nanoTime();

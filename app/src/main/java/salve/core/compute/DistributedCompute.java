@@ -21,6 +21,20 @@ public final class DistributedCompute {
     public boolean enabled() { return store.enabled(); }
     public void setEnabled(boolean enabled) { store.setEnabled(enabled); }
     public String status() { return enabled() ? router.status() : "Nodos desactivados"; }
+    /**
+     * Solo en un nodo, o nada: sin satélites ni modelo del teléfono. Para trabajos que se plantean de otra
+     * forma si hay un modelo grande disponible (una ventana de código mayor, por ejemplo); quien llama
+     * decide qué hacer si no lo hay.
+     */
+    public ModelResult generateOnNode(String prompt, String role) {
+        ModelResult none = ModelResult.failure(ModelResult.Status.UNAVAILABLE, "Sin nodo utilizable", 0);
+        if (!enabled() || Looper.myLooper() == Looper.getMainLooper()) return none;
+        long revision = store.revision();
+        java.util.function.BooleanSupplier stopped =
+                () -> Thread.currentThread().isInterrupted() || !store.enabled() || store.revision() != revision;
+        return router.generateOnNode(store.loadActive(), role, prompt, stopped, () -> none);
+    }
+
     public ModelResult generate(String prompt, String role, Supplier<ModelResult> local) {
         if (!enabled() || Looper.myLooper() == Looper.getMainLooper()) return local.get();
         long revision = store.revision();

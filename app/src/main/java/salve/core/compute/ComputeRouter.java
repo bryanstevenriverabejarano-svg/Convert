@@ -54,10 +54,25 @@ public final class ComputeRouter {
     }
     public synchronized ModelResult generate(List<ComputeNode> nodes, boolean enabled, String role, String prompt,
             BooleanSupplier stopped, Supplier<ModelResult> local) {
+        return generate(nodes, enabled, role, prompt, stopped, local, false);
+    }
+
+    /**
+     * Para trabajos que quien llama quiere en un nodo aunque el prompt sea corto (p. ej. escribir un parche
+     * de su propio código): se salta la regla de «tarea pesada». Todo lo demás es igual: mismos límites,
+     * un solo nodo y, si no hay ninguno utilizable, {@code local}.
+     */
+    public synchronized ModelResult generateOnNode(List<ComputeNode> nodes, String role, String prompt,
+            BooleanSupplier stopped, Supplier<ModelResult> local) {
+        return generate(nodes, true, role, prompt, stopped, local, true);
+    }
+
+    private ModelResult generate(List<ComputeNode> nodes, boolean enabled, String role, String prompt,
+            BooleanSupplier stopped, Supplier<ModelResult> local, boolean wanted) {
         long start = clock.getAsLong();
         if (stopped.getAsBoolean() || Thread.currentThread().isInterrupted()) return cancelled();
         if (!enabled || !ROLES.contains(role) || prompt == null || prompt.trim().isEmpty()
-                || !heavy(role, prompt.length()) || prompt.length() > MAX_PROMPT_CHARS) return local.get();
+                || !(wanted || heavy(role, prompt.length())) || prompt.length() > MAX_PROMPT_CHARS) return local.get();
         retryAfter.keySet().retainAll(nodeIds(nodes));
         ComputeNode selected = null; Health selectedHealth = null;
         try {

@@ -40,7 +40,27 @@ public final class ComputeRouterChecks {
     }
     private static void check(boolean value, String name) { if (!value) throw new AssertionError(name); }
     public static void main(String[] args) { run(); System.out.println("Compute router: 19 scenarios passed"); }
+    private static void wantedOnNode() {
+        // Un trabajo corto que normalmente se queda en el teléfono va al nodo si quien llama lo pide…
+        Case c = new Case();
+        ModelResult r = c.router.generateOnNode(Arrays.asList(A, B), "PLANIFICADOR", "parche corto", c.stopped::get,
+                () -> { c.local++; return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "sin nodo", 0); });
+        check(r.isSuccess() && r.getProvider().startsWith("Nodo GPU") && c.local == 0 && c.transport.generations == 1, "wanted work goes to the freest node");
+        // …y si no hay nodo utilizable devuelve lo que diga quien llama, sin inventar una respuesta.
+        Case d = new Case(); d.transport.failHealth = true;
+        ModelResult none = d.router.generateOnNode(Arrays.asList(A), "PLANIFICADOR", "parche corto", d.stopped::get,
+                () -> { d.local++; return ModelResult.failure(ModelResult.Status.UNAVAILABLE, "sin nodo", 0); });
+        check(!none.isSuccess() && d.local == 1 && d.transport.generations == 0, "no usable node reports unavailable");
+        // Los límites siguen: un rol desconocido o un prompt enorme no salen del teléfono.
+        Case e = new Case();
+        e.router.generateOnNode(Arrays.asList(A), "ROL_INVENTADO", "x", e.stopped::get, () -> { e.local++; return ModelResult.success("local", 0); });
+        e.router.generateOnNode(Arrays.asList(A), "PLANIFICADOR", "x".repeat(ComputeRouter.MAX_PROMPT_CHARS + 1), e.stopped::get,
+                () -> { e.local++; return ModelResult.success("local", 0); });
+        check(e.local == 2 && e.transport.probes == 0, "wanted work keeps role and size limits");
+    }
+
     public static void run() {
+        wantedOnNode();
         Case c = new Case();
         check(c.run(false, "NARRADOR", "cuento", A).getText().equals("local") && c.transport.probes == 0, "disabled is offline");
         c = new Case(); c.run(true, "CONVERSACIONAL", "hola", A);

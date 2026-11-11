@@ -22,6 +22,12 @@ No copia la aplicación, no escanea webs, no crea cuentas y no contrata máquina
 - La consolidación de sueño se beneficia a través de sus llamadas de inferencia; la base
   de datos y la aplicación de cambios en memoria siguen en el teléfono.
 
+- **Se programa con sus nodos (11-11-2026):** cuando escribe un parche de su propio código («abre un PR»),
+  con el modo de nodos activo lo pide primero a un nodo y le enseña una ventana de ~12.000 letras del archivo
+  (≈300 líneas) en vez de las ~2.000 del teléfono. Si no hay nodo utilizable, excede su cota de entrada o
+  tarda más que su plazo, lo escribe en el teléfono como antes. El límite del parche (60 líneas, un archivo),
+  la zona protegida y las pruebas en GitHub no cambian. El examen sigue haciéndose con el modelo del teléfono.
+
 Es distribución **por tareas**, no reparto de las capas de un LLM entre varias GPU.
 Cada tarea usa la capacidad de un nodo. El motor Android conserva su serialización de
 turnos: esta versión no suma el rendimiento de todos los nodos para un único cuento ni
