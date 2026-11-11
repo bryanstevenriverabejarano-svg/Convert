@@ -35,15 +35,23 @@ public final class ReadOnlyEvidenceDesk {
         if (notice != null && !notice.isEmpty()) out.append("Aviso: ").append(notice).append('\n');
         if (tasks.isEmpty()) return out.append("Todavía no hay tareas registradas en este dispositivo.").toString();
         int shown = 0;
+        // Recent voice failures are relevant evidence; do not bury them under sleep reports.
+        for (ExecutionJournal.Task task : tasks) {
+            if (shown >= max) break;
+            if (task == null || task.type == null || !task.type.startsWith("Voz · ")) continue;
+            if (!"ERROR".equals(task.status)) continue;
+            appendTask(out, task);
+            shown++;
+        }
         // Prefer the sleep run when the previous request is about a night cycle.
         for (ExecutionJournal.Task task : tasks) {
-            if (task == null || task.type == null || !task.type.equals("Sueño autónomo")) continue;
+            if (shown >= max || task == null || task.type == null || !task.type.equals("Sueño autónomo")) continue;
             appendTask(out, task);
             if (++shown >= max) break;
         }
         for (ExecutionJournal.Task task : tasks) {
             if (shown >= max) break;
-            if (task == null || task.type == null || task.type.equals("Sueño autónomo")) continue;
+            if (task == null || task.type == null || task.type.equals("Sueño autónomo") || (task.type.startsWith("Voz · ") && "ERROR".equals(task.status))) continue;
             appendTask(out, task);
             shown++;
         }
@@ -56,6 +64,19 @@ public final class ReadOnlyEvidenceDesk {
                 .append(bounded(task.status, 36)).append(" · ")
                 .append(ExecutionJournal.date(task.started)).append('\n');
         if (task.events == null) return;
+        // Voice traces store controlled event names and numeric values, not speech text.
+        if (task.type != null && task.type.startsWith("Voz · ")) {
+            int emitted = 0;
+            for (int i = task.events.size() - 1; i >= 0 && emitted < 4; i--) {
+                ExecutionJournal.Event event = task.events.get(i);
+                if (event == null || !"AUDIO".equals(event.kind) || event.text == null) continue;
+                if (!event.text.matches("elapsed_ms=[0-9]+ event=[A-Z0-9_]{1,50} code=-?[0-9]+")) continue;
+                out.append("  AUDIO: ").append(bounded(event.text, 110)).append('\n');
+                emitted++;
+            }
+            if (task.omitted > 0) out.append("  Aviso: eventos omitidos; traza incompleta.\n");
+            return;
+        }
         // Include only short non-user-origin statuses; full request/prompt stays inside the journal UI.
         for (int i = task.events.size() - 1; i >= 0; i--) {
             ExecutionJournal.Event event = task.events.get(i);
