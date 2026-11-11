@@ -18,6 +18,9 @@ import java.util.List;
  * fusionarse, y entre dos exámenes pueden haber cambiado más cosas (otro modelo, otros parches).
  */
 public final class SelfVerification {
+    /** Origen de un cambio de pesos (adaptador LoRA) en el linaje: ya está instalado cuando se anota. */
+    public static final String ADAPTER = "adaptador";
+
     private SelfVerification() { }
 
     public static File verdictsFile(Context context) {
@@ -34,11 +37,13 @@ public final class SelfVerification {
 
     /** Su último cambio, si la app se actualizó después de proponerlo y aún no tiene veredicto; si no, null. */
     public static JsonObject pending(List<JsonObject> lineage, List<JsonObject> verdicts, long appUpdatedAt) {
-        if (lineage == null || lineage.isEmpty() || appUpdatedAt <= 0) return null;
+        if (lineage == null || lineage.isEmpty()) return null;
         JsonObject last = lineage.get(lineage.size() - 1);
         long proposed = last.has("t") ? last.get("t").getAsLong() : 0L;
         String issue = text(last, "issue");
-        if (proposed <= 0 || appUpdatedAt <= proposed || issue.isEmpty()) return null;
+        // Un parche necesita que la app se actualice; un adaptador ya está cargado cuando se anota.
+        boolean installed = ADAPTER.equals(text(last, "origen")) || appUpdatedAt > proposed;
+        if (proposed <= 0 || !installed || issue.isEmpty()) return null;
         if (verdicts != null) for (JsonObject v : verdicts) if (issue.equals(text(v, "issue"))) return null;
         return last;
     }
@@ -59,6 +64,7 @@ public final class SelfVerification {
         v.addProperty("t", now);
         v.addProperty("issue", text(change, "issue"));
         v.addProperty("archivo", text(change, "archivo"));
+        v.addProperty("origen", text(change, "origen"));
         v.addProperty("objetivo", text(change, "objetivo"));
         v.addProperty("revision", text(change, "revision"));
         v.addProperty("antes", before);
@@ -79,7 +85,12 @@ public final class SelfVerification {
             case "no_comparable": return "Veredicto de " + what + ": no lo puedo dar. Mi examen cambió de tamaño entre la propuesta y hoy, "
                     + "así que comparar " + before + " fallos de entonces con " + now + " de ahora no mediría el cambio.";
             case "mejor": return "Veredicto de " + what + ": el examen mejoró, " + counts + ". Lo doy por bueno.";
-            case "peor": return "Veredicto de " + what + ": el examen empeoró, " + counts + ". Si esa propuesta llegó a fusionarse, "
+            case "peor":
+                if (ADAPTER.equals(text(verdict, "origen")))
+                    return "Veredicto de " + what + ": el examen empeoró, " + counts + ". Recomiendo quitar el adaptador "
+                            + "(borra salve-lora.gguf y salve-lora.json de la carpeta adapters) para volver al modelo base, y repetir el examen. "
+                            + "Entre los dos exámenes pudo cambiar algo más, así que es un indicio, no una prueba.";
+                return "Veredicto de " + what + ": el examen empeoró, " + counts + ". Si esa propuesta llegó a fusionarse, "
                     + "recomiendo revertir su commit (lo encuentras en " + text(verdict, "issue") + ") y repetir el examen. "
                     + "Entre los dos exámenes pudo cambiar algo más, así que es un indicio, no una prueba.";
             default: return "Veredicto de " + what + ": sin cambio medible en el examen (" + before + " casos fallidos antes y ahora). "
@@ -90,6 +101,9 @@ public final class SelfVerification {
     public static String pendingNotice(JsonObject change) {
         if (change == null) return "";
         String file = text(change, "archivo");
+        if (ADAPTER.equals(text(change, "origen")))
+            return "Tengo un adaptador nuevo cargado sin comprobar: aún no me he examinado con él. "
+                    + "En cuanto haga el examen dejaré su veredicto.";
         return "Tengo un cambio mío sin comprobar (" + file.substring(file.lastIndexOf('/') + 1)
                 + "): la app se actualizó después de proponerlo y aún no me he examinado con esta versión. "
                 + "En cuanto haga el examen dejaré su veredicto.";

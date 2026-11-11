@@ -46,6 +46,30 @@ public final class MindDatasetExporter {
         return out.toString();
     }
 
+    /**
+     * Lo que Bryan le ha corregido: la situación, lo que ella hizo y lo que él esperaba. Es el material
+     * para que su adaptador aprenda comportamiento, no solo datos. Solo correcciones de Bryan (no las
+     * que se hizo ella sola) y solo las completas. Su examen NO se exporta: es el juez del adaptador y
+     * entrenar con él falsearía la nota.
+     */
+    public static String corrections(List<LessonBook.Lesson> lessons) {
+        StringBuilder out = new StringBuilder();
+        if (lessons == null) return "";
+        for (LessonBook.Lesson l : lessons) {
+            if (l == null || !"bryan".equals(l.source) || blank(l.situation) || blank(l.expected)) continue;
+            JsonObject o = new JsonObject();
+            o.addProperty("type", "correction");
+            o.addProperty("situation", l.situation.trim());
+            o.addProperty("did", l.did == null ? "" : l.did.trim());
+            o.addProperty("expected", l.expected.trim());
+            o.addProperty("times", Math.max(1, l.times));
+            out.append(GSON.toJson(o)).append('\n');
+        }
+        return out.toString();
+    }
+
+    private static boolean blank(String s) { return s == null || s.trim().isEmpty(); }
+
     public static String episodes(List<Episode> episodes) {
         StringBuilder out = new StringBuilder();
         for (Episode e : episodes) {

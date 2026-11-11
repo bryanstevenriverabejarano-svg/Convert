@@ -50,7 +50,21 @@ def hedge(text, confidence):
     return "Por lo que me has contado, creo que " + text[0].lower() + text[1:] + " Corrígeme si ha cambiado."
 
 
-def build_examples(knowledge, seed=7):
+def correction_examples(system, corrected):
+    """Respuestas ya escritas y aceptadas por write_corrections.py: comportamiento, no datos."""
+    examples = []
+    for item in corrected:
+        if not item.get("question") or not item.get("reply"):
+            continue
+        examples.append({"messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": item["question"]},
+            {"role": "assistant", "content": item["reply"]},
+        ]})
+    return examples
+
+
+def build_examples(knowledge, seed=7, corrected=()):
     rng = random.Random(seed)
     narrative = next((k["text"] for k in knowledge if k.get("type") == "narrative"), None)
     if not narrative:
@@ -79,6 +93,7 @@ def build_examples(knowledge, seed=7):
             {"role": "user", "content": "¿En qué has estado pensando?"},
             {"role": "assistant", "content": "Estuve pensando en esto: " + item["text"]},
         ]})
+    examples.extend(correction_examples(system, corrected))
     return examples
 
 
@@ -86,9 +101,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--export-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--corrections", type=Path, help="corrected.jsonl de write_corrections.py (opcional)")
     args = parser.parse_args()
     knowledge = load_jsonl(args.export_dir / "salve-knowledge.jsonl")
-    examples = build_examples(knowledge)
+    examples = build_examples(knowledge, corrected=load_jsonl(args.corrections) if args.corrections else ())
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8") as out:
         for example in examples:

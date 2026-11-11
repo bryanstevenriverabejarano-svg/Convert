@@ -26,6 +26,28 @@ final class PersonalAdapter {
         return external != null ? external : new File(context.getFilesDir(), "adapters");
     }
 
+    /**
+     * Un adaptador nuevo es un cambio suyo como cualquier otro: se anota una vez en su linaje con la nota
+     * del examen de ese momento, y el siguiente examen (también el que hace sola de noche) da el veredicto.
+     * Si empeora, se quita el archivo y vuelve el modelo base.
+     */
+    private static void recordForVerdict(Context context, AdapterManifest manifest) {
+        try {
+            android.content.SharedPreferences prefs = context.getSharedPreferences("salve_adapter", Context.MODE_PRIVATE);
+            if (manifest.sha256 == null || manifest.sha256.equals(prefs.getString("recorded", null))) return;
+            com.google.gson.JsonObject exam = salve.core.evaluation.SleepImprovementRuntime.lastExam(context);
+            com.google.gson.JsonObject entry = salve.core.selfpr.SelfLineage.entry(System.currentTimeMillis(),
+                    salve.core.selfpr.SelfVerification.ADAPTER,
+                    "adaptador entrenado" + (manifest.trainedOn == null ? "" : " el " + manifest.trainedOn),
+                    "salve-lora.gguf", manifest.sha256,
+                    salve.core.selfpr.SelfVerification.ADAPTER + ":" + manifest.sha256.substring(0, Math.min(12, manifest.sha256.length())),
+                    salve.core.selfpr.SelfLineage.failedCases(exam));
+            entry.addProperty("casos_examen", salve.core.selfpr.SelfLineage.totalCases(exam));
+            salve.core.selfpr.SelfLineage.append(salve.core.selfpr.SelfVerification.lineageFile(context), entry);
+            prefs.edit().putString("recorded", manifest.sha256).apply();
+        } catch (Exception unsaved) { Log.w(TAG, "No pude anotar el adaptador en el linaje"); }
+    }
+
     /** @return descripción del resultado (para logs y estado). */
     static String applyIfPresent(Context context, String modelPath) {
         File dir = directory(context);
@@ -42,6 +64,7 @@ final class PersonalAdapter {
                     + (manifest.trainedOn == null ? "" : ", entrenado " + manifest.trainedOn) + ")."
                     : "llama.cpp rechazó el adaptador; el modelo base sigue activo.";
             Log.i(TAG, result);
+            if (applied) recordForVerdict(context, manifest);
             return result;
         } catch (RuntimeException failure) {
             Log.w(TAG, "Adaptador ignorado: " + failure.getClass().getSimpleName());

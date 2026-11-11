@@ -68,4 +68,22 @@ public class SelfVerificationTest {
                 "{\"detail\":{\"cases\":[{},{},{}]}}").getAsJsonObject()));
         assertEquals(-1, SelfLineage.totalCases(null));
     }
+
+    @Test public void aNewAdapterIsAChangeLikeAnyOtherAndGetsItsOwnVerdict() {
+        JsonObject adapter = SelfLineage.entry(5_000, SelfVerification.ADAPTER, "adaptador entrenado el 2026-11-12", "salve-lora.gguf",
+                "abcdef0123456789", SelfVerification.ADAPTER + ":abcdef012345", 6);
+        adapter.addProperty("casos_examen", 44);
+        List<JsonObject> lineage = Collections.singletonList(adapter);
+        // Ya está cargado: no espera a una actualización de la app.
+        JsonObject waiting = SelfVerification.pending(lineage, Collections.emptyList(), 0);
+        assertNotNull(waiting);
+        assertTrue(SelfVerification.pendingNotice(waiting).contains("adaptador nuevo cargado sin comprobar"));
+        JsonObject worse = SelfVerification.verdict(waiting, 9, 44, 10_000);
+        assertEquals("peor", worse.get("resultado").getAsString());
+        String text = SelfVerification.sentence(worse);
+        assertTrue(text, text.contains("Recomiendo quitar el adaptador"));
+        assertFalse("no habla de commits: no es un parche", text.contains("commit"));
+        assertTrue(SelfVerification.sentence(SelfVerification.verdict(waiting, 3, 44, 10_000)).contains("el examen mejoró, de 6 a 3"));
+        assertNull(SelfVerification.pending(lineage, Collections.singletonList(worse), 0));
+    }
 }
