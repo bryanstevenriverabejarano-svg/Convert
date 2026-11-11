@@ -54,7 +54,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
     /** Manos libres: tras cada respuesta vuelve a escuchar sola hasta «adiós, Salve» o 3 minutos de silencio. */
     private final VoiceConversationLoop loop = new VoiceConversationLoop(true);
     private final VoiceTurnMetrics metrics = new VoiceTurnMetrics();
-    private final VoiceDiagnosticLog diagnostics;
+    private VoiceDiagnosticLog diagnostics;
     private final VoiceLabReport voiceLab = new VoiceLabReport();
     /** AEC-only one-shot detector; the existing SpeechRecognizer still owns transcribed input. */
     private final VoiceBargeInMonitor bargeIn = new VoiceBargeInMonitor();
