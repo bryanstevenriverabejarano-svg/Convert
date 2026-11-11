@@ -26,6 +26,23 @@ public final class ReadOnlyEvidenceDesk {
         return out.toString();
     }
 
+    /** Evidence for existing improvement proposals; no new store or analysis engine. */
+    public static String recentVoiceFailures(Context context, int max) {
+        ExecutionJournal journal = ExecutionTrace.journal(context.getApplicationContext());
+        StringBuilder out = new StringBuilder();
+        int shown = 0;
+        for (ExecutionJournal.Task task : journal.recent()) {
+            if (shown >= Math.max(0, Math.min(max, 3))) break;
+            if (task == null || task.type == null || !task.type.startsWith("Voz · ")
+                    || !"ERROR".equals(task.status)) continue;
+            appendTask(out, task);
+            shown++;
+        }
+        if (shown == 0) return "";
+        return "\n\nFallos recientes de voz observados (no prueban una causa):\n" + out
+                + "Compara las trazas y valida cualquier corrección antes de aplicarla.";
+    }
+
     /** The existing journal is authoritative; these are metadata, not an invented chain of thought. */
     public static String recent(Context context, int max) {
         ExecutionJournal journal = ExecutionTrace.journal(context.getApplicationContext());
