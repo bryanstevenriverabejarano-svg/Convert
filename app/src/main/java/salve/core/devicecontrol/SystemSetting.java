@@ -132,9 +132,8 @@ public final class SystemSetting {
     public static String description(String input) {
         Command command = parse(input);
         if (command == null) throw new IllegalArgumentException("Sin ajuste pedido.");
-        return "{accion:'" + command.action.name() + "'}: cambia ese ajuste del sistema (" + command.action.label
-                + ") que pidió el usuario, mediante Shizuku; el valor sale de su frase. Recibes lo que el sistema informa después: "
-                + "cuenta solo eso, y si falta Shizuku o su permiso, dilo tal cual.";
+        return "{accion:'" + command.action.name() + "'}: cambia ese ajuste (" + command.action.label
+                + ") que pidió el usuario. Cuenta solo lo que el sistema informa; si falta Shizuku, dilo.";
     }
 
     /** El modelo nunca convierte «apaga» en «enciende» ni cambia de ajuste. */

@@ -71,8 +71,8 @@ public final class DeviceControlIntent {
     public static String description(String input) {
         Command command = parse(input);
         if (command == null) throw new IllegalArgumentException("Sin mando pedido.");
-        return "{accion:'" + command.action.name() + "'}: acciona ese mando físico del teléfono (linterna, volumen o vibración) "
-                + "que pidió el usuario; el valor sale de su frase. Recibes el estado real después: cuenta solo eso.";
+        return "{accion:'" + command.action.name() + "'}: acciona ese mando del teléfono que pidió el usuario. "
+                + "Cuenta solo el estado real que recibes.";
     }
 
     /** El modelo nunca convierte «apaga» en «enciende» ni «baja» en «sube». */

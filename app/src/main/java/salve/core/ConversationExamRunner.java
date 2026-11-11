@@ -155,7 +155,7 @@ final class ConversationExamRunner {
         CognitiveTurn.Outcome outcome;
         try {
             outcome = motor.runCognitiveTurn(c.question, context, null, false, null, false,
-                    history, catalog -> dryRun(catalog, tools, queries));
+                    history, catalog -> dryRun(examCatalog(c.question, catalog), tools, queries));
         } finally { LiteRTLlm.setThinking(false); }
         if (outcome.handedOff) return new ConversationExam.Attempt("(acción del móvil preparada para confirmar)", tools, queries);
         String reply = outcome.result.isSuccess() ? outcome.result.getText() : motor.modelFailureMessage(outcome.result);
@@ -166,7 +166,7 @@ final class ConversationExamRunner {
                             salve.core.reasoning.MathGrounding.problem(c.question, reply)));
             if (review.needsRewrite()) {
                 CognitiveTurn.Outcome retry = motor.runCognitiveTurn(c.question, context + review.instruction(), null, false, null, false,
-                        history, catalog -> dryRun(catalog, tools, queries));
+                        history, catalog -> dryRun(examCatalog(c.question, catalog), tools, queries));
                 if (!retry.handedOff && retry.result.isSuccess() && ReplyReviewer.better(
                         ReplyReviewer.review(retry.result.getText(), c.question, recent, reading, true,
                                 salve.core.conversation.TurnChecks.join(salve.core.conversation.TurnChecks.problem(c.question, retry.result.getText(), true),
@@ -178,6 +178,23 @@ final class ConversationExamRunner {
             reply = salve.core.reasoning.MathGrounding.ensureResult(c.question, reply);
         }
         return new ConversationExam.Attempt(reply, tools, queries);
+    }
+
+    /**
+     * El catálogo del examen es siempre el de Bryan verificado y con accesibilidad, esté como esté el
+     * teléfono en ese momento. Si no, la nota cambiaba según la hora: de día (verificado) tenía más
+     * herramientas que de noche, y dos exámenes no medían lo mismo. Todo sigue simulado: nada se ejecuta.
+     * Mismo orden y mismo recorte que en un turno real.
+     */
+    private Map<String, CognitiveTurn.Tool> examCatalog(String question, Map<String, CognitiveTurn.Tool> real) {
+        int budget = motor.llm == null ? 10500 : motor.llm.getConversationPromptBudgetChars();
+        Map<String, CognitiveTurn.Tool> verified = salve.core.cognition.CognitiveToolCatalog.build(
+                question, false, true, true, (name, args) -> new CognitiveTurn.Receipt("Hecho (simulado)."));
+        Map<String, CognitiveTurn.Tool> out = new LinkedHashMap<>(salve.core.cognition.CognitivePrompt.limitTools(
+                salve.core.cognition.CognitivePrompt.prioritize(verified, question), budget));
+        // Lo que el turno real ofrecía y esa lista no trae (p. ej. evidencia de la conversación) se conserva.
+        for (Map.Entry<String, CognitiveTurn.Tool> e : real.entrySet()) out.putIfAbsent(e.getKey(), e.getValue());
+        return out;
     }
 
     /** Mismas herramientas y descripciones que de verdad; lo que hacen, simulado y anotado. */
@@ -199,6 +216,13 @@ final class ConversationExamRunner {
                     case "sketch.draw":
                         return new CognitiveTurn.Receipt("DIBUJANDO " + (args.has("motivos") ? args.get("motivos").getAsString() : "")
                                 + " (repertorio); Bryan lo ve en la pantalla y en el chat.");
+                    case "device.sense":
+                        return new CognitiveTurn.Receipt("PERCEPCION_REAL (medido ahora, no guardado):\n"
+                                + "ENTORNO: Luz: 180.0 lux (luz tenue de interior).\nENERGIA: Batería: 82 % (descargándose, sin enchufar).");
+                    case "device.control":
+                        return new CognitiveTurn.Receipt("LINTERNA: Android aceptó la orden. VOLUMEN_REAL: multimedia antes 60 %, ahora 40 %.");
+                    case "device.setting":
+                        return new CognitiveTurn.Receipt("AJUSTE_REAL (leído del sistema después de la orden): wifi: desactivado. (el sistema informa 0)");
                     default:
                         return new CognitiveTurn.Receipt("Hecho (simulado).");
                 }
