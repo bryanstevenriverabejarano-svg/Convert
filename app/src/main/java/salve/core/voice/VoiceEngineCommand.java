@@ -12,7 +12,7 @@ public final class VoiceEngineCommand {
     public enum Target { NEURAL, ANDROID }
 
     private static final Pattern VERB = Pattern.compile(
-            "^(?:quiero que |a partir de ahora )?(?:us[ae]\\w*|pon\\w*|activ\\w*|cambi\\w*|desc\\w{0,3}g[ae]\\w*|instal\\w*|habla\\w*|vuelv\\w*|volver|quit\\w*|desactiv\\w*)\\b.*");
+            "^(?:quiero que |a partir de ahora )?(?:us[ae]\\w*|pon\\w*|activ\\w*|cambi\\w*|desc\\w{0,3}g[ae]\\w*|instal\\w*|habla\\w*|vuelv\\w*|volver|quit\\w*|desactiv\\w*|apag\\w*|deshabilit\\w*)\\b.*");
     private static final Pattern NEURAL = Pattern.compile(
             "\\bvoz (?:nueva|neuronal|natural|mas natural|humana|mas humana|de mujer|femenina|mas femenina|realista|mejor)\\b");
     private static final Pattern ANDROID = Pattern.compile(
@@ -26,7 +26,7 @@ public final class VoiceEngineCommand {
         if (text.isEmpty() || text.split(" ").length > 14 || !VERB.matcher(text).matches()) return null;
         boolean neural = NEURAL.matcher(text).find(), android = ANDROID.matcher(text).find();
         // «quita la voz nueva» = volver a la de Android.
-        if (neural && REMOVE.matcher(text).find()) return Target.ANDROID;
+        if (neural && (REMOVE.matcher(text).find() || text.startsWith("apaga ") || text.startsWith("deshabilita "))) return Target.ANDROID;
         if (neural == android) return null;
         return neural ? Target.NEURAL : Target.ANDROID;
     }
