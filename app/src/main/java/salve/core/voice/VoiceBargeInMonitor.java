@@ -20,6 +20,7 @@ import android.util.Log;
 public final class VoiceBargeInMonitor {
     public interface Listener {
         void onSpeechDetected(long voiceTurnToken);
+        default void onStatus(long token, VoiceDiagnosticLog.Event event, long code) { }
     }
 
     private static final String TAG = "Salve/BargeIn";
@@ -36,7 +37,11 @@ public final class VoiceBargeInMonitor {
 
     /** Call on the UI thread when actual voice output begins. */
     public synchronized boolean start(long token, Listener listener) {
-        if (token <= 0 || listener == null || !isSupported()) return false;
+        if (token <= 0 || listener == null) return false;
+        if (!isSupported()) {
+            listener.onStatus(token, VoiceDiagnosticLog.Event.MIC_AEC_UNAVAILABLE, 0);
+            return false;
+        }
         stop();
         final int owner = ++generation;
         running = true;
@@ -63,15 +68,27 @@ public final class VoiceBargeInMonitor {
         try {
             int minimum = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            if (minimum <= 0) return;
+            if (minimum <= 0) {
+                listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_BUFFER_INVALID, minimum);
+                return;
+            }
             rec = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION,
                     SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, Math.max(minimum * 2, 4096));
-            if (rec.getState() != AudioRecord.STATE_INITIALIZED) return;
+            if (rec.getState() != AudioRecord.STATE_INITIALIZED) {
+                listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_INIT_FAILED, rec.getState());
+                return;
+            }
             echo = AcousticEchoCanceler.create(rec.getAudioSessionId());
-            if (echo == null) return;
+            if (echo == null) {
+                listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_AEC_CREATE_FAILED, 0);
+                return;
+            }
             echo.setEnabled(true);
-            if (!echo.getEnabled()) return;
+            if (!echo.getEnabled()) {
+                listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_AEC_ENABLE_FAILED, 0);
+                return;
+            }
             if (NoiseSuppressor.isAvailable()) {
                 noise = NoiseSuppressor.create(rec.getAudioSessionId());
                 if (noise != null) noise.setEnabled(true);
@@ -79,12 +96,20 @@ public final class VoiceBargeInMonitor {
             if (!owns(owner)) return;
             activeRecord = rec;
             rec.startRecording();
-            if (rec.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) return;
+            if (rec.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
+                listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_CAPTURE_FAILED, rec.getRecordingState());
+                return;
+            }
+            listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_CAPTURE_ACTIVE,
+                    1L | (noise != null && noise.getEnabled() ? 2L : 0L));
             VoiceBargeInDetector detector = new VoiceBargeInDetector();
             short[] pcm = new short[FRAME];
             while (owns(owner)) {
                 int count = rec.read(pcm, 0, pcm.length, AudioRecord.READ_NON_BLOCKING);
-                if (count < 0) break;
+                if (count < 0) {
+                    listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_READ_FAILED, count);
+                    break;
+                }
                 if (count == 0) {
                     try { Thread.sleep(10); } catch (InterruptedException interrupted) {
                         Thread.currentThread().interrupt(); break;
@@ -92,6 +117,7 @@ public final class VoiceBargeInMonitor {
                     continue;
                 }
                 if (detector.accept(pcm, count)) {
+                    listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_DETECTOR_TRIGGERED, 0);
                     // Never dispatch raw audio or commands. The current voice session owns
                     // the actual cancellation and microphone transfer.
                     main.post(() -> {
@@ -101,6 +127,8 @@ public final class VoiceBargeInMonitor {
                 }
             }
         } catch (RuntimeException error) {
+            // No raw audio or exception messages are persisted; only a numeric event code.
+            listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_CAPTURE_EXCEPTION, 0);
             // No fallback to raw microphone without AEC; the Interrupt button still works.
             Log.w(TAG, "Barge-in audio capture unavailable; keeping manual interruption.", error);
         } finally {
