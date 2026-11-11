@@ -2348,6 +2348,11 @@ public class MotorConversacional {
                 : objective.rankAuthorized(offered);
         Map<String, CognitiveTurn.Tool> catalog = CognitivePrompt.limitTools(ranked, catalogPromptBudget);
         Map<String, CognitiveTurn.Tool> tools = toolOverride == null ? catalog : toolOverride.apply(catalog);
+        // Same requirement for microphone, car voice and typed messages. If the
+        // model only promises an explicitly requested existing tool, repair or
+        // report failure; never synthesize a success from model prose.
+        String requiredAction = photoAnalysis || toolOverride != null ? null
+                : salve.core.cognition.ActionToolExpectation.requiredTool(input, tools);
         List<salve.core.conversation.ChatMessage> turnHistory = historyOverride;
         // Sin la herramienta (Bryan aún no verificado) no se le puede decir «usa memory.lookup»: acababa
         // diciendo «no puedo acceder a mis recuerdos de forma automática».
@@ -2401,7 +2406,21 @@ public class MotorConversacional {
                         salve.core.cognition.TurnTiming.inference(inferences[0], results.size(), repair, took,
                                 engine != null && !engine.equals(engineBefore) ? engine : null));
             }
-        }, tools, () -> closed || !isVoiceContextCurrent());
+        }, tools, () -> closed || !isVoiceContextCurrent(), requiredAction);
+        if (requiredAction != null) {
+            boolean requestedActionAttempted = false;
+            for (com.google.gson.JsonElement item : outcome.receipts()) {
+                if (item != null && item.isJsonObject() && item.getAsJsonObject().has("name")
+                        && requiredAction.equals(item.getAsJsonObject().get("name").getAsString())) {
+                    requestedActionAttempted = true;
+                    break;
+                }
+            }
+            salve.core.trace.ExecutionTrace.note("RUTA DE HERRAMIENTAS",
+                    "required=" + requiredAction + " attempted=" + requestedActionAttempted
+                    + " handoff=" + outcome.handedOff
+                    + " result=" + outcome.result.getStatus().name());
+        }
         salve.core.trace.ExecutionTrace.note("TIEMPO DEL TURNO", salve.core.cognition.TurnTiming.turn(
                 inferences[0], modelNanos[0], System.nanoTime() - turnStarted));
         // A tool receipt is observable progress, never proof of the user's whole goal.
