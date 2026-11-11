@@ -1068,7 +1068,7 @@ public class MotorConversacional {
         // Use the EXISTING action parser for unambiguous imperative orders. Previously
         // these were skipped whenever the model was active, so Gemma could merely say
         // "claro" without executing Spotify or opening the requested app.
-        // The action desk now guards screen launches and music searches in driving mode.
+        // The action desk delegates screen launches in every voice mode to Android itself.
         if (!storyTurn && !modelFirstSelf
                 && salve.core.devicecontrol.AppActionCommand.parse(entrada) != null
                 && mesaAcciones.procesarControlExplicito(entrada)) return;
