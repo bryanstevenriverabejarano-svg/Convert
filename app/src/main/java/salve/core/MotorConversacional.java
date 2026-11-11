@@ -107,21 +107,30 @@ public class MotorConversacional {
             if (status == TextToSpeech.SUCCESS) {
                 this.tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String id) {
+                        salve.core.voice.VoicePlaybackJournal.event(id, "TTS_STARTED", 0);
                         dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechStart(avatarSession, id), 1);
                     }
                     @Override public void onRangeStart(String id, int start, int end, int frame) {
                         dispatchSpeechEvent(id, () -> AvatarMotionController.get().speechRange(avatarSession, id, start, end), 0);
                     }
                     @Override public void onDone(String id) {
+                        salve.core.voice.VoicePlaybackJournal.event(id, "TTS_DONE", 0);
+                        salve.core.voice.VoicePlaybackJournal.finish(id, "COMPLETADA");
                         finishSpeech(id, true, salve.core.voice.VoiceDiagnosticLog.Event.TTS_DONE, 0);
                     }
                     @Override public void onError(String id) {
+                        salve.core.voice.VoicePlaybackJournal.event(id, "TTS_ERROR", 0);
+                        salve.core.voice.VoicePlaybackJournal.finish(id, "ERROR");
                         finishSpeech(id, false, salve.core.voice.VoiceDiagnosticLog.Event.TTS_ERROR, 0);
                     }
                     @Override public void onError(String id, int errorCode) {
+                        salve.core.voice.VoicePlaybackJournal.event(id, "TTS_ERROR_CODE", errorCode);
+                        salve.core.voice.VoicePlaybackJournal.finish(id, "ERROR");
                         finishSpeech(id, false, salve.core.voice.VoiceDiagnosticLog.Event.TTS_ERROR_CODE, errorCode);
                     }
                     @Override public void onStop(String id, boolean interrupted) {
+                        salve.core.voice.VoicePlaybackJournal.event(id, "TTS_STOPPED", interrupted ? 1 : 0);
+                        salve.core.voice.VoicePlaybackJournal.finish(id, "INTERRUMPIDA");
                         finishSpeech(id, false, salve.core.voice.VoiceDiagnosticLog.Event.TTS_STOPPED, interrupted ? 1 : 0);
                     }
                 });
@@ -2257,11 +2266,18 @@ public class MotorConversacional {
         if (liveVoiceChannel.isActive() || !voiceTurnGate.maySpeak(generation)) return false;
         String id = "salve_stream_" + (++utteranceSequence);
         streamUtterances.put(id, turn);
+        salve.core.voice.VoicePlaybackJournal.begin(context, id, "fragmento de flujo", text.length());
         routeSpeech();
         int result;
         try { result = tts.speak(text, TextToSpeech.QUEUE_ADD, null, id); }
         catch (RuntimeException unavailable) { result = TextToSpeech.ERROR; }
-        if (result == TextToSpeech.ERROR) { streamUtterances.remove(id); return false; }
+        if (result == TextToSpeech.ERROR) {
+            salve.core.voice.VoicePlaybackJournal.event(id, "ENQUEUE_FAILED", result);
+            salve.core.voice.VoicePlaybackJournal.finish(id, "ERROR");
+            streamUtterances.remove(id);
+            return false;
+        }
+        salve.core.voice.VoicePlaybackJournal.event(id, "ENQUEUE_ACCEPTED", result);
         return true;
     }
 
@@ -2976,12 +2992,16 @@ public class MotorConversacional {
             String utteranceId = "salve_tts_" + (++utteranceSequence);
             activeUtterance = utteranceId;
             activeUtteranceOwner = owner;
+            salve.core.voice.VoicePlaybackJournal.begin(context, utteranceId,
+                    "respuesta del chat", texto.length());
             if (session != null) AvatarMotionController.get().speechPending(session, turn, utteranceId);
             int speechResult;
             routeSpeech();
             try { speechResult = tts.speak(texto, TextToSpeech.QUEUE_FLUSH, null, utteranceId); }
             catch (RuntimeException unavailable) { speechResult = TextToSpeech.ERROR; }
             if (speechResult == TextToSpeech.ERROR) {
+                salve.core.voice.VoicePlaybackJournal.event(utteranceId, "ENQUEUE_FAILED", speechResult);
+                salve.core.voice.VoicePlaybackJournal.finish(utteranceId, "ERROR");
                 activeUtterance = null;
                 activeUtteranceOwner = null;
                 if (session != null) AvatarMotionController.get().speechEnd(session, utteranceId);
@@ -2990,8 +3010,9 @@ public class MotorConversacional {
                     liveVoiceChannel.finished(owner, false);
                 });
                 Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
-            } else if (owner != null) {
-                toolHandler.post(() -> liveVoiceChannel.diagnostic(owner,
+            } else {
+                salve.core.voice.VoicePlaybackJournal.event(utteranceId, "ENQUEUE_ACCEPTED", speechResult);
+                if (owner != null) toolHandler.post(() -> liveVoiceChannel.diagnostic(owner,
                         salve.core.voice.VoiceDiagnosticLog.Event.TTS_ENQUEUE_OK, TextToSpeech.SUCCESS));
             }
         }
@@ -3140,6 +3161,7 @@ public class MotorConversacional {
     private long beginVoiceTurn() {
         long generation = voiceTurnGate.beginTurn();
         String previous = activeUtterance;
+        if (previous != null) salve.core.voice.VoicePlaybackJournal.event(previous, "APP_NEW_TURN_STOP", 0);
         activeUtterance = null;
         activeUtteranceOwner = null;
         if (previous != null && avatarSession != null) AvatarMotionController.get().speechEnd(avatarSession, previous);
@@ -3270,6 +3292,8 @@ public class MotorConversacional {
         voiceTurnGate.listening(value);
         if (value) {
             goalAutonomy.userActivity();
+            if (activeUtterance != null)
+                salve.core.voice.VoicePlaybackJournal.event(activeUtterance, "APP_LISTEN_STOP", 0);
             activeUtterance = null;
             activeUtteranceOwner = null;
             stopVoicePlayback();
