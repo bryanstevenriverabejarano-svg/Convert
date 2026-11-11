@@ -2599,17 +2599,8 @@ public class MotorConversacional {
      * qué gesto) sale siempre de lo que dijo Bryan, nunca de los argumentos del modelo.
      */
     String runSelfCommand(salve.core.cognition.SelfCommandIntent.Command command, String entrada) {
-        // Speaking with Salve through the car is allowed, but voice access must
-        // not pop up a visual dashboard that requires looking away from the road.
-        if (command == salve.core.cognition.SelfCommandIntent.Command.MIND_MAP
-                || command == salve.core.cognition.SelfCommandIntent.Command.OPEN_JOURNAL
-                || command == salve.core.cognition.SelfCommandIntent.Command.DEFAULT_ASSISTANT) {
-            boolean driving;
-            try { driving = salve.core.driving.DrivingModeManager.get(context).isActive(); }
-            catch (RuntimeException unavailable) { driving = false; }
-            if (driving) return "Puedo seguir escuchando y usando herramientas por voz, "
-                    + "pero esa pantalla necesita atención. Ábrela cuando estés estacionado.";
-        }
+        // Internal panels can be requested from any input mode; Android is
+        // responsible for any platform-level restrictions on a launched activity.
         switch (command) {
             case MEMORY_HEALTH:
                 return creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.";
