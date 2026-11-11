@@ -633,7 +633,12 @@ public final class MindRuntime {
                     knowledge.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             java.nio.file.Files.write(new File(dir, "salve-episodes.jsonl").toPath(),
                     salve.core.mind.MindDatasetExporter.episodes(episodes).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            return "Exporté " + (knowledge.split("\n").length - 1) + " elementos consolidados y " + episodes.size()
+            String corrections = salve.core.mind.MindDatasetExporter.corrections(lessons.all());
+            java.nio.file.Files.write(new File(dir, "salve-corrections.jsonl").toPath(),
+                    corrections.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            int corrected = corrections.isEmpty() ? 0 : corrections.split("\n").length;
+            return "Exporté " + (knowledge.split("\n").length - 1) + " elementos consolidados, " + corrected
+                    + " correcciones tuyas y " + episodes.size()
                     + " recuerdos citados en Android/data/" + app.getPackageName() + "/files/exports. "
                     + "Contienen datos personales: cópialos solo a tu PC.";
         } catch (Exception failure) {

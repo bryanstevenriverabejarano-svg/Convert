@@ -16,6 +16,7 @@ def load(name):
 
 prepare = load("prepare_dataset")
 manifest = load("make_manifest")
+corrections = load("write_corrections")
 
 
 class PrepareDatasetTest(unittest.TestCase):
@@ -66,6 +67,70 @@ class ManifestTest(unittest.TestCase):
             adapter.write_bytes(b"x")
             with self.assertRaises(ValueError):
                 manifest.manifest(adapter, "base.gguf", 3)
+
+
+class CorrectionsTest(unittest.TestCase):
+    CASE = {"type": "correction", "situation": "¿Qué intereses tienes?",
+            "did": "Me interesa mucho saber qué te interesa a ti. ¿Qué te apasiona?",
+            "expected": "háblame de ti, no me devuelvas la pregunta", "times": 3}
+
+    def test_teacher_sees_the_three_parts_and_is_told_to_answer_only(self):
+        system, user = corrections.teacher_messages(self.CASE, "Soy Salve y aprendo con Bryan.")
+        self.assertIn("Soy Salve y aprendo con Bryan.", system["content"])
+        for part in ("¿Qué intereses tienes?", "¿Qué te apasiona?", "no me devuelvas la pregunta", "SOLO la respuesta"):
+            self.assertIn(part, user["content"])
+
+    def test_gate_rejects_what_would_teach_her_the_wrong_thing(self):
+        good = "Me atrae entender cómo funcionan las cosas por dentro, dibujar con círculos y las historias que cuentas."
+        self.assertIsNone(corrections.acceptable(self.CASE, good))
+        self.assertEqual("vacía", corrections.acceptable(self.CASE, "  "))
+        self.assertEqual("repite la respuesta que Bryan corrigió", corrections.acceptable(self.CASE, self.CASE["did"]))
+        self.assertEqual("devuelve el mensaje de Bryan", corrections.acceptable(self.CASE, "¿Qué intereses tienes?"))
+        self.assertEqual("contiene texto técnico interno", corrections.acceptable(self.CASE, "Usé memory.lookup y me gusta dibujar."))
+        self.assertEqual("habla de la corrección en vez de responder",
+                         corrections.acceptable(self.CASE, "La respuesta correcta sería: me gusta dibujar."))
+        self.assertEqual("no está en español", corrections.acceptable(self.CASE, "I would say that I like the things you have about this."))
+        self.assertEqual("demasiado larga", corrections.acceptable(self.CASE, "Me gusta dibujar. " * 100))
+
+    def test_build_keeps_accepted_answers_and_never_trains_on_the_exam(self):
+        exam = {"quien eres"}
+        items = [self.CASE, dict(self.CASE),  # repetida
+                 {"type": "correction", "situation": "¿Quién eres?", "did": "x", "expected": "di tu nombre"},
+                 {"type": "correction", "situation": "Dibuja un gato", "did": "No puedo.", "expected": "dibújalo"},
+                 {"type": "correction", "situation": "", "expected": "nada"}]
+        answers = {"¿Qué intereses tienes?": "Me atrae entender cómo funcionan las cosas y dibujar con círculos.",
+                   "Dibuja un gato": "No puedo."}
+        def teacher(messages):
+            for question, reply in answers.items():
+                if question in messages[1]["content"]:
+                    return reply
+            raise RuntimeError("sin respuesta")
+        kept, dropped = corrections.build(items, teacher, held_out=exam)
+        self.assertEqual(["¿Qué intereses tienes?"], [k["question"] for k in kept])
+        reasons = dict(dropped)
+        self.assertIn("examen", reasons["¿Quién eres?"])
+        self.assertEqual("repite la respuesta que Bryan corrigió", reasons["Dibuja un gato"])
+        self.assertEqual(2, len(dropped))
+
+    def test_the_real_exam_is_readable_and_held_out(self):
+        questions = corrections.exam_questions()
+        self.assertGreaterEqual(len(questions), 25)
+        self.assertIn("dibuja un gorila", questions)
+
+    def test_only_a_local_teacher_is_allowed(self):
+        import subprocess, sys
+        result = subprocess.run([sys.executable, str(ROOT / "write_corrections.py"), "--export-dir", ".", "--output", "x.jsonl",
+                                 "--model", "m", "--endpoint", "https://api.example.com/v1"], capture_output=True, text=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("localhost", result.stderr)
+
+    def test_dataset_adds_corrected_answers_after_the_knowledge(self):
+        knowledge = [{"type": "narrative", "text": "Soy Salve."}]
+        examples = prepare.build_examples(knowledge, corrected=[
+            {"question": "¿Qué intereses tienes?", "reply": "Me gusta dibujar con círculos."}, {"question": "", "reply": "x"}])
+        self.assertEqual(2, len(examples))
+        self.assertEqual("Me gusta dibujar con círculos.", examples[-1]["messages"][2]["content"])
+        self.assertEqual("Eres Salve. Soy Salve.", examples[-1]["messages"][0]["content"])
 
 
 if __name__ == "__main__":

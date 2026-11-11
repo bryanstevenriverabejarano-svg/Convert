@@ -41,4 +41,28 @@ public class AdapterAndExportTest {
         assertFalse(jsonl.contains("Pensamiento sin fuente"));
         assertTrue(jsonl.contains("Pensamiento con fuente"));
     }
+
+    private static LessonBook.Lesson lesson(String source, String situation, String did, String expected, int times) {
+        LessonBook.Lesson l = new LessonBook.Lesson();
+        l.source = source; l.situation = situation; l.did = did; l.expected = expected; l.times = times;
+        return l;
+    }
+
+    @Test public void onlyBryansCompleteCorrectionsAreExportedForTraining() {
+        String out = MindDatasetExporter.corrections(java.util.Arrays.asList(
+                lesson("bryan", " ¿Qué intereses tienes? ", "Me interesa saber qué te interesa a ti.", "háblame de ti", 3),
+                lesson("yo", "Dibuja un gato", "No puedo", "dibujarlo", 1),      // se pilló ella: no es palabra de Bryan
+                lesson("bryan", "", "x", "algo", 1),                              // sin situación no hay pregunta
+                lesson("bryan", "Hola", "Hola", "  ", 1),                         // sin lo esperado no hay corrección
+                null));
+        String[] lines = out.trim().split("\n");
+        assertEquals(1, lines.length);
+        com.google.gson.JsonObject o = com.google.gson.JsonParser.parseString(lines[0]).getAsJsonObject();
+        assertEquals("correction", o.get("type").getAsString());
+        assertEquals("¿Qué intereses tienes?", o.get("situation").getAsString());
+        assertEquals("háblame de ti", o.get("expected").getAsString());
+        assertEquals(3, o.get("times").getAsInt());
+        assertEquals("", MindDatasetExporter.corrections(null));
+        assertEquals("", MindDatasetExporter.corrections(Collections.emptyList()));
+    }
 }
