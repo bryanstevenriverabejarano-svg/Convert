@@ -35,15 +35,23 @@ public final class ReadOnlyEvidenceDesk {
         if (notice != null && !notice.isEmpty()) out.append("Aviso: ").append(notice).append('\n');
         if (tasks.isEmpty()) return out.append("Todavía no hay tareas registradas en este dispositivo.").toString();
         int shown = 0;
+        // Recent voice failures are relevant evidence; do not bury them under sleep reports.
+        for (ExecutionJournal.Task task : tasks) {
+            if (shown >= max) break;
+            if (task == null || task.type == null || !task.type.startsWith("Voz · ")) continue;
+            if (!"ERROR".equals(task.status)) continue;
+            appendTask(out, task);
+            shown++;
+        }
         // Prefer the sleep run when the previous request is about a night cycle.
         for (ExecutionJournal.Task task : tasks) {
-            if (task == null || task.type == null || !task.type.equals("Sueño autónomo")) continue;
+            if (shown >= max || task == null || task.type == null || !task.type.equals("Sueño autónomo")) continue;
             appendTask(out, task);
             if (++shown >= max) break;
         }
         for (ExecutionJournal.Task task : tasks) {
             if (shown >= max) break;
-            if (task == null || task.type == null || task.type.equals("Sueño autónomo")) continue;
+            if (task == null || task.type == null || task.type.equals("Sueño autónomo") || (task.type.startsWith("Voz · ") && "ERROR".equals(task.status))) continue;
             appendTask(out, task);
             shown++;
         }
