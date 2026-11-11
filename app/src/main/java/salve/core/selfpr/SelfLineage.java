@@ -73,6 +73,12 @@ public final class SelfLineage {
         return failed;
     }
 
+    /** Cuántos casos tenía un examen guardado; −1 si no se sabe. Dos exámenes de distinto tamaño no se comparan. */
+    public static int totalCases(JsonObject exam) {
+        JsonArray cases = findCases(exam, 0);
+        return cases == null ? -1 : cases.size();
+    }
+
     private static JsonArray findCases(JsonObject node, int depth) {
         if (node == null || depth > 2) return null;
         JsonElement direct = node.get("cases");

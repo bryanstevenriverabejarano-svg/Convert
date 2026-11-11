@@ -54,4 +54,18 @@ public class SelfVerificationTest {
         assertNull(SelfVerification.verdict(null, 1, 10_000));
         assertEquals("", SelfVerification.sentence(null));
     }
+
+    @Test public void examsOfDifferentSizeAreNotCompared() {
+        JsonObject change = change(5_000, "https://github.com/o/r/issues/2", 2);
+        change.addProperty("casos_examen", 38);
+        assertEquals("mejor", SelfVerification.verdict(change, 1, 38, 10_000).get("resultado").getAsString());
+        JsonObject grown = SelfVerification.verdict(change, 4, 44, 10_000);
+        assertEquals("un examen con más casos falla más sin que el cambio tenga culpa", "no_comparable", grown.get("resultado").getAsString());
+        assertTrue(SelfVerification.sentence(grown).contains("no lo puedo dar"));
+        // Sin saber el tamaño de alguno de los dos, se compara como antes.
+        assertEquals("peor", SelfVerification.verdict(change, 4, -1, 10_000).get("resultado").getAsString());
+        assertEquals(3, SelfLineage.totalCases(com.google.gson.JsonParser.parseString(
+                "{\"detail\":{\"cases\":[{},{},{}]}}").getAsJsonObject()));
+        assertEquals(-1, SelfLineage.totalCases(null));
+    }
 }
