@@ -7,7 +7,8 @@ import java.util.regex.Pattern;
 
 /** Only explicit commands change the device or avatar; discussion about them remains conversation. */
 public final class AssistantControlCommand {
-    public enum Type { DEVICES, FINANCES, ROOM, WALK, BED, HIDE_BED, SLEEP, WAKE, PAJAMAS, DAY,
+    public enum Type { DEVICES, FINANCES, ROOM, PLANS, SALVENTES, CONTINUITY, HOME,
+        WALK, BED, HIDE_BED, SLEEP, WAKE, PAJAMAS, DAY,
         LIST_RECIPES, CANCEL_RECIPE, LEARN_RECIPE, RUN_RECIPE, DELETE_RECIPE }
     public final Type type;
     public final String argument;
@@ -25,6 +26,14 @@ public final class AssistantControlCommand {
             case "mis dispositivos": type = Type.DEVICES; break; // «abre WhatsApp» ya abre la propia app (AppActionCommand)
             case "abre tu habitacion": case "abrir habitacion": case "cambia tu ropa":
             case "evoluciona visualmente": type = Type.ROOM; break;
+            case "abre planes": case "abre tus planes": case "abre mis planes":
+            case "abre planes y resultados": case "muestra mis planes": type = Type.PLANS; break;
+            case "abre salventes": case "abre tus salventes": case "abre genesis de salventes":
+            case "abre la genesis de salventes": type = Type.SALVENTES; break;
+            case "abre continuidad": case "abre tu continuidad": case "abre guardian":
+            case "abre el guardian": type = Type.CONTINUITY; break;
+            case "abre mi casa": case "abre el panel de casa": case "abre home assistant":
+            case "abre hogar": type = Type.HOME; break;
             case "camina": case "camina por la pantalla": type = Type.WALK; break;
             case "cama": case "muestra la cama": case "muestra tu cama":
             case "crea una cama": case "crea tu cama": type = Type.BED; break;
