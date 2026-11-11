@@ -43,6 +43,16 @@ public final class CognitiveTurn {
             if (text == null || text.isEmpty()) throw new IllegalArgumentException("Falta evidencia.");
             return new Outcome(ModelResult.success(text, 0), false, new JsonArray());
         }
+        /** A controller already initiated the existing asynchronous action safely. */
+        public static Outcome controllerHandoff(String toolName) {
+            JsonArray receipts = new JsonArray();
+            JsonObject receipt = new JsonObject();
+            receipt.addProperty("name", toolName);
+            receipt.addProperty("status", "handoff");
+            receipt.addProperty("data", "Pendiente de resultado externo.");
+            receipts.add(receipt);
+            return new Outcome(ModelResult.success("", 0), true, receipts);
+        }
     }
     private CognitiveTurn() { }
     public static Outcome run(Model model, Map<String, Tool> available, BooleanSupplier cancelled) {
