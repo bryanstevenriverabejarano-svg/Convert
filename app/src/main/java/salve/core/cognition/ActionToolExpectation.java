@@ -1,5 +1,6 @@
 package salve.core.cognition;
 
+import com.google.gson.JsonObject;
 import java.text.Normalizer;
 import java.util.Locale;
 import java.util.Map;
@@ -7,7 +8,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import salve.core.devicecontrol.SystemSetting;
 import salve.core.mind.SelfCode;
-import salve.core.mind.SelfFunctions;
 import salve.core.reports.SelfReport;
 
 /**
@@ -104,6 +104,52 @@ public final class ActionToolExpectation {
         if (offered.containsKey("DEPLOY_WEB")
                 && s.matches(".*\\b(?:publica|despliega)\\b.*\\b(?:web|pagina)\\b.*"))
             return "DEPLOY_WEB";
+        return null;
+    }
+
+    /**
+     * A last-resort controller fallback ONLY for exact, reversible/read-only
+     * commands with arguments derived from the literal user turn. The existing
+     * executor still rechecks owner identity and every argument. Other tools
+     * (messages, calls, shell settings, browsing, remote updates and arbitrary
+     * app targets) must still be selected by the LLM or explicitly reviewed.
+     */
+    public static JsonObject directFallbackArguments(String input, String expectedTool) {
+        if (input == null || expectedTool == null) return null;
+        JsonObject args = new JsonObject();
+        if (DeviceControlIntent.TOOL.equals(expectedTool)) {
+            DeviceControlIntent.Command action = DeviceControlIntent.parse(input);
+            if (action == null) return null;
+            args.addProperty("accion", action.action.name());
+            return args;
+        }
+        if ("device.media_control".equals(expectedTool)) {
+            salve.core.voice.MusicControlCommand.Action action =
+                    salve.core.voice.MusicControlCommand.parse(input);
+            if (action == null || !MediaActionIntent.offered(input)) return null;
+            args.addProperty("action", action.name());
+            return args;
+        }
+        if (SelfCommandIntent.TOOL.equals(expectedTool)) {
+            Set<SelfCommandIntent.Command> detected = SelfCommandIntent.detected(input);
+            if (detected.size() != 1) return null;
+            SelfCommandIntent.Command action = detected.iterator().next();
+            switch (action) {
+                case MEMORY_HEALTH:
+                case SYNERGY_STATUS:
+                case MODEL_STATUS:
+                case DOWNLOAD_STATUS:
+                case SELF_PR_STATUS:
+                case IMPROVEMENT_PROPOSALS:
+                case MIND_MAP:
+                case OPEN_JOURNAL:
+                case BODY_ACTION:
+                case CHESS_START:
+                    args.addProperty("id", action.name());
+                    return args;
+                default: return null; // No auto-retry of sensitive or stateful modes.
+            }
+        }
         return null;
     }
 
