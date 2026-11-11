@@ -56,6 +56,19 @@ public final class ReadOnlyEvidenceDesk {
                 .append(bounded(task.status, 36)).append(" · ")
                 .append(ExecutionJournal.date(task.started)).append('\n');
         if (task.events == null) return;
+        // Voice traces store controlled event names and numeric values, not speech text.
+        if (task.type != null && task.type.startsWith("Voz · ")) {
+            int emitted = 0;
+            for (int i = task.events.size() - 1; i >= 0 && emitted < 4; i--) {
+                ExecutionJournal.Event event = task.events.get(i);
+                if (event == null || !"AUDIO".equals(event.kind) || event.text == null) continue;
+                if (!event.text.matches("elapsed_ms=[0-9]+ event=[A-Z0-9_]{1,50} code=-?[0-9]+")) continue;
+                out.append("  AUDIO: ").append(bounded(event.text, 110)).append('\n');
+                emitted++;
+            }
+            if (task.omitted > 0) out.append("  Aviso: eventos omitidos; traza incompleta.\n");
+            return;
+        }
         // Include only short non-user-origin statuses; full request/prompt stays inside the journal UI.
         for (int i = task.events.size() - 1; i >= 0; i--) {
             ExecutionJournal.Event event = task.events.get(i);
