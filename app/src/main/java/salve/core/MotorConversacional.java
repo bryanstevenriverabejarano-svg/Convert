@@ -2933,13 +2933,13 @@ public class MotorConversacional {
                 activeUtteranceOwner = null;
                 if (session != null) AvatarMotionController.get().speechEnd(session, utteranceId);
                 if (owner != null) toolHandler.post(() -> {
-                    liveVoiceChannel.diagnostic(owner, salve.core.voice.VoiceDiagnosticLog.Event.TTS_ENQUEUE_FAILED, speechResult);
+                    liveVoiceChannel.diagnostic(owner, salve.core.voice.VoiceDiagnosticLog.Event.TTS_ENQUEUE_FAILED, TextToSpeech.ERROR);
                     liveVoiceChannel.finished(owner, false);
                 });
                 Log.w(TAG, "Falló la síntesis de voz; la respuesta sigue disponible en pantalla");
             } else if (owner != null) {
                 toolHandler.post(() -> liveVoiceChannel.diagnostic(owner,
-                        salve.core.voice.VoiceDiagnosticLog.Event.TTS_ENQUEUE_OK, speechResult));
+                        salve.core.voice.VoiceDiagnosticLog.Event.TTS_ENQUEUE_OK, TextToSpeech.SUCCESS));
             }
         }
         if (publishUi && listener != null) listener.onHablar(withSketches(visibleText + sourcesNote));
