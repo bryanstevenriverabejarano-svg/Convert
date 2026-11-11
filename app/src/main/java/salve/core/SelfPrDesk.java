@@ -113,9 +113,11 @@ final class SelfPrDesk {
                 GitHubSelfPr.Submitted sent = github.openIssue(SelfPatch.issueTitle(problem, proposal),
                         SelfPatch.issueBody(problem, reply.explanation, examples, model.isEmpty() ? modelName() : model, proposal));
                 try {
-                    salve.core.selfpr.SelfLineage.append(lineageFile(), salve.core.selfpr.SelfLineage.entry(
+                    JsonObject lineageEntry = salve.core.selfpr.SelfLineage.entry(
                             System.currentTimeMillis(), goal != null ? "bryan" : "examen", problem, path, revision, sent.url,
-                            salve.core.selfpr.SelfLineage.failedCases(exam)));
+                            salve.core.selfpr.SelfLineage.failedCases(exam));
+                    lineageEntry.addProperty("casos_examen", salve.core.selfpr.SelfLineage.totalCases(exam));
+                    salve.core.selfpr.SelfLineage.append(lineageFile(), lineageEntry);
                 } catch (java.io.IOException unsaved) { Log.w(TAG, "No pude anotar el linaje"); }
                 salve.core.trace.ExecutionTrace.note("PROPUESTA DE CÓDIGO ENVIADA", path + "\nRevisión: " + revision
                         + "\nIssue: " + sent.url + "\n\n" + patch);

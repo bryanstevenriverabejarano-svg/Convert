@@ -139,6 +139,11 @@ public final class SleepFocusWorker extends Worker {
             // Ciclo de sus propios cambios: de noche solo se anota si queda alguno sin comprobar (sin inferencia).
             String unverified = salve.core.selfpr.SelfVerification.state(app);
             if (!unverified.isEmpty()) journal.append(traceId, "MIS CAMBIOS", unverified);
+            if (stop.getAsBoolean()) return Result.success();
+            // Se examina sola: solo si tiene un cambio suyo instalado sin comprobar, con el modelo de verdad
+            // y dentro de esta misma puerta de sueño (cargando y sin uso). Si Bryan vuelve, para y no guarda.
+            String selfExam = salve.core.SelfExam.runIfPending(app, stop);
+            if (!selfExam.isEmpty()) journal.append(traceId, "ME EXAMINO SOLA", selfExam);
             // Weekly local holdout, independent from the model and the practice samples.
             // Never installs learned skills or edits Android/GitHub, and yields on cancellation.
             String transfer = salve.core.evaluation.NightTransferTrial.runIfDue(app, stop);

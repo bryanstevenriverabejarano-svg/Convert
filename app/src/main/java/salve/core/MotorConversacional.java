@@ -358,8 +358,16 @@ public class MotorConversacional {
         avatarSession = session;
     }
 
+    /** El motor vivo de este proceso, si lo hay: lo usa el sueño para que Salve se examine sola. */
+    private static volatile java.lang.ref.WeakReference<MotorConversacional> current = new java.lang.ref.WeakReference<>(null);
+    static MotorConversacional current() {
+        MotorConversacional motor = current.get();
+        return motor == null || motor.closed ? null : motor;
+    }
+
     public MotorConversacional(Context context, MemoriaEmocional memoria, DiarioSecreto diario) {
         this.context  = context;
+        current = new java.lang.ref.WeakReference<>(this);
         this.conversationSession = new ConversationSession(new salve.core.conversation.FileConversationStore(
                 new java.io.File(context.getNoBackupFilesDir(), "conversation/recent.bin")));
         this.conversationResearch = new salve.data.tasks.RoomConversationResearchStore(

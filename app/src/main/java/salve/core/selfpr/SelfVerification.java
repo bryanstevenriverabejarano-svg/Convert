@@ -45,9 +45,16 @@ public final class SelfVerification {
 
     /** El veredicto de un cambio con el examen recién hecho; null si falta alguna de las dos medidas. */
     public static JsonObject verdict(JsonObject change, int failuresNow, long now) {
+        return verdict(change, failuresNow, -1, now);
+    }
+
+    /** {@code casesNow}: casos del examen recién hecho; si el examen cambió de tamaño desde la propuesta, no se compara. */
+    public static JsonObject verdict(JsonObject change, int failuresNow, int casesNow, long now) {
         if (change == null || failuresNow < 0) return null;
         int before = change.has("fallos_examen") ? change.get("fallos_examen").getAsInt() : -1;
         if (before < 0) return null;
+        int casesBefore = change.has("casos_examen") ? change.get("casos_examen").getAsInt() : -1;
+        boolean comparable = casesBefore <= 0 || casesNow <= 0 || casesBefore == casesNow;
         JsonObject v = new JsonObject();
         v.addProperty("t", now);
         v.addProperty("issue", text(change, "issue"));
@@ -56,7 +63,7 @@ public final class SelfVerification {
         v.addProperty("revision", text(change, "revision"));
         v.addProperty("antes", before);
         v.addProperty("ahora", failuresNow);
-        v.addProperty("resultado", failuresNow < before ? "mejor" : failuresNow > before ? "peor" : "igual");
+        v.addProperty("resultado", !comparable ? "no_comparable" : failuresNow < before ? "mejor" : failuresNow > before ? "peor" : "igual");
         return v;
     }
 
@@ -69,6 +76,8 @@ public final class SelfVerification {
         int before = verdict.get("antes").getAsInt(), now = verdict.get("ahora").getAsInt();
         String counts = "de " + before + " a " + now + " casos fallidos";
         switch (text(verdict, "resultado")) {
+            case "no_comparable": return "Veredicto de " + what + ": no lo puedo dar. Mi examen cambió de tamaño entre la propuesta y hoy, "
+                    + "así que comparar " + before + " fallos de entonces con " + now + " de ahora no mediría el cambio.";
             case "mejor": return "Veredicto de " + what + ": el examen mejoró, " + counts + ". Lo doy por bueno.";
             case "peor": return "Veredicto de " + what + ": el examen empeoró, " + counts + ". Si esa propuesta llegó a fusionarse, "
                     + "recomiendo revertir su commit (lo encuentras en " + text(verdict, "issue") + ") y repetir el examen. "
@@ -96,9 +105,13 @@ public final class SelfVerification {
 
     /** Tras un examen: si había un cambio sin comprobar, guarda su veredicto y devuelve la frase; si no, "". */
     public static String afterExam(Context context, int failuresNow, long now) {
+        return afterExam(context, failuresNow, -1, now);
+    }
+
+    public static String afterExam(Context context, int failuresNow, int casesNow, long now) {
         File file = verdictsFile(context);
         JsonObject waiting = pending(SelfLineage.read(lineageFile(context), 5), SelfLineage.read(file, 50), appUpdatedAt(context));
-        JsonObject verdict = verdict(waiting, failuresNow, now);
+        JsonObject verdict = verdict(waiting, failuresNow, casesNow, now);
         if (verdict == null) return "";
         try { SelfLineage.append(file, verdict); }
         catch (java.io.IOException unsaved) { return ""; }
