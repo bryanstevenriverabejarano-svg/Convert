@@ -6,6 +6,7 @@ public final class LiveVoiceChannel {
         void onReply(long token, String text, boolean audioQueued);
         void onSpeechStarted(long token);
         void onSpeechFinished(long token, boolean completed);
+        default void onDiagnostic(long token, VoiceDiagnosticLog.Event event, long code) { }
     }
 
     public static final class Ticket {
@@ -43,6 +44,11 @@ public final class LiveVoiceChannel {
     public void finished(Ticket ticket, boolean completed) {
         Listener listener = listenerFor(ticket);
         if (listener != null) listener.onSpeechFinished(ticket.token, completed);
+    }
+    /** Technical events obey the same ticket revocation as TTS callbacks. */
+    public void diagnostic(Ticket ticket, VoiceDiagnosticLog.Event event, long code) {
+        Listener listener = listenerFor(ticket);
+        if (listener != null) listener.onDiagnostic(ticket.token, event, code);
     }
     private synchronized Listener listenerFor(Ticket ticket) {
         // Never hold this lock while a UI listener calls back into the conversation motor.
