@@ -40,23 +40,32 @@ final class ConversationExamRunner {
     ConversationExamRunner(MotorConversacional motor) { this.motor = motor; }
 
     /** Hace el examen entero (minutos: una inferencia o dos por caso) y devuelve el informe. */
-    String run() {
+    String run() { return execute(true, null); }
+
+    /**
+     * El mismo examen sin hablar ni tocar el estado del chat: para cuando se examina sola de noche.
+     * Entre caso y caso mira {@code stop}; si hay que parar no guarda nada y devuelve null.
+     */
+    String runQuietly(java.util.function.BooleanSupplier stop) { return execute(false, stop); }
+
+    private String execute(boolean announce, java.util.function.BooleanSupplier stop) {
         Context context = motor.context;
         List<ConversationExam.Case> cases;
         try { cases = ConversationExam.parse(asset(context)); }
         catch (Exception broken) { return "No pude abrir mi examen: " + broken.getMessage(); }
         if (motor.llm == null || motor.llm.isLoading())
-            return "Para hacer el examen necesito mi modelo cargado. Espera a que diga «activo» y pídemelo otra vez.";
-        motor.hablar("Empiezo el examen: " + cases.size() + " conversaciones con mi modelo de verdad. Tardaré unos minutos y, "
+            return announce ? "Para hacer el examen necesito mi modelo cargado. Espera a que diga «activo» y pídemelo otra vez." : null;
+        if (announce) motor.hablar("Empiezo el examen: " + cases.size() + " conversaciones con mi modelo de verdad. Tardaré unos minutos y, "
                 + "mientras, no podré contestarte. No toco tus recuerdos ni nuestra conversación.");
         long started = System.currentTimeMillis();
         List<ConversationExam.Grade> grades = new ArrayList<>();
         List<ConversationExam.Attempt> attempts = new ArrayList<>();
         int n = 0;
         for (ConversationExam.Case c : cases) {
-            if (motor.closed) return "Examen interrumpido.";
+            if (motor.closed) return announce ? "Examen interrumpido." : null;
+            if (stop != null && stop.getAsBoolean()) return null;
             n++;
-            motor.estado("Examen " + n + "/" + cases.size() + ": «" + c.question + "»");
+            if (announce) motor.estado("Examen " + n + "/" + cases.size() + ": «" + c.question + "»");
             ConversationExam.Attempt attempt;
             try { attempt = answer(c); }
             catch (RuntimeException failed) {
@@ -67,6 +76,8 @@ final class ConversationExamRunner {
             grades.add(g); attempts.add(attempt);
             Log.i(TAG, c.id + " " + (g.ok() ? "OK" : "FALLA " + g.failed) + " :: " + attempt.reply);
         }
+        // Un examen a medias no es una medida: si hubo que parar durante el último caso, tampoco se guarda.
+        if (stop != null && stop.getAsBoolean()) return null;
         long millis = System.currentTimeMillis() - started;
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         Double previous = prefs.contains("last_mark") ? (double) prefs.getFloat("last_mark", 0) : null;

@@ -57,13 +57,25 @@ El linaje decía qué propuso; faltaba cerrar el ciclo. `SelfVerification`:
   exámenes pueden cambiar más cosas. El texto lo dice.
 - Vive en `selfpr/`, zona que ella no puede reescribir.
 
-Lo que **no** hace todavía: examinarse sola. El examen necesita el motor de conversación (minutos de
-inferencia, bloquea el chat), y el sueño corre en otro proceso de trabajo sin él. Hoy el examen lo pide Bryan.
+### Se examina sola (11 de noviembre de 2026)
+
+`SelfExam.runIfPending`, llamado por `SleepFocusWorker` dentro de la puerta del sueño (cargando y sin uso):
+
+- Solo si hay un cambio suyo instalado sin veredicto. Nunca por rutina: el examen son minutos de inferencia.
+- Usa el examen de siempre en silencio (`ConversationExamRunner.runQuietly`): no habla ni cambia el estado del
+  chat. Entre caso y caso mira si Bryan ha vuelto; si hay que parar, **no guarda nota** (un examen a medias no
+  es una medida).
+- `SelfExamPolicy`: si se interrumpe no reintenta hasta pasadas 6 h, y tras 3 intentos con el mismo cambio
+  espera a que Bryan lo pida. Cada decisión queda en el registro del sueño («ME EXAMINO SOLA») con su motivo.
+- Necesita el motor de conversación vivo en el proceso (la app abierta o en segundo plano) y el modelo cargado;
+  si no, lo dice y no hace nada.
+- No abre PR ni revierte: mide y deja el veredicto.
+
 
 ## Siguientes pasos, por efecto esperado
 
-1. Que se examine sola: separar el examen del motor de conversación para poder lanzarlo en el sueño, y que
-   con un veredicto «peor» abra ella la propuesta de reversión (hoy da el veredicto y la recomendación).
+1. Que con un veredicto «peor» abra ella la propuesta de reversión (hoy da el veredicto y la recomendación), y
+   separar del todo el examen del motor para que no dependa de que la app siga viva.
 2. Reescritura de la consulta de memoria en 2–3 consultas hipotéticas (LightMem) dentro del presupuesto de 7k.
 3. La misma puerta «arregla más de lo que rompe» para lecciones y habilidades aprendidas en el sueño.
 4. Ampliar el examen: hoy mide conversación; no mide herramientas del teléfono, sentidos ni dibujo.
