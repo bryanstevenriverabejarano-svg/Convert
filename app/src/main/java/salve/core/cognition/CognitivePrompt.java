@@ -129,9 +129,21 @@ public final class CognitivePrompt {
         task.add("pending_action", state.has("pending_action") ? state.get("pending_action").deepCopy() : com.google.gson.JsonNull.INSTANCE);
         task.addProperty("authorization", "Objetivo actual; efectos externos: aprobación existente");
         task.addProperty("format_repair", repair);
+        String requiredAction = ActionToolExpectation.requiredTool(input, tools);
+        if (requiredAction != null) {
+            // This is selected from the controller's authorized catalog and the
+            // literal USER_INPUT, never from web, history, memory or model output.
+            task.addProperty("required_action", requiredAction);
+            task.addProperty("action_rule", "Una promesa de hacerlo no es una ejecución. "
+                    + "Primero llama a required_action y espera el recibo. "
+                    + "Si el controlador falla, informa que no se ha realizado.");
+        }
         if (tools.containsKey("evidence.inspect"))
             task.addProperty("evidence_policy", "Si pregunta por mi actividad pasada, usa evidence.inspect: scope sleep, execution o both. Nunca inventes hechos sin registro.");
-        if (repair) task.addProperty("correction", "La salida anterior no cumplió el contrato; devuelve sólo el JSON exigido");
+        if (repair) task.addProperty("correction", requiredAction == null
+                ? "La salida anterior no cumplió el contrato; devuelve sólo el JSON exigido"
+                : "La respuesta anterior no ejecutó la herramienta solicitada: usa required_action "
+                  + "con argumentos basados en USER_INPUT, nunca digas que la hiciste sin recibo.");
         // Order = how long each part stays the same. What does not change between the
         // inferences of a turn goes first, so the local engine keeps it already read and
         // only reads what is new; what changes every inference (task state, receipts) goes last.

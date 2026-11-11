@@ -1068,7 +1068,7 @@ public class MotorConversacional {
         // Use the EXISTING action parser for unambiguous imperative orders. Previously
         // these were skipped whenever the model was active, so Gemma could merely say
         // "claro" without executing Spotify or opening the requested app.
-        // The action desk now guards screen launches and music searches in driving mode.
+        // The action desk delegates screen launches in every voice mode to Android itself.
         if (!storyTurn && !modelFirstSelf
                 && salve.core.devicecontrol.AppActionCommand.parse(entrada) != null
                 && mesaAcciones.procesarControlExplicito(entrada)) return;
@@ -2348,6 +2348,11 @@ public class MotorConversacional {
                 : objective.rankAuthorized(offered);
         Map<String, CognitiveTurn.Tool> catalog = CognitivePrompt.limitTools(ranked, catalogPromptBudget);
         Map<String, CognitiveTurn.Tool> tools = toolOverride == null ? catalog : toolOverride.apply(catalog);
+        // Same requirement for microphone, car voice and typed messages. If the
+        // model only promises an explicitly requested existing tool, repair or
+        // report failure; never synthesize a success from model prose.
+        String requiredAction = photoAnalysis || toolOverride != null ? null
+                : salve.core.cognition.ActionToolExpectation.requiredTool(input, tools);
         List<salve.core.conversation.ChatMessage> turnHistory = historyOverride;
         // Sin la herramienta (Bryan aún no verificado) no se le puede decir «usa memory.lookup»: acababa
         // diciendo «no puedo acceder a mis recuerdos de forma automática».
@@ -2401,7 +2406,48 @@ public class MotorConversacional {
                         salve.core.cognition.TurnTiming.inference(inferences[0], results.size(), repair, took,
                                 engine != null && !engine.equals(engineBefore) ? engine : null));
             }
-        }, tools, () -> closed || !isVoiceContextCurrent());
+        }, tools, () -> closed || !isVoiceContextCurrent(), requiredAction);
+        // If the model refuses a simple, unambiguous action even after the
+        // semantic retry, the controller can use EXACTLY the same authorized
+        // executor and current-user intent. No duplicate tool implementations,
+        // no unreviewed messaging, calls, system settings, or arbitrary targets.
+        if (requiredAction != null && tools.containsKey(requiredAction)
+                && !outcome.handedOff && !outcome.result.isSuccess()
+                && outcome.result.getStatus() != ModelResult.Status.CANCELLED
+                && outcome.receipts().size() == 0
+                && !closed && isVoiceContextCurrent()) {
+            com.google.gson.JsonObject fallbackArgs =
+                    salve.core.cognition.ActionToolExpectation.directFallbackArguments(input, requiredAction);
+            if (fallbackArgs != null) {
+                try {
+                    CognitiveTurn.Receipt performed =
+                            herramientas.executeCognitiveTool(requiredAction, fallbackArgs, input);
+                    salve.core.trace.ExecutionTrace.note("RESPALDO DE HERRAMIENTA",
+                            "La selección del modelo falló; el controlador usó la herramienta autorizada "
+                                    + requiredAction + " sin repetir operaciones.");
+                    outcome = performed.handoff
+                            ? CognitiveTurn.Outcome.controllerHandoff(requiredAction)
+                            : CognitiveTurn.Outcome.groundedText(performed.data);
+                } catch (RuntimeException rejected) {
+                    salve.core.trace.ExecutionTrace.note("RESPALDO DE HERRAMIENTA",
+                            "El controlador rechazó " + requiredAction + "; no se ejecutó.");
+                }
+            }
+        }
+        if (requiredAction != null) {
+            boolean requestedActionAttempted = false;
+            for (com.google.gson.JsonElement item : outcome.receipts()) {
+                if (item != null && item.isJsonObject() && item.getAsJsonObject().has("name")
+                        && requiredAction.equals(item.getAsJsonObject().get("name").getAsString())) {
+                    requestedActionAttempted = true;
+                    break;
+                }
+            }
+            salve.core.trace.ExecutionTrace.note("RUTA DE HERRAMIENTAS",
+                    "required=" + requiredAction + " attempted=" + requestedActionAttempted
+                    + " handoff=" + outcome.handedOff
+                    + " result=" + outcome.result.getStatus().name());
+        }
         salve.core.trace.ExecutionTrace.note("TIEMPO DEL TURNO", salve.core.cognition.TurnTiming.turn(
                 inferences[0], modelNanos[0], System.nanoTime() - turnStarted));
         // A tool receipt is observable progress, never proof of the user's whole goal.
@@ -2553,6 +2599,8 @@ public class MotorConversacional {
      * qué gesto) sale siempre de lo que dijo Bryan, nunca de los argumentos del modelo.
      */
     String runSelfCommand(salve.core.cognition.SelfCommandIntent.Command command, String entrada) {
+        // Internal panels can be requested from any input mode; Android is
+        // responsible for any platform-level restrictions on a launched activity.
         switch (command) {
             case MEMORY_HEALTH:
                 return creatorSide() ? mind().memoryHealth() : "Eso es privado de Bryan: se lo cuento cuando se verifique.";

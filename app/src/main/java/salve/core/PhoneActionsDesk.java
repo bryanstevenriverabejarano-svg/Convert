@@ -185,44 +185,32 @@ final class PhoneActionsDesk {
                         break;
                     }
                     case MUSIC_SEARCH: {
-                        if (driving) {
-                            m.hablar(drivingMusic(action.target, action.type.name()));
-                        } else {
-                            boolean accepted = salve.devices.PhoneActions.searchMusic(m.context, action.target);
-                            recordControl(action.type.name(), accepted ? "SEARCH_OPENED" : "FAILED", false);
-                            m.hablar(accepted ? "Abrí una búsqueda en Spotify para «" + action.target
-                                    + "». No he iniciado ninguna canción."
-                                    : "No pude abrir la búsqueda en Spotify.");
-                        }
+                        boolean accepted = salve.devices.PhoneActions.searchMusic(m.context, action.target);
+                        recordControl(action.type.name(), accepted ? "SEARCH_OPENED" : "FAILED", driving);
+                        m.hablar(accepted ? "Solicité abrir una búsqueda en Spotify para «" + action.target
+                                + "». No he iniciado ninguna canción."
+                                : "No pude abrir la búsqueda en Spotify.");
                         break;
                     }
                     case CALL:
-                        if (driving) {
-                            recordControl(action.type.name(), "DRIVING_BLOCKED", true);
-                            m.hablar("No abriré un formulario de llamadas mientras conduces. "
-                                    + "Cuando estés detenido podrás confirmar a quién llamar.");
-                            break;
-                        }
+                        // The requested review screen may open in every voice mode.
+                        // Placing the call still requires the existing explicit confirmation.
                         try {
                             m.context.startActivity(new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class)
                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_CALL, action.target));
-                            recordControl(action.type.name(), "REVIEW_OPENED", false);
+                            recordControl(action.type.name(), "REVIEW_OPENED", driving);
                             m.hablar("Busco a " + action.target + ". Confirma en pantalla antes de que llame.");
                         } catch (RuntimeException unavailable) {
-                            recordControl(action.type.name(), "FAILED", false);
+                            recordControl(action.type.name(), "FAILED", driving);
                             m.hablar("No pude abrir el panel de llamadas.");
                         }
                         break;
                     case OPEN_APP:
-                        if (driving) {
-                            recordControl(action.type.name(), "DRIVING_BLOCKED", true);
-                            m.hablar("Mientras conduces no voy a abrir una aplicación en la pantalla del móvil. "
-                                    + "Para controlar Spotify por voz, dime qué música quieres o di «siguiente».");
-                            break;
-                        }
+                        // No additional Salve-level screen ban based on the car mode.
+                        // The target app and Android remain responsible for their UI limits.
                         boolean opened = salve.devices.PhoneActions.openApp(m.context, appToOpen);
-                        recordControl(action.type.name(), opened ? "OPEN_REQUESTED" : "FAILED", false);
+                        recordControl(action.type.name(), opened ? "OPEN_REQUESTED" : "FAILED", driving);
                         m.hablar(opened ? "Solicité abrir " + appToOpen.label + "."
                                 : "Android no me dejó abrir " + appToOpen.label + ".");
                         break;
@@ -261,15 +249,25 @@ final class PhoneActionsDesk {
         if (command == null) return false;
         switch (command.type) {
             case FINANCES:
-                abrirPanel(salve.presentation.ui.BusinessFinanceActivity.class);
-                m.hablar("Abro el análisis local de costes, margen y punto de equilibrio. Introduce las cifras de tu negocio.");
+                openInternalPanel(salve.presentation.ui.BusinessFinanceActivity.class, "Finanzas");
                 return true;
             case DEVICES:
-                abrirPanel(salve.presentation.ui.DeviceControlActivity.class);
-                m.hablar("Abro Mi móvil: aplicaciones, borradores de WhatsApp y dispositivos.");
+                openInternalPanel(salve.presentation.ui.DeviceControlActivity.class, "Mi móvil");
                 return true;
             case ROOM:
-                abrirPanel(salve.presentation.ui.AvatarRoomActivity.class);
+                openInternalPanel(salve.presentation.ui.AvatarRoomActivity.class, "Mi habitación");
+                return true;
+            case PLANS:
+                openInternalPanel(salve.presentation.ui.AgentPlansActivity.class, "Planes y resultados");
+                return true;
+            case SALVENTES:
+                openInternalPanel(salve.presentation.ui.SalventeGenesisActivity.class, "Salventes");
+                return true;
+            case CONTINUITY:
+                openInternalPanel(salve.presentation.ui.ContinuityActivity.class, "Continuidad");
+                return true;
+            case HOME:
+                openInternalPanel(salve.presentation.ui.HomeActivity.class, "Mi casa");
                 return true;
             case LIST_RECIPES:
                 List<String> names = m.cerebelo.listarHabilidades();
@@ -559,6 +557,21 @@ final class PhoneActionsDesk {
         } else {
             m.hablar("No encontré un dato de perfil etiquetado como " + request.getDescription() + ". No he borrado otros recuerdos.");
         }
+    }
+
+    private void openInternalPanel(Class<?> activity, String label) {
+        postConversationTask(() -> {
+            if (m.closed) return;
+            try {
+                m.context.startActivity(new Intent(m.context, activity)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                recordControl("SALVE_PANEL", "OPEN_REQUESTED", isDriving());
+                m.hablar("He solicitado abrir " + label + ".");
+            } catch (RuntimeException unavailable) {
+                recordControl("SALVE_PANEL", "FAILED", isDriving());
+                m.hablar("Android no me dejó abrir " + label + ".");
+            }
+        });
     }
 
     void abrirPanel(Class<?> activity) {

@@ -4,6 +4,15 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AssistantControlCommandTest {
+    @Test public void internalPanelsCanBeRequestedByVoiceOrText() {
+        assertEquals(AssistantControlCommand.Type.PLANS, AssistantControlCommand.parse("abre planes y resultados").type);
+        assertEquals(AssistantControlCommand.Type.SALVENTES, AssistantControlCommand.parse("Salve, abre tus salventes").type);
+        assertEquals(AssistantControlCommand.Type.CONTINUITY, AssistantControlCommand.parse("abre continuidad").type);
+        assertEquals(AssistantControlCommand.Type.HOME, AssistantControlCommand.parse("abre mi casa").type);
+        assertNull(AssistantControlCommand.parse("¿qué es la continuidad?"));
+        assertNull(AssistantControlCommand.parse("no abras mi casa"));
+    }
+
     @Test public void bedCanBeShownAndHiddenWithExplicitShortCommands() {
         assertEquals(AssistantControlCommand.Type.BED, AssistantControlCommand.parse("Salve, cama.").type);
         assertEquals(AssistantControlCommand.Type.BED, AssistantControlCommand.parse("muestra tu cama").type);
