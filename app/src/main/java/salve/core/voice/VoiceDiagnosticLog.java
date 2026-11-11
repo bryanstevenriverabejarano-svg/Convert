@@ -2,13 +2,16 @@ package salve.core.voice;
 
 import android.content.Context;
 import android.os.SystemClock;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import salve.core.trace.ExecutionJournal;
 import salve.core.trace.ExecutionTrace;
 
 /**
  * One private execution-journal task per foreground voice session.
  * Only fixed event enums, monotonic durations and numeric system codes are accepted.
- * Never receives audio, transcripts, prompts, assistant responses or personal content.
+ * Journal I/O is serial and off the audio/UI threads. No audio, text or prompts are received.
  */
 public final class VoiceDiagnosticLog {
     public enum Event {
@@ -23,39 +26,63 @@ public final class VoiceDiagnosticLog {
     }
 
     private final ExecutionJournal journal;
+    private final ExecutorService io = Executors.newSingleThreadExecutor(task -> {
+        Thread thread = new Thread(task, "salve-voice-diagnostic-io");
+        thread.setDaemon(true);
+        return thread;
+    });
+    /** Only the single I/O worker reads and writes the journal task ID. */
     private String taskId;
     private long started;
+    private boolean recording;
+    private boolean closed;
 
     public VoiceDiagnosticLog(Context context) {
         journal = ExecutionTrace.journal(context.getApplicationContext());
     }
 
     public synchronized void start() {
-        if (taskId != null) return;
-        taskId = journal.begin("Conversación · diagnóstico de voz",
-                "Solo eventos técnicos del micrófono y TTS, sin audio, mensajes ni respuestas.");
+        if (recording || closed) return;
+        recording = true;
         started = SystemClock.elapsedRealtime();
+        io.execute(() -> {
+            taskId = journal.begin("Conversación · diagnóstico de voz",
+                    "Solo eventos técnicos del micrófono y TTS, sin audio, mensajes ni respuestas.");
+        });
         event(0L, Event.SESSION_STARTED, 0L);
     }
 
     public synchronized void event(long token, Event event, long code) {
-        if (taskId == null || event == null || token < 0) return;
+        if (!recording || closed || event == null || token < 0) return;
         long elapsed = Math.max(0L, SystemClock.elapsedRealtime() - started);
-        journal.append(taskId, "VOZ", "token=" + token + " elapsed_ms=" + elapsed
-                + " event=" + event.name() + " code=" + code);
+        String text = "token=" + token + " elapsed_ms=" + elapsed
+                + " event=" + event.name() + " code=" + code;
+        io.execute(() -> {
+            if (taskId != null) journal.append(taskId, "VOZ", text);
+        });
     }
 
     /** Accepts only the existing fixed-schema, machine-generated VoiceTurnMetrics line. */
     public synchronized void metrics(String line) {
-        if (taskId == null || line == null || !line.startsWith("voice_turn token=")
+        if (!recording || closed || line == null || !line.startsWith("voice_turn token=")
                 || !line.matches("[a-zA-Z0-9_= \\-]+") || line.length() > 600) return;
-        journal.append(taskId, "MÉTRICAS DE VOZ", line);
+        io.execute(() -> {
+            if (taskId != null) journal.append(taskId, "MÉTRICAS DE VOZ", line);
+        });
     }
 
     public synchronized void finish(long token) {
-        if (taskId == null) return;
+        if (!recording || closed) return;
         event(token, Event.SESSION_ENDED, 0L);
-        journal.finish(taskId, "TERMINADA");
-        taskId = null;
+        closed = true;
+        io.execute(() -> {
+            if (taskId != null) journal.finish(taskId, "TERMINADA");
+        });
+        io.shutdown();
+    }
+
+    /** Only used by Robolectric tests; never wait for disk on the Android UI/audio thread. */
+    boolean awaitWrittenForTests() throws InterruptedException {
+        return io.awaitTermination(5, TimeUnit.SECONDS);
     }
 }
