@@ -43,8 +43,8 @@ public class ExecutionJournalActivity extends Activity {
     private final Runnable poll = this::refresh;
     private final List<ExecutionJournal.Task> tasks = new ArrayList<>();
     private Spinner selector;
-    private LinearLayout executionPanel, libraryPanel, libraryList, chips;
-    private TextView executionTab, libraryTab, log, notice, libraryCount;
+    private LinearLayout executionPanel, libraryPanel, libraryList, chips, evolutionPanel, evolutionList;
+    private TextView executionTab, libraryTab, evolutionTab, log, notice, libraryCount;
     private String selected = "", shown = "", tab = ReportLibrary.TAB_EXECUTION;
     private ReportLibrary.Category filter;
     private boolean visible, loading;
@@ -68,11 +68,13 @@ public class ExecutionJournalActivity extends Activity {
         root.addView(tabs, new LinearLayout.LayoutParams(-1, -2));
         executionTab = tab(tabs, "Ejecución", ReportLibrary.TAB_EXECUTION);
         libraryTab = tab(tabs, "Biblioteca", ReportLibrary.TAB_LIBRARY);
+        evolutionTab = tab(tabs, "Evolución", "evolucion");
         View rule = new View(this); rule.setBackgroundColor(LINE);
         root.addView(rule, new LinearLayout.LayoutParams(-1, dp(1)));
 
         buildExecution(root);
         buildLibrary(root);
+        buildEvolution(root);
         notice = text(root, "", 13); notice.setTextColor(MUTED);
         setContentView(root);
         showTab(tab);
@@ -102,13 +104,16 @@ public class ExecutionJournalActivity extends Activity {
     }
 
     private void showTab(String key) {
-        tab = ReportLibrary.TAB_LIBRARY.equals(key) ? ReportLibrary.TAB_LIBRARY : ReportLibrary.TAB_EXECUTION;
+        tab = "evolucion".equals(key) ? "evolucion" : ReportLibrary.TAB_LIBRARY.equals(key) ? ReportLibrary.TAB_LIBRARY : ReportLibrary.TAB_EXECUTION;
         boolean library = tab.equals(ReportLibrary.TAB_LIBRARY);
         styleTab(executionTab, !library);
         styleTab(libraryTab, library);
-        executionPanel.setVisibility(library ? View.GONE : View.VISIBLE);
+        styleTab(evolutionTab, "evolucion".equals(tab));
+        executionPanel.setVisibility(ReportLibrary.TAB_EXECUTION.equals(tab) ? View.VISIBLE : View.GONE);
         libraryPanel.setVisibility(library ? View.VISIBLE : View.GONE);
+        evolutionPanel.setVisibility("evolucion".equals(tab) ? View.VISIBLE : View.GONE);
         if (library) refreshLibrary();
+        if ("evolucion".equals(tab)) refreshEvolution();
     }
 
     /** Pestaña activa: texto en color y raya debajo, como las de un navegador. */
@@ -352,6 +357,82 @@ public class ExecutionJournalActivity extends Activity {
         }
     }
 
+    // ───────────────────────── Evolución ─────────────────────────
+    /** Read-only overview built from the existing journal and PDF library; no duplicate storage. */
+    private void buildEvolution(LinearLayout root) {
+        evolutionPanel = new LinearLayout(this);
+        evolutionPanel.setOrientation(LinearLayout.VERTICAL);
+        root.addView(evolutionPanel, new LinearLayout.LayoutParams(-1, 0, 1));
+        TextView info = text(evolutionPanel,
+                "Observar → Registrar → Analizar → Proponer → Verificar\n"
+                + "Seguimiento basado en tareas e informes existentes. Una propuesta no equivale a una mejora verificada ni a un PR.", 13);
+        info.setTextColor(MUTED);
+        info.setPadding(0, dp(12), 0, dp(12));
+        ScrollView scroll = new ScrollView(this);
+        evolutionPanel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        evolutionList = new LinearLayout(this);
+        evolutionList.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(evolutionList);
+    }
+
+    private void refreshEvolution() {
+        worker.execute(() -> {
+            List<ReportLibrary.Entry> reports = ReportLibrary.list(reportDirectory(), null);
+            List<ExecutionJournal.Task> recent = ExecutionTrace.journal(this).recent();
+            main.post(() -> {
+                if (!isDestroyed() && "evolucion".equals(tab)) renderEvolution(reports, recent);
+            });
+        });
+    }
+
+    private void renderEvolution(List<ReportLibrary.Entry> reports, List<ExecutionJournal.Task> recent) {
+        evolutionList.removeAllViews();
+        int errors = 0;
+        for (ExecutionJournal.Task task : recent) {
+            if (task != null && ("ERROR".equals(task.status) || "FALLO".equals(task.status))) errors++;
+        }
+        TextView summary = text(evolutionList, "Observaciones: " + recent.size()
+                + " tareas recientes · " + errors + " fallos · " + reports.size() + " informes", 15);
+        summary.setTextColor(ACCENT);
+        TextView note = text(evolutionList,
+                "Observar y registrar: Registro de Ejecución.\n"
+                + "Analizar y proponer: informes de Biblioteca.\n"
+                + "Verificar: pendiente hasta disponer de resultados de pruebas vinculados.\n"
+                + "PR: consulta el estado real desde las herramientas de PR de Salve.", 13);
+        note.setTextColor(MUTED);
+        note.setPadding(0, dp(10), 0, dp(12));
+        if (reports.isEmpty() && recent.isEmpty()) {
+            text(evolutionList, "Aún no hay observaciones ni informes para mostrar.", 15);
+            return;
+        }
+        int count = 0;
+        for (ReportLibrary.Entry entry : reports) {
+            if (count++ >= 12) break;
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setPadding(dp(12), dp(10), dp(12), dp(10));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(CARD); bg.setCornerRadius(dp(12)); bg.setStroke(dp(1), LINE);
+            item.setBackground(bg);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, dp(5), 0, dp(5));
+            evolutionList.addView(item, lp);
+            TextView phase = text(item, "ANALIZAR / PROPONER · Documento existente · No verificado", 12);
+            phase.setTextColor(ACCENT);
+            TextView title = text(item, entry.title, 16);
+            title.setTypeface(Typeface.DEFAULT_BOLD);
+            if (!entry.preview.isEmpty()) {
+                TextView preview = text(item, entry.preview, 13);
+                preview.setTextColor(MUTED);
+                preview.setMaxLines(3);
+            }
+            link(item, "Abrir informe PDF", v -> openViewer(entry));
+        }
+        if (reports.isEmpty()) {
+            text(evolutionList, "Todavía no hay informes. Puedes crear uno desde Ejecución.", 14);
+        }
+    }
+
     // ───────────────────────── comunes ─────────────────────────
 
     private int dp(float v) { return Math.round(v * getResources().getDisplayMetrics().density); }
@@ -372,7 +453,7 @@ public class ExecutionJournalActivity extends Activity {
         parent.addView(t);
     }
 
-    @Override protected void onResume() { super.onResume(); visible = true; refresh(); if (tab.equals(ReportLibrary.TAB_LIBRARY)) refreshLibrary(); }
+    @Override protected void onResume() { super.onResume(); visible = true; refresh(); if (tab.equals(ReportLibrary.TAB_LIBRARY)) refreshLibrary(); if ("evolucion".equals(tab)) refreshEvolution(); }
     @Override protected void onPause() { visible = false; main.removeCallbacks(poll); super.onPause(); }
     @Override protected void onDestroy() { main.removeCallbacksAndMessages(null); worker.shutdownNow(); super.onDestroy(); }
     @Override protected void onSaveInstanceState(Bundle state) {
