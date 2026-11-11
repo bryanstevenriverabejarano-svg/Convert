@@ -100,8 +100,11 @@ public final class VoiceBargeInMonitor {
                 listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_CAPTURE_FAILED, rec.getRecordingState());
                 return;
             }
+            boolean suppressionEnabled = false;
+            try { suppressionEnabled = noise != null && noise.getEnabled(); }
+            catch (RuntimeException ignored) { /* diagnostics must never stop capture */ }
             listener.onStatus(voiceToken, VoiceDiagnosticLog.Event.MIC_CAPTURE_ACTIVE,
-                    1L | (noise != null && noise.getEnabled() ? 2L : 0L));
+                    1L | (suppressionEnabled ? 2L : 0L));
             VoiceBargeInDetector detector = new VoiceBargeInDetector();
             short[] pcm = new short[FRAME];
             while (owns(owner)) {
