@@ -24,6 +24,10 @@ public final class ConversationEvidenceIntent {
             return Scope.NONE; // A geolocation history is not the execution journal.
         boolean execution = s.matches(".*\\b(?:registro de ejecucion|registro de tareas|registro de acciones|historial de ejecucion|historial de tareas|log de ejecucion|logs de ejecucion|notas de tarea|tus registros de ejecucion)\\b.*")
                 || s.matches("^(?:muestrame|ensename|abre|ver|quiero ver|dame|lee) (?:el |tu |tus )?(?:registro|registros|logs|log)$");
+        if (s.matches(".*\\b(?:tu|tus) (?:ultimo|ultimos|ultima|ultimas) (?:error|errores|fallo|fallos) (?:de |en )?(?:voz|audio|sintesis)\\b.*")
+                || s.matches(".*\\b(?:que|por que|porque|cual) (?:te |se )?(?:fallo|fallaron|corto|cortaron|paso) (?:la |tu |el )?(?:voz|audio|sintesis)\\b.*")
+                || s.matches(".*\\b(?:revisa|analiza|diagnostica|muestrame|explicame) (?:tu |tus |el |los )?(?:error|errores|fallo|fallos|registro|logs) (?:de |en )?(?:voz|audio|sintesis)\\b.*"))
+            execution = true;
         if (!execution && recentSleepContext(history)
                 && s.matches("^(?:y |pues |entonces )?(?:el |tu |un )?(?:registro|logs|log|historial)(?: de (?:tareas|ejecucion|acciones))?$"))
             execution = true;
