@@ -18,6 +18,12 @@ public class ConversationEvidenceIntentTest {
                 "¿Qué aprendiste mientras dormías y qué aparece en el registro de ejecución?", null));
     }
 
+    @Test public void voiceDiagnosticsUseExistingExecutionEvidence() {
+        assertEquals(EXECUTION, ConversationEvidenceIntent.classify("Revisa tus errores de voz", null));
+        assertEquals(EXECUTION, ConversationEvidenceIntent.classify("¿Qué te falló la voz?", null));
+        assertEquals(EXECUTION, ConversationEvidenceIntent.classify("Analiza tus fallos de audio", null));
+    }
+
     @Test public void followUpUsesRecentDialogueWithoutForgingACommand() {
         ChatMessage prior = new ChatMessage(ChatMessage.Role.USER, "Salve, duerme", 100);
         ChatMessage reply = new ChatMessage(ChatMessage.Role.ASSISTANT,
