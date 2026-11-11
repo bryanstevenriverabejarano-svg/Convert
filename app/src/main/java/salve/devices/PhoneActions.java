@@ -126,6 +126,11 @@ public final class PhoneActions {
 
     /** La app del lanzador cuyo nombre encaja claramente con lo dicho; null si no hay ninguna o hay empate. */
     public static InstalledApp findApp(Context context, String spokenName) {
+        // Querying all launcher activities can miss a package on recent Android
+        // versions even when the known package is declared in manifest queries.
+        if (spokenName != null && "spotify".equalsIgnoreCase(spokenName.trim())
+                && isInstalled(context, SPOTIFY))
+            return new InstalledApp("Spotify", SPOTIFY);
         try {
             PackageManager pm = context.getPackageManager();
             Intent launcher = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);

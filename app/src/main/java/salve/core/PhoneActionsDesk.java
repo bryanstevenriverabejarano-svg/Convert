@@ -62,8 +62,69 @@ import salve.services.VideoAnalysisManager;
  */
 final class PhoneActionsDesk {
     private final MotorConversacional m;
+    private static final java.util.concurrent.ExecutorService ACTION_LOG =
+            java.util.concurrent.Executors.newSingleThreadExecutor(task -> {
+                Thread worker = new Thread(task, "salve-mobile-action-journal");
+                worker.setDaemon(true);
+                return worker;
+            });
 
     PhoneActionsDesk(MotorConversacional m) { this.m = m; }
+
+    private boolean isDriving() {
+        try { return salve.core.driving.DrivingModeManager.get(m.context).isActive(); }
+        catch (RuntimeException unavailable) { return false; }
+    }
+
+    private String drivingMusic(String query, String action) {
+        // Android Auto: use the already-running Spotify media session. Never open
+        // a search result page or another on-screen app while the car is active.
+        boolean accepted = salve.devices.MusicController.playFromSearch(m.context, query, null);
+        recordControl(action, accepted ? "MEDIA_REQUESTED" : "NO_MEDIA_SESSION_OR_PERMISSION", true);
+        if (accepted) return "He pedido a Spotify que reproduzca «" + query
+                + "» por su reproductor, sin abrir la pantalla. Todavía no he confirmado que suene.";
+        if (!salve.devices.MusicController.hasAccess(m.context))
+            return "Para elegir canciones en Spotify mientras conduces necesito acceso a notificaciones. "
+                    + "Actívalo en Mi móvil cuando estés estacionado; ahora no abriré ajustes.";
+        return "No pude pedir esa canción al reproductor de Spotify. "
+                + "La sesión multimedia no está disponible o rechazó la orden.";
+    }
+
+    private void recordControl(String action, String outcome, boolean driving) {
+        // One fixed-schema receipt on a background I/O queue: no recording, speech text,
+        // song names, personal messages, contacts, tool arguments or blocking on the UI thread.
+        final android.content.Context app = m.context.getApplicationContext();
+        ACTION_LOG.execute(() -> {
+            salve.core.trace.ExecutionJournal journal = salve.core.trace.ExecutionTrace.journal(app);
+            String id = journal.begin("Control móvil", "Resultado técnico de orden; sin texto personal.");
+            if (id == null) return;
+            journal.append(id, "RESULTADO", "action=" + action + " outcome=" + outcome
+                    + " driving=" + driving);
+            journal.finish(id, "TERMINADA");
+        });
+    }
+
+    boolean procesarContinuacionMusical(String text,
+            java.util.List<salve.core.conversation.ChatMessage> history) {
+        salve.core.devicecontrol.MusicFollowupCommand followup =
+                salve.core.devicecontrol.MusicFollowupCommand.parse(text, history);
+        if (followup == null) return false;
+        postConversationTask(() -> {
+            if (m.closed) return;
+            if (isDriving()) {
+                m.hablar(drivingMusic(followup.target, "MUSIC_FOLLOWUP"));
+            } else {
+                boolean accepted = followup.kind == salve.core.devicecontrol.MusicFollowupCommand.Kind.FAVORITES
+                        ? salve.devices.PhoneActions.playLiked(m.context)
+                        : salve.devices.PhoneActions.playMusic(m.context, followup.target);
+                recordControl("MUSIC_FOLLOWUP", accepted ? "REQUESTED" : "FAILED", false);
+                m.hablar(accepted ? "He solicitado reproducir «" + followup.target
+                        + "». Todavía no he confirmado que esté sonando."
+                        : "No pude solicitar esa música en Spotify.");
+            }
+        });
+        return true;
+    }
 
     static final long TOOL_APPROVAL_TTL_MS = 2 * 60 * 1000L;
 
@@ -86,48 +147,84 @@ final class PhoneActionsDesk {
         if (action != null) {
             postConversationTask(() -> {
                 if (m.closed) return;
+                boolean driving = isDriving();
                 switch (action.type) {
-                    case NAVIGATE:
-                        m.hablar(salve.devices.PhoneActions.navigate(m.context, action.target)
-                                ? "Abro la ruta a " + action.target + "." : "No encontré ninguna app de mapas para abrir la ruta.");
+                    case NAVIGATE: {
+                        boolean accepted = salve.devices.PhoneActions.navigate(m.context, action.target);
+                        recordControl(action.type.name(), accepted ? "REQUESTED" : "FAILED", driving);
+                        m.hablar(accepted ? "Solicité una ruta hacia " + action.target + ". Comprueba el destino."
+                                : "No encontré ninguna app de mapas para abrir la ruta.");
                         break;
-                    case MUSIC:
-                        m.hablar(salve.devices.PhoneActions.playMusic(m.context, action.target)
-                                ? "Pongo " + action.target + "." : "No encontré Spotify ni otra app de música que acepte búsquedas.");
+                    }
+                    case MUSIC: {
+                        if (driving) {
+                            m.hablar(drivingMusic(action.target, action.type.name()));
+                        } else {
+                            boolean accepted = salve.devices.PhoneActions.playMusic(m.context, action.target);
+                            recordControl(action.type.name(), accepted ? "REQUESTED" : "FAILED", false);
+                            m.hablar(accepted ? "Solicité reproducir «" + action.target
+                                    + "» en Spotify. No tengo confirmación de que ya esté sonando."
+                                    : "No pude solicitar la reproducción en Spotify.");
+                        }
                         break;
+                    }
                     case PLAYLIST:
-                        m.hablar(salve.devices.PhoneActions.playPlaylist(m.context, action.target)
-                                ? "Pongo tu lista «" + action.target + "» en Spotify."
-                                : "No encontré Spotify para poner la lista «" + action.target + "».");
+                    case LIKED: {
+                        if (driving) {
+                            String query = action.type == salve.core.devicecontrol.AppActionCommand.Type.LIKED
+                                    ? "Tus me gusta" : action.target;
+                            m.hablar(drivingMusic(query, action.type.name()));
+                        } else {
+                            boolean accepted = action.type == salve.core.devicecontrol.AppActionCommand.Type.LIKED
+                                    ? salve.devices.PhoneActions.playLiked(m.context)
+                                    : salve.devices.PhoneActions.playPlaylist(m.context, action.target);
+                            recordControl(action.type.name(), accepted ? "REQUESTED" : "FAILED", false);
+                            m.hablar(accepted ? "Solicité reproducir tu música en Spotify. No he confirmado que suene."
+                                    : "No pude iniciar esa música en Spotify.");
+                        }
                         break;
-                    case LIKED:
-                        m.hablar(salve.devices.PhoneActions.playLiked(m.context)
-                                ? "Pongo tus me gusta de Spotify." : "No encontré Spotify para poner tus me gusta.");
-                        break;
+                    }
                     case MUSIC_SEARCH: {
-                        boolean driving;
-                        try { driving = salve.core.driving.DrivingModeManager.get(m.context).isActive(); }
-                        catch (RuntimeException unavailable) { driving = false; }
-                        // Conduciendo no se mira una lista de resultados: se pone el primero.
-                        if (driving) m.hablar(salve.devices.PhoneActions.playMusic(m.context, action.target)
-                                ? "Conduciendo no te enseño resultados: pongo «" + action.target + "»."
-                                : "No encontré Spotify ni otra app de música que acepte búsquedas.");
-                        else m.hablar(salve.devices.PhoneActions.searchMusic(m.context, action.target)
-                                ? "Te abro Spotify con lo que hay de «" + action.target + "»."
-                                : "No encontré Spotify para buscar «" + action.target + "».");
+                        if (driving) {
+                            m.hablar(drivingMusic(action.target, action.type.name()));
+                        } else {
+                            boolean accepted = salve.devices.PhoneActions.searchMusic(m.context, action.target);
+                            recordControl(action.type.name(), accepted ? "SEARCH_OPENED" : "FAILED", false);
+                            m.hablar(accepted ? "Abrí una búsqueda en Spotify para «" + action.target
+                                    + "». No he iniciado ninguna canción."
+                                    : "No pude abrir la búsqueda en Spotify.");
+                        }
                         break;
                     }
                     case CALL:
+                        if (driving) {
+                            recordControl(action.type.name(), "DRIVING_BLOCKED", true);
+                            m.hablar("No abriré un formulario de llamadas mientras conduces. "
+                                    + "Cuando estés detenido podrás confirmar a quién llamar.");
+                            break;
+                        }
                         try {
                             m.context.startActivity(new Intent(m.context, salve.presentation.ui.DeviceControlActivity.class)
                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     .putExtra(salve.presentation.ui.DeviceControlActivity.EXTRA_CALL, action.target));
+                            recordControl(action.type.name(), "REVIEW_OPENED", false);
                             m.hablar("Busco a " + action.target + ". Confirma en pantalla antes de que llame.");
-                        } catch (RuntimeException unavailable) { m.hablar("No pude abrir el panel de llamadas."); }
+                        } catch (RuntimeException unavailable) {
+                            recordControl(action.type.name(), "FAILED", false);
+                            m.hablar("No pude abrir el panel de llamadas.");
+                        }
                         break;
                     case OPEN_APP:
-                        m.hablar(salve.devices.PhoneActions.openApp(m.context, appToOpen)
-                                ? "Abro " + appToOpen.label + "." : "Android no me dejó abrir " + appToOpen.label + ".");
+                        if (driving) {
+                            recordControl(action.type.name(), "DRIVING_BLOCKED", true);
+                            m.hablar("Mientras conduces no voy a abrir una aplicación en la pantalla del móvil. "
+                                    + "Para controlar Spotify por voz, dime qué música quieres o di «siguiente».");
+                            break;
+                        }
+                        boolean opened = salve.devices.PhoneActions.openApp(m.context, appToOpen);
+                        recordControl(action.type.name(), opened ? "OPEN_REQUESTED" : "FAILED", false);
+                        m.hablar(opened ? "Solicité abrir " + appToOpen.label + "."
+                                : "Android no me dejó abrir " + appToOpen.label + ".");
                         break;
                 }
             });

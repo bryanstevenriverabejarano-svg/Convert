@@ -875,14 +875,9 @@ public class MotorConversacional {
         if (!modelFirstSelf && salve.core.voice.ListenCommand.parse(entrada) != null) {
             hablar(runSelfCommand(salve.core.cognition.SelfCommandIntent.Command.LISTEN, entrada)); return;
         }
-        // For a verified conversation, the LLM selects the existing music
-        // transport action. The direct parser remains an offline fallback.
-        boolean modelFirstMusic = llm != null
-                && salve.core.identity.IdentityManager.get(context).privateAccess()
-                && salve.core.cognition.MediaActionIntent.offered(entrada);
-        // «Escucha esta canción» es su función de oír, no reproducir: si ya se la ofrecimos
-        // al modelo, el parser de música no se la adelanta (antes lo impedía el orden).
-        String music = modelFirstMusic || modelFirstSelf ? null : controlMusica(entrada);
+        // Clear transport commands must work even when Gemma answers in prose
+        // instead of selecting the offered media tool. Ambiguous goals still use the model.
+        String music = modelFirstSelf ? null : controlMusica(entrada);
         if (music != null) { hablar(music); return; }
         String windowResponse = modelFirstSelf ? null : mesaInvestigacion.comandoMiniVentana(entrada);
         if (windowResponse != null) { hablar(windowResponse); return; }
@@ -1070,10 +1065,20 @@ public class MotorConversacional {
                 + mesaFunciones.conocimientoPropio(entrada)
                 + estrategiaRespuesta() + mesaFunciones.misActualizaciones(entrada) + misHabilidades(entrada)
                 + tonoOido();
-        // Model-first dispatch for already-implemented phone capabilities:
-        // the LLM decides which authorized adapter to use and its arguments.
-        // The existing explicit parser stays a fallback if no model / private
-        // authorization is available; no new Android capability is invented.
+        // Use the EXISTING action parser for unambiguous imperative orders. Previously
+        // these were skipped whenever the model was active, so Gemma could merely say
+        // "claro" without executing Spotify or opening the requested app.
+        // The action desk now guards screen launches and music searches in driving mode.
+        if (!storyTurn && !modelFirstSelf
+                && salve.core.devicecontrol.AppActionCommand.parse(entrada) != null
+                && mesaAcciones.procesarControlExplicito(entrada)) return;
+        // An answer to "¿qué canción quieres?" also carries an explicit, bounded
+        // music intent from this conversation. Never infer a title from model output alone.
+        if (!storyTurn && !modelFirstSelf && mesaAcciones.procesarContinuacionMusical(
+                entrada, conversationSession.snapshot())) return;
+
+        // Natural expressions outside the strict parser still enter the LLM-first
+        // tool cycle. The catalog and executor enforce current-user authorization.
         boolean modelFirstDevice = llm != null
                 && salve.core.identity.IdentityManager.get(context).privateAccess()
                 && (salve.core.cognition.WhatsAppDraftIntent.offered(entrada)
