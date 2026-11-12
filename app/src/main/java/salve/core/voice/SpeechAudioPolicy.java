@@ -10,6 +10,7 @@ package salve.core.voice;
  */
 public final class SpeechAudioPolicy {
     public static final int USAGE_MEDIA = 1;
+    public static final int USAGE_VOICE_COMMUNICATION = 2;
     public static final int USAGE_GUIDANCE = 12;   // USAGE_ASSISTANCE_NAVIGATION_GUIDANCE
     public static final int USAGE_ASSISTANT = 16;
 
@@ -17,6 +18,20 @@ public final class SpeechAudioPolicy {
 
     /** Uso con el que habla el TTS. */
     public static int speechUsage(boolean driving) { return driving ? USAGE_GUIDANCE : USAGE_MEDIA; }
+
+    /**
+     * Con la conversación por voz en «manos libres» (como una llamada) habla por el canal de comunicación: así
+     * la cancelación de eco del teléfono tiene su voz como referencia y la quita del micrófono, y Salve puede
+     * escuchar a Bryan mientras habla sin oírse a sí misma (como ChatGPT). En el coche manda la guía.
+     */
+    public static int speechUsage(boolean driving, boolean handsFree) {
+        return driving ? USAGE_GUIDANCE : handsFree ? USAGE_VOICE_COMMUNICATION : USAGE_MEDIA;
+    }
+
+    private static volatile boolean handsFree;
+    /** Lo enciende la conversación por voz solo si el teléfono aceptó el modo comunicación y su ruta. */
+    public static void setHandsFree(boolean on) { handsFree = on; }
+    public static boolean handsFree() { return handsFree; }
 
     /** Uso con el que la conversación por voz pide el foco de audio. */
     public static int focusUsage(boolean driving) { return driving ? USAGE_GUIDANCE : USAGE_ASSISTANT; }

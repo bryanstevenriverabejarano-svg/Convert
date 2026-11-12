@@ -28,4 +28,11 @@ public class SpeechAudioPolicyTest {
         assertFalse("fuera del coche, nada nuevo", SpeechAudioPolicy.needsOwnFocus(false, false));
         assertFalse(SpeechAudioPolicy.needsOwnFocus(false, true));
     }
+
+    @Test public void inHandsFreeHerVoiceGoesThroughTheCallChannelSoEchoIsCancelled() {
+        assertEquals(SpeechAudioPolicy.USAGE_VOICE_COMMUNICATION, SpeechAudioPolicy.speechUsage(false, true));
+        assertEquals(SpeechAudioPolicy.USAGE_MEDIA, SpeechAudioPolicy.speechUsage(false, false));
+        assertEquals("en el coche manda la guía", SpeechAudioPolicy.USAGE_GUIDANCE, SpeechAudioPolicy.speechUsage(true, true));
+        assertEquals(SpeechAudioPolicy.speechUsage(false), SpeechAudioPolicy.speechUsage(false, false));
+    }
 }

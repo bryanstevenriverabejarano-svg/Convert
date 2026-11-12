@@ -3172,6 +3172,8 @@ public class MotorConversacional {
 
     // ── Voz por el coche (Android Auto) ─────────────────────────────────────────────────────────
     private volatile Boolean speechRouteDriving;
+    /** Último uso de audio aplicado al TTS (null: el de Android por defecto, multimedia). */
+    private volatile Integer speechRouteUsage;
     private final Object carFocusLock = new Object();
     private android.media.AudioFocusRequest carSpeechFocus;
     private final android.os.Handler speechRouteHandler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -3196,12 +3198,18 @@ public class MotorConversacional {
         boolean driving;
         try { driving = salve.core.driving.DrivingModeManager.get(context).isActive(); }
         catch (RuntimeException unavailable) { driving = false; }
-        Boolean previous = speechRouteDriving;
-        if ((driving || Boolean.TRUE.equals(previous)) && (previous == null || previous != driving)) {
+        // Manos libres solo con la conversación por voz abierta (y si el teléfono aceptó el modo comunicación).
+        boolean handsFree = liveVoiceChannel.isActive() && salve.core.voice.SpeechAudioPolicy.handsFree();
+        int usage = salve.core.voice.SpeechAudioPolicy.speechUsage(driving, handsFree);
+        Integer previousUsage = speechRouteUsage;
+        boolean changed = previousUsage == null ? usage != salve.core.voice.SpeechAudioPolicy.USAGE_MEDIA
+                : previousUsage != usage;
+        if (changed) {
             try {
                 t.setAudioAttributes(new android.media.AudioAttributes.Builder()
                         .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .setUsage(salve.core.voice.SpeechAudioPolicy.speechUsage(driving)).build());
+                        .setUsage(usage).build());
+                speechRouteUsage = usage;
             } catch (RuntimeException ignored) { /* sigue con la ruta anterior */ }
         }
         speechRouteDriving = driving;
