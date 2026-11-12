@@ -44,7 +44,8 @@ public final class ActionMeaning {
     static final Pattern NEGATED = Pattern.compile(
             "\\b(?:no|nunca|jamas)\\s+(?:(?:me|nos|te|le|les)\\s+)?"
             + "(?:abras|abre|actives|activa|enciendas|pongas|cambies|uses|escuches|"
-            + "parpadees|muevas|brilles|juguemos|juegues|hagas|mandes)\\b");
+            + "parpadees|muevas|brilles|juguemos|juegues|hagas|mandes|apagues|quites|subas|bajes|pares|"
+            + "pauses|desactives|conectes|desconectes|cortes|silencies|pases|vibres|lleves)\\b");
     // «No quiero jugar ahora», «no me apetece»: un rechazo. «Ya no quiero QUE te despiertes…» sí es una
     // petición (apagar algo), por eso se excluye lo que sigue con «que».
     private static final Pattern REFUSED = Pattern.compile(
@@ -55,20 +56,62 @@ public final class ActionMeaning {
         public final String command;
         /** Frase que su reconocedor de siempre entiende; de ella salen los detalles. */
         public final String canonical;
+        /**
+         * Solo en los interruptores (wifi, linterna, volumen…): la canónica de apagar/bajar. Los embeddings
+         * no distinguen «enciende» de «apaga»; el sentido sale de las palabras de Bryan ({@link #on}/{@link #off}),
+         * y si no está claro, no se ofrece nada.
+         */
+        public final String canonicalOff;
+        final Pattern on, off;
         final String[] examples;
         Meaning(String command, String canonical, String... examples) {
-            this.command = command; this.canonical = canonical; this.examples = examples;
+            this(command, canonical, null, null, null, examples);
+        }
+        private Meaning(String command, String canonical, String canonicalOff, Pattern on, Pattern off, String... examples) {
+            this.command = command; this.canonical = canonical; this.canonicalOff = canonicalOff;
+            this.on = on; this.off = off; this.examples = examples;
+        }
+        static Meaning toggle(String command, String canonicalOn, String canonicalOff, String... examples) {
+            return new Meaning(command, canonicalOn, canonicalOff, ON, OFF, examples);
+        }
+        static Meaning toggle(String command, String canonicalOn, String canonicalOff, Pattern on, Pattern off,
+                              String... examples) {
+            return new Meaning(command, canonicalOn, canonicalOff, on, off, examples);
+        }
+
+        /** La canónica según el sentido que dijo Bryan, o null si no se sabe (o dice las dos cosas). */
+        String canonicalFor(String input) {
+            if (canonicalOff == null) return canonical;
+            String s = normalize(input);
+            boolean wantsOn = on.matcher(s).find(), wantsOff = off.matcher(s).find();
+            return wantsOn == wantsOff ? null : wantsOn ? canonical : canonicalOff;
         }
     }
+
+    // El sentido de un interruptor, por las palabras de Bryan (normalizadas, sin tildes).
+    static final Pattern ON = Pattern.compile(
+            "\\b(?:enciende\\w*|activa\\w*|pon|ponme|ponlo|ponla|conecta\\w*|habilita\\w*|prende\\w*|dame|"
+            + "alumbra\\w*|ilumina\\w*|necesito|quiero)\\b");
+    static final Pattern OFF = Pattern.compile(
+            "\\b(?:apaga\\w*|desactiva\\w*|quita\\w*|desconecta\\w*|deshabilita\\w*|corta\\w*|cierra\\w*|sin)\\b"
+            + "|\\bya no\\b|\\bdeja de\\b");
+    static final Pattern LOUDER = Pattern.compile(
+            "\\b(?:sube\\w*|aumenta\\w*)\\b|\\bmas (?:alto|fuerte)\\b|\\bno (?:te )?(?:oigo|escucho)\\b"
+            + "|\\bno se (?:oye|escucha)\\b");
+    static final Pattern QUIETER = Pattern.compile(
+            "\\b(?:baja\\w*|reduce\\w*)\\b|\\bmas (?:bajo|bajito|flojo)\\b|\\b(?:muy|demasiado) alto\\b");
+    static final Pattern DND_ON = Pattern.compile(ON.pattern() + "|\\bno me (?:molest|lleguen|suenen)\\w*\\b|\\bsilencia\\w*\\b");
 
     /** Qué se entendió, con su puntuación para el registro. */
     public static final class Match {
         public final String command;
+        /** Frase canónica de la que salen los detalles (en un interruptor, la del sentido que dijo). */
         public final String canonical;
         public final String example;
         public final double score;
-        public Match(Meaning meaning, String example, double score) {
-            this.command = meaning.command; this.canonical = meaning.canonical; this.example = example; this.score = score;
+        public Match(Meaning meaning, String example, double score) { this(meaning, meaning.canonical, example, score); }
+        public Match(Meaning meaning, String canonical, String example, double score) {
+            this.command = meaning.command; this.canonical = canonical; this.example = example; this.score = score;
         }
     }
 
@@ -97,7 +140,6 @@ public final class ActionMeaning {
                 CONTROL = "device.control",
                 MEDIA = "device.media_control",
                 PLAY_MUSIC = "device.play_music",
-                SEARCH_MUSIC = "device.search_music",
                 OPEN_APP = "device.open_app",
                 NAVIGATE = "device.navigate";
         private Ids() { }
@@ -157,37 +199,22 @@ public final class ActionMeaning {
                 "quiero elegir uno de tus cuentos"));
 
         // ── Ajustes del móvil (Shizuku): el ajuste y si se enciende o se apaga salen de la canónica.
-        m.add(new Meaning(Ids.SETTING, "activa el wifi",
-                "activa el wifi", "conéctate a la red wifi", "pon internet por wifi", "enciende el wifi del móvil"));
-        m.add(new Meaning(Ids.SETTING, "desactiva el wifi",
-                "desactiva el wifi", "desconéctate del wifi", "corta el wifi", "apaga el wifi del móvil"));
-        m.add(new Meaning(Ids.SETTING, "activa el bluetooth",
-                "activa el bluetooth", "enciende el bluetooth para conectar los cascos",
-                "quiero conectar los auriculares inalámbricos"));
-        m.add(new Meaning(Ids.SETTING, "desactiva el bluetooth",
-                "desactiva el bluetooth", "apaga el bluetooth que gasta batería", "desconecta el bluetooth"));
-        m.add(new Meaning(Ids.SETTING, "activa los datos móviles",
-                "activa los datos móviles", "enciende los datos que no tengo wifi", "pon los datos del móvil"));
-        m.add(new Meaning(Ids.SETTING, "desactiva los datos móviles",
-                "desactiva los datos móviles", "apaga los datos que se me acaban los megas", "quita los datos del móvil"));
-        m.add(new Meaning(Ids.SETTING, "activa el modo avión",
-                "activa el modo avión", "pon el móvil en modo vuelo", "voy a despegar, pon el modo avión"));
-        m.add(new Meaning(Ids.SETTING, "desactiva el modo avión",
-                "desactiva el modo avión", "quita el modo vuelo", "ya he aterrizado, quita el modo avión"));
-        m.add(new Meaning(Ids.SETTING, "activa el modo no molestar",
-                "activa el modo no molestar", "que no me lleguen notificaciones", "silencia todas las notificaciones un rato"));
-        m.add(new Meaning(Ids.SETTING, "desactiva el modo no molestar",
-                "desactiva el modo no molestar", "quita el no molestar", "vuelve a dejar que me lleguen las notificaciones"));
+        m.add(Meaning.toggle(Ids.SETTING, "activa el wifi", "desactiva el wifi",
+                "el wifi", "la conexión wifi del móvil", "la red wifi de casa", "internet por wifi"));
+        m.add(Meaning.toggle(Ids.SETTING, "activa el bluetooth", "desactiva el bluetooth",
+                "el bluetooth", "el bluetooth para los cascos", "la conexión con los auriculares inalámbricos"));
+        m.add(Meaning.toggle(Ids.SETTING, "activa los datos móviles", "desactiva los datos móviles",
+                "los datos móviles", "los datos del móvil", "los megas de la tarifa"));
+        m.add(Meaning.toggle(Ids.SETTING, "activa el modo avión", "desactiva el modo avión",
+                "el modo avión", "el modo vuelo del teléfono", "el móvil en modo avión para despegar"));
+        m.add(Meaning.toggle(Ids.SETTING, "activa el modo no molestar", "desactiva el modo no molestar", DND_ON, OFF,
+                "el modo no molestar", "que no me lleguen notificaciones", "silenciar las notificaciones un rato"));
 
         // ── Mandos físicos: linterna, volumen y vibración.
-        m.add(new Meaning(Ids.CONTROL, "enciende la linterna",
-                "enciende la linterna", "no veo nada, dame luz", "pon la luz del móvil", "alumbra que está oscuro"));
-        m.add(new Meaning(Ids.CONTROL, "apaga la linterna",
-                "apaga la linterna", "quita la luz del móvil", "ya no necesito la luz"));
-        m.add(new Meaning(Ids.CONTROL, "sube el volumen",
-                "sube el volumen", "no te oigo bien, habla más fuerte", "más alto, que no se escucha", "pon el sonido más fuerte"));
-        m.add(new Meaning(Ids.CONTROL, "baja el volumen",
-                "baja el volumen", "estás hablando muy alto", "más bajito, por favor", "pon el sonido más flojo"));
+        m.add(Meaning.toggle(Ids.CONTROL, "enciende la linterna", "apaga la linterna",
+                "la linterna", "la luz del móvil", "luz que está oscuro y no veo nada", "alumbrar con el flash"));
+        m.add(Meaning.toggle(Ids.CONTROL, "sube el volumen", "baja el volumen", LOUDER, QUIETER,
+                "el volumen", "más fuerte que no te oigo", "más bajito que hablas muy alto", "el sonido de tu voz"));
         m.add(new Meaning(Ids.CONTROL, "silencia el móvil",
                 "silencia el móvil", "quita todo el sonido", "pon el móvil en silencio"));
         m.add(new Meaning(Ids.CONTROL, "vibra",
@@ -209,8 +236,7 @@ public final class ActionMeaning {
         m.add(new Meaning(Ids.PLAY_MUSIC, "pon música",
                 "ponme algo de Rosalía", "quiero escuchar a Queen", "me apetece oír música de los ochenta",
                 "pon el último disco de Bad Bunny"));
-        m.add(new Meaning(Ids.SEARCH_MUSIC, "busca música",
-                "busca canciones de Shakira en Spotify", "encuéntrame el álbum de Estopa", "búscame música para estudiar"));
+        // Buscar música (sin ponerla) se parece demasiado a ponerla: va solo por su frase exacta.
         m.add(new Meaning(Ids.OPEN_APP, "abre la app",
                 "abre Instagram", "quiero entrar en YouTube", "llévame a la aplicación del banco", "enséñame el calendario del móvil"));
         m.add(new Meaning(Ids.NAVIGATE, "llévame",
@@ -326,7 +352,8 @@ public final class ActionMeaning {
         if ((m.bestScore - m.other) / span < MIN_LEAD) return null;
         if ((m.bestScore - m.second) / span < MIN_LEAD) return null;
         Meaning meaning = MEANINGS.get(m.best);
-        return new Match(meaning, meaning.examples[m.bestExample], m.bestScore);
+        String canonical = meaning.canonicalFor(input);
+        return canonical == null ? null : new Match(meaning, canonical, meaning.examples[m.bestExample], m.bestScore);
     }
 
     static String normalize(String raw) {

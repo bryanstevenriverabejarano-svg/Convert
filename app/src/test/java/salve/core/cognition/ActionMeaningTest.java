@@ -32,27 +32,32 @@ public class ActionMeaningTest {
     @After public void forget() { ActionMeaning.remember(null, null); }
 
     @Test public void everyCanonicalPhraseIsUnderstoodByTheExistingRecognizer() {
-        for (ActionMeaning.Meaning m : ActionMeaning.MEANINGS) {
+        for (ActionMeaning.Meaning meaning : ActionMeaning.MEANINGS)
+            for (String canonical : new String[]{meaning.canonical, meaning.canonicalOff})
+                if (canonical != null) checkCanonical(meaning, canonical);
+    }
+
+    private static void checkCanonical(ActionMeaning.Meaning m, String canonical) {
             switch (m.command) {
                 case "device.setting":
-                    assertTrue(m.canonical, salve.core.devicecontrol.SystemSetting.offeredExact(m.canonical)); break;
+                    assertTrue(canonical, salve.core.devicecontrol.SystemSetting.offeredExact(canonical)); break;
                 case "device.control":
-                    assertNotNull(m.canonical, DeviceControlIntent.parseExact(m.canonical)); break;
+                    assertNotNull(canonical, DeviceControlIntent.parseExact(canonical)); break;
                 case "device.media_control":
-                    assertTrue(m.canonical, MediaActionIntent.offeredExact(m.canonical)); break;
+                    assertTrue(canonical, MediaActionIntent.offeredExact(canonical)); break;
                 default:
                     // Música nueva, apps y rutas: el destino sale de la frase real, no de la canónica.
                     if (m.command.indexOf('.') >= 0) break;
                     // Las de solo lectura no tienen detalles: su frase canónica no se usa para nada.
                     SelfCommandIntent.Command c = SelfCommandIntent.Command.valueOf(m.command);
-                    if (!c.readOnly) assertTrue(m.canonical, SelfCommandIntent.detected(m.canonical).contains(c));
+                    if (!c.readOnly) assertTrue(canonical, SelfCommandIntent.detected(canonical).contains(c));
             }
-        }
     }
 
     private static ActionMeaning.Match understood(String id, String canonical) {
         for (ActionMeaning.Meaning m : ActionMeaning.MEANINGS)
-            if (m.command.equals(id) && m.canonical.equals(canonical)) return new ActionMeaning.Match(m, m.examples[0], 0.95);
+            if (m.command.equals(id) && (canonical.equals(m.canonical) || canonical.equals(m.canonicalOff)))
+                return new ActionMeaning.Match(m, canonical, m.examples[0], 0.95);
         throw new AssertionError(id + " " + canonical);
     }
 
@@ -185,5 +190,25 @@ public class ActionMeaningTest {
         assertEquals("buenas noches", ActionMeaning.queryText("buenas noches, Salve"));
         assertEquals("enséñame tu mente", ActionMeaning.queryText("Oye Salve, enséñame tu mente"));
         assertEquals("salvemos el día", ActionMeaning.queryText("salvemos el día"));
+    }
+
+    @Test public void aSwitchTakesItsDirectionFromHisWordsNotFromTheEmbedding() throws Exception {
+        ActionMeaning.Index index = index();
+        float[] wifi = vector("la conexión wifi del móvil");
+        ActionMeaning.Match off = ActionMeaning.understand("quítame la conexión wifi", wifi, index, 1.0, 0.0);
+        assertEquals("desactiva el wifi", off.canonical);
+        ActionMeaning.Match on = ActionMeaning.understand("ponme la conexión wifi", wifi, index, 1.0, 0.0);
+        assertEquals("activa el wifi", on.canonical);
+        // Sin sentido claro, o con los dos a la vez, no se ofrece.
+        assertNull(ActionMeaning.understand("lo del wifi del móvil", wifi, index, 1.0, 0.0));
+        assertNull(ActionMeaning.understand("apaga y enciende el wifi", wifi, index, 1.0, 0.0));
+        assertNull(ActionMeaning.understand("no apagues el wifi", wifi, index, 1.0, 0.0));
+
+        float[] volume = vector("el volumen");
+        assertEquals("sube el volumen", ActionMeaning.understand("no te oigo nada", volume, index, 1.0, 0.0).canonical);
+        assertEquals("baja el volumen", ActionMeaning.understand("hablas demasiado alto", volume, index, 1.0, 0.0).canonical);
+        float[] dnd = vector("el modo no molestar");
+        assertEquals("activa el modo no molestar",
+                ActionMeaning.understand("que no me molesten esta noche", dnd, index, 1.0, 0.0).canonical);
     }
 }

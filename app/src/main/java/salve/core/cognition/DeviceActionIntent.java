@@ -49,7 +49,8 @@ public final class DeviceActionIntent {
     /**
      * La clase de acción la pide la frase exacta o, si no, su modelo de significado la entendió en
      * este turno («quiero escuchar a Queen»). El destino lo sigue comprobando {@link #checkedTarget}
-     * contra la frase real. Llamar no se entiende por significado: va siempre por su frase exacta.
+     * contra la frase real. Llamar y buscar música no se entienden por significado: van siempre por
+     * su frase exacta (llamar es delicado; buscar se confunde con poner).
      */
     public static boolean offered(Kind kind, String userInput) {
         if (offeredExact(kind, userInput)) return true;
@@ -62,7 +63,6 @@ public final class DeviceActionIntent {
             case OPEN_APP: return "device.open_app";
             case NAVIGATE: return "device.navigate";
             case PLAY_MUSIC: return "device.play_music";
-            case SEARCH_MUSIC: return "device.search_music";
             default: return null;
         }
     }
