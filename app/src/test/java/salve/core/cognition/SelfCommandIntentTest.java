@@ -44,7 +44,8 @@ public class SelfCommandIntentTest {
                 SelfCommandIntent.verified("¿cómo vas con lo de mejorarte a ti misma?", "EVOLUTION_STATUS"));
         assertEquals(SelfCommandIntent.Command.CAUSAL_MEMORY,
                 SelfCommandIntent.verified("¿qué relaciones de causa y efecto te he enseñado?", "causal_memory"));
-        assertTrue(SelfCommandIntent.available("hola").contains(SelfCommandIntent.Command.MEMORY_HEALTH));
+        // Pero no se ofrecen en cada turno: ocupaban el catálogo y desplazaban sus recuerdos.
+        assertTrue(SelfCommandIntent.available("hola").isEmpty());
         // Lo que tiene efecto sigue necesitando que él lo pida: el modelo no enciende nada por su cuenta.
         assertFalse(SelfCommandIntent.available("hola").contains(SelfCommandIntent.Command.EAR_MODE));
         reject("¿cómo estás?", "SELF_PR_OPEN");

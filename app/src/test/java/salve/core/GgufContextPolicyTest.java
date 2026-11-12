@@ -56,4 +56,28 @@ public class GgufContextPolicyTest {
         assertEquals(Arrays.asList(4096,2048), calls);
         assertTrue(GgufContextPolicy.promptBudget(2048) < GgufContextPolicy.promptBudget(4096));
     }
+
+    @Test public void extendedContextStepsDownOneTierAtATime() {
+        List<Integer> calls = new ArrayList<>();
+        GgufContextPolicy.Generation result = GgufContextPolicy.generate(GgufContextPolicy.EXTENDED, context -> {
+            calls.add(context);
+            if (context == GgufContextPolicy.EXTENDED) throw new GgufContextPolicy.AllocationException("No cabe 7k");
+            return "Con 4k";
+        }, () -> false);
+        assertEquals(Arrays.asList(7168, 4096), calls);
+        assertEquals(4096, result.contextTokens);
+        calls.clear();
+        assertThrows(GgufContextPolicy.AllocationException.class, () -> GgufContextPolicy.generate(GgufContextPolicy.EXTENDED,
+                context -> { calls.add(context); throw new GgufContextPolicy.AllocationException("Sin memoria"); }, () -> false));
+        assertEquals(Arrays.asList(7168, 4096, 2048), calls);
+    }
+    @Test public void extendedContextLeavesRoomForHerWholeIdentityCore() throws Exception {
+        assertTrue(GgufContextPolicy.supported(GgufContextPolicy.EXTENDED));
+        String core = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("src/main/assets/prompts/salve_cognitive_core_v1.txt")), java.nio.charset.StandardCharsets.UTF_8);
+        // CognitivePrompt usa el núcleo completo si núcleo + catálogo (≤1.100) + 2.600 caben en el presupuesto.
+        assertTrue(core.length() + 1100 + 2600 < GgufContextPolicy.promptBudget(GgufContextPolicy.EXTENDED));
+        assertFalse("con 4k nunca cabía", core.length() + 2600 < GgufContextPolicy.promptBudget(GgufContextPolicy.STANDARD));
+    }
 }
+

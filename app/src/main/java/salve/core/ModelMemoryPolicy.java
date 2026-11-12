@@ -37,12 +37,19 @@ public final class ModelMemoryPolicy {
                 : LocalModelPolicy.UNCENSORED_E2B.equals(id) ? UNCENSORED_E2B_WEIGHTS
                 : LocalModelPolicy.GEMMA_E4B.equals(id) ? 3659530240L : 2588147712L;
         long overhead = LocalModelPolicy.PRIMARY.equals(id) ? 1024 * MIB : 512 * MIB;
+        if (contextTokens == GgufContextPolicy.EXTENDED) overhead += EXTENDED_CONTEXT_OVERHEAD;
         if (contextTokens == GgufContextPolicy.COMPACT) {
             if (LocalModelPolicy.PRIMARY.equals(id)) overhead = 768 * MIB;
             else if (LocalModelPolicy.LIGHT.equals(id)) overhead = 384 * MIB;
         }
         return (loaded ? 0 : weights) + overhead + Math.max(RESERVE, threshold);
     }
+    /**
+     * Caché KV y lotes extra al pasar de 4.096 a 7.168 tokens en llama.cpp (Gemma 4: casi todas sus
+     * capas son de ventana deslizante, así que crece poco). Estimación conservadora, no medición:
+     * si no reserva, GgufContextPolicy baja a 4.096 en el mismo turno.
+     */
+    public static final long EXTENDED_CONTEXT_OVERHEAD = 384 * MIB;
     /** Codificador visual de Gemma (LiteRT-LM) además del modelo de texto. Estimación, no medición. */
     public static final long VISION_OVERHEAD = 384 * MIB;
     /** Caché KV adicional al pasar de 4.096 a 7.000 tokens de contexto en LiteRT-LM. Estimación. */
@@ -152,6 +159,9 @@ public final class ModelMemoryPolicy {
     }
     /** Choose the largest budget that fits. Reducing context never removes the weight/reserve cost. */
     public static int selectContext(String id, Snapshot ram, boolean loaded) {
+        // Gemma sin censura: 7k siempre que quepa (núcleo de identidad completo); si no, 4k como antes.
+        if (isUncensored(id) && (fits(id, ram, loaded, GgufContextPolicy.EXTENDED)
+                || largePhoneGguf(id, ram, loaded, GgufContextPolicy.EXTENDED))) return GgufContextPolicy.EXTENDED;
         if (canLoad(id, ram, loaded)) return GgufContextPolicy.STANDARD;
         if (largePhoneGguf(id, ram, loaded)) return GgufContextPolicy.STANDARD;
         if ((LocalModelPolicy.PRIMARY.equals(id) || LocalModelPolicy.LIGHT.equals(id)) && ram.known() && !ram.low
@@ -171,9 +181,17 @@ public final class ModelMemoryPolicy {
      * la activación falla y SalveLLM vuelve al modelo anterior.
      */
     static boolean largePhoneGguf(String id, Snapshot ram, boolean loaded) {
+        return largePhoneGguf(id, ram, loaded, GgufContextPolicy.STANDARD);
+    }
+
+    static boolean largePhoneGguf(String id, Snapshot ram, boolean loaded, int contextTokens) {
         if (!isUncensored(id) || !ram.known() || ram.low || ram.total < LARGE_PHONE_TOTAL) return false;
-        return ram.available >= required(id, true, ram.threshold)
-                && ram.total >= required(id, false, ram.threshold) + LARGE_PHONE_HEADROOM;
+        return ram.available >= required(id, true, ram.threshold, contextTokens)
+                && ram.total >= required(id, false, ram.threshold, contextTokens) + LARGE_PHONE_HEADROOM;
+    }
+
+    private static boolean fits(String id, Snapshot ram, boolean loaded, int contextTokens) {
+        return ram.known() && !ram.low && ram.available >= required(id, loaded, ram.threshold, contextTokens);
     }
 
     /** An already resident engine will be released on activation; do not charge both models here. */

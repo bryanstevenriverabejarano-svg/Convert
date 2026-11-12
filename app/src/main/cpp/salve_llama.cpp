@@ -360,7 +360,7 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
     try {
         auto *vision = reinterpret_cast<mtmd_context *>(visionHandle);
         const bool withMedia = vision && mediaInput;
-        if (contextSize != 4096 && contextSize != 2048) throw std::invalid_argument("Contexto GGUF no admitido");
+        if (contextSize != 7168 && contextSize != 4096 && contextSize != 2048) throw std::invalid_argument("Contexto GGUF no admitido");
         auto *model = reinterpret_cast<llama_model *>(handle);
         Request request(env, cancelled);
         if (repair) request.deadline = Clock::now() + std::chrono::seconds(30);
@@ -402,7 +402,8 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_salve_core_GgufLlm_infer(
                 prompt += "<think>\n\n</think>\n\n";
         }
         int length = static_cast<int>(prompt.size());
-        const int outputTokens = repair ? 256 : 512;
+        // Con 7k (GgufContextPolicy.EXTENDED) hay sitio para respuestas largas sin cortarlas.
+        const int outputTokens = repair ? 256 : contextSize >= 7168 ? 1024 : 512;
         // Con ojos y oídos cargados, siempre lote grande: los tokens de una foto se leen juntos
         // (atención no causal) y así texto y foto/audio comparten el mismo contexto y su caché.
         // Antes, pasar de oír a contestar cambiaba el lote, se recreaba el contexto y se perdía todo.

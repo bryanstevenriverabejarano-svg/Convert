@@ -18,7 +18,13 @@ public class ModelMemoryPolicyTest {
         // S24 Ultra de Bryan: 10,82 GiB totales, ~2,7–3,1 GiB «disponibles» por las apps en caché.
         ModelMemoryPolicy.Snapshot s24 = new ModelMemoryPolicy.Snapshot(2900L * ModelMemoryPolicy.MIB, 11080L * ModelMemoryPolicy.MIB, 0, false);
         assertFalse("la regla estricta nunca lo dejaría", ModelMemoryPolicy.canLoad(id, s24, false));
-        assertEquals("regla de móvil grande: contexto normal", GgufContextPolicy.STANDARD, ModelMemoryPolicy.selectContext(id, s24, false));
+        assertEquals("regla de móvil grande: contexto ampliado de 7k", GgufContextPolicy.EXTENDED, ModelMemoryPolicy.selectContext(id, s24, false));
+        // Si los 7k no caben pero los 4k sí, se queda en 4k como antes.
+        long gibMinus = ModelMemoryPolicy.required(id, true, 0, GgufContextPolicy.EXTENDED) - 1;
+        ModelMemoryPolicy.Snapshot justStandard = new ModelMemoryPolicy.Snapshot(gibMinus, 11080L * ModelMemoryPolicy.MIB, 0, false);
+        assertEquals(GgufContextPolicy.STANDARD, ModelMemoryPolicy.selectContext(id, justStandard, false));
+        // Dolphin y el resto no cambian: 7k es solo para Gemma sin censura.
+        assertNotEquals(GgufContextPolicy.EXTENDED, ModelMemoryPolicy.selectContext(LocalModelPolicy.LIGHT, ram(8L * 1024 * ModelMemoryPolicy.MIB, false), false));
         assertTrue("puede empezar a descargarse", ModelMemoryPolicy.canPrepare(id, s24, false));
         ModelMemoryPolicy.Snapshot tight = new ModelMemoryPolicy.Snapshot(
                 ModelMemoryPolicy.required(id, true, 0, GgufContextPolicy.COMPACT), 11080L * ModelMemoryPolicy.MIB, 0, true);
