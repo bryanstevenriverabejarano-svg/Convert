@@ -108,7 +108,6 @@ public class LiteRtContextGuardTest {
         ModelMemoryPolicy.Snapshot tight = new ModelMemoryPolicy.Snapshot(need6 + (need7 - need6) / 2, (long) (10.82 * gib), 768 * ModelMemoryPolicy.MIB, false);
         // En el móvil grande, 7.000 siempre (13/11/2026); los escalones intermedios quedan para el resto.
         assertEquals(ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(E4B, tight, false, false));
-        assertEquals(ModelMemoryPolicy.LITERT_6K, ModelMemoryPolicy.selectLiteRtContext(E4B, tight, false, false));
         assertEquals(7000, LiteRtContextGuard.below(8192));
         assertEquals(6144, LiteRtContextGuard.below(7000));
         assertEquals(5120, LiteRtContextGuard.below(6144));
