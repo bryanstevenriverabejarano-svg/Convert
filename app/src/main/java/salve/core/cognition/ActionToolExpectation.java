@@ -41,9 +41,13 @@ public final class ActionToolExpectation {
         // The recognizers below are already the allowlist shared by text and voice.
         if (offered.containsKey("whatsapp.draft") && WhatsAppDraftIntent.offered(input))
             return "whatsapp.draft";
-        Set<SelfCommandIntent.Command> self = SelfCommandIntent.detected(input);
-        if (offered.containsKey(SelfCommandIntent.TOOL) && self.size() == 1)
-            return SelfCommandIntent.TOOL;
+        // Por significado solo se exige una ACCIÓN entendida con claridad; una pregunta de solo
+        // lectura entendida por significado la decide el modelo (puede ser simple charla).
+        Set<SelfCommandIntent.Command> self = SelfCommandIntent.understood(input);
+        if (offered.containsKey(SelfCommandIntent.TOOL) && self.size() == 1) {
+            SelfCommandIntent.Command only = self.iterator().next();
+            if (!only.readOnly || SelfCommandIntent.detected(input).contains(only)) return SelfCommandIntent.TOOL;
+        }
         if (offered.containsKey(SystemSetting.TOOL) && SystemSetting.offered(input))
             return SystemSetting.TOOL;
         if (offered.containsKey(DeviceControlIntent.TOOL) && DeviceControlIntent.offered(input))

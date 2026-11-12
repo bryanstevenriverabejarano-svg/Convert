@@ -664,6 +664,42 @@ public final class MindRuntime {
         };
     }
 
+    // ── Entender sus funciones por significado ──────────────────────────────────
+
+    private volatile salve.core.cognition.SelfCommandMeaning.Index meaningIndex;
+    private final AtomicBoolean meaningLoading = new AtomicBoolean();
+
+    /**
+     * Qué función propia le piden por significado, o null. No espera a nada: si el modelo de
+     * embeddings o los ejemplos aún no están listos, los prepara en segundo plano y este turno
+     * queda con los reconocedores de siempre. Usa la calibración simétrica de este móvil.
+     */
+    public salve.core.cognition.SelfCommandMeaning.Match understandOwnFunction(String input) {
+        EmbeddingsIndex index = embeddings;
+        EmbeddingCalibration.Result c = similarityCalibration;
+        salve.core.cognition.SelfCommandMeaning.Index examples = meaningIndex;
+        if (index == null || c == null || !c.passed) { warmUpEmbeddings(); return null; }
+        if (examples == null) {
+            if (meaningLoading.compareAndSet(false, true)) background.execute(() -> {
+                try {
+                    meaningIndex = salve.core.cognition.SelfCommandMeaning.build(text -> {
+                        synchronized (index) { return index.embedQuery(text); }
+                    });
+                } catch (Exception failure) {
+                    Log.w(TAG, "Ejemplos de funciones sin vector: " + failure.getClass().getSimpleName());
+                } finally { meaningLoading.set(false); }
+            });
+            return null;
+        }
+        try {
+            float[] q;
+            synchronized (index) { q = index.embedQuery(salve.core.cognition.SelfCommandMeaning.queryText(input)); }
+            return salve.core.cognition.SelfCommandMeaning.understand(input, q, examples, c.relatedMean, c.unrelatedMean);
+        } catch (Exception unavailable) {
+            return null;
+        }
+    }
+
     /** Indexa en segundo plano los recuerdos nuevos que aún no tienen vector. */
     public void indexNewMemoriesAsync() {
         background.execute(() -> indexMissing(INDEX_BATCH, () -> false));
