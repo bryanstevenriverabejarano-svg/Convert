@@ -112,16 +112,12 @@ public final class SelfCommandIntent {
     }
 
     /**
-     * Lo que el modelo puede elegir este turno: las funciones con efecto, solo si las palabras de Bryan las
-     * piden (de ellas salen los detalles); las de solo lectura, siempre. Así entiende con su LLM qué le
-     * preguntan («¿cómo vas evolucionando?», «¿qué te falla?») sin depender de una frase exacta.
+     * Lo que se le ofrece al modelo este turno: lo que Bryan pidió por frase exacta o lo que su modelo de
+     * significado entendió (ActionMeaning). Antes se ofrecían siempre todas las de solo lectura: eran ~720
+     * caracteres de catálogo en cada turno y, con 4k, desplazaban memory.lookup y el resto de herramientas.
      */
     public static Set<Command> available(String input) {
-        EnumSet<Command> out = EnumSet.noneOf(Command.class);
-        out.addAll(understood(input));
-        if (input == null || input.trim().isEmpty()) return Collections.unmodifiableSet(out);
-        for (Command c : Command.values()) if (c.readOnly) out.add(c);
-        return Collections.unmodifiableSet(out);
+        return understood(input);
     }
 
     /**
