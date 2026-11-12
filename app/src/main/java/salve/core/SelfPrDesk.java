@@ -75,12 +75,18 @@ final class SelfPrDesk {
                 + "No voy a cambiar código sin una razón medida.";
         String issueId = candidate.get("issue_id").getAsString();
         String path = candidate.get("source_module_candidate").getAsString();
-        String[] what = goal != null ? null : salve.core.evaluation.ImprovementProposals.problem(issueId);
-        String problem = goal != null ? goal : what == null ? issueId : what[0];
-        String idea = goal != null ? "el cambio mínimo que lo consiga, sin quitar nada de lo que ya funciona"
-                : what == null ? "arreglarlo con el cambio mínimo" : what[1];
-        List<String> examples = goal != null ? new java.util.ArrayList<>()
-                : salve.core.evaluation.ImprovementProposals.examples(exam, issueId, 3);
+        // Fuera del examen (registro, revisión de su código, investigación, sueño) el candidato trae su propio
+        // problema, idea y pruebas (EvolutionSignals); del examen salen del catálogo de siempre.
+        String origin = text(candidate, "fuente"), verify = text(candidate, "verificar");
+        boolean observedElsewhere = goal == null && !origin.isEmpty() && !"Examen".equals(origin);
+        String[] what = goal != null || observedElsewhere ? null : salve.core.evaluation.ImprovementProposals.problem(issueId);
+        String problem = goal != null ? goal : observedElsewhere ? text(candidate, "problem") : what == null ? issueId : what[0];
+        String idea = goal != null ? "el cambio que lo consiga, sin quitar nada de lo que ya funciona"
+                : observedElsewhere ? text(candidate, "idea") : what == null ? "arreglarlo de verdad" : what[1];
+        List<String> examples = new java.util.ArrayList<>();
+        if (observedElsewhere && candidate.has("examples") && candidate.get("examples").isJsonArray())
+            for (com.google.gson.JsonElement e : candidate.getAsJsonArray("examples")) examples.add(e.getAsString());
+        else if (goal == null) examples = salve.core.evaluation.ImprovementProposals.examples(exam, issueId, 3);
         if (!salve.core.selfpr.SelfChangeScope.allowed(path) && goal != null)
             return "Ese archivo no lo puedo tocar yo: es parte de lo que me mide o me autoriza.";
 
@@ -109,11 +115,11 @@ final class SelfPrDesk {
                 String wide = SelfPatch.excerpt(source, SelfPatch.keywords(issueId,
                         goal != null ? java.util.Collections.singletonList(goal) : examples), SelfPatch.NODE_WINDOW_CHARS);
                 result = motor.llm.generateOnNodeOnly(
-                        SelfPatch.prompt(problem, idea, examples, path, wide, error, goal != null), SalveLLM.Role.PLANIFICADOR);
+                        SelfPatch.prompt(problem, idea, examples, path, wide, error, goal != null, origin), SalveLLM.Role.PLANIFICADOR);
                 if (!result.isSuccess()) result = null;
             }
             if (result == null) result = motor.llm.generateResult(
-                    SelfPatch.prompt(problem, idea, examples, path, excerpt, error, goal != null), SalveLLM.Role.PLANIFICADOR);
+                    SelfPatch.prompt(problem, idea, examples, path, excerpt, error, goal != null, origin), SalveLLM.Role.PLANIFICADOR);
             if (result == null || !result.isSuccess()) {
                 error = "mi modelo no respondió" + (result == null || result.getError() == null ? "" : ": " + result.getError());
                 continue;
@@ -129,6 +135,7 @@ final class SelfPrDesk {
                 String patch = SelfPatch.unifiedDiff(path, source, changed);
                 JsonObject proposal = SelfPatch.proposal(path, revision, source, patch,
                         (goal != null ? "Cambio pedido por Bryan: " + problem + ". "
+                                : observedElsewhere ? problem + " (" + origin + "). "
                                 : problem + " (" + candidate.get("observed_failures").getAsInt() + " fallos en el examen). ")
                                 + (reply.explanation.isEmpty() ? "" : "Salve: " + reply.explanation), true, true);
                 motor.estado("Enviando mi propuesta a GitHub…");
@@ -138,7 +145,12 @@ final class SelfPrDesk {
                     JsonObject lineageEntry = salve.core.selfpr.SelfLineage.entry(
                             System.currentTimeMillis(), autonomous ? salve.core.selfpr.EvolutionCycle.ORIGIN_AUTONOMOUS
                                     : goal != null ? "bryan" : "examen", problem, path, revision, sent.url,
-                            salve.core.selfpr.SelfLineage.failedCases(exam));
+                            salve.core.selfpr.EvolutionCycle.VERIFY_ERRORS.equals(verify)
+                                    ? candidate.get("observed_failures").getAsInt()
+                                    : salve.core.selfpr.SelfLineage.failedCases(exam));
+                    if (!origin.isEmpty()) lineageEntry.addProperty("fuente", origin);
+                    if (!verify.isEmpty()) lineageEntry.addProperty("verificar", verify);
+                    if (candidate.has("firma")) lineageEntry.addProperty("firma", text(candidate, "firma"));
                     lineageEntry.addProperty("casos_examen", salve.core.selfpr.SelfLineage.totalCases(exam));
                     // Lo que cambió, tal cual: así puede deshacerlo sola si el examen empeora.
                     lineageEntry.add("cambios", salve.core.selfpr.EvolutionCycle.record(reply.edits));
@@ -231,6 +243,10 @@ final class SelfPrDesk {
         } catch (java.io.IOException failed) {
             return "No pude consultar GitHub: " + failed.getMessage() + ".";
         }
+    }
+
+    private static String text(JsonObject o, String key) {
+        return o != null && o.has(key) && o.get(key).isJsonPrimitive() ? o.get(key).getAsString() : "";
     }
 
     private File lineageFile() { return new File(new File(motor.context.getFilesDir(), "selfpr"), "linaje.jsonl"); }

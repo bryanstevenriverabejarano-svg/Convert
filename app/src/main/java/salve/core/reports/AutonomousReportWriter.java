@@ -27,7 +27,10 @@ public final class AutonomousReportWriter {
                         + "Distingue hechos observados, hipótesis, propuestas, riesgos y pruebas pendientes. "
                         + "No inventes inspecciones de código, fuentes, resultados ni acciones. "
                         + "No incluyas secretos ni datos personales. No ejecutes cambios. "
-                        + "Si la evidencia es insuficiente, dilo. Evidencia:\n" + observed;
+                        + "Si la evidencia es insuficiente, dilo. "
+                        + "Termina con una última línea exacta: «" + salve.core.selfpr.EvolutionSignals.IMPROVEMENT_LINE
+                        + " <una mejora concreta para tu propio código que se desprenda de esto, o «ninguna»>». "
+                        + "Evidencia:\n" + observed;
                 ModelResult result = llm.generateResult(prompt, SalveLLM.Role.PLANIFICADOR);
                 if (result != null && result.isSuccess() && result.getText() != null
                         && !result.getText().trim().isEmpty())

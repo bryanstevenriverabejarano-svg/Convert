@@ -29,6 +29,18 @@ public final class SelfExam {
         String issue = waiting == null || !waiting.has("issue") ? "" : waiting.get("issue").getAsString();
         boolean sameChange = issue.equals(prefs.getString("issue", ""));
         long now = System.currentTimeMillis();
+        // Un arreglo de un error del registro no se mide con el examen: se mira si ese error vuelve a aparecer.
+        if (waiting != null && salve.core.selfpr.EvolutionCycle.VERIFY_ERRORS.equals(
+                waiting.has("verificar") ? waiting.get("verificar").getAsString() : "")) {
+            JsonObject verdict = salve.core.selfpr.EvolutionSignals.errorVerdict(waiting,
+                    salve.core.trace.ExecutionTrace.journal(app).recent(), SelfVerification.appUpdatedAt(app),
+                    System.currentTimeMillis());
+            if (verdict == null) return "Mi último cambio arregla un error de mi registro: espero a que esa tarea se use "
+                    + salve.core.selfpr.EvolutionSignals.RUNS_TO_JUDGE + " veces con la versión nueva para ver si vuelve a fallar.";
+            try { SelfLineage.append(SelfVerification.verdictsFile(app), verdict); }
+            catch (java.io.IOException unsaved) { return "No pude guardar el veredicto de mi último cambio."; }
+            return "Comprobé mi último cambio en mi registro: " + SelfVerification.sentence(verdict);
+        }
         String reason = SelfExamPolicy.reasonNotToRun(waiting != null, motor != null,
                 motor != null && motor.llm != null && !motor.llm.isLoading(),
                 sameChange ? prefs.getLong("attempt_at", 0L) : 0L, sameChange ? prefs.getInt("attempts", 0) : 0, now);

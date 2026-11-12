@@ -30,8 +30,14 @@ public final class ReportLibrary {
         public final String title, preview;
         public final Category category;
         public final long createdAt;
+        /** La mejora concreta que el informe propone para su código («MEJORA PARA MI CÓDIGO»), o "". */
+        public final String improvement;
         Entry(File pdf, String title, Category category, String preview, long createdAt) {
+            this(pdf, title, category, preview, createdAt, "");
+        }
+        Entry(File pdf, String title, Category category, String preview, long createdAt, String improvement) {
             this.pdf = pdf; this.title = title; this.category = category; this.preview = preview; this.createdAt = createdAt;
+            this.improvement = improvement == null ? "" : improvement;
         }
     }
 
@@ -63,7 +69,8 @@ public final class ReportLibrary {
             title = first.isEmpty() ? "Informe" : cut(first, 80);
             category = Category.OTHER;
         }
-        return new Entry(pdf, cut(title, 90), category, preview(lines), createdAt);
+        return new Entry(pdf, cut(title, 90), category, preview(lines), createdAt,
+                salve.core.selfpr.EvolutionSignals.improvementOf(text));
     }
 
     /** Lo primero con contenido después de la cabecera y del aviso de «Estado». */
@@ -91,6 +98,7 @@ public final class ReportLibrary {
             o.addProperty("category", entry.category.name());
             o.addProperty("preview", entry.preview);
             o.addProperty("created", entry.createdAt);
+            if (!entry.improvement.isEmpty()) o.addProperty("improvement", entry.improvement);
             Files.write(metaFile(entry.pdf).toPath(), o.toString().getBytes(StandardCharsets.UTF_8));
         } catch (Exception ignored) { }
     }
@@ -107,7 +115,8 @@ public final class ReportLibrary {
                 try { c = Category.valueOf(o.get("category").getAsString()); } catch (RuntimeException ignored) { }
                 return new Entry(pdf, o.get("title").getAsString(), c,
                         o.has("preview") ? o.get("preview").getAsString() : "",
-                        o.has("created") ? o.get("created").getAsLong() : created);
+                        o.has("created") ? o.get("created").getAsLong() : created,
+                        o.has("improvement") ? o.get("improvement").getAsString() : "");
             } catch (Exception broken) { /* ficha rota: como un PDF antiguo */ }
         }
         return new Entry(pdf, "Informe", Category.OTHER, "", created);
