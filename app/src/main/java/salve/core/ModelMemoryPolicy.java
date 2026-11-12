@@ -121,6 +121,10 @@ public final class ModelMemoryPolicy {
      * Sigue exigiendo libre todo lo que no son pesos (motor, visión y reserva de Android).
      */
     public static int admitLiteRt(String id, Snapshot ram, boolean weightsResident, boolean vision) {
+        // Móvil grande: 7.000 SIEMPRE (Bryan, 13/11/2026), como con GGUF. La RAM «disponible» casi siempre
+        // parece llena por apps en caché que Android cierra al pedirla. Si una carga se cerrara,
+        // LiteRtContextGuard baja un escalón la próxima vez.
+        if (alwaysLiteRtLong(id, ram, vision)) return LITERT_LONG;
         int strict = selectLiteRtContext(id, ram, weightsResident, vision);
         int large = largePhoneContext(id, ram, weightsResident, vision);
         if (Math.max(strict, large) != 0) return Math.max(strict, large);
@@ -199,6 +203,18 @@ public final class ModelMemoryPolicy {
     public static boolean alwaysExtended(String id, Snapshot ram) {
         return isUncensored(id) && ram.total >= LARGE_PHONE_TOTAL && ram.total > 0
                 && ram.total >= required(id, false, ram.threshold, GgufContextPolicy.EXTENDED) + LARGE_PHONE_HEADROOM;
+    }
+
+    /** Gemma LiteRT (E2B o E4B) en un móvil grande cuya RAM total cubre 7.000 tokens con 3 GiB de margen. */
+    public static boolean alwaysLiteRtLong(String id, Snapshot ram, boolean vision) {
+        return isLiteRt(id) && ram.total > 0 && ram.total >= LARGE_PHONE_TOTAL
+                && ram.total >= requiredLiteRt(id, false, ram.threshold, vision, LITERT_LONG) + LARGE_PHONE_HEADROOM;
+    }
+
+    /** ¿Conviene cerrar las apps en caché antes de cargar Gemma LiteRT con 7.000? */
+    public static boolean shouldFreeForLiteRtLong(String id, Snapshot ram, boolean weightsResident, boolean vision) {
+        return alwaysLiteRtLong(id, ram, vision) && (ram.low
+                || ram.available < requiredLiteRt(id, weightsResident, ram.threshold, vision, LITERT_LONG));
     }
 
     /** ¿Conviene liberar las apps en caché antes de cargar o responder con 7k? */
