@@ -361,9 +361,11 @@ final class CognitiveToolExecutor {
                     throw new IllegalArgumentException("Mis funciones propias requieren a Bryan verificado.");
                 salve.core.cognition.SelfCommandIntent.Command command =
                         salve.core.cognition.SelfCommandIntent.verified(input, CognitiveReply.string(args, "id"));
-                String reply = m.runSelfCommand(command, input);
+                String words = salve.core.cognition.SelfCommandIntent.wordsFor(input, command);
+                String reply = m.runSelfCommand(command, words);
                 salve.core.trace.ExecutionTrace.note("FUNCIÓN PROPIA ELEGIDA POR EL MODELO",
-                        command.name() + (command.readOnly ? " (lectura: el modelo lo explica)" : " (acción: entrega)"));
+                        command.name() + (command.readOnly ? " (lectura: el modelo lo explica)" : " (acción: entrega)")
+                                + (words.equals(input) ? "" : "; entendida por significado como «" + words + "»"));
                 if (command.readOnly) return new CognitiveTurn.Receipt(command.name() + "_REAL: " + reply);
                 m.hablar(reply);
                 // Opening a screen or toggling a mode is a handoff, not a verified goal.

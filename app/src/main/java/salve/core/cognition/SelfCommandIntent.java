@@ -50,10 +50,7 @@ public final class SelfCommandIntent {
 
     // An explicit prohibition is never offered to the model. It falls back to
     // the legacy parsers, which already understand their own "desactiva" forms.
-    private static final Pattern NEGATED = Pattern.compile(
-            "\\b(?:no|nunca|jamas)\\s+(?:(?:me|nos|te|le|les)\\s+)?"
-            + "(?:abras|abre|actives|activa|enciendas|pongas|cambies|uses|escuches|"
-            + "parpadees|muevas|brilles|juguemos|juegues|hagas|mandes)\\b");
+    private static final Pattern NEGATED = SelfCommandMeaning.NEGATED;
 
     private SelfCommandIntent() { }
 
@@ -87,7 +84,29 @@ public final class SelfCommandIntent {
     private static final Pattern CHESS = Pattern.compile(
             "\\b(?:jugar al ajedrez|juguemos (?:al )?ajedrez|jugar ajedrez|echamos una partida de ajedrez)\\b");
 
-    public static boolean offered(String input) { return !detected(input).isEmpty(); }
+    /** Lo pedido por frase conocida o, si su modelo de significado lo entendió en este turno, por significado. */
+    public static Set<Command> understood(String input) {
+        Set<Command> exact = detected(input);
+        SelfCommandMeaning.Match meaning = SelfCommandMeaning.forTurn(input);
+        Command command = meaning == null ? null : Command.valueOf(meaning.command);
+        if (command == null || exact.contains(command)) return exact;
+        EnumSet<Command> out = EnumSet.noneOf(Command.class);
+        out.addAll(exact);
+        out.add(command);
+        return Collections.unmodifiableSet(out);
+    }
+
+    public static boolean offered(String input) { return !understood(input).isEmpty(); }
+
+    /**
+     * Las palabras de las que salen los detalles: las de Bryan si su reconocedor las entiende; si solo se
+     * entendieron por significado, la frase canónica emparejada por el controlador (nunca texto del modelo).
+     */
+    public static String wordsFor(String input, Command command) {
+        if (detected(input).contains(command)) return input;
+        SelfCommandMeaning.Match meaning = SelfCommandMeaning.forTurn(input);
+        return meaning != null && command.name().equals(meaning.command) ? meaning.canonical : input;
+    }
 
     /**
      * Lo que el modelo puede elegir este turno: las funciones con efecto, solo si las palabras de Bryan las
@@ -96,7 +115,7 @@ public final class SelfCommandIntent {
      */
     public static Set<Command> available(String input) {
         EnumSet<Command> out = EnumSet.noneOf(Command.class);
-        out.addAll(detected(input));
+        out.addAll(understood(input));
         if (input == null || input.trim().isEmpty()) return Collections.unmodifiableSet(out);
         for (Command c : Command.values()) if (c.readOnly) out.add(c);
         return Collections.unmodifiableSet(out);
@@ -104,7 +123,8 @@ public final class SelfCommandIntent {
 
     /**
      * The model selects an id. A read-only function can be chosen whenever the model understands it is asked
-     * for (it only reads her own state); a function with an effect only if the user's own words asked for it.
+     * for (it only reads her own state); a function with an effect only if the user's own words asked for it,
+     * by a known phrase or by meaning (matched by the controller for this exact input).
      */
     public static Command verified(String input, String proposed) {
         if (proposed == null) throw new IllegalArgumentException("Falta la función.");
@@ -114,7 +134,7 @@ public final class SelfCommandIntent {
         } catch (IllegalArgumentException unknown) {
             throw new IllegalArgumentException("Función propia desconocida.");
         }
-        if (!chosen.readOnly && !detected(input).contains(chosen))
+        if (!chosen.readOnly && !understood(input).contains(chosen))
             throw new IllegalArgumentException("El usuario no pidió esa función en este turno.");
         return chosen;
     }
