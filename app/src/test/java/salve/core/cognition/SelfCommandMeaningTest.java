@@ -104,4 +104,16 @@ public class SelfCommandMeaningTest {
         String input = "activa el modo oídos";
         assertEquals(input, SelfCommandIntent.wordsFor(input, SelfCommandIntent.Command.EAR_MODE));
     }
+
+    @Test public void aRefusalIsNotARequestButTurningSomethingOffIs() {
+        assertTrue(SelfCommandMeaning.refused("no quiero jugar al ajedrez ahora"));
+        assertTrue(SelfCommandMeaning.refused("No me apetece que parpadees"));
+        assertFalse(SelfCommandMeaning.refused("ya no quiero que te despiertes al oír tu nombre"));
+    }
+
+    @Test public void herNameIsNotPartOfTheMeaning() {
+        assertEquals("buenas noches", SelfCommandMeaning.queryText("buenas noches, Salve"));
+        assertEquals("enséñame tu mente", SelfCommandMeaning.queryText("Oye Salve, enséñame tu mente"));
+        assertEquals("salvemos el día", SelfCommandMeaning.queryText("salvemos el día"));
+    }
 }

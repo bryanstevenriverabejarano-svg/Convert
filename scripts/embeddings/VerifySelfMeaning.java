@@ -39,12 +39,17 @@ public final class VerifySelfMeaning {
             if (!c.passed) throw new AssertionError("Calibración simétrica fallida");
             SelfCommandMeaning.Index index = SelfCommandMeaning.build(engine::query);
             int asked = 0, understood = 0, wrong = 0, falseOffers = 0;
+            System.out.printf("Calibración: paráfrasis %.3f, sin relación %.3f%n", c.relatedMean, c.unrelatedMean);
             for (String[] row : CASES) {
-                SelfCommandMeaning.Match m = SelfCommandMeaning.understand(row[0], engine.query(row[0]), index,
-                        cosine -> { double s = c.surprise(cosine); return s < 0 ? -1 : 1 - s; });
+                float[] q = engine.query(SelfCommandMeaning.queryText(row[0]));
+                java.util.function.DoubleUnaryOperator rel = cosine -> { double s = c.surprise(cosine); return s < 0 ? -1 : 1 - s; };
+                SelfCommandMeaning.Match m = SelfCommandMeaning.understand(row[0], q, index, rel);
+                SelfCommandMeaning.Scores sc = SelfCommandMeaning.measure(q, index);
                 String got = m == null ? "" : m.command;
-                System.out.printf("%-48s → %-18s (esperado %s)%s%n", row[0], got.isEmpty() ? "—" : got,
-                        row[1].isEmpty() ? "—" : row[1], m == null ? "" : String.format(" %.3f ≈ «%s»", m.score, m.example));
+                System.out.printf("%-46s → %-18s esperado %-18s | mejor %s %.3f (%.2f) «%s» · 2ª %.3f (%.2f) · otra %.3f (%.2f) «%s»%n",
+                        row[0], got.isEmpty() ? "—" : got, row[1].isEmpty() ? "—" : row[1],
+                        sc.bestId(), sc.bestScore, rel.applyAsDouble(sc.bestScore), sc.bestExampleText(),
+                        sc.second, rel.applyAsDouble(sc.second), sc.other, rel.applyAsDouble(sc.other), sc.otherText());
                 if (row[1].isEmpty()) { if (m != null) falseOffers++; continue; }
                 asked++;
                 if (row[1].equals(got)) understood++;

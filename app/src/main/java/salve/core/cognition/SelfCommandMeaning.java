@@ -37,6 +37,10 @@ public final class SelfCommandMeaning {
             "\\b(?:no|nunca|jamas)\\s+(?:(?:me|nos|te|le|les)\\s+)?"
             + "(?:abras|abre|actives|activa|enciendas|pongas|cambies|uses|escuches|"
             + "parpadees|muevas|brilles|juguemos|juegues|hagas|mandes)\\b");
+    // «No quiero jugar ahora», «no me apetece»: un rechazo. «Ya no quiero QUE te despiertes…» sí es una
+    // petición (apagar algo), por eso se excluye lo que sigue con «que».
+    private static final Pattern REFUSED = Pattern.compile(
+            "\\b(?:no|nunca|jamas)\\s+(?:(?:quiero|hace falta|me hace falta)\\b(?!\\s+que\\b)|me apetece\\b|necesito\\b)");
 
     public static final class Meaning {
         /** Id de {@code SelfCommandIntent.Command}. */
@@ -121,10 +125,10 @@ public final class SelfCommandMeaning {
                 "brilla", "ilumínate", "haz que se enciendan tus luces", "que brillen tus circuitos"));
         m.add(new Meaning(Ids.WAKE_WORD_ON, "activa la palabra de activación",
                 "activa la palabra de activación", "quiero despertarte diciendo tu nombre",
-                "que te actives cuando diga Salve", "quiero llamarte sin tocar el móvil"));
+                "que te actives cuando diga tu nombre", "quiero llamarte sin tocar el móvil"));
         m.add(new Meaning(Ids.WAKE_WORD_OFF, "desactiva la palabra de activación",
                 "desactiva la palabra de activación", "deja de esperar a que diga tu nombre",
-                "ya no quiero que te despiertes al oír Salve", "quita lo de activarte por tu nombre"));
+                "ya no quiero que te despiertes al oír tu nombre", "quita lo de activarte por tu nombre"));
         m.add(new Meaning(Ids.DEFAULT_ASSISTANT, "hazte mi asistente predeterminado",
                 "hazte mi asistente predeterminado", "quiero que salgas al mantener el botón lateral",
                 "sustituye al asistente de Google", "quiero que seas la asistente del móvil"));
@@ -151,7 +155,7 @@ public final class SelfCommandMeaning {
     static final String[] OTHER = {
             "abre Spotify", "abre WhatsApp", "pon música de reggaeton", "llama a mi madre",
             "llévame a casa", "busca en internet las noticias de hoy", "cuéntame un cuento",
-            "hola, ¿qué tal estás?", "hazme una foto", "sube el volumen", "enciende la linterna",
+            "hola, ¿qué tal estás?", "buenas noches", "buenos días", "hasta mañana", "hazme una foto", "sube el volumen", "enciende la linterna",
             "activa el wifi", "dibuja un gato", "¿qué tiempo hace mañana?", "te quiero mucho",
             "escríbele a Ana por WhatsApp", "investiga sobre los agujeros negros", "¿qué sabes sobre mí?"
     };
@@ -177,17 +181,29 @@ public final class SelfCommandMeaning {
         return new Index(vectors, other);
     }
 
-    /**
-     * @param relatedness coseno → 0..1 con la calibración de ESTE modelo en este móvil
-     *                    (1 − sorpresa); negativo si no hay calibración válida.
-     * @return la función entendida, o null si no se parece con claridad a ninguna.
-     */
-    public static Match understand(String input, float[] query, Index index, DoubleUnaryOperator relatedness) {
-        if (input == null || query == null || index == null || relatedness == null) return null;
-        String s = normalize(input);
-        if (s.isEmpty() || s.length() > 300 || NEGATED.matcher(s).find()) return null;
-        int best = -1, bestExample = -1;
-        double bestScore = -2, second = -2;
+    /** Lo que midió, para el registro y la CI: la mejor función, la segunda y «otra cosa». */
+    public static final class Scores {
+        public final int best, bestExample, otherIndex;
+        public final double bestScore, second, other;
+        Scores(int best, int bestExample, double bestScore, double second, double other, int otherIndex) {
+            this.best = best; this.bestExample = bestExample; this.bestScore = bestScore;
+            this.second = second; this.other = other; this.otherIndex = otherIndex;
+        }
+        public String bestId() { return best < 0 ? "" : MEANINGS.get(best).command; }
+        public String bestExampleText() { return best < 0 ? "" : MEANINGS.get(best).examples[bestExample]; }
+        public String otherText() { return otherIndex < 0 ? "" : OTHER[otherIndex]; }
+    }
+
+    /** El texto que se vectoriza: sin su nombre al principio o al final («buenas noches, Salve»). */
+    public static String queryText(String input) {
+        if (input == null) return "";
+        return input.trim().replaceFirst("(?i)^(?:(?:oye|hola|hey|vale)[,\\s]+)?salve[,.:;!\\s]+", "")
+                .replaceFirst("(?i)[,\\s]+salve[.!?¡¿\\s]*$", "").trim();
+    }
+
+    public static Scores measure(float[] query, Index index) {
+        int best = -1, bestExample = -1, otherIndex = -1;
+        double bestScore = -2, second = -2, other = -2;
         for (int i = 0; i < index.meanings.length; i++) {
             double score = -2; int example = -1;
             for (int j = 0; j < index.meanings[i].length; j++) {
@@ -199,15 +215,36 @@ public final class SelfCommandMeaning {
                 second = bestScore; bestScore = score; best = i; bestExample = example;
             } else if (score > second) second = score;
         }
-        double other = -2;
-        for (float[] v : index.other) other = Math.max(other, cosine(query, v));
-        if (best < 0) return null;
-        double top = relatedness.applyAsDouble(bestScore);
+        for (int i = 0; i < index.other.length; i++) {
+            double c = cosine(query, index.other[i]);
+            if (c > other) { other = c; otherIndex = i; }
+        }
+        return new Scores(best, bestExample, bestScore, second, other, otherIndex);
+    }
+
+    /** Una prohibición o un rechazo explícito: nunca se convierte en acción. */
+    static boolean refused(String input) {
+        String s = normalize(input);
+        return NEGATED.matcher(s).find() || REFUSED.matcher(s).find();
+    }
+
+    /**
+     * @param relatedness coseno → 0..1 con la calibración de ESTE modelo en este móvil
+     *                    (1 − sorpresa); negativo si no hay calibración válida.
+     * @return la función entendida, o null si no se parece con claridad a ninguna.
+     */
+    public static Match understand(String input, float[] query, Index index, DoubleUnaryOperator relatedness) {
+        if (input == null || query == null || index == null || relatedness == null) return null;
+        String s = normalize(input);
+        if (s.isEmpty() || s.length() > 300 || refused(input)) return null;
+        Scores m = measure(query, index);
+        if (m.best < 0) return null;
+        double top = relatedness.applyAsDouble(m.bestScore);
         if (top < MIN_RELATED) return null;
-        if (top - relatedness.applyAsDouble(other) < MIN_LEAD) return null;
-        if (top - relatedness.applyAsDouble(second) < MIN_LEAD) return null;
-        Meaning meaning = MEANINGS.get(best);
-        return new Match(meaning, meaning.examples[bestExample], bestScore);
+        if (top - relatedness.applyAsDouble(m.other) < MIN_LEAD) return null;
+        if (top - relatedness.applyAsDouble(m.second) < MIN_LEAD) return null;
+        Meaning meaning = MEANINGS.get(m.best);
+        return new Match(meaning, meaning.examples[m.bestExample], m.bestScore);
     }
 
     static String normalize(String raw) {

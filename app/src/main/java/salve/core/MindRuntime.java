@@ -693,7 +693,7 @@ public final class MindRuntime {
         }
         try {
             float[] q;
-            synchronized (index) { q = index.embedQuery(input); }
+            synchronized (index) { q = index.embedQuery(salve.core.cognition.SelfCommandMeaning.queryText(input)); }
             return salve.core.cognition.SelfCommandMeaning.understand(input, q, examples, cosine -> {
                 double surprise = c.surprise(cosine);
                 return surprise < 0 ? -1 : 1 - surprise;
