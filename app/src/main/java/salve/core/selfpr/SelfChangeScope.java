@@ -10,16 +10,17 @@ import salve.core.mind.SelfCode;
  *
  * Antes solo podía tocar los cinco archivos que su examen asocia a un fallo repetido. Ahora, con un
  * objetivo dicho por Bryan («abre un PR para que…»), busca en el índice de su propio código el módulo
- * que mejor encaja y puede proponer el cambio en cualquier parte de {@code salve/core}… salvo en lo que
+ * que mejor encaja y puede proponer el cambio en cualquier parte de su código ({@code salve/}, Java o Kotlin;
+ * ampliado desde {@code salve/core} por decisión de Bryan, 2026-11-12)… salvo en lo que
  * la mide y la autoriza: su examen, la puerta de sus PR, la identidad y los datos privados. Un sistema
  * que se reescribe no debe poder reescribir su propio juez (el mismo límite se repite en el servidor,
  * {@code scripts/auto_improvement_runner.py}, que es quien de verdad lo hace cumplir).
  */
 public final class SelfChangeScope {
-    public static final String ROOT = "app/src/main/java/salve/core/";
+    public static final String ROOT = "app/src/main/java/salve/";
     /** Relativo a {@link #ROOT}: carpetas (terminan en /) y archivos que una propuesta propia no toca. */
-    static final String[] PROTECTED = {"selfpr/", "identity/", "privatefamily/", "finance/", "evaluation/",
-            "SelfPrDesk.java", "ObjectiveGovernance.java"};
+    static final String[] PROTECTED = {"core/selfpr/", "core/identity/", "core/privatefamily/", "core/finance/",
+            "core/evaluation/", "core/SelfPrDesk.java", "core/ObjectiveGovernance.java"};
 
     private static final Pattern GOAL_PR = Pattern.compile(
             "(?:abre|haz|crea|escribe|manda|envia|propon) (?:un |tu |otro )?(?:pr|pull request|parche) "
@@ -46,7 +47,7 @@ public final class SelfChangeScope {
 
     /** ¿Puede una propuesta propia tocar este archivo? Ruta completa desde la raíz del repositorio. */
     public static boolean allowed(String path) {
-        if (path == null || !path.startsWith(ROOT) || !path.endsWith(".java") || path.contains("..")) return false;
+        if (path == null || !path.startsWith(ROOT) || !(path.endsWith(".java") || path.endsWith(".kt")) || path.contains("..")) return false;
         String inside = path.substring(ROOT.length());
         for (String rule : PROTECTED)
             if (rule.endsWith("/") ? inside.startsWith(rule) : inside.equals(rule)) return false;

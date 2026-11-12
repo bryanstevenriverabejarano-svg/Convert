@@ -476,7 +476,8 @@ public class ExecutionJournalActivity extends Activity {
                     : "Salve solo cambiará su código cuando se lo pidas", Toast.LENGTH_SHORT).show();
         });
         autoRow.addView(toggle);
-        TextView autoText = text(auto, "Mientras duermo cargando: si cumplo las cinco fases propongo un cambio. "
+        TextView autoText = text(auto, "Mientras duermo cargando estudio mi examen, los errores de mi registro, lo que apunto al "
+                + "leer mi código y las mejoras de mis investigaciones y sueños. Si cumplo las cinco fases propongo un cambio. "
                 + "GitHub ejecuta todas mis pruebas y compila Android; solo si pasa se fusiona y se publica. Al instalar la versión "
                 + "nueva me examino y, si empeoro en " + salve.core.selfpr.EvolutionCycle.REVERT_MARGIN + " casos o más, me revierto sola.", 13);
         autoText.setTextColor(MUTED);
@@ -554,6 +555,9 @@ public class ExecutionJournalActivity extends Activity {
         what.setTextColor(ACCENT);
         what.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
         pill(top, stateLabel(phase.state), stateColor(phase.state));
+        TextView origin = text(phaseCard, "Fuente: " + plan.source, 13);
+        origin.setTextColor(MUTED);
+        origin.setPadding(0, dp(4), 0, 0);
         TextView step = text(phaseCard, n + ". " + PHASE_TITLES[n - 1], 20);
         step.setTypeface(Typeface.DEFAULT_BOLD);
         step.setPadding(0, dp(14), 0, dp(8));
@@ -596,6 +600,8 @@ public class ExecutionJournalActivity extends Activity {
                 : salve.core.selfpr.EvolutionCycle.ORIGIN_REVERT.equals(origin) ? "Reversión automática"
                 : "bryan".equals(origin) ? "Pedida por Bryan"
                 : salve.core.selfpr.SelfVerification.ADAPTER.equals(origin) ? "Adaptador de pesos" : "Del examen";
+        String from = safeLineage(e, "fuente");
+        if (!from.isEmpty() && !"Examen".equals(from)) who += " · " + from;
         long t = e.has("t") ? e.get("t").getAsLong() : 0;
         TextView meta = text(parent, who + " · " + file.substring(file.lastIndexOf('/') + 1)
                 + (t > 0 ? " · " + android.text.format.DateFormat.format("d MMM, HH:mm", t) : "")

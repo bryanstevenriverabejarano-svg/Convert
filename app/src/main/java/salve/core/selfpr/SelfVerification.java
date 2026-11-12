@@ -81,6 +81,15 @@ public final class SelfVerification {
         String what = "mi último cambio (" + file + (goal.isEmpty() ? "" : ": «" + goal + "»") + ")";
         int before = verdict.get("antes").getAsInt(), now = verdict.get("ahora").getAsInt();
         String counts = "de " + before + " a " + now + " casos fallidos";
+        if (EvolutionCycle.VERIFY_ERRORS.equals(text(verdict, "verificar"))) {
+            String times = "antes " + before + (before == 1 ? " vez" : " veces") + ", ahora " + now + " con la versión nueva";
+            switch (text(verdict, "resultado")) {
+                case "mejor": return "Veredicto de " + what + ": el error no ha vuelto a aparecer en mi registro (" + times + "). Lo doy por bueno.";
+                case "peor": return "Veredicto de " + what + ": el error sigue apareciendo (" + times + "). El arreglo no sirvió; "
+                        + "si empeoró, me revierto.";
+                default: return "Veredicto de " + what + ": el error aparece menos (" + times + "), pero no ha desaparecido.";
+            }
+        }
         switch (text(verdict, "resultado")) {
             case "no_comparable": return "Veredicto de " + what + ": no lo puedo dar. Mi examen cambió de tamaño entre la propuesta y hoy, "
                     + "así que comparar " + before + " fallos de entonces con " + now + " de ahora no mediría el cambio.";

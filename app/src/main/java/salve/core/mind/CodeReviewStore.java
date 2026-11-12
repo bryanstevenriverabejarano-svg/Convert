@@ -77,6 +77,23 @@ public final class CodeReviewStore {
     /** Su nota sobre el archivo, o null si aún no lo ha revisado. */
     public synchronized String note(String path) { return str(entry(path, false), "note"); }
 
+    /** Archivos ya revisados con su nota: {ruta, nota, cuándo}, el más reciente primero. */
+    public synchronized java.util.List<String[]> reviewedNotes() {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        for (String key : files().keySet()) {
+            JsonObject e = files().getAsJsonObject(key);
+            String note = str(e, "note");
+            if (str(e, "reviewed") == null || note == null || note.trim().isEmpty()) continue;
+            out.add(new String[]{key, note, e.has("at") ? e.get("at").getAsString() : "0"});
+        }
+        out.sort((x, y) -> Long.compare(parse(y[2]), parse(x[2])));
+        return out;
+    }
+
+    private static long parse(String v) {
+        try { return Long.parseLong(v); } catch (RuntimeException bad) { return 0L; }
+    }
+
     public synchronized int reviewedCount() {
         int n = 0;
         for (String key : files().keySet()) if (str(files().getAsJsonObject(key), "reviewed") != null) n++;

@@ -62,6 +62,20 @@ class ProposalValidationTest(unittest.TestCase):
         proposal["targetClass"] = "DeviceSenses"
         proposal["patch"] = f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n"
         runner.validate_proposal(proposal)
+        # Y todo su código, también Kotlin fuera del núcleo (la voz).
+        proposal = self.proposal()
+        path = "app/src/main/java/salve/services/NeuralTtsService.kt"
+        proposal["targetPath"] = path
+        proposal["targetClass"] = "NeuralTtsService"
+        proposal["patch"] = f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n"
+        runner.validate_proposal(proposal)
+        for outside in ("app/src/main/AndroidManifest.xml", "app/build.gradle", ".github/workflows/salve-self-pr.yml"):
+            with self.subTest(outside=outside):
+                proposal = self.proposal()
+                proposal["targetPath"] = outside
+                proposal["patch"] = f"diff --git a/{outside} b/{outside}\n--- a/{outside}\n+++ b/{outside}\n"
+                with self.assertRaises(runner.ProposalError):
+                    runner.validate_proposal(proposal)
 
     def test_rejects_truthy_non_boolean_gates(self):
         for field in ("syntheticValidationPassed", "ethicalReviewPassed"):

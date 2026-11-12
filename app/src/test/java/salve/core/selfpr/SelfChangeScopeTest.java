@@ -27,16 +27,18 @@ public class SelfChangeScopeTest {
     }
 
     @Test public void sheCannotRewriteHerOwnJudgeOrHerGate() {
-        String root = SelfChangeScope.ROOT;
+        String root = SelfChangeScope.ROOT + "core/";
         assertTrue(SelfChangeScope.allowed(root + "sensors/DeviceSenses.java"));
         assertTrue(SelfChangeScope.allowed(root + "conversation/TurnChecks.java"));
         assertTrue(SelfChangeScope.allowed(root + "MotorConversacional.java"));
         for (String inside : new String[]{"evaluation/ConversationExam.java", "selfpr/SelfPatch.java", "selfpr/SelfChangeScope.java",
                 "identity/IdentityManager.java", "privatefamily/X.java", "finance/Y.java", "SelfPrDesk.java", "ObjectiveGovernance.java"})
             assertFalse(inside, SelfChangeScope.allowed(root + inside));
-        assertFalse("fuera del núcleo", SelfChangeScope.allowed("app/src/main/java/salve/services/SalveAccessibilityService.java"));
-        assertFalse(SelfChangeScope.allowed(root + "../services/X.java"));
-        assertFalse(SelfChangeScope.allowed(root + "LocalModelPolicy.kt"));
+        // Todo su código, también fuera del núcleo y en Kotlin (la voz, los servicios, su cuerpo).
+        assertTrue(SelfChangeScope.allowed("app/src/main/java/salve/services/NeuralTtsService.kt"));
+        assertTrue(SelfChangeScope.allowed(root + "LocalModelPolicy.kt"));
+        assertFalse(SelfChangeScope.allowed(root + "../../../res/values/strings.xml"));
+        assertFalse(SelfChangeScope.allowed("app/src/main/AndroidManifest.xml"));
         assertFalse(SelfChangeScope.allowed(".github/workflows/salve-self-pr.yml"));
         assertFalse(SelfChangeScope.allowed(null));
     }
@@ -47,8 +49,10 @@ public class SelfChangeScopeTest {
                 + "{\"p\":\"salve/core/sensors/DeviceSenses.java\",\"l\":250,\"d\":\"Los sentidos del teléfono: sensores, batería, luz\","
                 + "\"m\":[{\"n\":\"offered\",\"d\":\"cuándo se ofrecen los sensores\"}]},"
                 + "{\"p\":\"salve/avatar/AstralBody.java\",\"l\":240,\"d\":\"Cuerpo astral\",\"m\":[]}]}");
-        assertEquals(SelfChangeScope.ROOT + "sensors/DeviceSenses.java", SelfChangeScope.choose(index, "leer mejor los sensores"));
-        assertNull("su cuerpo queda fuera del núcleo que puede tocar", SelfChangeScope.choose(index, "cuerpo astral"));
+        assertEquals(SelfChangeScope.ROOT + "core/sensors/DeviceSenses.java", SelfChangeScope.choose(index, "leer mejor los sensores"));
+        assertEquals("su cuerpo también es suyo", SelfChangeScope.ROOT + "avatar/AstralBody.java", SelfChangeScope.choose(index, "cuerpo astral"));
+        assertNull("su examen nunca", SelfChangeScope.choose(SelfCode.parse("{\"files\":[{\"p\":\"salve/core/evaluation/ConversationExam.java\","
+                + "\"l\":300,\"d\":\"Examen de conversación\",\"m\":[]}]}"), "examen de conversación"));
         assertNull(SelfChangeScope.choose(SelfCode.parse("{}"), "leer mejor los sensores"));
         assertNull(SelfChangeScope.choose(index, null));
     }

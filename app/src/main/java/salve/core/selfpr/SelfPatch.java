@@ -111,15 +111,24 @@ public final class SelfPatch {
     /** {@code requested}: el cambio lo pidió Bryan con sus palabras, no salió del examen. */
     public static String prompt(String problem, String idea, List<String> examples, String path, String excerpt,
                                 String previousError, boolean requested) {
+        return prompt(problem, idea, examples, path, excerpt, previousError, requested, null);
+    }
+
+    /** {@code origin}: de dónde salió el problema si no fue del examen («Registro de ejecución», «Investigación»…). */
+    public static String prompt(String problem, String idea, List<String> examples, String path, String excerpt,
+                                String previousError, boolean requested, String origin) {
         StringBuilder p = new StringBuilder();
-        p.append("Eres Salve y vas a mejorar tu propio código Java. ")
-                .append(requested ? "Cambio que te pide Bryan: " : "Problema que mostró tu examen: ")
+        p.append("Eres Salve y vas a mejorar tu propio código (").append(path.endsWith(".kt") ? "Kotlin" : "Java").append("). ")
+                .append(requested ? "Cambio que te pide Bryan: "
+                        : origin == null || origin.isEmpty() || "Examen".equals(origin) ? "Problema que mostró tu examen: "
+                        : "Lo que observaste (" + origin + "): ")
                 .append(problem).append(".\nIdea de arreglo: ").append(idea).append(".\n");
         if (examples != null && !examples.isEmpty()) {
             p.append("Ejemplos del fallo:\n");
             for (int i = 0; i < Math.min(2, examples.size()); i++) p.append("- ").append(clip(examples.get(i), 200)).append('\n');
         }
-        p.append("Fragmento de ").append(path).append(":\n```java\n").append(excerpt).append("```\n");
+        String lang = path.endsWith(".kt") ? "kotlin" : "java";
+        p.append("Fragmento de ").append(path).append(":\n```").append(lang).append("\n").append(excerpt).append("```\n");
         if (previousError != null && !previousError.isEmpty())
             p.append("Tu intento anterior no sirvió: ").append(clip(previousError, 200)).append(". Corrígelo.\n");
         p.append("Haz el cambio que haga falta para arreglarlo de verdad, del tamaño que necesite; puedes repetir "
@@ -244,7 +253,7 @@ public final class SelfPatch {
         p.addProperty("proposalId", UUID.randomUUID().toString());
         p.addProperty("targetPath", path);
         String name = path.substring(path.lastIndexOf('/') + 1);
-        p.addProperty("targetClass", name.endsWith(".java") ? name.substring(0, name.length() - 5) : name);
+        p.addProperty("targetClass", name.replaceFirst("\\.(java|kt)$", ""));
         p.addProperty("issueSummary", issueSummary);
         p.addProperty("patch", patch);
         p.addProperty("sourceRevision", revision);
