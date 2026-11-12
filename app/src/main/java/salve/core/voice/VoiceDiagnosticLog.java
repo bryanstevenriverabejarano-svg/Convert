@@ -22,7 +22,9 @@ public final class VoiceDiagnosticLog {
         TTS_FINISHED_FAILED, MIC_AEC_UNAVAILABLE, MIC_BUFFER_INVALID,
         MIC_INIT_FAILED, MIC_AEC_CREATE_FAILED, MIC_AEC_ENABLE_FAILED,
         MIC_CAPTURE_FAILED, MIC_CAPTURE_ACTIVE, MIC_READ_FAILED,
-        MIC_DETECTOR_TRIGGERED, MIC_CAPTURE_EXCEPTION
+        MIC_DETECTOR_TRIGGERED, MIC_CAPTURE_EXCEPTION,
+        /** Sale por el altavoz del teléfono: el micrófono oiría su propia voz, así que no se escucha encima. */
+        MIC_BARGE_IN_SKIPPED_SPEAKER
     }
 
     private final ExecutionJournal journal;

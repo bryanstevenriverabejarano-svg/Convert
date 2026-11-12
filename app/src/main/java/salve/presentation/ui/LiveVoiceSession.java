@@ -717,7 +717,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 status.setText("Preparando respuesta…"); break;
             case SPEAKING:
                 stage.setVoicePresence(SalveStageController.PresenceMode.SPEAKING);
-                status.setText(VoiceBargeInMonitor.isSupported()
+                status.setText(VoiceBargeInMonitor.isSupported() && VoiceBargeInMonitor.echoFreeRoute(activity)
                         ? "Salve está hablando… Puedes interrumpirla hablando."
                         : "Salve está hablando… Usa Interrumpir para tomar tu turno."); break;
             case COOLDOWN:
@@ -791,7 +791,11 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         if (!dismissed && loop.owns(token) && metrics.speechStarted(token, timestamp)) {
             voiceLab.event(token, "tts", "started");
             apply(loop.speechStarted(token, timestamp));
-            if (!dismissed && loop.owns(token)
+            if (!dismissed && loop.owns(token) && loop.state() == VoiceConversationLoop.State.SPEAKING
+                    && !VoiceBargeInMonitor.echoFreeRoute(activity)) {
+                // Por el altavoz se oiría a sí misma y se cortaría sola: se interrumpe con el botón o el de los auriculares.
+                diagnostics.event(token, VoiceDiagnosticLog.Event.MIC_BARGE_IN_SKIPPED_SPEAKER, 0);
+            } else if (!dismissed && loop.owns(token)
                     && loop.state() == VoiceConversationLoop.State.SPEAKING) {
                 bargeIn.start(token, new VoiceBargeInMonitor.Listener() {
                     @Override public void onSpeechDetected(long activeToken) { onBargeInDetected(activeToken); }

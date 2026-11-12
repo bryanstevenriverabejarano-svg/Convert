@@ -64,4 +64,18 @@ public class VoiceBargeInDetectorTest {
         assertEquals(VoiceConversationLoop.Action.NONE, loop.tick(999).action);
         assertEquals(VoiceConversationLoop.Action.LISTEN, loop.tick(1000).action);
     }
+
+    @Test public void onlyListensOverHerVoiceWhenItCannotReachTheMicrophone() {
+        // Altavoz del teléfono (2) y auricular de llamada (1): su voz vuelve al micrófono, no escucha encima.
+        assertFalse(VoiceBargeInMonitor.echoFreeRoute(new int[]{2}));
+        assertFalse(VoiceBargeInMonitor.echoFreeRoute(new int[]{1, 2}));
+        assertFalse(VoiceBargeInMonitor.echoFreeRoute(new int[0]));
+        assertFalse(VoiceBargeInMonitor.echoFreeRoute((int[]) null));
+        // Bluetooth multimedia (8) o altavoz LE (27): puede ser un altavoz o el coche, el micrófono la oiría.
+        assertFalse(VoiceBargeInMonitor.echoFreeRoute(new int[]{2, 8}));
+        assertFalse(VoiceBargeInMonitor.echoFreeRoute(new int[]{2, 27}));
+        // Auriculares con cable (3, 4), cascos de llamada (7 SCO, 26 LE), USB (22), audífonos (23): sí.
+        for (int type : new int[]{3, 4, 7, 22, 23, 26})
+            assertTrue("tipo " + type, VoiceBargeInMonitor.echoFreeRoute(new int[]{2, type}));
+    }
 }
