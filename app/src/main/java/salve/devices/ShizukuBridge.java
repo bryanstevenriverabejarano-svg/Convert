@@ -63,6 +63,31 @@ public final class ShizukuBridge {
         }
     }
 
+    /**
+     * Cierra las apps en segundo plano para dejar memoria a su modelo. Silencioso: si Shizuku no está en
+     * marcha o aún no le dio permiso, no pide nada (se carga en mitad de una respuesta) y devuelve false.
+     */
+    public static boolean freeMemory(Context context) {
+        if (Looper.myLooper() == Looper.getMainLooper()) return false;
+        try {
+            if (!Shizuku.pingBinder() || Shizuku.isPreV11()
+                    || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) return false;
+            IBinder binder = bind(context);
+            if (binder == null) return false;
+            Parcel data = Parcel.obtain(), reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ShizukuSettingsService.DESCRIPTOR);
+                binder.transact(ShizukuSettingsService.FREE_MEMORY, data, reply, 0);
+                reply.readException();
+                return reply.readInt() == 0;
+            } finally { data.recycle(); reply.recycle(); }
+        } catch (Exception failed) {
+            synchronized (LOCK) { service = null; }
+            Log.w(TAG, "No se pudo liberar memoria: " + failed.getClass().getSimpleName());
+            return false;
+        }
+    }
+
     private static IBinder bind(Context context) throws InterruptedException {
         synchronized (LOCK) { if (service != null && service.pingBinder()) return service; }
         final CountDownLatch ready = new CountDownLatch(1);
@@ -75,7 +100,7 @@ public final class ShizukuBridge {
         };
         Shizuku.UserServiceArgs args = new Shizuku.UserServiceArgs(
                 new ComponentName(context.getPackageName(), ShizukuSettingsService.class.getName()))
-                .daemon(false).processNameSuffix("ajustes").tag("salve-ajustes").version(1);
+                .daemon(false).processNameSuffix("ajustes").tag("salve-ajustes").version(2); // 2: liberar memoria
         Shizuku.bindUserService(args, connection);
         ready.await(8, TimeUnit.SECONDS);
         synchronized (LOCK) { return service; }

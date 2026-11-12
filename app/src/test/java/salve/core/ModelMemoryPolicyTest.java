@@ -19,16 +19,20 @@ public class ModelMemoryPolicyTest {
         ModelMemoryPolicy.Snapshot s24 = new ModelMemoryPolicy.Snapshot(2900L * ModelMemoryPolicy.MIB, 11080L * ModelMemoryPolicy.MIB, 0, false);
         assertFalse("la regla estricta nunca lo dejaría", ModelMemoryPolicy.canLoad(id, s24, false));
         assertEquals("regla de móvil grande: contexto ampliado de 7k", GgufContextPolicy.EXTENDED, ModelMemoryPolicy.selectContext(id, s24, false));
-        // Si los 7k no caben pero los 4k sí, se queda en 4k como antes.
-        long gibMinus = ModelMemoryPolicy.required(id, true, 0, GgufContextPolicy.EXTENDED) - 1;
-        ModelMemoryPolicy.Snapshot justStandard = new ModelMemoryPolicy.Snapshot(gibMinus, 11080L * ModelMemoryPolicy.MIB, 0, false);
-        assertEquals(GgufContextPolicy.STANDARD, ModelMemoryPolicy.selectContext(id, justStandard, false));
+        // 7k obligatorio en el móvil grande aunque la RAM «disponible» parezca llena (apps en caché).
+        ModelMemoryPolicy.Snapshot full = new ModelMemoryPolicy.Snapshot(600L * ModelMemoryPolicy.MIB, 11080L * ModelMemoryPolicy.MIB, 0, true);
+        assertEquals(GgufContextPolicy.EXTENDED, ModelMemoryPolicy.selectContext(id, full, true));
+        assertTrue("y se piden las apps en segundo plano", ModelMemoryPolicy.shouldFreeForExtended(id, full, true));
+        assertFalse("con sitio de sobra no se cierra nada", ModelMemoryPolicy.shouldFreeForExtended(id,
+                new ModelMemoryPolicy.Snapshot(6L * gib, 11080L * ModelMemoryPolicy.MIB, 0, false), true));
         // Dolphin y el resto no cambian: 7k es solo para Gemma sin censura.
         assertNotEquals(GgufContextPolicy.EXTENDED, ModelMemoryPolicy.selectContext(LocalModelPolicy.LIGHT, ram(8L * 1024 * ModelMemoryPolicy.MIB, false), false));
+        assertFalse(ModelMemoryPolicy.shouldFreeForExtended(LocalModelPolicy.LIGHT, full, true));
         assertTrue("puede empezar a descargarse", ModelMemoryPolicy.canPrepare(id, s24, false));
+        // En un móvil sin margen de RAM total (8 GiB) no hay 7k obligatorio: rigen las reglas de siempre.
         ModelMemoryPolicy.Snapshot tight = new ModelMemoryPolicy.Snapshot(
-                ModelMemoryPolicy.required(id, true, 0, GgufContextPolicy.COMPACT), 11080L * ModelMemoryPolicy.MIB, 0, true);
-        assertEquals(GgufContextPolicy.COMPACT, ModelMemoryPolicy.selectContext(id, tight, false));
+                ModelMemoryPolicy.required(id, true, 0, GgufContextPolicy.COMPACT), 8L * gib, 0, true);
+        assertFalse(ModelMemoryPolicy.alwaysExtended(id, tight));
         ModelMemoryPolicy.Snapshot small = new ModelMemoryPolicy.Snapshot(3 * gib, 8 * gib, 0, false);
         assertEquals(0, ModelMemoryPolicy.selectContext(id, small, false));
         assertFalse(ModelMemoryPolicy.canPrepare(id, small, false));
