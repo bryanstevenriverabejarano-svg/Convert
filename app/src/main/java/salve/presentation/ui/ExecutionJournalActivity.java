@@ -476,7 +476,7 @@ public class ExecutionJournalActivity extends Activity {
                     : "Salve solo cambiará su código cuando se lo pidas", Toast.LENGTH_SHORT).show();
         });
         autoRow.addView(toggle);
-        TextView autoText = text(auto, "Mientras duermo cargando: si cumplo las cinco fases propongo un cambio (como mucho uno al día). "
+        TextView autoText = text(auto, "Mientras duermo cargando: si cumplo las cinco fases propongo un cambio. "
                 + "GitHub ejecuta todas mis pruebas y compila Android; solo si pasa se fusiona y se publica. Al instalar la versión "
                 + "nueva me examino y, si empeoro en " + salve.core.selfpr.EvolutionCycle.REVERT_MARGIN + " casos o más, me revierto sola.", 13);
         autoText.setTextColor(MUTED);

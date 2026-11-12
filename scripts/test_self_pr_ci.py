@@ -181,10 +181,9 @@ class SelfPrCiTest(unittest.TestCase):
         url_patch = PATCH.replace('contains(\"y a ti\"));', 'contains(\"https://x.example\"));')
         with self.assertRaisesRegex(ci.runner.ProposalError, "no permitidas"):
             ci.extract(issue_body(proposal(self.base, patch=url_patch)))
-        lines = "".join(f"+        int x{i} = {i};\n" for i in range(61))
-        big = PATCH.replace("@@ -5,7 +5,7 @@", "@@ -5,7 +5,68 @@") + lines
-        with self.assertRaisesRegex(ci.runner.ProposalError, "máximo"):
-            ci.extract(issue_body(proposal(self.base, patch=big)))
+        lines = "".join(f"+        int x{i} = {i};\n" for i in range(300))
+        big = PATCH.replace("@@ -5,7 +5,7 @@", "@@ -5,7 +5,307 @@") + lines
+        ci.check_limits(proposal(self.base, patch=big))  # sin límite de tamaño: lo deciden las pruebas
         with self.assertRaisesRegex(ci.runner.ProposalError, "suites generadas"):
             ci.check_limits(proposal(self.base, generatedTests="public class X {}"))
 

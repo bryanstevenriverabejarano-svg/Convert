@@ -29,12 +29,10 @@ public final class EvolutionCycle {
     public enum State { DONE, WAITING, BLOCKED, IDLE }
 
     public static final String[] NAMES = {"Observar", "Registrar", "Analizar", "Proponer", "Verificar"};
-    /** Máximo una propuesta autónoma al día. */
-    public static final long COOLDOWN_MS = 24L * 60 * 60 * 1000;
     /** Un cambio sin veredicto bloquea otros durante este tiempo (CI + publicar + instalar + examen). */
     public static final long VERDICT_WAIT_MS = 3L * 24 * 60 * 60 * 1000;
     /** Intentos sin mejora medible con el mismo problema antes de dejarlo para Bryan. */
-    public static final int MAX_TRIES_PER_PROBLEM = 2;
+    public static final int MAX_TRIES_PER_PROBLEM = 3;
     /** Empeorar en al menos esto (casos del examen) justifica revertir sola; menos puede ser ruido. */
     public static final int REVERT_MARGIN = 2;
     /** Origen de las entradas del linaje que propuso ella sola. */
@@ -160,18 +158,15 @@ public final class EvolutionCycle {
         else if (lastVerdict != null && "peor".equals(str(lastVerdict, "resultado")) && !ORIGIN_REVERT.equals(str(last, "origen"))) {
             block = "Mi último cambio empeoró el examen. Antes de proponer nada nuevo hay que revertirlo.";
             blockState = State.BLOCKED;
-        } else if (lastAutonomous(lineage) > 0 && now - lastAutonomous(lineage) < COOLDOWN_MS)
-            block = "Ya propuse un cambio por mi cuenta en las últimas 24 horas; espero al siguiente día.";
-        else if (failedTries(lineage, verdicts, problem) >= MAX_TRIES_PER_PROBLEM) {
+        } else if (failedTries(lineage, verdicts, problem) >= MAX_TRIES_PER_PROBLEM) {
             block = "Ya intenté arreglar «" + problem + "» " + MAX_TRIES_PER_PROBLEM + " veces sin mejora medible. "
                     + "No insisto: necesito otra idea o que lo mire Bryan.";
             blockState = State.BLOCKED;
         }
         boolean ready = analyzed && block == null;
         phases.add(new Phase(4, !analyzed ? State.IDLE : ready ? State.DONE : blockState, ready
-                ? "Puedo escribir el parche en " + file(path) + ": como mucho " + SelfPatch.MAX_EDITS + " ediciones y "
-                + SelfPatch.MAX_CHANGED_LINES + " líneas, sin llamadas peligrosas y sin tocar mi examen, la puerta de mis PR "
-                + "ni mi identidad. Si mi modelo no escribe uno válido en dos intentos, no envío nada."
+                ? "Puedo escribir el parche en " + file(path) + ", del tamaño que haga falta, sin llamadas peligrosas y "
+                + "sin tocar mi examen, la puerta de mis PR ni mi identidad. Si mi modelo no escribe uno válido en dos intentos, no envío nada."
                 : block));
 
         // 5. Verificar: GitHub prueba y fusiona; luego me examino con la versión instalada y comparo.
@@ -272,14 +267,6 @@ public final class EvolutionCycle {
         if (issue == null || issue.isEmpty() || verdicts == null) return null;
         for (int i = verdicts.size() - 1; i >= 0; i--) if (issue.equals(str(verdicts.get(i), "issue"))) return verdicts.get(i);
         return null;
-    }
-
-    static long lastAutonomous(List<JsonObject> lineage) {
-        for (int i = lineage.size() - 1; i >= 0; i--) {
-            String origin = str(lineage.get(i), "origen");
-            if (ORIGIN_AUTONOMOUS.equals(origin) || ORIGIN_REVERT.equals(origin)) return num(lineage.get(i), "t");
-        }
-        return 0;
     }
 
     static int failedTries(List<JsonObject> lineage, List<JsonObject> verdicts, String problem) {

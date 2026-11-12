@@ -118,20 +118,18 @@ public class EvolutionCycleTest {
         assertEquals("Verificando", p.status);
     }
 
-    @Test public void atMostOneAutonomousProposalPerDay() {
+    @Test public void noDailyLimitOnceThePreviousChangeIsMeasured() {
         List<JsonObject> lineage = new ArrayList<>();
         String issue = "https://github.com/x/y/issues/8";
         lineage.add(change(NOW - DAY / 3, EvolutionCycle.ORIGIN_AUTONOMOUS, "Otra cosa", issue, 3));
         List<JsonObject> verdicts = Collections.singletonList(verdict(issue, 3, 2, "mejor"));
-        EvolutionCycle.Plan p = plan(exam(NOW - DAY / 4, 3, 10), candidate(FILE), lineage, verdicts);
-        assertFalse(p.ready);
-        assertTrue(p.phase(4).reasoning.contains("24 horas"));
+        assertTrue(plan(exam(NOW - DAY / 4, 3, 10), candidate(FILE), lineage, verdicts).ready);
     }
 
     @Test public void stopsAfterRepeatedAttemptsWithoutImprovement() {
         List<JsonObject> lineage = new ArrayList<>();
         List<JsonObject> verdicts = new ArrayList<>();
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < EvolutionCycle.MAX_TRIES_PER_PROBLEM; i++) {
             String issue = "https://github.com/x/y/issues/" + (20 + i);
             lineage.add(change(NOW - (10 - i) * DAY, "examen",
                     salve.core.evaluation.ImprovementProposals.problem("no_repite")[0], issue, 3));
