@@ -845,8 +845,9 @@ public class MotorConversacional {
         // el reconocedor de siempre solo las ofrece (self.command) y el ejecutor vuelve a
         // comprobarlas con lo que dijo Bryan. Sin modelo, siguen siendo órdenes directas.
         final boolean privateSelf = llm != null && salve.core.identity.IdentityManager.get(context).privateAccess();
-        // Su modelo de significado (E5) entiende qué función propia le piden aunque no sea la frase
-        // exacta; solo la ofrece a su LLM, que decide. Se calcula una vez por turno, con esta frase.
+        // Su modelo de significado (E5) entiende qué acción le piden (función propia, cuentos, ajustes,
+        // linterna/volumen, música, apps, rutas) aunque no sea la frase exacta; solo la ofrece a su
+        // LLM, que decide. Se calcula una vez por turno, con esta frase.
         entenderFuncionPropia(entrada, privateSelf);
         final boolean modelFirstSelf = privateSelf
                 && salve.core.cognition.SelfCommandIntent.offered(entrada);
@@ -2614,14 +2615,14 @@ public class MotorConversacional {
     }
 
     private void entenderFuncionPropia(String entrada, boolean privateSelf) {
-        salve.core.cognition.SelfCommandMeaning.Match match = null;
+        salve.core.cognition.ActionMeaning.Match match = null;
         if (privateSelf && entrada != null && salve.core.cognition.SelfCommandIntent.detected(entrada).isEmpty()) {
-            try { match = mind().understandOwnFunction(entrada); }
+            try { match = mind().understandAction(entrada); }
             catch (RuntimeException unavailable) { match = null; }
         }
-        salve.core.cognition.SelfCommandMeaning.remember(entrada, match);
+        salve.core.cognition.ActionMeaning.remember(entrada, match);
         if (match != null)
-            salve.core.trace.ExecutionTrace.note("FUNCIÓN PROPIA ENTENDIDA POR SIGNIFICADO",
+            salve.core.trace.ExecutionTrace.note("ACCIÓN ENTENDIDA POR SIGNIFICADO",
                     match.command + " ≈ «" + match.example + "» ("
                             + String.format(java.util.Locale.ROOT, "%.3f", match.score) + "); el LLM decide si la usa");
     }
@@ -2699,6 +2700,8 @@ public class MotorConversacional {
                             .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
                 } catch (RuntimeException unavailable) { Log.w(TAG, "No se pudieron abrir las apps predeterminadas"); }
                 return salve.core.voice.AssistantLaunch.HOW_TO;
+            case STORY_SHELF:
+                return creatorSide() ? lectura.abrirRepertorio() : "Mis cuentos guardados son de Bryan: te los enseño cuando se verifique.";
             case CHESS_START:
                 jugandoAjedrez = true;
                 gestorAjedrez.iniciarJuego();

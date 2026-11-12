@@ -6,8 +6,22 @@ import salve.core.voice.MusicControlCommand;
 public final class MediaActionIntent {
     private MediaActionIntent() { }
 
-    public static boolean offered(String input) {
-        MusicControlCommand.Action expected = MusicControlCommand.parse(input);
+    static final String TOOL = "device.media_control";
+
+    /** La acción de la frase exacta o, si su modelo de significado la entendió, la de su canónica. */
+    static MusicControlCommand.Action expected(String input) {
+        MusicControlCommand.Action exact = MusicControlCommand.parse(input);
+        if (exact != null || input == null) return exact;
+        String canonical = ActionMeaning.canonicalFor(input, TOOL);
+        return canonical == null ? null : MusicControlCommand.parse(canonical);
+    }
+
+    /** Solo la frase exacta (lo que el controlador puede exigir sin que lo elija el modelo). */
+    static boolean offeredExact(String input) { return controllable(MusicControlCommand.parse(input)); }
+
+    public static boolean offered(String input) { return controllable(expected(input)); }
+
+    private static boolean controllable(MusicControlCommand.Action expected) {
         return expected == MusicControlCommand.Action.PLAY
                 || expected == MusicControlCommand.Action.PAUSE
                 || expected == MusicControlCommand.Action.NEXT
@@ -17,7 +31,7 @@ public final class MediaActionIntent {
 
     /** The LLM must never turn "pause" into "play" or "next" into "previous". */
     public static MusicControlCommand.Action verifiedAction(String userInput, String proposed) {
-        MusicControlCommand.Action expected = MusicControlCommand.parse(userInput);
+        MusicControlCommand.Action expected = expected(userInput);
         if (!offered(userInput) || proposed == null
                 || !expected.name().equalsIgnoreCase(proposed.trim())) {
             throw new IllegalArgumentException("Acción de música distinta de la petición original.");

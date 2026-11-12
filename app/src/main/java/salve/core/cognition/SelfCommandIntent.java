@@ -40,6 +40,7 @@ public final class SelfCommandIntent {
         WAKE_WORD_OFF(false, "desactivar la palabra de activación"),
         DEFAULT_ASSISTANT(false, "abrir ajustes para ser su asistente predeterminado"),
         CHESS_START(false, "empezar una partida de ajedrez"),
+        STORY_SHELF(false, "abrir tu repertorio de cuentos guardados"),
         SELF_PR_OPEN(false, "escribir tu propio parche y abrir un PR");
 
         /** Read-only: the receipt goes back to the model instead of ending the turn. */
@@ -50,7 +51,7 @@ public final class SelfCommandIntent {
 
     // An explicit prohibition is never offered to the model. It falls back to
     // the legacy parsers, which already understand their own "desactiva" forms.
-    private static final Pattern NEGATED = SelfCommandMeaning.NEGATED;
+    private static final Pattern NEGATED = ActionMeaning.NEGATED;
 
     private SelfCommandIntent() { }
 
@@ -78,6 +79,7 @@ public final class SelfCommandIntent {
         else if (salve.core.voice.WakeWord.asksToDisable(input)) found.add(Command.WAKE_WORD_OFF);
         if (salve.core.voice.AssistantLaunch.asksToBecomeAssistant(input)) found.add(Command.DEFAULT_ASSISTANT);
         if (CHESS.matcher(s).find()) found.add(Command.CHESS_START);
+        if (salve.core.reading.DocumentReading.asksForStoryList(input)) found.add(Command.STORY_SHELF);
         return Collections.unmodifiableSet(found);
     }
 
@@ -87,8 +89,9 @@ public final class SelfCommandIntent {
     /** Lo pedido por frase conocida o, si su modelo de significado lo entendió en este turno, por significado. */
     public static Set<Command> understood(String input) {
         Set<Command> exact = detected(input);
-        SelfCommandMeaning.Match meaning = SelfCommandMeaning.forTurn(input);
-        Command command = meaning == null ? null : Command.valueOf(meaning.command);
+        ActionMeaning.Match meaning = ActionMeaning.forTurn(input);
+        // Lo entendido puede ser una herramienta del móvil (su id lleva punto): eso no es función propia.
+        Command command = meaning == null || meaning.command.indexOf('.') >= 0 ? null : Command.valueOf(meaning.command);
         if (command == null || exact.contains(command)) return exact;
         EnumSet<Command> out = EnumSet.noneOf(Command.class);
         out.addAll(exact);
@@ -104,7 +107,7 @@ public final class SelfCommandIntent {
      */
     public static String wordsFor(String input, Command command) {
         if (detected(input).contains(command)) return input;
-        SelfCommandMeaning.Match meaning = SelfCommandMeaning.forTurn(input);
+        ActionMeaning.Match meaning = ActionMeaning.forTurn(input);
         return meaning != null && command.name().equals(meaning.command) ? meaning.canonical : input;
     }
 

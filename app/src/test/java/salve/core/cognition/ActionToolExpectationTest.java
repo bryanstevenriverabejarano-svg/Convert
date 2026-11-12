@@ -61,4 +61,17 @@ public class ActionToolExpectationTest {
         assertNull(ActionToolExpectation.requiredTool(
                 "¿cómo estás?", tools("web.search", "sketch.draw")));
     }
+
+    @Test public void whatIsOnlyUnderstoodByMeaningIsOfferedButNeverForced() {
+        String input = "córtame el wifi, anda";
+        ActionMeaning.Meaning off = null;
+        for (ActionMeaning.Meaning m : ActionMeaning.MEANINGS)
+            if ("desactiva el wifi".equals(m.canonicalOff)) off = m;
+        ActionMeaning.remember(input, new ActionMeaning.Match(off, off.canonicalOff, off.examples[0], 0.95));
+        try {
+            assertNull(ActionToolExpectation.requiredTool(input, tools("device.setting")));
+        } finally {
+            ActionMeaning.remember(null, null);
+        }
+    }
 }
