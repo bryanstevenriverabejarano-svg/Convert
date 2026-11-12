@@ -252,6 +252,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
             apply(loop.stop(VoiceConversationLoop.StopReason.AUDIO_FOCUS));
         } else {
             controls.setKeepScreenOn(true);
+            enterHandsFree();
             listenToHeadsetButton();
             // Sigue contigo si sales de la app o apagas la pantalla, con notificación y «Terminar».
             salve.services.VoiceForegroundService.start(activity, "Te escucho…", this::endFromNotification);
@@ -669,7 +670,53 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         }
     }
 
+    /** ¿El teléfono está en manos libres (modo comunicación) para esta conversación? */
+    private boolean handsFree;
+
+    /**
+     * Como una llamada en manos libres: modo comunicación y, sin auriculares, el altavoz como salida. Su voz va
+     * por ese canal ({@link salve.core.voice.SpeechAudioPolicy#speechUsage(boolean, boolean)}), la cancelación de
+     * eco la tiene como referencia y la quita del micrófono: puede escuchar a Bryan mientras habla. En el coche
+     * no se toca (Android Auto lleva su ruta). Si el teléfono no lo acepta, todo sigue como antes.
+     */
+    private void enterHandsFree() {
+        if (audioManager == null || handsFree) return;
+        try { if (salve.core.driving.DrivingModeManager.get(activity).isActive()) return; }
+        catch (RuntimeException unknown) { return; }
+        try {
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            boolean routed = true;
+            if (!VoiceBargeInMonitor.echoFreeRoute(activity)) {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    routed = false;
+                    for (android.media.AudioDeviceInfo device : audioManager.getAvailableCommunicationDevices())
+                        if (device.getType() == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                            routed = audioManager.setCommunicationDevice(device);
+                            break;
+                        }
+                } else {
+                    audioManager.setSpeakerphoneOn(true);
+                }
+            }
+            if (!routed) { leaveHandsFree(); return; }   // nunca hablar por el auricular de llamada
+            handsFree = true;
+            salve.core.voice.SpeechAudioPolicy.setHandsFree(true);
+        } catch (RuntimeException refused) { leaveHandsFree(); }
+    }
+
+    private void leaveHandsFree() {
+        handsFree = false;
+        salve.core.voice.SpeechAudioPolicy.setHandsFree(false);
+        if (audioManager == null) return;
+        try {
+            if (Build.VERSION.SDK_INT >= 31) audioManager.clearCommunicationDevice();
+            else audioManager.setSpeakerphoneOn(false);
+        } catch (RuntimeException ignored) { }
+        try { audioManager.setMode(AudioManager.MODE_NORMAL); } catch (RuntimeException ignored) { }
+    }
+
     private void releaseResources() {
+        leaveHandsFree();
         bargeIn.stop();
         handler.removeCallbacks(watchdog);
         if (headsetButton != null) {
@@ -717,7 +764,7 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
                 status.setText("Preparando respuesta…"); break;
             case SPEAKING:
                 stage.setVoicePresence(SalveStageController.PresenceMode.SPEAKING);
-                status.setText(VoiceBargeInMonitor.isSupported()
+                status.setText(VoiceBargeInMonitor.isSupported() && (handsFree || VoiceBargeInMonitor.echoFreeRoute(activity))
                         ? "Salve está hablando… Puedes interrumpirla hablando."
                         : "Salve está hablando… Usa Interrumpir para tomar tu turno."); break;
             case COOLDOWN:
@@ -791,7 +838,11 @@ public final class LiveVoiceSession implements MotorConversacional.VoiceConversa
         if (!dismissed && loop.owns(token) && metrics.speechStarted(token, timestamp)) {
             voiceLab.event(token, "tts", "started");
             apply(loop.speechStarted(token, timestamp));
-            if (!dismissed && loop.owns(token)
+            if (!dismissed && loop.owns(token) && loop.state() == VoiceConversationLoop.State.SPEAKING
+                    && !handsFree && !VoiceBargeInMonitor.echoFreeRoute(activity)) {
+                // Por el altavoz se oiría a sí misma y se cortaría sola: se interrumpe con el botón o el de los auriculares.
+                diagnostics.event(token, VoiceDiagnosticLog.Event.MIC_BARGE_IN_SKIPPED_SPEAKER, 0);
+            } else if (!dismissed && loop.owns(token)
                     && loop.state() == VoiceConversationLoop.State.SPEAKING) {
                 bargeIn.start(token, new VoiceBargeInMonitor.Listener() {
                     @Override public void onSpeechDetected(long activeToken) { onBargeInDetected(activeToken); }

@@ -35,6 +35,40 @@ public final class VoiceBargeInMonitor {
         return AcousticEchoCanceler.isAvailable();
     }
 
+    /**
+     * Salidas por las que su voz no vuelve al micrófono: auriculares de cable o USB, cascos Bluetooth de llamada
+     * (SCO, LE) y audífonos. Bluetooth «multimedia» (A2DP) queda fuera: puede ser un altavoz o el coche, y ahí
+     * el micrófono del teléfono la oiría igual que con el altavoz.
+     */
+    private static final int[] ECHO_FREE = {
+            android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET, android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO, android.media.AudioDeviceInfo.TYPE_USB_HEADSET,
+            android.media.AudioDeviceInfo.TYPE_HEARING_AID, 26 /* TYPE_BLE_HEADSET */};
+
+    /**
+     * ¿Puede escuchar mientras habla sin oírse a sí misma? Por el altavoz del teléfono, no: la cancelación de eco
+     * de Android no tiene como referencia la voz de Salve (no es una llamada), el micrófono la oye y el detector
+     * la confundía con Bryan: se cortaba sola a menos de un segundo («Estoy funcio…»). Con auriculares su voz
+     * no vuelve al micrófono.
+     */
+    public static boolean echoFreeRoute(int[] outputDeviceTypes) {
+        if (outputDeviceTypes == null) return false;
+        for (int type : outputDeviceTypes) for (int free : ECHO_FREE) if (type == free) return true;
+        return false;
+    }
+
+    /** Lo mismo con las salidas conectadas ahora mismo al teléfono. */
+    public static boolean echoFreeRoute(android.content.Context context) {
+        try {
+            android.media.AudioManager audio = context.getSystemService(android.media.AudioManager.class);
+            if (audio == null) return false;
+            android.media.AudioDeviceInfo[] devices = audio.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS);
+            int[] types = new int[devices.length];
+            for (int i = 0; i < devices.length; i++) types[i] = devices[i].getType();
+            return echoFreeRoute(types);
+        } catch (RuntimeException unknown) { return false; }
+    }
+
     /** Call on the UI thread when actual voice output begins. */
     public synchronized boolean start(long token, Listener listener) {
         if (token <= 0 || listener == null) return false;
