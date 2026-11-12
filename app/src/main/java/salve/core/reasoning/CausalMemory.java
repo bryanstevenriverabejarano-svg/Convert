@@ -164,9 +164,12 @@ public final class CausalMemory {
     }
 
     private static final Pattern FORGET = Pattern.compile("^(?:salve,? )?(?:olvida|olvidate de|borra|deja de pensar) que (.+)$");
+    // Solo cuando pregunta por CAUSAS. «¿Qué sabes de mí?» o «¿qué has aprendido de mí?» son preguntas sobre
+    // él, no sobre esta memoria: las responde ella con sus recuerdos (antes caían aquí y contestaba un texto
+    // fijo, «Todavía no he aprendido ninguna causa…»).
     private static final Pattern WHAT_LEARNED = Pattern.compile(
-            "^(?:salve,? )?(?:que (?:has aprendido|sabes|causas (?:has aprendido|conoces)) (?:de mi|sobre mi)|"
-            + "que causas (?:has aprendido|conoces|tienes guardadas)|tu memoria causal|ensename tu memoria causal)$");
+            "^(?:salve,? )?(?:que causas (?:has aprendido|conoces|tienes guardadas)(?: (?:de mi|sobre mi))?|"
+            + "(?:que hay en |ensename )?tu memoria causal)$");
 
     /**
      * Órdenes de Bryan sobre esta memoria: «¿qué has aprendido de mí?» y «olvida que X provoca Y».

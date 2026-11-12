@@ -81,9 +81,14 @@ public class CausalMemoryTest {
 
     @Test public void bryanCanAskWhatSheLearnedAndMakeHerForget() {
         CausalMemory memory = new CausalMemory(new ReasoningEngine(), null);
-        assertTrue(memory.command("¿Qué has aprendido de mí?").startsWith("Todavía no"));
+        assertTrue(memory.command("¿Qué causas has aprendido de mí?").startsWith("Todavía no"));
+        // Preguntas sobre Bryan, no sobre causas: las contesta ella con sus recuerdos.
+        assertNull(memory.command("qué sabes sobre mí"));
+        assertNull(memory.command("¿Qué sabes de mí?"));
+        assertNull(memory.command("¿Qué has aprendido de mí?"));
         memory.learn("El estrés provoca dolor de cabeza. El estrés provoca dolor de cabeza.");
-        String learned = memory.command("¿Qué has aprendido de mí?");
+        assertTrue(memory.command("enséñame tu memoria causal").contains("estres → dolor de cabeza"));
+        String learned = memory.command("¿Qué causas has aprendido de mí?");
         assertTrue(learned, learned.contains("estres → dolor de cabeza") && learned.contains("2 veces"));
         assertTrue(memory.command("Olvida que el estrés provoca dolor de cabeza").startsWith("Hecho"));
         assertNull(memory.command("olvida que el estrés provoca dolor de cabeza"));
