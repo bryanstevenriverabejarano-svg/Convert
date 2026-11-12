@@ -44,8 +44,18 @@ public final class DeviceControlIntent {
 
     private DeviceControlIntent() { }
 
-    /** El mando pedido en este turno, o null si no pidió ninguno (o lo prohibió). */
+    /**
+     * El mando pedido en este turno, o null si no pidió ninguno (o lo prohibió). Si no es la frase
+     * exacta pero su modelo de significado lo entendió («no veo nada, dame luz»), vale su canónica.
+     */
     public static Command parse(String input) {
+        Command exact = parseExact(input);
+        if (exact != null || input == null) return exact;
+        String canonical = ActionMeaning.canonicalFor(input, TOOL);
+        return canonical == null ? null : parseExact(canonical);
+    }
+
+    static Command parseExact(String input) {
         if (input == null) return null;
         String s = Normalizer.normalize(input.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replace("%", " por ciento").replaceAll("[^a-z0-9 ]+", " ")

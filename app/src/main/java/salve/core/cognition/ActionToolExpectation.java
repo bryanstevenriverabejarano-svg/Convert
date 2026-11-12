@@ -41,33 +41,31 @@ public final class ActionToolExpectation {
         // The recognizers below are already the allowlist shared by text and voice.
         if (offered.containsKey("whatsapp.draft") && WhatsAppDraftIntent.offered(input))
             return "whatsapp.draft";
-        // Por significado solo se exige una ACCIÓN entendida con claridad; una pregunta de solo
-        // lectura entendida por significado la decide el modelo (puede ser simple charla).
-        Set<SelfCommandIntent.Command> self = SelfCommandIntent.understood(input);
-        if (offered.containsKey(SelfCommandIntent.TOOL) && self.size() == 1) {
-            SelfCommandIntent.Command only = self.iterator().next();
-            if (!only.readOnly || SelfCommandIntent.detected(input).contains(only)) return SelfCommandIntent.TOOL;
-        }
-        if (offered.containsKey(SystemSetting.TOOL) && SystemSetting.offered(input))
+        // Solo las frases exactas EXIGEN una herramienta. Lo entendido por significado se ofrece y lo
+        // decide su LLM: si prefiere conversar, no se le fuerza ni se ejecuta por detrás.
+        Set<SelfCommandIntent.Command> self = SelfCommandIntent.detected(input);
+        if (offered.containsKey(SelfCommandIntent.TOOL) && self.size() == 1)
+            return SelfCommandIntent.TOOL;
+        if (offered.containsKey(SystemSetting.TOOL) && SystemSetting.offeredExact(input))
             return SystemSetting.TOOL;
-        if (offered.containsKey(DeviceControlIntent.TOOL) && DeviceControlIntent.offered(input))
+        if (offered.containsKey(DeviceControlIntent.TOOL) && DeviceControlIntent.parseExact(input) != null)
             return DeviceControlIntent.TOOL;
-        if (offered.containsKey("device.media_control") && MediaActionIntent.offered(input))
+        if (offered.containsKey("device.media_control") && MediaActionIntent.offeredExact(input))
             return "device.media_control";
         if (offered.containsKey("device.call")
-                && DeviceActionIntent.offered(DeviceActionIntent.Kind.CALL, input))
+                && DeviceActionIntent.offeredExact(DeviceActionIntent.Kind.CALL, input))
             return "device.call";
         if (offered.containsKey("device.navigate")
-                && DeviceActionIntent.offered(DeviceActionIntent.Kind.NAVIGATE, input))
+                && DeviceActionIntent.offeredExact(DeviceActionIntent.Kind.NAVIGATE, input))
             return "device.navigate";
         if (offered.containsKey("device.open_app")
-                && DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP, input))
+                && DeviceActionIntent.offeredExact(DeviceActionIntent.Kind.OPEN_APP, input))
             return "device.open_app";
         if (offered.containsKey("device.play_music")
-                && DeviceActionIntent.offered(DeviceActionIntent.Kind.PLAY_MUSIC, input))
+                && DeviceActionIntent.offeredExact(DeviceActionIntent.Kind.PLAY_MUSIC, input))
             return "device.play_music";
         if (offered.containsKey("device.search_music")
-                && DeviceActionIntent.offered(DeviceActionIntent.Kind.SEARCH_MUSIC, input))
+                && DeviceActionIntent.offeredExact(DeviceActionIntent.Kind.SEARCH_MUSIC, input))
             return "device.search_music";
 
         // Additional tools retain their original per-operation verification.
@@ -122,7 +120,7 @@ public final class ActionToolExpectation {
         if (input == null || expectedTool == null) return null;
         JsonObject args = new JsonObject();
         if (DeviceControlIntent.TOOL.equals(expectedTool)) {
-            DeviceControlIntent.Command action = DeviceControlIntent.parse(input);
+            DeviceControlIntent.Command action = DeviceControlIntent.parseExact(input);
             if (action == null) return null;
             args.addProperty("accion", action.action.name());
             return args;
@@ -130,7 +128,7 @@ public final class ActionToolExpectation {
         if ("device.media_control".equals(expectedTool)) {
             salve.core.voice.MusicControlCommand.Action action =
                     salve.core.voice.MusicControlCommand.parse(input);
-            if (action == null || !MediaActionIntent.offered(input)) return null;
+            if (action == null || !MediaActionIntent.offeredExact(input)) return null;
             args.addProperty("action", action.name());
             return args;
         }

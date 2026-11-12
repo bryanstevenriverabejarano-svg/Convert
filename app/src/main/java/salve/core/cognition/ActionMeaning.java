@@ -8,26 +8,30 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * Entender por significado qué función propia le piden, aunque Bryan no use la frase exacta.
+ * Entender por significado qué acción le piden, aunque Bryan no use la frase exacta: sus funciones
+ * propias (self.command), sus cuentos y los mandos del móvil (ajustes, linterna y volumen, música,
+ * abrir apps, rutas).
  *
- * <p>Cada función tiene frases de ejemplo y una frase canónica que su reconocedor de siempre ya
- * entiende («activa el modo oídos»). La petición se compara por significado (E5, el mismo modelo
+ * <p>Cada acción tiene frases de ejemplo y una frase canónica que su reconocedor de siempre ya
+ * entiende («activa el modo oídos», «apaga el wifi»). La petición se compara por significado (E5, el mismo modelo
  * de su memoria) con los ejemplos; si se parece de verdad a una y no a otra cosa, esa función se le
  * ofrece a su LLM, que decide si la usa. Los detalles (encender o apagar, qué pestaña, qué gesto)
  * salen de la frase canónica emparejada por el controlador, nunca de los argumentos del modelo.</p>
  *
- * <p>Las frases de {@link #OTHER} son cosas que NO son sus funciones (abrir apps, música, charla):
+ * <p>Las frases de {@link #OTHER} son cosas que NO son acciones suyas (charla, preguntas, buscar en
+ * internet, WhatsApp, llamadas):
  * si la petición se parece más a eso, no se ofrece nada. Una negación explícita tampoco: los
  * embeddings apenas distinguen «activa» de «no actives».</p>
  *
- * <p>Lógica pura y sin dependencias (las funciones van por su id de {@code SelfCommandIntent.Command}):
+ * <p>Lógica pura y sin dependencias (las funciones propias van por su id de
+ * {@code SelfCommandIntent.Command}; las herramientas del móvil, por el nombre de la herramienta):
  * el modelo de embeddings y su calibración se inyectan, y la CI la mide con el E5 real.</p>
  */
-public final class SelfCommandMeaning {
+public final class ActionMeaning {
     /*
      * Umbrales en unidades de la calibración de ESTE modelo (0 = media de frases sin relación,
      * 1 = media de paráfrasis), sin recortar. Medidos con el E5 real en la CI
-     * (scripts/embeddings/VerifySelfMeaning.java): las peticiones reales quedan en 1,1–2,3 y ganan
+     * (scripts/embeddings/VerifyActionMeaning.java): las peticiones reales quedan en 1,1–2,3 y ganan
      * a la segunda opción por ≥0,45; lo que no es suyo nunca cumple las tres a la vez.
      */
     static final double MIN_RELATED = 0.9;
@@ -47,7 +51,7 @@ public final class SelfCommandMeaning {
             "\\b(?:no|nunca|jamas)\\s+(?:(?:quiero|hace falta|me hace falta)\\b(?!\\s+que\\b)|me apetece\\b|necesito\\b)");
 
     public static final class Meaning {
-        /** Id de {@code SelfCommandIntent.Command}. */
+        /** Id de {@code SelfCommandIntent.Command}, o nombre de herramienta del móvil (lleva punto). */
         public final String command;
         /** Frase que su reconocedor de siempre entiende; de ella salen los detalles. */
         public final String canonical;
@@ -63,7 +67,7 @@ public final class SelfCommandMeaning {
         public final String canonical;
         public final String example;
         public final double score;
-        Match(Meaning meaning, String example, double score) {
+        public Match(Meaning meaning, String example, double score) {
             this.command = meaning.command; this.canonical = meaning.canonical; this.example = example; this.score = score;
         }
     }
@@ -86,7 +90,16 @@ public final class SelfCommandMeaning {
                 SELF_PR_STATUS = "SELF_PR_STATUS",
                 VOICE_ENGINE = "VOICE_ENGINE",
                 WAKE_WORD_OFF = "WAKE_WORD_OFF",
-                WAKE_WORD_ON = "WAKE_WORD_ON";
+                WAKE_WORD_ON = "WAKE_WORD_ON",
+                STORY_SHELF = "STORY_SHELF",
+                // Herramientas del móvil: el mismo nombre que ve el modelo en su catálogo.
+                SETTING = "device.setting",
+                CONTROL = "device.control",
+                MEDIA = "device.media_control",
+                PLAY_MUSIC = "device.play_music",
+                SEARCH_MUSIC = "device.search_music",
+                OPEN_APP = "device.open_app",
+                NAVIGATE = "device.navigate";
         private Ids() { }
     }
 
@@ -139,6 +152,70 @@ public final class SelfCommandMeaning {
         m.add(new Meaning(Ids.CHESS_START, "quiero jugar al ajedrez",
                 "quiero jugar al ajedrez", "echamos una partida de ajedrez", "te reto al ajedrez",
                 "saca el tablero que movemos peones"));
+        m.add(new Meaning(Ids.STORY_SHELF, "repertorio de cuentos",
+                "repertorio de cuentos", "¿qué cuentos tienes guardados?", "enséñame los cuentos que me has contado",
+                "quiero elegir uno de tus cuentos"));
+
+        // ── Ajustes del móvil (Shizuku): el ajuste y si se enciende o se apaga salen de la canónica.
+        m.add(new Meaning(Ids.SETTING, "activa el wifi",
+                "activa el wifi", "conéctate a la red wifi", "pon internet por wifi", "enciende el wifi del móvil"));
+        m.add(new Meaning(Ids.SETTING, "desactiva el wifi",
+                "desactiva el wifi", "desconéctate del wifi", "corta el wifi", "apaga el wifi del móvil"));
+        m.add(new Meaning(Ids.SETTING, "activa el bluetooth",
+                "activa el bluetooth", "enciende el bluetooth para conectar los cascos",
+                "quiero conectar los auriculares inalámbricos"));
+        m.add(new Meaning(Ids.SETTING, "desactiva el bluetooth",
+                "desactiva el bluetooth", "apaga el bluetooth que gasta batería", "desconecta el bluetooth"));
+        m.add(new Meaning(Ids.SETTING, "activa los datos móviles",
+                "activa los datos móviles", "enciende los datos que no tengo wifi", "pon los datos del móvil"));
+        m.add(new Meaning(Ids.SETTING, "desactiva los datos móviles",
+                "desactiva los datos móviles", "apaga los datos que se me acaban los megas", "quita los datos del móvil"));
+        m.add(new Meaning(Ids.SETTING, "activa el modo avión",
+                "activa el modo avión", "pon el móvil en modo vuelo", "voy a despegar, pon el modo avión"));
+        m.add(new Meaning(Ids.SETTING, "desactiva el modo avión",
+                "desactiva el modo avión", "quita el modo vuelo", "ya he aterrizado, quita el modo avión"));
+        m.add(new Meaning(Ids.SETTING, "activa el modo no molestar",
+                "activa el modo no molestar", "que no me lleguen notificaciones", "silencia todas las notificaciones un rato"));
+        m.add(new Meaning(Ids.SETTING, "desactiva el modo no molestar",
+                "desactiva el modo no molestar", "quita el no molestar", "vuelve a dejar que me lleguen las notificaciones"));
+
+        // ── Mandos físicos: linterna, volumen y vibración.
+        m.add(new Meaning(Ids.CONTROL, "enciende la linterna",
+                "enciende la linterna", "no veo nada, dame luz", "pon la luz del móvil", "alumbra que está oscuro"));
+        m.add(new Meaning(Ids.CONTROL, "apaga la linterna",
+                "apaga la linterna", "quita la luz del móvil", "ya no necesito la luz"));
+        m.add(new Meaning(Ids.CONTROL, "sube el volumen",
+                "sube el volumen", "no te oigo bien, habla más fuerte", "más alto, que no se escucha", "pon el sonido más fuerte"));
+        m.add(new Meaning(Ids.CONTROL, "baja el volumen",
+                "baja el volumen", "estás hablando muy alto", "más bajito, por favor", "pon el sonido más flojo"));
+        m.add(new Meaning(Ids.CONTROL, "silencia el móvil",
+                "silencia el móvil", "quita todo el sonido", "pon el móvil en silencio"));
+        m.add(new Meaning(Ids.CONTROL, "vibra",
+                "vibra", "haz vibrar el teléfono", "que tiemble el móvil un momento"));
+
+        // ── Música que ya suena (sesión multimedia).
+        m.add(new Meaning(Ids.MEDIA, "reanuda la música",
+                "reanuda la música", "sigue con la canción que estaba sonando", "vuelve a poner la música donde estaba"));
+        m.add(new Meaning(Ids.MEDIA, "pausa",
+                "pausa", "para la música un momento", "detén la canción", "calla la música"));
+        m.add(new Meaning(Ids.MEDIA, "siguiente canción",
+                "siguiente canción", "esta no me gusta, pasa a otra", "salta este tema", "cambia de canción"));
+        m.add(new Meaning(Ids.MEDIA, "canción anterior",
+                "canción anterior", "vuelve a la que sonaba antes", "pon otra vez el tema de antes"));
+        m.add(new Meaning(Ids.MEDIA, "qué canción suena",
+                "qué canción suena", "¿cómo se llama lo que tengo puesto en Spotify?", "dime el título de la canción que tengo puesta"));
+        // ── Música nueva, apps y rutas: el destino lo pone el modelo y el controlador comprueba que
+        //    aparece en la frase de Bryan; aquí solo se entiende la clase de acción.
+        m.add(new Meaning(Ids.PLAY_MUSIC, "pon música",
+                "ponme algo de Rosalía", "quiero escuchar a Queen", "me apetece oír música de los ochenta",
+                "pon el último disco de Bad Bunny"));
+        m.add(new Meaning(Ids.SEARCH_MUSIC, "busca música",
+                "busca canciones de Shakira en Spotify", "encuéntrame el álbum de Estopa", "búscame música para estudiar"));
+        m.add(new Meaning(Ids.OPEN_APP, "abre la app",
+                "abre Instagram", "quiero entrar en YouTube", "llévame a la aplicación del banco", "enséñame el calendario del móvil"));
+        m.add(new Meaning(Ids.NAVIGATE, "llévame",
+                "llévame al trabajo", "¿cómo llego a la estación?", "dame la ruta hasta Bilbao", "guíame hasta el hospital"));
+
         // Las de solo lectura ya se ofrecen siempre; entenderlas solo ordena el catálogo.
         m.add(new Meaning(Ids.MEMORY_HEALTH, "cómo está tu memoria",
                 "cómo está tu memoria", "¿recuerdas bien las cosas?", "¿cuántos recuerdos tienes guardados?"));
@@ -157,11 +234,11 @@ public final class SelfCommandMeaning {
 
     /** Peticiones que NO son sus funciones: si se parece más a esto, no se ofrece ninguna. */
     static final String[] OTHER = {
-            "abre Spotify", "abre WhatsApp", "pon música de reggaeton", "llama a mi madre",
-            "llévame a casa", "busca en internet las noticias de hoy", "cuéntame un cuento",
-            "hola, ¿qué tal estás?", "buenas noches", "buenos días", "hasta mañana", "hazme una foto", "sube el volumen", "enciende la linterna",
-            "activa el wifi", "dibuja un gato", "¿qué tiempo hace mañana?", "te quiero mucho",
-            "escríbele a Ana por WhatsApp", "investiga sobre los agujeros negros", "¿qué sabes sobre mí?"
+            "llama a mi madre", "escríbele a Ana por WhatsApp", "busca en internet las noticias de hoy",
+            "investiga sobre los agujeros negros", "cuéntame un cuento nuevo de dragones", "hola, ¿qué tal estás?",
+            "buenas noches", "buenos días", "hasta mañana", "te quiero mucho", "¿qué tiempo hace mañana?",
+            "dibuja un gato", "hazme una foto", "¿qué ves en esta foto?", "recuérdame una cosa mañana",
+            "¿qué sabes sobre mí?", "explícame cómo funciona un motor", "estoy cansado", "¿qué opinas de esto?"
     };
 
     /** Vectores de los ejemplos, calculados una vez por proceso. */
@@ -171,7 +248,7 @@ public final class SelfCommandMeaning {
         Index(float[][][] meanings, float[][] other) { this.meanings = meanings; this.other = other; }
     }
 
-    private SelfCommandMeaning() { }
+    private ActionMeaning() { }
 
     public static Index build(Embedder embedder) throws Exception {
         float[][][] vectors = new float[MEANINGS.size()][][];
@@ -276,11 +353,21 @@ public final class SelfCommandMeaning {
         turnInput = input; turnMatch = match;
     }
 
+    /**
+     * La frase canónica de lo entendido en este turno si es para esa herramienta, o null. Los
+     * reconocedores del móvil la usan cuando la frase de Bryan no es la exacta: así el ajuste, el mando
+     * o la acción de música salen del controlador, no del modelo.
+     */
+    public static String canonicalFor(String input, String tool) {
+        Match match = forTurn(input);
+        return match != null && match.command.equals(tool) ? match.canonical : null;
+    }
+
     /** Lo entendido para exactamente esta frase, o null. */
     public static Match forTurn(String input) {
         String remembered;
         Match match;
-        synchronized (SelfCommandMeaning.class) { remembered = turnInput; match = turnMatch; }
+        synchronized (ActionMeaning.class) { remembered = turnInput; match = turnMatch; }
         return input != null && input.equals(remembered) ? match : null;
     }
 }

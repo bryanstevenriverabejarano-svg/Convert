@@ -25,11 +25,11 @@ java -m jdk.compiler/com.sun.tools.javac.Main --release 11 -cp "$classpath" -d "
   app/src/main/java/salve/core/mind/MindEmbedder.java \
   app/src/main/java/salve/core/memory/MemoryVectorStore.java \
   app/src/main/java/salve/core/mind/EmbeddingCalibration.java \
-  app/src/main/java/salve/core/cognition/SelfCommandMeaning.java \
-  scripts/embeddings/VerifyE5.java scripts/embeddings/VerifySelfMeaning.java
+  app/src/main/java/salve/core/cognition/ActionMeaning.java \
+  scripts/embeddings/VerifyE5.java scripts/embeddings/VerifyActionMeaning.java
 java -Djava.library.path="$validation_dir/native" -cp "$validation_dir/classes:$classpath" VerifyE5 \
   "$model_dir/sentencepiece.bpe.model" docs/evidence/embeddings/tokenizer-golden.json \
   "$model_dir/model_qint8_avx512_vnni.onnx" "$validation_dir/reference-vectors.json"
 # Sus funciones por significado, medidas con este mismo modelo (frases que no están en los ejemplos).
-java -Djava.library.path="$validation_dir/native" -cp "$validation_dir/classes:$classpath" VerifySelfMeaning \
+java -Djava.library.path="$validation_dir/native" -cp "$validation_dir/classes:$classpath" VerifyActionMeaning \
   "$model_dir/sentencepiece.bpe.model" "$model_dir/model_qint8_avx512_vnni.onnx"

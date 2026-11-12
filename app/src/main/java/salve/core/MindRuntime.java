@@ -664,25 +664,25 @@ public final class MindRuntime {
         };
     }
 
-    // ── Entender sus funciones por significado ──────────────────────────────────
+    // ── Entender sus acciones por significado ──────────────────────────────────
 
-    private volatile salve.core.cognition.SelfCommandMeaning.Index meaningIndex;
+    private volatile salve.core.cognition.ActionMeaning.Index meaningIndex;
     private final AtomicBoolean meaningLoading = new AtomicBoolean();
 
     /**
-     * Qué función propia le piden por significado, o null. No espera a nada: si el modelo de
+     * Qué acción le piden por significado (función propia o herramienta del móvil), o null. No espera a nada: si el modelo de
      * embeddings o los ejemplos aún no están listos, los prepara en segundo plano y este turno
      * queda con los reconocedores de siempre. Usa la calibración simétrica de este móvil.
      */
-    public salve.core.cognition.SelfCommandMeaning.Match understandOwnFunction(String input) {
+    public salve.core.cognition.ActionMeaning.Match understandAction(String input) {
         EmbeddingsIndex index = embeddings;
         EmbeddingCalibration.Result c = similarityCalibration;
-        salve.core.cognition.SelfCommandMeaning.Index examples = meaningIndex;
+        salve.core.cognition.ActionMeaning.Index examples = meaningIndex;
         if (index == null || c == null || !c.passed) { warmUpEmbeddings(); return null; }
         if (examples == null) {
             if (meaningLoading.compareAndSet(false, true)) background.execute(() -> {
                 try {
-                    meaningIndex = salve.core.cognition.SelfCommandMeaning.build(text -> {
+                    meaningIndex = salve.core.cognition.ActionMeaning.build(text -> {
                         synchronized (index) { return index.embedQuery(text); }
                     });
                 } catch (Exception failure) {
@@ -693,8 +693,8 @@ public final class MindRuntime {
         }
         try {
             float[] q;
-            synchronized (index) { q = index.embedQuery(salve.core.cognition.SelfCommandMeaning.queryText(input)); }
-            return salve.core.cognition.SelfCommandMeaning.understand(input, q, examples, c.relatedMean, c.unrelatedMean);
+            synchronized (index) { q = index.embedQuery(salve.core.cognition.ActionMeaning.queryText(input)); }
+            return salve.core.cognition.ActionMeaning.understand(input, q, examples, c.relatedMean, c.unrelatedMean);
         } catch (Exception unavailable) {
             return null;
         }

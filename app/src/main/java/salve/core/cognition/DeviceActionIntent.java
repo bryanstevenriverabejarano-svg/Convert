@@ -46,7 +46,28 @@ public final class DeviceActionIntent {
             + "llama|llames|llamar|marques|marca|navegues|navega|llevame|"
             + "pongas|pon|ponme|reproduzcas|reproduce|busques|busca)\\b");
 
+    /**
+     * La clase de acción la pide la frase exacta o, si no, su modelo de significado la entendió en
+     * este turno («quiero escuchar a Queen»). El destino lo sigue comprobando {@link #checkedTarget}
+     * contra la frase real. Llamar no se entiende por significado: va siempre por su frase exacta.
+     */
     public static boolean offered(Kind kind, String userInput) {
+        if (offeredExact(kind, userInput)) return true;
+        String tool = tool(kind);
+        return tool != null && ActionMeaning.canonicalFor(userInput, tool) != null;
+    }
+
+    static String tool(Kind kind) {
+        switch (kind) {
+            case OPEN_APP: return "device.open_app";
+            case NAVIGATE: return "device.navigate";
+            case PLAY_MUSIC: return "device.play_music";
+            case SEARCH_MUSIC: return "device.search_music";
+            default: return null;
+        }
+    }
+
+    static boolean offeredExact(Kind kind, String userInput) {
         String s = normalize(userInput);
         if (s.isEmpty() || s.length() > 450 || NEGATED.matcher(s).find()
                 || (kind != Kind.NAVIGATE && META.matcher(s).find())) return false;

@@ -106,8 +106,21 @@ public final class SystemSetting {
             {"(?:el )?brillo automatico", Action.BRIGHTNESS_AUTO_ON, Action.BRIGHTNESS_AUTO_OFF},
     };
 
-    /** El ajuste pedido en este turno, o null si no pidió ninguno (o lo prohibió). */
+    /**
+     * El ajuste pedido en este turno, o null si no pidió ninguno (o lo prohibió). Si no es la frase
+     * exacta pero su modelo de significado lo entendió («corta el wifi»), vale su frase canónica.
+     */
     public static Command parse(String input) {
+        Command exact = parseExact(input);
+        if (exact != null || input == null) return exact;
+        String canonical = salve.core.cognition.ActionMeaning.canonicalFor(input, TOOL);
+        return canonical == null ? null : parseExact(canonical);
+    }
+
+    /** Solo la frase exacta: lo único que el controlador puede exigir sin que lo elija el modelo. */
+    public static boolean offeredExact(String input) { return parseExact(input) != null; }
+
+    static Command parseExact(String input) {
         if (input == null) return null;
         String s = Normalizer.normalize(input.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "").replace("%", " por ciento").replaceAll("[^a-z0-9 ]+", " ")
