@@ -60,7 +60,27 @@ public class ExecutionJournalActivity extends Activity {
         else if (ReportLibrary.TAB_LIBRARY.equals(getIntent().getStringExtra(EXTRA_TAB))) tab = ReportLibrary.TAB_LIBRARY;
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(16), dp(16), dp(8)); root.setBackgroundColor(BG);
-        TextView title = text(root, "Registro de Salve", 23); title.setTypeface(Typeface.DEFAULT_BOLD);
+        // Cabecera: su cara (la misma que en el chat), el nombre del registro y para qué sirve.
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        root.addView(header, new LinearLayout.LayoutParams(-1, -2));
+        ImageView face = new ImageView(this);
+        face.setImageResource(com.salve.app.R.drawable.salve_chat_avatar);
+        face.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        face.setContentDescription("Salve");
+        face.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override public void getOutline(View view, android.graphics.Outline outline) {
+                outline.setOval(0, 0, view.getWidth(), view.getHeight());
+            }
+        });
+        face.setClipToOutline(true);
+        LinearLayout.LayoutParams faceSize = new LinearLayout.LayoutParams(dp(56), dp(56));
+        faceSize.setMargins(0, 0, dp(14), 0);
+        header.addView(face, faceSize);
+        LinearLayout names = new LinearLayout(this); names.setOrientation(LinearLayout.VERTICAL);
+        header.addView(names, new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView title = text(names, "Registro de Salve", 23); title.setTypeface(Typeface.DEFAULT_BOLD);
+        TextView subtitle = text(names, "Actividad, investigaciones y evolución", 14); subtitle.setTextColor(MUTED);
 
         // ── Pestañas ──
         LinearLayout tabs = new LinearLayout(this);
@@ -69,8 +89,6 @@ public class ExecutionJournalActivity extends Activity {
         executionTab = tab(tabs, "Ejecución", ReportLibrary.TAB_EXECUTION);
         libraryTab = tab(tabs, "Biblioteca", ReportLibrary.TAB_LIBRARY);
         evolutionTab = tab(tabs, "Evolución", "evolucion");
-        View rule = new View(this); rule.setBackgroundColor(LINE);
-        root.addView(rule, new LinearLayout.LayoutParams(-1, dp(1)));
 
         buildExecution(root);
         buildLibrary(root);
@@ -93,7 +111,7 @@ public class ExecutionJournalActivity extends Activity {
         t.setPadding(dp(8), dp(12), dp(8), dp(10));
         View underline = new View(this);
         LinearLayout.LayoutParams ul = new LinearLayout.LayoutParams(-1, dp(3));
-        ul.setMargins(dp(24), 0, dp(24), 0);
+        ul.setMargins(dp(3), 0, dp(3), 0);
         box.addView(t);
         box.addView(underline, ul);
         t.setTag(underline);
@@ -120,7 +138,9 @@ public class ExecutionJournalActivity extends Activity {
     private void styleTab(TextView t, boolean active) {
         t.setTextColor(active ? ACCENT : MUTED);
         t.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-        ((View) t.getTag()).setBackgroundColor(active ? ACCENT : Color.TRANSPARENT);
+        GradientDrawable bar = new GradientDrawable();
+        bar.setColor(active ? ACCENT : LINE); bar.setCornerRadius(dp(2));
+        ((View) t.getTag()).setBackground(bar);
     }
 
     // ───────────────────────── Ejecución ─────────────────────────
@@ -358,111 +378,134 @@ public class ExecutionJournalActivity extends Activity {
     }
 
     // ───────────────────────── Evolución ─────────────────────────
-    /** Read-only overview built from the existing journal and PDF library; no duplicate storage. */
+    // Las cinco fases con las que Salve decide si se cambia a sí misma (EvolutionCycle), sus propuestas con su
+    // estado real (linaje + veredictos + lo que dijo GitHub) y los informes. Nada se guarda aquí: solo se enseña.
+
+    private static final int PANEL = Color.rgb(17, 33, 46), SELECTED = Color.rgb(29, 78, 82),
+            WAIT = Color.rgb(240, 196, 110), BAD = Color.rgb(240, 128, 120);
+    private static final int[] PHASE_ICONS = {com.salve.app.R.drawable.ic_salve_phase_observe, com.salve.app.R.drawable.ic_salve_phase_record,
+            com.salve.app.R.drawable.ic_salve_phase_analyze, com.salve.app.R.drawable.ic_salve_phase_propose, com.salve.app.R.drawable.ic_salve_phase_verify};
+    private static final String[] PHASE_TITLES = {"Observar el problema", "Registrar las evidencias", "Analizar las causas",
+            "Proponer una solución", "Verificar resultados"};
+    private int selectedPhase = 0;
+    private salve.core.selfpr.EvolutionCycle.Plan plan;
+    private List<com.google.gson.JsonObject> lineage = new ArrayList<>(), verdicts = new ArrayList<>();
+    private java.util.Map<Integer, salve.core.selfpr.GitHubSelfPr.Status> github = new java.util.HashMap<>();
+    private List<ReportLibrary.Entry> evolutionReports = new ArrayList<>();
+    private LinearLayout phaseRow, phaseCard;
+
     private void buildEvolution(LinearLayout root) {
         evolutionPanel = new LinearLayout(this);
         evolutionPanel.setOrientation(LinearLayout.VERTICAL);
         root.addView(evolutionPanel, new LinearLayout.LayoutParams(-1, 0, 1));
-        TextView info = text(evolutionPanel,
-                "Observar → Registrar → Analizar → Proponer → Verificar\n"
-                + "Seguimiento basado en tareas e informes existentes. Una propuesta no equivale a una mejora verificada ni a un PR.", 13);
-        info.setTextColor(MUTED);
-        info.setPadding(0, dp(12), 0, dp(12));
         ScrollView scroll = new ScrollView(this);
         evolutionPanel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         evolutionList = new LinearLayout(this);
         evolutionList.setOrientation(LinearLayout.VERTICAL);
+        evolutionList.setPadding(0, dp(14), 0, dp(16));
         scroll.addView(evolutionList);
     }
 
     private void refreshEvolution() {
         worker.execute(() -> {
+            salve.core.selfpr.EvolutionCycle.Plan cycle = salve.core.selfpr.EvolutionCycle.load(this);
+            List<com.google.gson.JsonObject> changes = salve.core.selfpr.SelfLineage.read(
+                    salve.core.selfpr.SelfVerification.lineageFile(this), 15);
+            List<com.google.gson.JsonObject> measured = salve.core.selfpr.SelfLineage.read(
+                    salve.core.selfpr.SelfVerification.verdictsFile(this), 50);
             List<ReportLibrary.Entry> reports = ReportLibrary.list(reportDirectory(), null);
-            List<ExecutionJournal.Task> recent = ExecutionTrace.journal(this).recent();
-            List<com.google.gson.JsonObject> lineage = salve.core.selfpr.SelfLineage.read(
-                    new File(new File(getFilesDir(), "selfpr"), "linaje.jsonl"), 15);
             main.post(() -> {
-                if (!isDestroyed() && "evolucion".equals(tab)) renderEvolution(reports, recent, lineage);
+                if (isDestroyed()) return;
+                plan = cycle; lineage = changes; verdicts = measured; evolutionReports = reports;
+                if (selectedPhase == 0) selectedPhase = cycle.current;
+                if ("evolucion".equals(tab)) renderEvolution();
             });
+            // Lo que dijo GitHub de cada propuesta (si hay token y red); sin red se queda lo local.
+            String token = salve.core.selfpr.SelfPrTokenStore.token(this);
+            if (token == null || changes.isEmpty()) return;
+            try {
+                java.util.Map<Integer, salve.core.selfpr.GitHubSelfPr.Status> found = new java.util.HashMap<>();
+                for (salve.core.selfpr.GitHubSelfPr.Status st : new salve.core.selfpr.GitHubSelfPr(token).recent(15))
+                    found.put(st.number, st);
+                main.post(() -> {
+                    if (isDestroyed()) return;
+                    github = found;
+                    if ("evolucion".equals(tab)) renderEvolution();
+                });
+            } catch (java.io.IOException | RuntimeException offline) { /* se enseña lo local */ }
         });
     }
 
-    private void renderEvolution(List<ReportLibrary.Entry> reports, List<ExecutionJournal.Task> recent,
-                                 List<com.google.gson.JsonObject> lineage) {
+    private void renderEvolution() {
         evolutionList.removeAllViews();
-        int errors = 0;
-        for (ExecutionJournal.Task task : recent) {
-            if (task != null && ("ERROR".equals(task.status) || "FALLO".equals(task.status))) errors++;
+        if (plan == null) return;
+
+        // ── Ciclo de mejora + estado ──
+        LinearLayout head = row(evolutionList);
+        TextView heading = text(head, "Ciclo de mejora", 21);
+        heading.setTypeface(Typeface.DEFAULT_BOLD);
+        heading.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+        pill(head, plan.status, plan.ready ? ACCENT : TEXT);
+
+        // ── Las cinco fases ──
+        phaseRow = new LinearLayout(this);
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
+        rowLp.setMargins(0, dp(16), 0, dp(14));
+        evolutionList.addView(phaseRow, rowLp);
+        for (int i = 1; i <= 5; i++) phaseChip(i);
+
+        // ── Tarjeta de la fase elegida ──
+        phaseCard = new LinearLayout(this);
+        phaseCard.setOrientation(LinearLayout.VERTICAL);
+        phaseCard.setPadding(dp(18), dp(16), dp(18), dp(14));
+        phaseCard.setBackground(box(PANEL, LINE, 18));
+        evolutionList.addView(phaseCard, new LinearLayout.LayoutParams(-1, -2));
+        renderPhaseCard();
+
+        // ── Autonomía ──
+        LinearLayout auto = section(evolutionList, CARD);
+        LinearLayout autoRow = row(auto);
+        TextView autoTitle = text(autoRow, "Evolución autónoma", 17);
+        autoTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        autoTitle.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+        Switch toggle = new Switch(this);
+        toggle.setChecked(salve.core.selfpr.EvolutionCycle.autonomous(this));
+        toggle.setOnCheckedChangeListener((b, on) -> {
+            salve.core.selfpr.EvolutionCycle.setAutonomous(this, on);
+            Toast.makeText(this, on ? "Salve podrá proponer y revertir sola mientras duerme"
+                    : "Salve solo cambiará su código cuando se lo pidas", Toast.LENGTH_SHORT).show();
+        });
+        autoRow.addView(toggle);
+        TextView autoText = text(auto, "Mientras duermo cargando: si cumplo las cinco fases propongo un cambio (como mucho uno al día). "
+                + "GitHub ejecuta todas mis pruebas y compila Android; solo si pasa se fusiona y se publica. Al instalar la versión "
+                + "nueva me examino y, si empeoro en " + salve.core.selfpr.EvolutionCycle.REVERT_MARGIN + " casos o más, me revierto sola.", 13);
+        autoText.setTextColor(MUTED);
+        autoText.setPadding(0, dp(6), 0, 0);
+
+        // ── Propuestas de mejora ──
+        LinearLayout proposals = section(evolutionList, CARD);
+        TextView ptitle = text(proposals, "Propuestas de mejora", 20);
+        ptitle.setTypeface(Typeface.DEFAULT_BOLD);
+        TextView pnote = text(proposals, "Un PR solo avanza si pasa las comprobaciones y permisos establecidos; "
+                + "después lo verifico con un examen en la versión instalada.", 13);
+        pnote.setTextColor(MUTED);
+        pnote.setPadding(0, dp(4), 0, dp(6));
+        if (lineage.isEmpty()) {
+            TextView none = text(proposals, "Todavía no he propuesto ningún cambio de mi código.", 15);
+            none.setPadding(0, dp(8), 0, dp(4));
         }
-        TextView summary = text(evolutionList, "Observaciones: " + recent.size()
-                + " tareas recientes · " + errors + " fallos · " + reports.size() + " informes", 15);
-        summary.setTextColor(ACCENT);
-        TextView note = text(evolutionList,
-                "Observar y registrar: Registro de Ejecución.\n"
-                + "Analizar y proponer: informes de Biblioteca.\n"
-                + "Verificar: pendiente hasta disponer de resultados de pruebas vinculados.\n"
-                + "PR: consulta el estado real desde las herramientas de PR de Salve.", 13);
-        note.setTextColor(MUTED);
-        note.setPadding(0, dp(10), 0, dp(12));
-        if (reports.isEmpty() && recent.isEmpty() && lineage.isEmpty()) {
-            text(evolutionList, "Aún no hay observaciones, propuestas ni informes para mostrar.", 15);
-            return;
-        }
-        if (!lineage.isEmpty()) {
-            TextView heading = text(evolutionList, "Propuestas registradas: " + lineage.size(), 17);
-            heading.setTypeface(Typeface.DEFAULT_BOLD);
-            for (int i = lineage.size() - 1; i >= 0; i--) {
-                com.google.gson.JsonObject e = lineage.get(i);
-                String goal = safeLineage(e, "objetivo");
-                String file = safeLineage(e, "archivo");
-                String issue = safeLineage(e, "issue");
-                String revision = safeLineage(e, "revision");
-                String origin = safeLineage(e, "origen");
-                String failures = safeLineage(e, "fallos_examen");
-                LinearLayout proposal = new LinearLayout(this);
-                proposal.setOrientation(LinearLayout.VERTICAL);
-                proposal.setPadding(dp(12), dp(10), dp(12), dp(10));
-                GradientDrawable background = new GradientDrawable();
-                background.setColor(CARD);
-                background.setCornerRadius(dp(12));
-                background.setStroke(dp(1), LINE);
-                proposal.setBackground(background);
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-                params.setMargins(0, dp(5), 0, dp(5));
-                evolutionList.addView(proposal, params);
-                TextView phase = text(proposal, "REGISTRADA · Verificación pendiente", 12);
-                phase.setTextColor(ACCENT);
-                TextView name = text(proposal, goal.isEmpty() ? "Propuesta sin título" : goal, 16);
-                name.setTypeface(Typeface.DEFAULT_BOLD);
-                TextView details = text(proposal,
-                        "Origen: " + (origin.isEmpty() ? "No indicado" : origin)
-                        + "\nArchivo: " + (file.isEmpty() ? "No indicado" : file)
-                        + "\nRevisión: " + (revision.isEmpty() ? "No indicada" : revision)
-                        + "\nFallos del examen al registrar: " + (failures.isEmpty() || "-1".equals(failures) ? "Sin datos" : failures), 13);
-                details.setTextColor(MUTED);
-                if (issue.startsWith("https://github.com/")) {
-                    link(proposal, "Abrir referencia en GitHub", v -> startActivity(
-                            new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(issue))));
-                } else {
-                    TextView missing = text(proposal, "PR/issue: sin enlace registrado", 13);
-                    missing.setTextColor(MUTED);
-                }
-            }
+        for (int i = lineage.size() - 1, shown = 0; i >= 0 && shown < 8; i--, shown++) proposal(proposals, lineage.get(i));
+
+        // ── Informes ──
+        if (!evolutionReports.isEmpty()) {
+            TextView rtitle = text(evolutionList, "Informes", 18);
+            rtitle.setTypeface(Typeface.DEFAULT_BOLD);
+            rtitle.setPadding(dp(2), dp(18), 0, dp(4));
         }
         int count = 0;
-        for (ReportLibrary.Entry entry : reports) {
-            if (count++ >= 12) break;
-            LinearLayout item = new LinearLayout(this);
-            item.setOrientation(LinearLayout.VERTICAL);
-            item.setPadding(dp(12), dp(10), dp(12), dp(10));
-            GradientDrawable bg = new GradientDrawable();
-            bg.setColor(CARD); bg.setCornerRadius(dp(12)); bg.setStroke(dp(1), LINE);
-            item.setBackground(bg);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-            lp.setMargins(0, dp(5), 0, dp(5));
-            evolutionList.addView(item, lp);
-            TextView phase = text(item, "ANALIZAR / PROPONER · Documento existente · No verificado", 12);
-            phase.setTextColor(ACCENT);
+        for (ReportLibrary.Entry entry : evolutionReports) {
+            if (count++ >= 8) break;
+            LinearLayout item = section(evolutionList, CARD);
             TextView title = text(item, entry.title, 16);
             title.setTypeface(Typeface.DEFAULT_BOLD);
             if (!entry.preview.isEmpty()) {
@@ -472,9 +515,199 @@ public class ExecutionJournalActivity extends Activity {
             }
             link(item, "Abrir informe PDF", v -> openViewer(entry));
         }
-        if (reports.isEmpty()) {
-            text(evolutionList, "Todavía no hay informes. Puedes crear uno desde Ejecución.", 14);
+    }
+
+    private void phaseChip(int number) {
+        salve.core.selfpr.EvolutionCycle.Phase phase = plan.phase(number);
+        boolean on = number == selectedPhase;
+        LinearLayout chip = new LinearLayout(this);
+        chip.setOrientation(LinearLayout.VERTICAL);
+        chip.setGravity(Gravity.CENTER_HORIZONTAL);
+        chip.setPadding(dp(2), dp(12), dp(2), dp(9));
+        chip.setBackground(box(on ? SELECTED : CARD, 0, 14));
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(PHASE_ICONS[number - 1]);
+        icon.setColorFilter(on ? ACCENT : TEXT);
+        chip.addView(icon, new LinearLayout.LayoutParams(dp(26), dp(26)));
+        TextView label = new TextView(this);
+        label.setText(phase.name); label.setTextSize(12.5f); label.setSingleLine(true);
+        label.setGravity(Gravity.CENTER); label.setTextColor(on ? ACCENT : TEXT);
+        label.setPadding(0, dp(6), 0, dp(5));
+        chip.addView(label, new LinearLayout.LayoutParams(-1, -2));
+        // Puntito: cumplida, esperando, bloqueada o aún no alcanzada.
+        View dot = new View(this);
+        GradientDrawable d = new GradientDrawable(); d.setShape(GradientDrawable.OVAL); d.setColor(stateColor(phase.state));
+        dot.setBackground(d);
+        chip.addView(dot, new LinearLayout.LayoutParams(dp(6), dp(6)));
+        chip.setContentDescription(phase.name + ": " + stateLabel(phase.state));
+        chip.setOnClickListener(v -> { selectedPhase = number; renderEvolution(); });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        lp.setMargins(number == 1 ? 0 : dp(3), 0, number == 5 ? 0 : dp(3), 0);
+        phaseRow.addView(chip, lp);
+    }
+
+    private void renderPhaseCard() {
+        int n = Math.max(1, Math.min(5, selectedPhase));
+        salve.core.selfpr.EvolutionCycle.Phase phase = plan.phase(n);
+        LinearLayout top = row(phaseCard);
+        TextView what = text(top, "Investigación actual · " + plan.title, 18);
+        what.setTextColor(ACCENT);
+        what.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+        pill(top, stateLabel(phase.state), stateColor(phase.state));
+        TextView step = text(phaseCard, n + ". " + PHASE_TITLES[n - 1], 20);
+        step.setTypeface(Typeface.DEFAULT_BOLD);
+        step.setPadding(0, dp(14), 0, dp(8));
+        TextView body = text(phaseCard, phase.reasoning, 15);
+        body.setLineSpacing(0, 1.15f);
+        View rule = new View(this); rule.setBackgroundColor(LINE);
+        LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(-1, dp(1));
+        ruleLp.setMargins(0, dp(16), 0, dp(12));
+        phaseCard.addView(rule, ruleLp);
+        LinearLayout evidence = row(phaseCard);
+        TextView label = text(evidence, "Evidencia vinculada", 14);
+        label.setTextColor(MUTED);
+        label.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+        String issue = lineage.isEmpty() ? "" : safeLineage(lineage.get(lineage.size() - 1), "issue");
+        String target = n == 1 ? "Examen" : n == 2 ? "Registro de ejecución" : n == 3 ? "Informes del sueño"
+                : issue.startsWith("https://github.com/") ? "Propuesta en GitHub" : "Registro + informe PDF";
+        TextView open = text(evidence, target + " ›", 14);
+        open.setTypeface(Typeface.DEFAULT_BOLD);
+        open.setOnClickListener(v -> {
+            if (n == 1) showExam();
+            else if (n == 2) showTab(ReportLibrary.TAB_EXECUTION);
+            else if (n == 3 || !issue.startsWith("https://github.com/")) showTab(ReportLibrary.TAB_LIBRARY);
+            else startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(issue)));
+        });
+    }
+
+    private void proposal(LinearLayout parent, com.google.gson.JsonObject e) {
+        View rule = new View(this); rule.setBackgroundColor(LINE);
+        LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(-1, dp(1));
+        ruleLp.setMargins(0, dp(10), 0, dp(10));
+        parent.addView(rule, ruleLp);
+        String goal = safeLineage(e, "objetivo"), file = safeLineage(e, "archivo"), issue = safeLineage(e, "issue");
+        LinearLayout top = row(parent);
+        TextView name = text(top, goal.isEmpty() ? "Cambio en " + file.substring(file.lastIndexOf('/') + 1) : goal, 16);
+        name.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+        String[] st = proposalState(e);
+        pill(top, st[0], "ok".equals(st[1]) ? ACCENT : "bad".equals(st[1]) ? BAD : "wait".equals(st[1]) ? WAIT : TEXT);
+        String origin = safeLineage(e, "origen");
+        String who = salve.core.selfpr.EvolutionCycle.ORIGIN_AUTONOMOUS.equals(origin) ? "Propuesta autónoma"
+                : salve.core.selfpr.EvolutionCycle.ORIGIN_REVERT.equals(origin) ? "Reversión automática"
+                : "bryan".equals(origin) ? "Pedida por Bryan"
+                : salve.core.selfpr.SelfVerification.ADAPTER.equals(origin) ? "Adaptador de pesos" : "Del examen";
+        long t = e.has("t") ? e.get("t").getAsLong() : 0;
+        TextView meta = text(parent, who + " · " + file.substring(file.lastIndexOf('/') + 1)
+                + (t > 0 ? " · " + android.text.format.DateFormat.format("d MMM, HH:mm", t) : "")
+                + (st[2].isEmpty() ? "" : "\n" + st[2]), 13);
+        meta.setTextColor(MUTED);
+        meta.setPadding(0, dp(4), 0, 0);
+        if (issue.startsWith("https://github.com/")) {
+            View.OnClickListener go = v -> startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(issue)));
+            name.setOnClickListener(go); meta.setOnClickListener(go);
         }
+    }
+
+    /** {etiqueta, tono (ok/bad/wait/neutral), detalle}: el veredicto medido manda; si no hay, lo que dijo GitHub. */
+    private String[] proposalState(com.google.gson.JsonObject e) {
+        String issue = safeLineage(e, "issue");
+        com.google.gson.JsonObject v = salve.core.selfpr.EvolutionCycle.verdictFor(verdicts, issue);
+        if (v != null) {
+            String r = safeLineage(v, "resultado");
+            String counts = "Examen: " + v.get("antes").getAsInt() + " → " + v.get("ahora").getAsInt() + " casos fallidos";
+            switch (r) {
+                case "mejor": return new String[]{"Mejoró", "ok", counts};
+                case "peor": return new String[]{"Empeoró", "bad", counts};
+                case "no_comparable": return new String[]{"No comparable", "neutral", "El examen cambió de tamaño"};
+                default: return new String[]{"Sin cambio", "neutral", counts};
+            }
+        }
+        int number = -1;
+        int slash = issue.lastIndexOf('/');
+        if (slash >= 0) try { number = Integer.parseInt(issue.substring(slash + 1)); } catch (NumberFormatException ignored) { }
+        salve.core.selfpr.GitHubSelfPr.Status st = github.get(number);
+        if (st != null) switch (st.outcome) {
+            case "merged": return new String[]{"Fusionado", "wait", "Falta instalarlo y examinarme con él"};
+            case "passed": return new String[]{"Pasó pruebas", "wait", st.detail};
+            case "failed": return new String[]{"Falló pruebas", "bad", st.detail};
+            case "rejected": return new String[]{"Rechazado", "bad", st.detail};
+            default: return new String[]{"open".equals(st.state) ? "Probándose" : "Cerrado", "wait", ""};
+        }
+        long before = e.has("fallos_examen") && e.get("fallos_examen").isJsonPrimitive() ? e.get("fallos_examen").getAsLong() : -1;
+        return new String[]{"Sin verificar", "neutral", before >= 0 ? "Fallos del examen al proponer: " + before : ""};
+    }
+
+    /** El último examen tal cual (ultimo.txt), sin resumir. */
+    private void showExam() {
+        worker.execute(() -> {
+            File file = new File(new File(getFilesDir(), "exam"), "ultimo.txt");
+            String text;
+            try { text = file.isFile() ? new String(java.nio.file.Files.readAllBytes(file.toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8) : "Aún no me he examinado. Pídeme «hazte el examen»."; }
+            catch (java.io.IOException unreadable) { text = "No pude leer el examen."; }
+            String shown = text.length() > 20000 ? text.substring(0, 20000) + "…" : text;
+            main.post(() -> {
+                if (isDestroyed()) return;
+                TextView view = new TextView(this);
+                view.setText(shown); view.setTextIsSelectable(true); view.setPadding(dp(18), dp(12), dp(18), dp(12));
+                ScrollView sv = new ScrollView(this); sv.addView(view);
+                new AlertDialog.Builder(this).setTitle("Mi último examen").setView(sv)
+                        .setPositiveButton("Cerrar", null).show();
+            });
+        });
+    }
+
+    private static String stateLabel(salve.core.selfpr.EvolutionCycle.State state) {
+        switch (state) {
+            case DONE: return "Cumplida";
+            case BLOCKED: return "Bloqueada";
+            case WAITING: return "En estudio";
+            default: return "Pendiente";
+        }
+    }
+
+    private int stateColor(salve.core.selfpr.EvolutionCycle.State state) {
+        switch (state) {
+            case DONE: return ACCENT;
+            case BLOCKED: return BAD;
+            case WAITING: return WAIT;
+            default: return MUTED;
+        }
+    }
+
+    private LinearLayout row(LinearLayout parent) {
+        LinearLayout r = new LinearLayout(this);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        parent.addView(r, new LinearLayout.LayoutParams(-1, -2));
+        return r;
+    }
+
+    private LinearLayout section(LinearLayout parent, int color) {
+        LinearLayout s = new LinearLayout(this);
+        s.setOrientation(LinearLayout.VERTICAL);
+        s.setPadding(dp(18), dp(16), dp(18), dp(16));
+        s.setBackground(box(color, 0, 18));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, dp(12), 0, 0);
+        parent.addView(s, lp);
+        return s;
+    }
+
+    private void pill(LinearLayout parent, String label, int color) {
+        TextView p = new TextView(this);
+        p.setText(label); p.setTextSize(14); p.setTextColor(color); p.setSingleLine(true);
+        p.setPadding(dp(14), dp(6), dp(14), dp(6));
+        p.setBackground(box(Color.rgb(38, 56, 72), 0, 99));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+        lp.setMargins(dp(10), 0, 0, 0);
+        parent.addView(p, lp);
+    }
+
+    private GradientDrawable box(int fill, int stroke, int radius) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(fill); g.setCornerRadius(dp(radius));
+        if (stroke != 0) g.setStroke(dp(1), stroke);
+        return g;
     }
 
     private static String safeLineage(com.google.gson.JsonObject e, String key) {

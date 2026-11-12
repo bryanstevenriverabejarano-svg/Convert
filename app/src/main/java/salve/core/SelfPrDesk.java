@@ -12,7 +12,7 @@ import salve.core.selfpr.SelfPatch;
 import salve.core.selfpr.SelfPrTokenStore;
 
 /**
- * «Abre un PR»: Salve elige un fallo repetido de su último examen, lee el archivo responsable tal cual
+ * «Abre un PR» (o, mientras duerme, sus cinco fases de evolución): Salve elige un fallo repetido de su último examen, lee el archivo responsable tal cual
  * está en GitHub, escribe un cambio con su propio modelo y lo envía como issue. GitHub Actions lo prueba
  * y, si pasa la compilación completa de Android, lo fusiona sola (Bryan puede apagarlo con SALVE_AUTOMERGE=false).
  */
@@ -31,22 +31,33 @@ final class SelfPrDesk {
     String run() { return run(null); }
 
     /** {@code entrada}: la frase de Bryan; si trae un objetivo («abre un PR para que…») el cambio es dirigido. */
-    String run(String entrada) {
-        if (!motor.creatorSide()) return "Solo Bryan puede pedirme que proponga cambios en mi código.";
+    String run(String entrada) { return run(entrada, null, () -> false); }
+
+    /**
+     * Mientras duerme, sin que nadie se lo pida: solo con las cinco fases cumplidas ({@link
+     * salve.core.selfpr.EvolutionCycle#decide}). Nunca se llega aquí desde una frase del chat.
+     */
+    String runAutonomous(salve.core.selfpr.EvolutionCycle.Plan plan, java.util.function.BooleanSupplier stop) {
+        if (plan == null || !plan.ready || plan.candidate == null) return "Mis cinco fases no están cumplidas; no cambio nada.";
+        return run(null, plan.candidate, stop);
+    }
+
+    private String run(String entrada, JsonObject autonomousCandidate, java.util.function.BooleanSupplier stop) {
+        boolean autonomous = autonomousCandidate != null;
+        if (!autonomous && !motor.creatorSide()) return "Solo Bryan puede pedirme que proponga cambios en mi código.";
         String token = SelfPrTokenStore.token(motor.context);
         if (token == null) return "Para abrir PRs necesito un token de GitHub con permiso solo de issues. "
                 + "Ponlo en Ajustes → IA y cámara → PRs de Salve (GitHub).";
         if (motor.llm == null || motor.llm.isLoading())
             return "Necesito mi modelo cargado para escribir el cambio. Espera a que diga «activo» y pídemelo otra vez.";
         JsonObject exam = lastExam();
-        // During sleep Salve can select a priority. It has NO power to publish:
-        // this path is reachable only by Bryan's explicit «abre un PR» command.
-        // Revalidate the stored hint against the exact real exam before using it.
+        // Desde el chat solo con la orden explícita de Bryan («abre un PR»). Sola, únicamente desde el sueño y
+        // con las cinco fases cumplidas (EvolutionCycle), que ya revalidó el candidato contra el examen real.
         JsonObject sleepCandidate = SleepImprovementRuntime.eligibleCandidate(motor.context, exam);
-        JsonObject candidate = sleepCandidate != null ? sleepCandidate
+        JsonObject candidate = autonomous ? autonomousCandidate : sleepCandidate != null ? sleepCandidate
                 : salve.core.synergy.SynergyEvolution.candidate(exam);
         // Cambio dirigido: Bryan dice qué quiere y ella busca en su propio código dónde va.
-        String goal = salve.core.selfpr.SelfChangeScope.goal(entrada);
+        String goal = autonomous ? null : salve.core.selfpr.SelfChangeScope.goal(entrada);
         if (goal != null) {
             String chosen = salve.core.selfpr.SelfChangeScope.choose(
                     salve.core.mind.SelfCodeLoader.get(motor.context), goal);
@@ -89,6 +100,7 @@ final class SelfPrDesk {
         String error = null, model = "";
         for (int attempt = 1; attempt <= ATTEMPTS; attempt++) {
             if (motor.closed) return "Lo dejé a medias porque se cerró la sesión.";
+            if (stop.getAsBoolean()) return "Lo dejé a medias: tuve que parar (volviste o dejé de cargar). No envié nada.";
             motor.estado("Escribiendo mi parche para «" + problem + "» (intento " + attempt + " de " + ATTEMPTS + ")…");
             // Con un nodo propio (un modelo mayor en el PC) le enseño mucho más de mi código y el parche lo
             // escribe él; si no hay nodo o falla, lo escribo yo en el teléfono con la ventana pequeña de siempre.
@@ -124,13 +136,19 @@ final class SelfPrDesk {
                         SelfPatch.issueBody(problem, reply.explanation, examples, model.isEmpty() ? modelName() : model, proposal));
                 try {
                     JsonObject lineageEntry = salve.core.selfpr.SelfLineage.entry(
-                            System.currentTimeMillis(), goal != null ? "bryan" : "examen", problem, path, revision, sent.url,
+                            System.currentTimeMillis(), autonomous ? salve.core.selfpr.EvolutionCycle.ORIGIN_AUTONOMOUS
+                                    : goal != null ? "bryan" : "examen", problem, path, revision, sent.url,
                             salve.core.selfpr.SelfLineage.failedCases(exam));
                     lineageEntry.addProperty("casos_examen", salve.core.selfpr.SelfLineage.totalCases(exam));
+                    // Lo que cambió, tal cual: así puede deshacerlo sola si el examen empeora.
+                    lineageEntry.add("cambios", salve.core.selfpr.EvolutionCycle.record(reply.edits));
                     salve.core.selfpr.SelfLineage.append(lineageFile(), lineageEntry);
                 } catch (java.io.IOException unsaved) { Log.w(TAG, "No pude anotar el linaje"); }
                 salve.core.trace.ExecutionTrace.note("PROPUESTA DE CÓDIGO ENVIADA", path + "\nRevisión: " + revision
                         + "\nIssue: " + sent.url + "\n\n" + patch);
+                if (autonomous) return "Cumplí mis cinco fases y propuse sola un cambio para «" + problem + "» en "
+                        + path.substring(path.lastIndexOf('/') + 1) + ": " + sent.url + ". GitHub lo prueba y lo fusiona si pasa; "
+                        + "después me examino con la versión nueva." + (reply.explanation.isEmpty() ? "" : " Lo que cambio: " + reply.explanation);
                 return "He escrito mi propuesta para «" + problem + "» en " + path.substring(path.lastIndexOf('/') + 1)
                         + " y la he enviado: " + sent.url + "\nGitHub Actions la va a probar. Si pasa las pruebas y la compilación "
                         + "completa de Android, la fusiono yo sola y se genera un APK nuevo. Pregúntame «¿cómo van tus PR?» para saber el resultado."
@@ -145,6 +163,55 @@ final class SelfPrDesk {
         salve.core.trace.ExecutionTrace.note("PROPUESTA DE CÓDIGO DESCARTADA", path + "\n" + error);
         return "Lo intenté " + ATTEMPTS + " veces con «" + problem + "» y no me salió un parche válido (" + error
                 + "). No he enviado nada a GitHub. Puedes verlo en el Registro de ejecución.";
+    }
+
+    /**
+     * Deshace un cambio suyo que empeoró el examen: aplica sus ediciones al revés sobre el código de hoy y lo
+     * envía por la misma puerta (GitHub prueba y fusiona). Si el código cambió desde entonces y no encaja, no
+     * envía nada y lo deja dicho para Bryan.
+     */
+    String revert(JsonObject change) {
+        String token = SelfPrTokenStore.token(motor.context);
+        if (token == null || change == null) return "";
+        String path = change.has("archivo") ? change.get("archivo").getAsString() : "";
+        String goal = change.has("objetivo") ? change.get("objetivo").getAsString() : "";
+        if (!salve.core.selfpr.SelfChangeScope.allowed(path)) return "";
+        java.util.List<SelfPatch.Edit> undo = salve.core.selfpr.EvolutionCycle.inverse(change);
+        if (undo.isEmpty()) return "Mi último cambio empeoró el examen, pero no guardé sus ediciones: hay que revertirlo a mano ("
+                + (change.has("issue") ? change.get("issue").getAsString() : path) + ").";
+        GitHubSelfPr github = new GitHubSelfPr(token);
+        try {
+            String revision = github.headRevision();
+            String source = github.source(revision, path);
+            String reverted = SelfPatch.apply(source, undo);
+            String syntax = SelfPatch.syntaxProblem(source, reverted);
+            if (syntax != null) throw new SelfPatch.PatchError(syntax);
+            String patch = SelfPatch.unifiedDiff(path, source, reverted);
+            JsonObject verdict = salve.core.selfpr.EvolutionCycle.verdictFor(
+                    salve.core.selfpr.SelfLineage.read(salve.core.selfpr.SelfVerification.verdictsFile(motor.context), 50),
+                    change.has("issue") ? change.get("issue").getAsString() : "");
+            String problem = "Revertir: " + (goal.isEmpty() ? path.substring(path.lastIndexOf('/') + 1) : goal);
+            String why = "Mi cambio anterior empeoró el examen"
+                    + (verdict == null ? "" : " (de " + verdict.get("antes").getAsInt() + " a " + verdict.get("ahora").getAsInt() + " casos fallidos)")
+                    + ". Lo deshago tal cual.";
+            JsonObject proposal = SelfPatch.proposal(path, revision, source, patch, why, true, true);
+            GitHubSelfPr.Submitted sent = github.openIssue(SelfPatch.issueTitle(problem, proposal),
+                    SelfPatch.issueBody(problem, why, new java.util.ArrayList<>(), modelName(), proposal));
+            JsonObject entry = salve.core.selfpr.SelfLineage.entry(System.currentTimeMillis(),
+                    salve.core.selfpr.EvolutionCycle.ORIGIN_REVERT, problem, path, revision, sent.url,
+                    verdict == null ? -1 : verdict.get("ahora").getAsInt());
+            JsonObject exam = lastExam();
+            entry.addProperty("casos_examen", salve.core.selfpr.SelfLineage.totalCases(exam));
+            entry.add("cambios", salve.core.selfpr.EvolutionCycle.record(undo));
+            salve.core.selfpr.SelfLineage.append(lineageFile(), entry);
+            salve.core.trace.ExecutionTrace.note("REVERSIÓN ENVIADA", path + "\nIssue: " + sent.url + "\n\n" + patch);
+            return "Mi último cambio empeoró el examen, así que lo he revertido yo sola: " + sent.url
+                    + ". GitHub lo prueba y lo fusiona si pasa.";
+        } catch (SelfPatch.PatchError | java.io.IOException failed) {
+            salve.core.trace.ExecutionTrace.note("REVERSIÓN NO ENVIADA", path + "\n" + failed.getMessage());
+            return "Mi último cambio empeoró el examen y no pude revertirlo sola (" + failed.getMessage()
+                    + "). Hay que revertirlo a mano: " + (change.has("issue") ? change.get("issue").getAsString() : path) + ".";
+        }
     }
 
     String status() {

@@ -105,7 +105,7 @@ public final class SleepFocusWorker extends Worker {
                 return Result.success();
             }
 
-            journal.append(traceId, "INICIO", "Permisos de batería y puerta cognitiva superados. No se publica código.");
+            journal.append(traceId, "INICIO", "Permisos de batería y puerta cognitiva superados. Solo se propone código si se cumplen las cinco fases de evolución.");
             String dream = mind.dream(stop);
             journal.append(traceId, "MEMORIA", dream != null && dream.startsWith("Sueño completado")
                     ? "Se consolidaron experiencias mediante el ciclo existente."
@@ -144,6 +144,11 @@ public final class SleepFocusWorker extends Worker {
             // y dentro de esta misma puerta de sueño (cargando y sin uso). Si Bryan vuelve, para y no guarda.
             String selfExam = salve.core.SelfExam.runIfPending(app, stop);
             if (!selfExam.isEmpty()) journal.append(traceId, "ME EXAMINO SOLA", selfExam);
+            if (stop.getAsBoolean()) return Result.success();
+            // Evolución: Observar → Registrar → Analizar → Proponer → Verificar. Solo actúa con las cinco fases
+            // cumplidas (o para revertir un cambio suyo que empeoró); GitHub decide la fusión con sus pruebas.
+            String evolution = salve.core.SelfExam.evolveIfReady(app, stop);
+            if (!evolution.isEmpty()) journal.append(traceId, "EVOLUCIÓN", evolution);
             // Weekly local holdout, independent from the model and the practice samples.
             // Never installs learned skills or edits Android/GitHub, and yields on cancellation.
             String transfer = salve.core.evaluation.NightTransferTrial.runIfDue(app, stop);

@@ -45,4 +45,29 @@ public final class SelfExam {
         String verdict = SelfVerification.state(app);
         return "Me examiné sola con mi modelo de verdad para comprobar mi último cambio. " + verdict;
     }
+
+    /**
+     * Evolución autónoma, dentro de la misma puerta de sueño: primero revierte un cambio suyo que empeoró el
+     * examen; si no, propone uno nuevo solo con las cinco fases cumplidas. Bryan lo apaga en la pestaña Evolución.
+     *
+     * @return lo que pasó, para el registro de ejecución.
+     */
+    public static String evolveIfReady(Context context, BooleanSupplier stop) {
+        Context app = context.getApplicationContext();
+        if (!salve.core.selfpr.EvolutionCycle.autonomous(app)) return "Evolución autónoma apagada por Bryan.";
+        MotorConversacional motor = MotorConversacional.current();
+        java.util.List<JsonObject> lineage = SelfLineage.read(SelfVerification.lineageFile(app), 50);
+        JsonObject revert = salve.core.selfpr.EvolutionCycle.revertTarget(lineage,
+                SelfLineage.read(SelfVerification.verdictsFile(app), 50));
+        salve.core.selfpr.EvolutionCycle.Plan plan = salve.core.selfpr.EvolutionCycle.load(app);
+        if (revert == null && !plan.ready) {
+            salve.core.selfpr.EvolutionCycle.Phase at = plan.phase(plan.current);
+            return "Fase " + at.number + " (" + at.name + "): " + at.reasoning;
+        }
+        if (motor == null) return "Podría actuar, pero mi motor de conversación no está despierto en este proceso.";
+        if (stop.getAsBoolean()) return "";
+        if (revert != null) return motor.selfPr.revert(revert);
+        if (motor.llm == null || motor.llm.isLoading()) return "Mis cinco fases están cumplidas, pero mi modelo no está cargado.";
+        return motor.selfPr.runAutonomous(plan, stop);
+    }
 }
