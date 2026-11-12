@@ -28,6 +28,8 @@ public final class SelfCommandIntent {
         DOWNLOAD_STATUS(true, "cómo va la descarga del modelo"),
         SELF_PR_STATUS(true, "estado de tus PR en GitHub"),
         IMPROVEMENT_PROPOSALS(true, "qué mejorarías de ti misma, con ejemplos"),
+        CAUSAL_MEMORY(true, "las causas que te ha contado Bryan («X porque Y»)"),
+        EVOLUTION_STATUS(true, "en qué fase de tu evolución estás y por qué"),
         EAR_MODE(false, "activar/desactivar modo oídos según lo que dijo"),
         VOICE_ENGINE(false, "cambiar entre tu voz nueva y la de Android según lo pedido"),
         LISTEN(false, "escuchar con el micrófono lo que pidió"),
@@ -87,7 +89,23 @@ public final class SelfCommandIntent {
 
     public static boolean offered(String input) { return !detected(input).isEmpty(); }
 
-    /** The model selects an id; only an id the user's own words asked for is accepted. */
+    /**
+     * Lo que el modelo puede elegir este turno: las funciones con efecto, solo si las palabras de Bryan las
+     * piden (de ellas salen los detalles); las de solo lectura, siempre. Así entiende con su LLM qué le
+     * preguntan («¿cómo vas evolucionando?», «¿qué te falla?») sin depender de una frase exacta.
+     */
+    public static Set<Command> available(String input) {
+        EnumSet<Command> out = EnumSet.noneOf(Command.class);
+        out.addAll(detected(input));
+        if (input == null || input.trim().isEmpty()) return Collections.unmodifiableSet(out);
+        for (Command c : Command.values()) if (c.readOnly) out.add(c);
+        return Collections.unmodifiableSet(out);
+    }
+
+    /**
+     * The model selects an id. A read-only function can be chosen whenever the model understands it is asked
+     * for (it only reads her own state); a function with an effect only if the user's own words asked for it.
+     */
     public static Command verified(String input, String proposed) {
         if (proposed == null) throw new IllegalArgumentException("Falta la función.");
         Command chosen;
@@ -96,7 +114,7 @@ public final class SelfCommandIntent {
         } catch (IllegalArgumentException unknown) {
             throw new IllegalArgumentException("Función propia desconocida.");
         }
-        if (!detected(input).contains(chosen))
+        if (!chosen.readOnly && !detected(input).contains(chosen))
             throw new IllegalArgumentException("El usuario no pidió esa función en este turno.");
         return chosen;
     }
@@ -116,7 +134,7 @@ public final class SelfCommandIntent {
             text.append(c.name()).append('=').append(c.label);
             first = false;
         }
-        return text.append("). Tú decides si hace falta; los detalles (encender/apagar, cuál) salen de lo que dijo, no de ti.")
+        return text.append("). Úsala solo si de verdad te preguntan por eso; los detalles (encender/apagar, cuál) salen de lo que dijo, no de ti.")
                 .toString();
     }
 

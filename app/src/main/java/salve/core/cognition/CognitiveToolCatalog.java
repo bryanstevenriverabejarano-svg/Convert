@@ -118,7 +118,7 @@ public final class CognitiveToolCatalog {
         // model now only decide which of her functions the LLM may choose. Details
         // (on/off, which voice, which tab) are re-derived from USER_INPUT later.
         java.util.Set<SelfCommandIntent.Command> selfCommands = verifiedCreator && !whatsappDraft
-                ? SelfCommandIntent.detected(safeInput) : java.util.Collections.emptySet();
+                ? SelfCommandIntent.available(safeInput) : java.util.Collections.emptySet();
         if (!selfCommands.isEmpty())
             add(tools, SelfCommandIntent.TOOL, SelfCommandIntent.description(selfCommands), dispatch, "id");
 
@@ -142,7 +142,8 @@ public final class CognitiveToolCatalog {
                 deviceAction = true;
             }
             // «Abre el mapa de tu mente» is her own function, not an installed app.
-            if (selfCommands.isEmpty()
+            // Se mira lo que él pidió (no lo que se ofrece siempre: sus funciones de solo lectura).
+            if (!SelfCommandIntent.offered(safeInput)
                     && DeviceActionIntent.offered(DeviceActionIntent.Kind.OPEN_APP, safeInput)) {
                 add(tools, "device.open_app",
                         "{target:string}: abre app instalada mencionada por el usuario. Nunca supone que el siguiente paso se haya completado.",

@@ -33,9 +33,23 @@ public class SelfCommandIntentTest {
                 SelfCommandIntent.verified("activa el modo oídos", "ear_mode"));
         reject("activa el modo oídos", "MIND_MAP");
         reject("activa el modo oídos", "SELF_PR_OPEN");
-        reject("hola", "MEMORY_HEALTH");
+        reject("hola", "EAR_MODE");
         reject("parpadea", "BORRA_TODO");
         reject("parpadea", null);
+    }
+
+    @Test public void sheUnderstandsReadOnlyQuestionsWithHerModelNotWithExactPhrases() {
+        // Sin frase exacta: el modelo puede elegir leer su estado (no cambia nada) y explicarlo con sus palabras.
+        assertEquals(SelfCommandIntent.Command.EVOLUTION_STATUS,
+                SelfCommandIntent.verified("¿cómo vas con lo de mejorarte a ti misma?", "EVOLUTION_STATUS"));
+        assertEquals(SelfCommandIntent.Command.CAUSAL_MEMORY,
+                SelfCommandIntent.verified("¿qué relaciones de causa y efecto te he enseñado?", "causal_memory"));
+        assertTrue(SelfCommandIntent.available("hola").contains(SelfCommandIntent.Command.MEMORY_HEALTH));
+        // Lo que tiene efecto sigue necesitando que él lo pida: el modelo no enciende nada por su cuenta.
+        assertFalse(SelfCommandIntent.available("hola").contains(SelfCommandIntent.Command.EAR_MODE));
+        reject("¿cómo estás?", "SELF_PR_OPEN");
+        // Y no fuerza la herramienta: ofrecerla no es decidir que la pidió.
+        assertFalse(SelfCommandIntent.offered("hola, ¿qué tal?"));
     }
 
     @Test public void readOnlyFunctionsGoBackToTheModelAndActionsAreHandoffs() {
