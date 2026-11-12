@@ -118,7 +118,7 @@ public final class CognitiveToolCatalog {
         // model now only decide which of her functions the LLM may choose. Details
         // (on/off, which voice, which tab) are re-derived from USER_INPUT later.
         java.util.Set<SelfCommandIntent.Command> selfCommands = verifiedCreator && !whatsappDraft
-                ? SelfCommandIntent.detected(safeInput) : java.util.Collections.emptySet();
+                ? SelfCommandIntent.available(safeInput) : java.util.Collections.emptySet();
         if (!selfCommands.isEmpty())
             add(tools, SelfCommandIntent.TOOL, SelfCommandIntent.description(selfCommands), dispatch, "id");
 

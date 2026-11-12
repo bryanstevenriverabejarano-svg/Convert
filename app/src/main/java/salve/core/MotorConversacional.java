@@ -919,7 +919,7 @@ public class MotorConversacional {
             return;
         }
         // «¿Qué has aprendido de mí?» / «olvida que X provoca Y»: solo Bryan gestiona su memoria causal.
-        String causal = memoriaCausal != null && creatorSide() ? memoriaCausal.command(entrada) : null;
+        String causal = memoriaCausal != null && creatorSide() ? memoriaCausal.command(entrada, llm == null) : null;
         if (causal != null) { hablar(causal); return; }
         if (pideFotoEnLaNube(entrada)) {
             if (activePhoto == null) { hablar("No hay ninguna foto en el chat. Añade una y vuelve a pedírmelo."); return; }
@@ -2629,6 +2629,19 @@ public class MotorConversacional {
             case SELF_PR_STATUS: return selfPr.status();
             case SELF_PR_OPEN: return selfPr.run(entrada);
             case IMPROVEMENT_PROPOSALS: return examen.proposals();
+            case CAUSAL_MEMORY:
+                if (!creatorSide()) return "Eso es privado de Bryan: se lo cuento cuando se verifique.";
+                return memoriaCausal == null ? "Mi memoria causal no está disponible." : memoriaCausal.describe();
+            case EVOLUTION_STATUS: {
+                salve.core.selfpr.EvolutionCycle.Plan plan = salve.core.selfpr.EvolutionCycle.load(context);
+                StringBuilder out = new StringBuilder("Estudio: ").append(plan.title).append(" (fuente: ").append(plan.source)
+                        .append("). Estado: ").append(plan.status).append(". Evolución autónoma: ")
+                        .append(salve.core.selfpr.EvolutionCycle.autonomous(context) ? "encendida" : "apagada").append('.');
+                for (salve.core.selfpr.EvolutionCycle.Phase phase : plan.phases)
+                    out.append("\n").append(phase.number).append(". ").append(phase.name).append(" [").append(phase.state)
+                            .append("]: ").append(phase.reasoning);
+                return out.toString();
+            }
             case EAR_MODE: {
                 salve.core.voice.EarMode.Command oidos = salve.core.voice.EarMode.parse(entrada);
                 return oidos == null ? "No entendí si activar o desactivar el modo oídos." : cambioModoOidos(oidos);

@@ -175,10 +175,16 @@ public final class CausalMemory {
      * Órdenes de Bryan sobre esta memoria: «¿qué has aprendido de mí?» y «olvida que X provoca Y».
      * Devuelve la respuesta, o null si el mensaje no es una de ellas.
      */
-    public synchronized String command(String input) {
+    public synchronized String command(String input) { return command(input, true); }
+
+    /**
+     * @param listing ¿responder aquí a «qué causas has aprendido»? Con modelo, no: lo elige ella como función
+     *                (self.command CAUSAL_MEMORY) y lo explica con sus palabras. Olvidar sigue siendo directo.
+     */
+    public synchronized String command(String input, boolean listing) {
         if (input == null || input.length() > 300) return null;
         String t = normalize(input).replaceAll("[¿?¡!.]+", " ").replaceAll("\\s+", " ").trim();
-        if (WHAT_LEARNED.matcher(t).matches()) return describe();
+        if (listing && WHAT_LEARNED.matcher(t).matches()) return describe();
         Matcher forget = FORGET.matcher(t);
         if (!forget.matches()) return null;
         List<Relation> asked = extract(forget.group(1));
@@ -214,7 +220,7 @@ public final class CausalMemory {
     public synchronized int size() { return engine.getTotalLinks(); }
 
     /** Lo aprendido, con cuántas veces se lo ha dicho Bryan. */
-    String describe() {
+    public synchronized String describe() {
         List<String> lines = new ArrayList<>();
         for (Map.Entry<String, List<ReasoningEngine.CausalLink>> e : engine.getAllCausalLinks().entrySet())
             for (ReasoningEngine.CausalLink l : e.getValue())
