@@ -66,8 +66,8 @@ public class ActionToolExpectationTest {
         String input = "córtame el wifi, anda";
         ActionMeaning.Meaning off = null;
         for (ActionMeaning.Meaning m : ActionMeaning.MEANINGS)
-            if (m.canonical.equals("desactiva el wifi")) off = m;
-        ActionMeaning.remember(input, new ActionMeaning.Match(off, off.examples[0], 0.95));
+            if ("desactiva el wifi".equals(m.canonicalOff)) off = m;
+        ActionMeaning.remember(input, new ActionMeaning.Match(off, off.canonicalOff, off.examples[0], 0.95));
         try {
             assertNull(ActionToolExpectation.requiredTool(input, tools("device.setting")));
         } finally {
