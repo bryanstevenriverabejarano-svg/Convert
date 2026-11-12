@@ -40,34 +40,34 @@ public class SelfCommandMeaningTest {
 
     @Test public void aParaphraseIsUnderstoodByMeaning() throws Exception {
         SelfCommandMeaning.Match match = SelfCommandMeaning.understand("déjame ver por dentro lo que piensas",
-                near("enséñame cómo piensas por dentro", 0.3), index(), c -> c);
+                near("enséñame cómo piensas por dentro", 0.3), index(), 1.0, 0.0);
         assertNotNull(match);
         assertEquals("MIND_MAP", match.command);
         assertEquals("abre el mapa de tu mente", match.canonical);
     }
 
     @Test public void somethingThatIsNotHerFunctionOffersNothing() throws Exception {
-        assertNull(SelfCommandMeaning.understand("ábreme Spotify", near("abre Spotify", 0.3), index(), c -> c));
+        assertNull(SelfCommandMeaning.understand("ábreme Spotify", near("abre Spotify", 0.3), index(), 1.0, 0.0));
     }
 
     @Test public void unrelatedTalkOffersNothing() throws Exception {
-        assertNull(SelfCommandMeaning.understand("me encanta el café", vector("me encanta el café"), index(), c -> c));
+        assertNull(SelfCommandMeaning.understand("me encanta el café", vector("me encanta el café"), index(), 1.0, 0.0));
     }
 
     @Test public void anExplicitNoIsNeverTurnedIntoAnAction() throws Exception {
         assertNull(SelfCommandMeaning.understand("no actives tus oídos",
-                vector("activa el modo oídos"), index(), c -> c));
+                vector("activa el modo oídos"), index(), 1.0, 0.0));
     }
 
     @Test public void onAndOffTooCloseIsAmbiguousAndOffersNothing() throws Exception {
         float[] on = vector("activa el modo oídos"), off = vector("desactiva el modo oídos");
         float[] both = new float[DIM];
         for (int i = 0; i < DIM; i++) both[i] = on[i] + off[i];
-        assertNull(SelfCommandMeaning.understand("lo de los oídos", both, index(), c -> c));
+        assertNull(SelfCommandMeaning.understand("lo de los oídos", both, index(), 1.0, 0.0));
     }
 
     @Test public void withoutCalibrationNothingIsUnderstood() throws Exception {
-        assertNull(SelfCommandMeaning.understand("quiero ver tu mente", vector("quiero ver tu mente"), index(), c -> -1));
+        assertNull(SelfCommandMeaning.understand("quiero ver tu mente", vector("quiero ver tu mente"), index(), 0.8, 0.8));
     }
 
     @Test public void theModelMayChooseItButTheDetailsComeFromTheController() throws Exception {
@@ -79,7 +79,7 @@ public class SelfCommandMeaningTest {
         } catch (IllegalArgumentException expected) { }
 
         SelfCommandMeaning.Match match = SelfCommandMeaning.understand(input,
-                near("usa tu oído para entender cómo te hablo", 0.3), index(), c -> c);
+                near("usa tu oído para entender cómo te hablo", 0.3), index(), 1.0, 0.0);
         assertNotNull(match);
         SelfCommandMeaning.remember(input, match);
         assertEquals(SelfCommandIntent.Command.EAR_MODE, SelfCommandIntent.verified(input, "EAR_MODE"));
@@ -94,7 +94,7 @@ public class SelfCommandMeaningTest {
 
     @Test public void whatWasUnderstoodBelongsOnlyToThatTurn() throws Exception {
         String input = "quiero ver tu mente";
-        SelfCommandMeaning.remember(input, SelfCommandMeaning.understand(input, vector(input), index(), c -> c));
+        SelfCommandMeaning.remember(input, SelfCommandMeaning.understand(input, vector(input), index(), 1.0, 0.0));
         assertNotNull(SelfCommandMeaning.forTurn(input));
         assertNull(SelfCommandMeaning.forTurn("abre el chat"));
         assertFalse(SelfCommandIntent.understood("abre el chat").contains(SelfCommandIntent.Command.MIND_MAP));

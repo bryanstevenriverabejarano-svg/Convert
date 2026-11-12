@@ -31,6 +31,9 @@ public final class VerifySelfMeaning {
             {"busca recetas de lentejas", ""}, {"cuéntame un chiste", ""}, {"hazle una foto al gato", ""},
             {"me duele la cabeza", ""}, {"¿qué opinas de la inteligencia artificial?", ""},
             {"no actives el modo oídos", ""}, {"no quiero jugar al ajedrez ahora", ""},
+            {"escucha, tengo que contarte algo", ""}, {"¿cómo estás hoy?", ""}, {"abre la cámara", ""},
+            {"pon el modo avión", ""}, {"enséñame fotos de la playa", ""}, {"qué guapa estás", ""},
+            {"recuérdame comprar pan", ""}, {"me voy a dormir", ""},
     };
 
     public static void main(String[] args) throws Exception {
@@ -42,8 +45,8 @@ public final class VerifySelfMeaning {
             System.out.printf("Calibración: paráfrasis %.3f, sin relación %.3f%n", c.relatedMean, c.unrelatedMean);
             for (String[] row : CASES) {
                 float[] q = engine.query(SelfCommandMeaning.queryText(row[0]));
-                java.util.function.DoubleUnaryOperator rel = cosine -> { double s = c.surprise(cosine); return s < 0 ? -1 : 1 - s; };
-                SelfCommandMeaning.Match m = SelfCommandMeaning.understand(row[0], q, index, rel);
+                java.util.function.DoubleUnaryOperator rel = cosine -> (cosine - c.unrelatedMean) / (c.relatedMean - c.unrelatedMean);
+                SelfCommandMeaning.Match m = SelfCommandMeaning.understand(row[0], q, index, c.relatedMean, c.unrelatedMean);
                 SelfCommandMeaning.Scores sc = SelfCommandMeaning.measure(q, index);
                 String got = m == null ? "" : m.command;
                 System.out.printf("%-46s → %-18s esperado %-18s | mejor %s %.3f (%.2f) «%s» · 2ª %.3f (%.2f) · otra %.3f (%.2f) «%s»%n",

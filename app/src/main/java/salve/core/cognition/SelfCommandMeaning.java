@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.DoubleUnaryOperator;
 import java.util.regex.Pattern;
 
 /**
@@ -25,10 +24,15 @@ import java.util.regex.Pattern;
  * el modelo de embeddings y su calibración se inyectan, y la CI la mide con el E5 real.</p>
  */
 public final class SelfCommandMeaning {
-    /** Normalizado con la calibración del propio modelo: 0 = sin relación, 1 = paráfrasis típica. */
-    static final double MIN_RELATED = 0.75;
-    /** Ventaja mínima sobre «otra cosa» y sobre la segunda función (normalizada). */
-    static final double MIN_LEAD = 0.15;
+    /*
+     * Umbrales en unidades de la calibración de ESTE modelo (0 = media de frases sin relación,
+     * 1 = media de paráfrasis), sin recortar. Medidos con el E5 real en la CI
+     * (scripts/embeddings/VerifySelfMeaning.java): las peticiones reales quedan en 1,1–2,3 y ganan
+     * a la segunda opción por ≥0,45; lo que no es suyo nunca cumple las tres a la vez.
+     */
+    static final double MIN_RELATED = 0.9;
+    /** Ventaja mínima sobre «otra cosa» y sobre la segunda función. */
+    static final double MIN_LEAD = 0.4;
 
     public interface Embedder { float[] embed(String text) throws Exception; }
 
@@ -229,20 +233,21 @@ public final class SelfCommandMeaning {
     }
 
     /**
-     * @param relatedness coseno → 0..1 con la calibración de ESTE modelo en este móvil
-     *                    (1 − sorpresa); negativo si no hay calibración válida.
+     * @param relatedMean   media del coseno entre paráfrasis de la calibración simétrica de este móvil
+     * @param unrelatedMean media del coseno entre frases sin relación de esa misma calibración
      * @return la función entendida, o null si no se parece con claridad a ninguna.
      */
-    public static Match understand(String input, float[] query, Index index, DoubleUnaryOperator relatedness) {
-        if (input == null || query == null || index == null || relatedness == null) return null;
+    public static Match understand(String input, float[] query, Index index, double relatedMean, double unrelatedMean) {
+        if (input == null || query == null || index == null) return null;
+        double span = relatedMean - unrelatedMean;
+        if (!(span > 1e-6)) return null;
         String s = normalize(input);
         if (s.isEmpty() || s.length() > 300 || refused(input)) return null;
         Scores m = measure(query, index);
         if (m.best < 0) return null;
-        double top = relatedness.applyAsDouble(m.bestScore);
-        if (top < MIN_RELATED) return null;
-        if (top - relatedness.applyAsDouble(m.other) < MIN_LEAD) return null;
-        if (top - relatedness.applyAsDouble(m.second) < MIN_LEAD) return null;
+        if ((m.bestScore - unrelatedMean) / span < MIN_RELATED) return null;
+        if ((m.bestScore - m.other) / span < MIN_LEAD) return null;
+        if ((m.bestScore - m.second) / span < MIN_LEAD) return null;
         Meaning meaning = MEANINGS.get(m.best);
         return new Match(meaning, meaning.examples[m.bestExample], m.bestScore);
     }
