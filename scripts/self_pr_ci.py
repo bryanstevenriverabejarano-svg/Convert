@@ -55,7 +55,6 @@ def extract(body: str) -> dict:
     return proposal
 
 
-MAX_CHANGED_LINES = 60
 # Lo mismo que SelfPatch.RISKY en el teléfono: se vuelve a comprobar aquí porque Salve fusiona sola.
 RISKY = re.compile(
     r"Runtime\s*\.\s*getRuntime|ProcessBuilder|\.exec\s*\(|DexClassLoader|PathClassLoader|System\s*\.\s*load|"
@@ -64,7 +63,8 @@ RISKY = re.compile(
 
 
 def check_limits(proposal: dict) -> None:
-    """Cambios pequeños y sin llamadas peligrosas: condición para que pueda fusionarse sin revisión humana."""
+    """Sin llamadas peligrosas: condición para que pueda fusionarse sin revisión humana. Sin límite de tamaño
+    (decisión de Bryan): lo frenan las pruebas, la compilación de Android y el examen tras instalarlo."""
     added, removed = [], []
     for line in proposal["patch"].splitlines():
         if line.startswith("+++") or line.startswith("---"):
@@ -73,8 +73,6 @@ def check_limits(proposal: dict) -> None:
             added.append(line[1:])
         elif line.startswith("-"):
             removed.append(line[1:])
-    if len(added) + len(removed) > MAX_CHANGED_LINES:
-        raise runner.ProposalError(f"Cambia {len(added) + len(removed)} líneas; el máximo es {MAX_CHANGED_LINES}")
     risky = sorted({m.group() for m in RISKY.finditer("\n".join(added))})
     if risky:
         raise runner.ProposalError("Añade llamadas no permitidas: " + ", ".join(risky))

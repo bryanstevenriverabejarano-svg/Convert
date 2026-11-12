@@ -10,7 +10,7 @@ name: Salve abre sus PRs
 #   tiene permiso de issues). Cualquier otra issue se ignora.
 # - «probar» ejecuta el código propuesto, así que no tiene permisos de escritura ni secretos.
 # - «publicar» tiene permiso de escritura y NO ejecuta código propuesto: solo git apply, commit, push,
-#   espera a android.yml y fusiona exactamente el commit probado (cambios ≤ 60 líneas, sin llamadas peligrosas).
+#   espera a android.yml y fusiona exactamente el commit probado (sin llamadas peligrosas; sin límite de tamaño).
 # - El cuerpo de la issue nunca se interpola en el shell: llega por variable de entorno.
 
 on:

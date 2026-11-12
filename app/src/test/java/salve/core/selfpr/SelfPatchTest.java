@@ -93,13 +93,13 @@ public class SelfPatchTest {
         assertNull("una llave dentro de un texto no cuenta", SelfPatch.syntaxProblem(SOURCE, SOURCE.replace("\"Voy a\"", "\"Voy a {\"")));
     }
 
-    @Test public void bigRewritesAreRejected() throws Exception {
+    @Test public void bigChangesAreAllowed() throws Exception {
         StringBuilder huge = new StringBuilder();
         for (int i = 0; i < 70; i++) huge.append("        int x").append(i).append(" = ").append(i).append(";\n");
         String changed = SelfPatch.apply(SOURCE, Collections.singletonList(new SelfPatch.Edit(
                 "        String t = reply == null ? \"\" : reply.trim();", huge + "        String t = reply == null ? \"\" : reply.trim();")));
-        try { SelfPatch.unifiedDiff(PATH, SOURCE, changed); fail(); }
-        catch (SelfPatch.PatchError expected) { assertTrue(expected.getMessage().contains("máximo")); }
+        // Sin límite de tamaño: el diff se genera y lo frenan las pruebas, no las líneas.
+        assertTrue(SelfPatch.unifiedDiff(PATH, SOURCE, changed).contains("+        int x69 = 69;"));
     }
 
     @Test public void excerptFitsTheBudgetAndFindsTheRelevantCode() {

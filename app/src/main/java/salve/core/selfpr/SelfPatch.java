@@ -26,10 +26,9 @@ import java.util.regex.Pattern;
 public final class SelfPatch {
     private SelfPatch() { }
 
-    /** Máximo de bloques BUSCAR/REEMPLAZAR por propuesta: cambios pequeños y revisables. */
-    public static final int MAX_EDITS = 3;
-    /** Máximo de líneas añadidas + quitadas. */
-    public static final int MAX_CHANGED_LINES = 60;
+    // Sin límite de tamaño (decisión de Bryan, 2026-11-12): un cambio puede ser tan grande como haga falta.
+    // Lo que lo frena no es su tamaño sino que pase todas las pruebas y la compilación de Android, que no
+    // añada llamadas peligrosas, que no toque lo que la mide o la autoriza, y el examen después de instalarlo.
     public static final String MARKER = "<!-- salve-self-pr v1 -->";
     public static final String TITLE_PREFIX = "[Salve] ";
 
@@ -79,7 +78,7 @@ public final class SelfPatch {
      */
     /**
      * Ventana de código cuando el parche lo escribe un nodo propio: unas 12.000 letras (≈300 líneas) frente
-     * a las ~2.000 del teléfono. El límite del parche (60 líneas, un archivo) no cambia.
+     * a las ~2.000 del teléfono. El parche sigue siendo de un archivo.
      */
     public static final int NODE_WINDOW_CHARS = 12000;
 
@@ -123,7 +122,8 @@ public final class SelfPatch {
         p.append("Fragmento de ").append(path).append(":\n```java\n").append(excerpt).append("```\n");
         if (previousError != null && !previousError.isEmpty())
             p.append("Tu intento anterior no sirvió: ").append(clip(previousError, 200)).append(". Corrígelo.\n");
-        p.append("Haz el cambio MÁS PEQUEÑO que arregle el problema. No inventes clases ni métodos que no estén en el fragmento. "
+        p.append("Haz el cambio que haga falta para arreglarlo de verdad, del tamaño que necesite; puedes repetir "
+                + "BUSCAR/REEMPLAZAR varias veces. No inventes clases ni métodos que no estén en el fragmento. "
                 + "Responde SOLO así:\nEXPLICACION: una frase\nBUSCAR:\n```java\n(líneas copiadas EXACTAMENTE del fragmento)\n```\n"
                 + "REEMPLAZAR:\n```java\n(las líneas nuevas)\n```\n");
         return p.toString();
@@ -140,7 +140,6 @@ public final class SelfPatch {
         List<Edit> edits = new ArrayList<>();
         Matcher b = BLOCK.matcher(text);
         while (b.find()) {
-            if (edits.size() == MAX_EDITS) throw new PatchError("propuso más de " + MAX_EDITS + " cambios; deben ser pequeños");
             String search = stripEdges(b.group(1)), replace = stripEdges(b.group(2));
             if (search.trim().isEmpty()) throw new PatchError("un bloque BUSCAR está vacío");
             if (search.equals(replace)) continue;
@@ -222,8 +221,6 @@ public final class SelfPatch {
                 && a[a.length - 1 - suffix].equals(b[b.length - 1 - suffix])) suffix++;
         int start = Math.max(0, prefix - 3);
         int endA = Math.min(a.length, a.length - suffix + 3), endB = Math.min(b.length, b.length - suffix + 3);
-        int changed = (a.length - suffix - prefix) + (b.length - suffix - prefix);
-        if (changed > MAX_CHANGED_LINES) throw new PatchError("cambia " + changed + " líneas; el máximo es " + MAX_CHANGED_LINES);
         StringBuilder d = new StringBuilder();
         d.append("diff --git a/").append(path).append(" b/").append(path).append('\n')
                 .append("--- a/").append(path).append('\n').append("+++ b/").append(path).append('\n');
