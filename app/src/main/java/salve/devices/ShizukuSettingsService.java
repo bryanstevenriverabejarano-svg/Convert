@@ -12,13 +12,16 @@ import salve.core.devicecontrol.SystemSetting;
 /**
  * Servicio de usuario de Shizuku: corre en un proceso aparte con identidad de shell (la de ADB).
  *
- * Solo entiende una transacción: «aplica el ajuste nº N con el valor V». Las órdenes las saca de la
+ * Entiende dos transacciones: «aplica el ajuste nº N con el valor V» y «cierra las apps en segundo
+ * plano» (para que Salve tenga memoria para sus 7k). Las órdenes las saca de la
  * tabla fija de {@link SystemSetting}; no acepta texto de shell de nadie, tampoco de la app. Devuelve
  * el código de salida y la lectura del estado después del cambio.
  */
 public class ShizukuSettingsService extends Binder {
     static final String DESCRIPTOR = "salve.devices.ShizukuSettingsService";
     static final int APPLY = IBinder.FIRST_CALL_TRANSACTION;
+    /** «Cierra las apps en segundo plano» (am kill-all): orden fija, sin texto de nadie. */
+    static final int FREE_MEMORY = IBinder.FIRST_CALL_TRANSACTION + 1;
     /** Código que Shizuku usa para pedir al servicio que termine. */
     static final int DESTROY = 16777115;
 
@@ -26,6 +29,15 @@ public class ShizukuSettingsService extends Binder {
 
     @Override protected boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
         if (code == DESTROY) { System.exit(0); return true; }
+        if (code == FREE_MEMORY) {
+            data.enforceInterface(DESCRIPTOR);
+            int exit;
+            // Solo procesos en caché/segundo plano que Android puede cerrar sin riesgo; nunca el de
+            // primer plano ni servicios persistentes.
+            try { exit = run(new String[]{"am", "kill-all"}, null); } catch (Exception failed) { exit = -2; }
+            if (reply != null) { reply.writeNoException(); reply.writeInt(exit); }
+            return true;
+        }
         if (code != APPLY) return super.onTransact(code, data, reply, flags);
         data.enforceInterface(DESCRIPTOR);
         int action = data.readInt(), value = data.readInt();

@@ -75,6 +75,8 @@ public class SalveLLM {
     private volatile boolean isLiteRT = false; // indica si es un modelo .litertlm o .task
     private volatile boolean isGguf = false;
     private volatile int ggufContextTokens = GgufContextPolicy.STANDARD;
+    /** Lo más que el motor llegó a reservar en esta carga (baja solo si 7k o 4k fallaron de verdad). */
+    private volatile int ggufContextCeiling = GgufContextPolicy.EXTENDED;
     private boolean activationInProgress;
     private boolean fallbackRequested;
     private volatile long selectionVersion;
@@ -165,6 +167,7 @@ public class SalveLLM {
         visionModel = path != null && path.equals(visionPath);
         isGguf = false;
         ggufContextTokens = GgufContextPolicy.STANDARD;
+        ggufContextCeiling = GgufContextPolicy.EXTENDED;
 
         if (path == null || path.trim().isEmpty()) {
             throw new IllegalStateException(
@@ -484,7 +487,9 @@ public class SalveLLM {
                         && GgufLlm.releaseVisionForMemory())
                     salve.core.trace.ExecutionTrace.note("MEMORIA JUSTA", "Solté mis ojos y oídos (≈1 GB) para responder; "
                             + "se vuelven a cargar con la próxima foto o audio. " + DeviceModelMemory.describe(DeviceModelMemory.read(appContext)));
-                ggufContextTokens = Math.min(ggufContextTokens, DeviceModelMemory.contextFor(appContext, modelPath, true));
+                // Cada turno vuelve a elegir (antes solo podía bajar: un momento de RAM llena dejaba 4k
+                // para siempre). El techo solo baja si el motor de verdad no pudo reservar el contexto.
+                ggufContextTokens = Math.min(ggufContextCeiling, DeviceModelMemory.contextFor(appContext, modelPath, true));
                 decorated = salve.core.cognition.CognitivePrompt.withEngine(decorated,
                         ModelRuntimeInfo.name(modelPath), true, ggufContextTokens);
                 boolean large = LocalModelPolicy.isLarge(modelPath);
@@ -528,7 +533,9 @@ public class SalveLLM {
                     return generateLocalResult(prompt, role, GgufLlm.lastStreamed() ? null : onChunk);
                 }
                 finally {
-                    ggufContextTokens = Math.min(ggufContextTokens, GgufLlm.getContextTokens());
+                    int used = GgufLlm.getContextTokens();
+                    if (used < ggufContextTokens) ggufContextCeiling = used; // no se pudo reservar: no se reintenta
+                    ggufContextTokens = Math.min(ggufContextTokens, used);
                     if (large) markLargeOperation(false);
                 }
             } else {
@@ -983,7 +990,10 @@ public class SalveLLM {
             String id = LocalModelPolicy.idForPath(path);
             int forecast = id == null ? ggufContextTokens
                     : ModelMemoryPolicy.selectContext(id, DeviceModelMemory.read(appContext), engineInitialized);
-            return GgufContextPolicy.promptBudget(forecast == 0 ? GgufContextPolicy.COMPACT : Math.min(ggufContextTokens, forecast));
+            // Lo que se va a usar en este turno: la previsión, con el techo de lo que el motor pudo reservar
+            // (no el contexto del turno anterior, que con RAM llena momentánea podía haber sido 4k).
+            return GgufContextPolicy.promptBudget(forecast == 0 ? GgufContextPolicy.COMPACT
+                    : Math.min(engineInitialized ? ggufContextCeiling : ggufContextTokens, forecast));
         }
         if (isLiteRT && path != null && path.toLowerCase(java.util.Locale.ROOT).endsWith(".task")) return 3200;
         // El motor se carga con hasta 7.000 tokens para tener holgura (foto + respuesta larga), pero el

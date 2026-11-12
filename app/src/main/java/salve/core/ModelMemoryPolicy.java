@@ -159,7 +159,12 @@ public final class ModelMemoryPolicy {
     }
     /** Choose the largest budget that fits. Reducing context never removes the weight/reserve cost. */
     public static int selectContext(String id, Snapshot ram, boolean loaded) {
-        // Gemma sin censura: 7k siempre que quepa (núcleo de identidad completo); si no, 4k como antes.
+        // Gemma sin censura en un móvil grande: 7k SIEMPRE (Bryan, 13/11/2026). Su RAM «disponible» casi
+        // siempre parece llena por las apps en caché, que Android cierra cuando Salve pide memoria; y lo
+        // que cuesta pasar de 4k a 7k (~384 MiB) es poco frente a los pesos, que hacen falta igual.
+        // Si aun así no se pudiera reservar, GgufContextPolicy baja a 4k en ese turno.
+        if (alwaysExtended(id, ram)) return GgufContextPolicy.EXTENDED;
+        // En otros móviles: 7k siempre que quepa (núcleo de identidad completo); si no, 4k como antes.
         if (isUncensored(id) && (fits(id, ram, loaded, GgufContextPolicy.EXTENDED)
                 || largePhoneGguf(id, ram, loaded, GgufContextPolicy.EXTENDED))) return GgufContextPolicy.EXTENDED;
         if (canLoad(id, ram, loaded)) return GgufContextPolicy.STANDARD;
@@ -188,6 +193,17 @@ public final class ModelMemoryPolicy {
         if (!isUncensored(id) || !ram.known() || ram.low || ram.total < LARGE_PHONE_TOTAL) return false;
         return ram.available >= required(id, true, ram.threshold, contextTokens)
                 && ram.total >= required(id, false, ram.threshold, contextTokens) + LARGE_PHONE_HEADROOM;
+    }
+
+    /** Móvil grande (≥10 GiB) cuya RAM total cubre el modelo con 7k y 3 GiB de margen. */
+    public static boolean alwaysExtended(String id, Snapshot ram) {
+        return isUncensored(id) && ram.total >= LARGE_PHONE_TOTAL && ram.total > 0
+                && ram.total >= required(id, false, ram.threshold, GgufContextPolicy.EXTENDED) + LARGE_PHONE_HEADROOM;
+    }
+
+    /** ¿Conviene liberar las apps en caché antes de cargar o responder con 7k? */
+    public static boolean shouldFreeForExtended(String id, Snapshot ram, boolean loaded) {
+        return alwaysExtended(id, ram) && (ram.low || ram.available < required(id, loaded, ram.threshold, GgufContextPolicy.EXTENDED));
     }
 
     private static boolean fits(String id, Snapshot ram, boolean loaded, int contextTokens) {
