@@ -33,7 +33,8 @@ public class LiteRtMemoryPolicyTest {
         ModelMemoryPolicy.Snapshot cached = new ModelMemoryPolicy.Snapshot(
                 (long) (2.71 * GIB), (long) (10.82 * GIB), 768 * ModelMemoryPolicy.MIB, false);
         assertEquals("la medida estricta sigue diciendo que no", 0, ModelMemoryPolicy.selectLiteRtContext(id, cached, false, false));
-        assertEquals(ModelMemoryPolicy.LITERT_STANDARD, ModelMemoryPolicy.admitLiteRt(id, cached, false, false));
+        // Desde el 13/11/2026, en este móvil 7.000 siempre (antes 4.096 por la regla de móvil grande).
+        assertEquals(ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(id, cached, false, false));
         assertTrue("descargar no gasta RAM", ModelMemoryPolicy.canPrepare(id, cached, false));
         assertFalse("la visión de antemano sigue siendo estricta",
                 ModelMemoryPolicy.selectLiteRtContext(id, cached, false, true) != 0);
@@ -44,12 +45,16 @@ public class LiteRtMemoryPolicyTest {
         ModelMemoryPolicy.Snapshot small = new ModelMemoryPolicy.Snapshot(
                 (long) (2.71 * GIB), 4L * GIB, 768 * ModelMemoryPolicy.MIB, false);
         assertEquals("4 GiB en total: no hay caché que liberar", 0, ModelMemoryPolicy.admitLiteRt(id, small, false, false));
+        // En el móvil grande ya no se rechaza por la RAM «disponible» ni por el aviso de memoria baja:
+        // Bryan pidió 7.000 siempre (13/11/2026); Salve cierra las apps en caché y, si una carga se
+        // cerrara, LiteRtContextGuard baja un escalón la siguiente vez.
         ModelMemoryPolicy.Snapshot low = new ModelMemoryPolicy.Snapshot(
                 (long) (2.71 * GIB), (long) (10.82 * GIB), 768 * ModelMemoryPolicy.MIB, true);
-        assertEquals("Android ya avisa de memoria baja", 0, ModelMemoryPolicy.admitLiteRt(id, low, false, false));
-        ModelMemoryPolicy.Snapshot almostNothing = new ModelMemoryPolicy.Snapshot(
-                900 * ModelMemoryPolicy.MIB, (long) (10.82 * GIB), 768 * ModelMemoryPolicy.MIB, false);
-        assertEquals("ni el motor cabe", 0, ModelMemoryPolicy.admitLiteRt(id, almostNothing, false, false));
+        assertEquals(ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(id, low, false, false));
+        // En un móvil de 8 GiB (sin 3 GiB de margen total) sigue la regla de siempre.
+        ModelMemoryPolicy.Snapshot mid = new ModelMemoryPolicy.Snapshot(
+                (long) (2.71 * GIB), 8L * GIB, 768 * ModelMemoryPolicy.MIB, true);
+        assertEquals("Android ya avisa de memoria baja", 0, ModelMemoryPolicy.admitLiteRt(id, mid, false, false));
         ModelMemoryPolicy.Snapshot tiny = new ModelMemoryPolicy.Snapshot(2L * GIB, 3L * GIB, 768 * ModelMemoryPolicy.MIB, false);
         assertFalse("un móvil de 3 GiB no descarga Gemma", ModelMemoryPolicy.canPrepare(id, tiny, false));
         assertFalse("los Dolphin siguen como antes", ModelMemoryPolicy.canPrepare(LocalModelPolicy.PRIMARY,

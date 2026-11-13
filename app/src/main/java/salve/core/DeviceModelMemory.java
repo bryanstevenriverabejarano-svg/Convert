@@ -38,6 +38,7 @@ public final class DeviceModelMemory {
         String id = LocalModelPolicy.idForPath(path);
         if (id == null) return ModelMemoryPolicy.LITERT_STANDARD;
         ModelMemoryPolicy.Snapshot ram = read(context);
+        if (ModelMemoryPolicy.shouldFreeForLiteRtLong(id, ram, weightsResident, vision)) ram = freeForSevenK(context, ram);
         int tokens = ModelMemoryPolicy.admitLiteRt(id, ram, weightsResident, vision);
         if (tokens == 0) throw new ModelMemoryPolicy.PressureException((ram.known() ? "RAM insuficiente para " : "No se pudo comprobar la RAM para ")
                 + id + (vision ? " con visión" : "") + ". " + describe(ram) + String.format(Locale.getDefault(),
@@ -59,23 +60,26 @@ public final class DeviceModelMemory {
     /** Como mucho una limpieza por minuto: no se cierran apps en cada mensaje. */
     private static final long FREE_INTERVAL_MS = 60_000L;
 
+    /** Cierra las apps en segundo plano (Shizuku), como mucho una vez por minuto; devuelve la RAM medida después. */
+    private static ModelMemoryPolicy.Snapshot freeForSevenK(Context context, ModelMemoryPolicy.Snapshot ram) {
+        if (SystemClock.elapsedRealtime() - freedAt <= FREE_INTERVAL_MS) return ram;
+        freedAt = SystemClock.elapsedRealtime();
+        long before = ram.available;
+        if (!salve.devices.ShizukuBridge.freeMemory(context)) return ram;
+        ModelMemoryPolicy.Snapshot after = read(context);
+        salve.core.trace.ExecutionTrace.note("MEMORIA PARA 7K", String.format(Locale.getDefault(),
+                "Cerré las apps en segundo plano: %.2f → %.2f GiB libres.",
+                before / (double)(1024 * ModelMemoryPolicy.MIB), after.available / (double)(1024 * ModelMemoryPolicy.MIB)));
+        return after;
+    }
+
     public static int contextFor(Context context, String path, boolean loaded) {
         String id = LocalModelPolicy.idForPath(path);
         if (id == null) return GgufContextPolicy.STANDARD;
         ModelMemoryPolicy.Snapshot ram = read(context);
         // Con 7k obligatorio y la RAM llena de apps en caché, se le pide a Android (vía Shizuku, si ya
         // tiene permiso) que cierre las apps en segundo plano. Nunca las de primer plano ni a Salve.
-        if (ModelMemoryPolicy.shouldFreeForExtended(id, ram, loaded)
-                && SystemClock.elapsedRealtime() - freedAt > FREE_INTERVAL_MS) {
-            freedAt = SystemClock.elapsedRealtime();
-            long before = ram.available;
-            if (salve.devices.ShizukuBridge.freeMemory(context)) {
-                ram = read(context);
-                salve.core.trace.ExecutionTrace.note("MEMORIA PARA 7K", String.format(Locale.getDefault(),
-                        "Cerré las apps en segundo plano: %.2f → %.2f GiB libres.",
-                        before / (double)(1024 * ModelMemoryPolicy.MIB), ram.available / (double)(1024 * ModelMemoryPolicy.MIB)));
-            }
-        }
+        if (ModelMemoryPolicy.shouldFreeForExtended(id, ram, loaded)) ram = freeForSevenK(context, ram);
         int tokens = ModelMemoryPolicy.selectContext(id, ram, loaded);
         if (tokens == 0) throw new ModelMemoryPolicy.PressureException(explain(id, ram, loaded));
         return tokens;

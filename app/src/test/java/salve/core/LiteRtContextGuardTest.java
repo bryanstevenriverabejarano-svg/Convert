@@ -21,6 +21,17 @@ public class LiteRtContextGuardTest {
         public void put(String key, int value) { if (value == 0) map.remove(key); else map.put(key, value); }
     }
 
+    @Test public void s24UltraAlwaysGetsSevenKEvenWithMemoryLookingFull() {
+        // Lo que marca su móvil con todo abierto: 0,6 GiB «disponibles» y memoria baja.
+        ModelMemoryPolicy.Snapshot full = new ModelMemoryPolicy.Snapshot((long) (0.6 * GIB), (long) (10.82 * GIB), 768 * ModelMemoryPolicy.MIB, true);
+        for (String id : new String[]{E4B, LocalModelPolicy.FALLBACK}) {
+            assertEquals(id, ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(id, full, false, false));
+            assertEquals(id, ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(id, full, false, true));
+            assertTrue(ModelMemoryPolicy.shouldFreeForLiteRtLong(id, full, false, false));
+        }
+        assertFalse("con RAM libre de sobra no se cierra nada", ModelMemoryPolicy.shouldFreeForLiteRtLong(E4B, ram(7.0, 10.82), false, false));
+    }
+
     @Test public void s24UltraWithCachedAppsGetsMoreThan4096() {
         // Lo que de verdad marca su móvil: 2,71–3,09 GiB «disponibles» de 10,82.
         assertEquals(ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(E4B, ram(2.71, 10.82), false, false));
@@ -36,8 +47,8 @@ public class LiteRtContextGuardTest {
                 ModelMemoryPolicy.LITERT_5K, ModelMemoryPolicy.admitLiteRt(E4B, ram(4.7, 7.5), false, false));
         assertEquals("E2B nunca pasa de 7.000",
                 ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.selectLiteRtContext(LocalModelPolicy.FALLBACK, ram(9.0, 12), false, false));
-        assertEquals("memoria baja: nada", 0, ModelMemoryPolicy.admitLiteRt(E4B,
-                new ModelMemoryPolicy.Snapshot(9 * GIB, 12 * GIB, 768 * ModelMemoryPolicy.MIB, true), false, false));
+        assertEquals("memoria baja en un móvil pequeño: nada", 0, ModelMemoryPolicy.admitLiteRt(E4B,
+                new ModelMemoryPolicy.Snapshot(5 * GIB, (long) (7.5 * GIB), 768 * ModelMemoryPolicy.MIB, true), false, false));
         assertEquals("7.000 cuesta lo de siempre", ModelMemoryPolicy.LONG_CONTEXT_OVERHEAD,
                 ModelMemoryPolicy.contextOverhead(ModelMemoryPolicy.LITERT_LONG));
         assertTrue(ModelMemoryPolicy.contextOverhead(ModelMemoryPolicy.LITERT_16K) > ModelMemoryPolicy.contextOverhead(ModelMemoryPolicy.LITERT_8K));
@@ -95,7 +106,8 @@ public class LiteRtContextGuardTest {
         long need6 = ModelMemoryPolicy.requiredLiteRt(E4B, true, 768 * ModelMemoryPolicy.MIB, false, ModelMemoryPolicy.LITERT_6K);
         long need7 = ModelMemoryPolicy.requiredLiteRt(E4B, true, 768 * ModelMemoryPolicy.MIB, false, ModelMemoryPolicy.LITERT_LONG);
         ModelMemoryPolicy.Snapshot tight = new ModelMemoryPolicy.Snapshot(need6 + (need7 - need6) / 2, (long) (10.82 * gib), 768 * ModelMemoryPolicy.MIB, false);
-        assertEquals(ModelMemoryPolicy.LITERT_6K, ModelMemoryPolicy.admitLiteRt(E4B, tight, false, false));
+        // En el móvil grande, 7.000 siempre (13/11/2026); los escalones intermedios quedan para el resto.
+        assertEquals(ModelMemoryPolicy.LITERT_LONG, ModelMemoryPolicy.admitLiteRt(E4B, tight, false, false));
         assertEquals(7000, LiteRtContextGuard.below(8192));
         assertEquals(6144, LiteRtContextGuard.below(7000));
         assertEquals(5120, LiteRtContextGuard.below(6144));
