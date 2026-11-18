@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 /** Only explicit commands change the device or avatar; discussion about them remains conversation. */
 public final class AssistantControlCommand {
-    public enum Type { DEVICES, FINANCES, ROOM, PLANS, SALVENTES, CONTINUITY, HOME,
+    public enum Type { DEVICES, FINANCES, GYM, ROOM, PLANS, SALVENTES, CONTINUITY, HOME,
         WALK, BED, HIDE_BED, SLEEP, WAKE, PAJAMAS, DAY,
         LIST_RECIPES, CANCEL_RECIPE, LEARN_RECIPE, RUN_RECIPE, DELETE_RECIPE }
     public final Type type;
@@ -22,6 +22,8 @@ public final class AssistantControlCommand {
         Type type;
         switch (normalized) {
             case "abre finanzas": case "abrir finanzas": case "finanzas de mi negocio": type = Type.FINANCES; break;
+            case "abre el gym": case "abre gym": case "abre mi gym": case "modo gym": case "empieza entreno":
+            case "empezar entreno": case "empieza el entreno": case "abre el gimnasio": type = Type.GYM; break;
             case "mi movil": case "control del movil": case "abre el panel de dispositivos":
             case "mis dispositivos": type = Type.DEVICES; break; // «abre WhatsApp» ya abre la propia app (AppActionCommand)
             case "abre tu habitacion": case "abrir habitacion": case "cambia tu ropa":

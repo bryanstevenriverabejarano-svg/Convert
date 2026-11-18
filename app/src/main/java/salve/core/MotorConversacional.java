@@ -396,19 +396,7 @@ public class MotorConversacional {
         this.goalAutonomy = GoalAutonomyRuntime.get(context);
         this.autonomousTools = AutonomousToolRuntime.get(context);
         this.personalBudget = new salve.core.finance.PersonalBudgetService(new java.io.File(context.getNoBackupFilesDir(), "finance/personal-budget.json"));
-        this.vida = new salve.core.vida.VidaService(new java.io.File(context.getNoBackupFilesDir(), "vida/vida.tsv"),
-                java.time.Clock.systemDefaultZone(), new salve.core.vida.VidaService.Cloud() {
-                    // Una sola cola: una copia vieja nunca termina después de una nueva.
-                    private final java.util.concurrent.ExecutorService uploads =
-                            java.util.concurrent.Executors.newSingleThreadExecutor();
-                    @Override public String fetch() throws java.io.IOException {
-                        return salve.data.sync.CloudSyncManager.fetchVida(context);
-                    }
-                    @Override public void push(String content) {
-                        uploads.execute(() -> {
-                            boolean ok = salve.data.sync.CloudSyncManager.uploadVida(context, content);
-                            Log.d(TAG, "Vida → pCloud: " + (ok ? "verificada" : "pendiente"));
-                        });
+        this.vida = salve.core.vida.VidaRuntime.get(context);
                     }
                 });
         this.voiceProfiles = new VoiceProfileStore(context);

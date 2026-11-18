@@ -113,6 +113,29 @@ public final class VidaService {
         }
     }
 
+    /** Registro actual para la pantalla del gym (fusiona la nube la primera vez). Fuera del hilo de la pantalla. */
+    public VidaLog read() throws IOException {
+        synchronized (lock) { VidaLog log = load(); cached = log; return log; }
+    }
+
+    /**
+     * Guarda un entreno terminado en la pantalla del gym. Calcula los récords contra el
+     * historial anterior al entreno y solo devuelve el resumen después de guardar.
+     */
+    public GymTracker.Summary saveWorkout(List<VidaLog.GymSet> done) throws IOException {
+        synchronized (lock) {
+            VidaLog log = load();
+            GymTracker.Summary summary = GymTracker.summarize(log, done);
+            Set<String> keys = new HashSet<>();
+            for (VidaLog.GymSet s : log.sets) keys.add(s.key);
+            List<VidaLog.GymSet> next = new ArrayList<>(log.sets);
+            for (VidaLog.GymSet s : done) if (keys.add(s.key)) next.add(s);
+            VidaLog updated = log.withSets(next);
+            store.save(updated); cached = updated; push(updated);
+            return summary;
+        }
+    }
+
     // ---------------------------------------------------------------- nube
 
     private static boolean isCloudCommand(String input) {

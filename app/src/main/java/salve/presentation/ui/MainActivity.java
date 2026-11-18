@@ -1768,7 +1768,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle("IA y cámara")
                 .setItems(new String[]{downloadLabel, "Usar modelo local",
                         "Probar modelo local", "Importar otro modelo", "Tomar foto y preguntar",
-                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español", "Nodos de cómputo", "Salventes (génesis)", "Continuidad (Guardián)", "Mi casa (Home Assistant)", "Registro de ejecución", "PRs de Salve (GitHub)"}, (dialog, which) -> {
+                        "Configurar Gemini", "Usar Gemini", "Probar Gemini", "Voz de Salve", "Equipo de programación", "Finanzas del negocio", "Registro de modelos", "Nube pCloud", "Fotos guardadas", "Planes y resultados", "Buscadores web", "Memoria en español", "Nodos de cómputo", "Salventes (génesis)", "Continuidad (Guardián)", "Mi casa (Home Assistant)", "Registro de ejecución", "PRs de Salve (GitHub)", "Gym (Vida)"}, (dialog, which) -> {
                     switch (which) {
                         case 0: mostrarDescargaModeloPrincipal(); break;
                         case 1:
@@ -1806,6 +1806,7 @@ public class MainActivity extends AppCompatActivity {
                         case 20: startActivity(new Intent(this, HomeActivity.class)); break;
                         case 21: startActivity(new Intent(this, ExecutionJournalActivity.class)); break;
                         case 22: editarTokenGitHub(); break;
+                        case 23: startActivity(new Intent(this, GymActivity.class)); break;
                         default: break;
                     }
                 })
