@@ -23,8 +23,9 @@ final class VidaWidgets {
             super(c);
             this.color = color;
             float d = c.getResources().getDisplayMetrics().density;
-            track.setStyle(Paint.Style.STROKE); track.setStrokeWidth(8 * d); track.setColor(Color.rgb(32, 44, 70));
-            arc.setStyle(Paint.Style.STROKE); arc.setStrokeWidth(8 * d); arc.setStrokeCap(Paint.Cap.ROUND);
+            track.setStyle(Paint.Style.STROKE); track.setStrokeWidth(9 * d); track.setColor(Color.rgb(16, 30, 56));
+            arc.setStyle(Paint.Style.STROKE); arc.setStrokeWidth(9 * d); arc.setStrokeCap(Paint.Cap.ROUND);
+            arc.setShadowLayer(6 * d, 0, 0, Color.rgb(41, 160, 255)); setLayerType(LAYER_TYPE_SOFTWARE, null);
             text.setColor(Color.WHITE); text.setTypeface(Typeface.DEFAULT_BOLD); text.setTextAlign(Paint.Align.CENTER);
         }
         void set(float fraction, String label) { this.fraction = Math.max(0, Math.min(1, fraction)); this.label = label; invalidate(); }
@@ -67,7 +68,7 @@ final class VidaWidgets {
         void set(float f) { fraction = Math.max(0, Math.min(1, f)); invalidate(); }
         @Override protected void onDraw(Canvas canvas) {
             float h = getHeight(), r = h / 2;
-            p.setColor(Color.rgb(32, 44, 70));
+            p.setColor(Color.rgb(16, 30, 56));
             canvas.drawRoundRect(new RectF(0, 0, getWidth(), h), r, r, p);
             if (fraction <= 0) return;
             p.setColor(color);

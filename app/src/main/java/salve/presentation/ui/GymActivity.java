@@ -54,7 +54,7 @@ import salve.core.vida.VidaService;
  * resumen al terminar. Los datos son los del módulo Vida (mismo archivo, misma copia en pCloud).
  */
 public final class GymActivity extends Activity {
-    private static final int BG = Color.rgb(6, 10, 22), CARD = Color.rgb(17, 27, 49), ROW_ALT = Color.rgb(22, 35, 60),
+    private static final int BG = Color.BLACK, CARD = Color.rgb(8, 14, 28), ROW_ALT = Color.rgb(14, 24, 46),
             BLUE = Color.rgb(33, 150, 243), MUTED = Color.rgb(143, 163, 199), DONE = Color.rgb(27, 94, 32);
     private static final int[] RESTS = {0, 60, 90, 120, 150, 180, 240};
     private static final int PICK_CSV = 41;

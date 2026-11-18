@@ -64,9 +64,13 @@ public final class VidaActivity extends Activity {
         LinearLayout root = column(this); root.setBackground(night());
         LinearLayout head = row(this);
         head.setPadding(dp(this, 16), dp(this, 30), dp(this, 16), dp(this, 6));
-        head.addView(icon(this, "💙", 48));
+        TextView logo = text(this, null, "💙", 26, Color.WHITE, false);
+        logo.setGravity(Gravity.CENTER); logo.setBackground(neon(this, true, 16));
+        head.addView(logo, new LinearLayout.LayoutParams(dp(this, 58), dp(this, 58)));
         LinearLayout titles = column(this); titles.setPadding(dp(this, 12), 0, 0, 0);
-        text(this, titles, "Vida", 30, Color.WHITE, true);
+        TextView big = text(this, titles, "Vida", 38, Color.WHITE, true);
+        big.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD_ITALIC));
+        big.setShadowLayer(dp(this, 8), 0, 0, NEON);
         text(this, titles, "Tu organización, bienestar y progreso.", 14, MUTED, false);
         head.addView(titles, new LinearLayout.LayoutParams(0, -2, 1));
         root.addView(head);
@@ -115,12 +119,9 @@ public final class VidaActivity extends Activity {
             LinearLayout c = column(this);
             c.setGravity(Gravity.CENTER);
             c.setPadding(dp(this, 14), dp(this, 8), dp(this, 14), dp(this, 8));
-            if (sel) {
-                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
-                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Color.rgb(41, 121, 255), Color.rgb(21, 80, 200)});
-                bg.setCornerRadius(dp(this, 16)); c.setBackground(bg);
-            } else c.setBackground(glass(this));
+            c.setBackground(neon(this, sel, 14));
             TextView ic = text(this, c, icons[i], 18, Color.WHITE, false); ic.setGravity(Gravity.CENTER);
+            if (sel) ic.setShadowLayer(dp(this, 6), 0, 0, NEON);
             TextView lb = text(this, c, t, 13, sel ? Color.WHITE : LIGHT, sel); lb.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
             lp.setMargins(dp(this, 4), 0, dp(this, 4), 0);
@@ -161,7 +162,7 @@ public final class VidaActivity extends Activity {
 
         // Fecha con flechas y frase del día
         LinearLayout nav = row(this);
-        nav.setBackground(glass(this)); nav.setPadding(dp(this, 6), dp(this, 2), dp(this, 6), dp(this, 2));
+        nav.setBackground(neon(this, false, 12)); nav.setPadding(dp(this, 6), dp(this, 2), dp(this, 6), dp(this, 2));
         nav.addView(link(this, "‹", v -> { viewDate = viewDate.minusDays(1); render(); }));
         TextView date = text(this, null, "📅  " + VidaPlanner.cap(today.format(DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", new Locale("es")))) + (isToday ? "" : "  ·  volver a hoy"), 16, Color.WHITE, false);
         date.setGravity(Gravity.CENTER);
@@ -169,7 +170,7 @@ public final class VidaActivity extends Activity {
         nav.addView(date, new LinearLayout.LayoutParams(0, -2, 1));
         nav.addView(link(this, "›", v -> { viewDate = viewDate.plusDays(1); render(); }));
         content.addView(nav, wide(this, 2));
-        TextView quote = text(this, content, "“" + QUOTES[(int) (today.toEpochDay() % QUOTES.length)] + "”", 15, LIGHT, false);
+        TextView quote = text(this, content, "//  “" + QUOTES[(int) (today.toEpochDay() % QUOTES.length)] + "”", 16, Color.WHITE, false);
         quote.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.ITALIC));
         quote.setPadding(dp(this, 10), dp(this, 8), 0, dp(this, 2));
 
@@ -221,7 +222,7 @@ public final class VidaActivity extends Activity {
         focus.addView(header("🎯", "Lo más importante hoy"));
         if (f == null) {
             text(this, focus, "Elige UNA cosa. Si la terminas, el día está ganado.", 14, MUTED, false);
-            Button pick = button(this, "Elegir mi tarea de hoy", BLUE);
+            Button pick = button(this, "Elegir mi tarea de hoy   »", BLUE);
             pick.setOnClickListener(v -> askFocus(today));
             focus.addView(pick, wide(this, 6));
         } else {
@@ -245,8 +246,8 @@ public final class VidaActivity extends Activity {
             View dot = new View(this);
             android.graphics.drawable.GradientDrawable o = new android.graphics.drawable.GradientDrawable();
             o.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-            o.setColor(df != null && df.done ? BLUE : CARD_2);
-            if (monday.plusDays(i).equals(today)) o.setStroke(dp(this, 2), BLUE);
+            o.setColor(df != null && df.done ? NEON : Color.TRANSPARENT);
+            o.setStroke(dp(this, 2), monday.plusDays(i).equals(today) ? NEON : STROKE);
             dot.setBackground(o);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(this, 12), dp(this, 12)); lp.setMargins(dp(this, 3), 0, dp(this, 3), 0);
             dots.addView(dot, lp);
@@ -333,7 +334,7 @@ public final class VidaActivity extends Activity {
             boolean trained = VidaPlanner.checked(log, "gym", d);
             TextView c = text(this, null, letters[i], 14, Color.WHITE, d.equals(today));
             c.setGravity(Gravity.CENTER);
-            c.setBackground(rounded(this, trained ? GREEN : d.equals(today) ? BLUE : CARD_2, 8));
+            c.setBackground(trained ? rounded(this, GREEN, 8) : neon(this, d.equals(today), 8));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(this, 34), 1); lp.setMargins(dp(this, 3), 0, dp(this, 3), 0);
             days.addView(c, lp);
         }
@@ -404,7 +405,7 @@ public final class VidaActivity extends Activity {
 
     private LinearLayout tile() {
         LinearLayout t = column(this);
-        int p = dp(this, 12); t.setPadding(p, p, p, p);
+        int p = dp(this, 14); t.setPadding(p, p, p, p);
         t.setBackground(glass(this));
         return t;
     }
@@ -414,7 +415,9 @@ public final class VidaActivity extends Activity {
         TextView i = text(this, null, emoji, 17, Color.WHITE, false);
         i.setPadding(0, 0, dp(this, 8), 0);
         r.addView(i);
-        r.addView(text(this, null, title, 17, Color.WHITE, true), new LinearLayout.LayoutParams(0, -2, 1));
+        TextView t = text(this, null, title, 18, Color.WHITE, true);
+        t.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD_ITALIC));
+        r.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
         return r;
     }
 
@@ -422,7 +425,7 @@ public final class VidaActivity extends Activity {
         TextView t = text(this, null, emoji + "  " + value, 14, Color.WHITE, true);
         t.setGravity(Gravity.CENTER);
         t.setPadding(0, dp(this, 8), 0, dp(this, 8));
-        t.setBackground(rounded(this, CARD_2, 10));
+        t.setBackground(neon(this, false, 10));
         return t;
     }
 
@@ -432,15 +435,11 @@ public final class VidaActivity extends Activity {
         LinearLayout t = column(this);
         t.setGravity(Gravity.CENTER_HORIZONTAL);
         int p = dp(this, 10); t.setPadding(p, p, p, p);
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                done ? new int[]{Color.rgb(20, 70, 40), Color.rgb(12, 40, 24)} : new int[]{Color.rgb(24, 38, 66), Color.rgb(14, 22, 40)});
-        bg.setCornerRadius(dp(this, 14)); bg.setStroke(Math.max(1, dp(this, 1)), done ? GREEN : STROKE);
-        t.setBackground(bg);
+        t.setBackground(neon(this, done, 14));
         TextView i = text(this, t, habitEmoji(h), 22, Color.WHITE, false); i.setGravity(Gravity.CENTER);
         TextView n = text(this, t, h.name, 13, Color.WHITE, true); n.setGravity(Gravity.CENTER); n.setMaxLines(2);
-        TextView s = text(this, t, done ? "✔ Hoy" : week + "/" + h.perWeek + " sem", 12, done ? GREEN : MUTED, false); s.setGravity(Gravity.CENTER);
-        VidaWidgets.Line line = new VidaWidgets.Line(this, done ? GREEN : BLUE); line.set((float) week / h.perWeek);
+        TextView s = text(this, t, done ? "✔ Hoy" : week + "/" + h.perWeek + " sem", 12, done ? NEON : MUTED, done); s.setGravity(Gravity.CENTER);
+        VidaWidgets.Line line = new VidaWidgets.Line(this, NEON); line.set((float) week / h.perWeek);
         t.addView(line, lineParams());
         t.setOnClickListener(v -> change(l -> VidaPlanner.toggle(l, h.id, day)));
         return t;
