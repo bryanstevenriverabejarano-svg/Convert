@@ -396,7 +396,21 @@ public class MotorConversacional {
         this.goalAutonomy = GoalAutonomyRuntime.get(context);
         this.autonomousTools = AutonomousToolRuntime.get(context);
         this.personalBudget = new salve.core.finance.PersonalBudgetService(new java.io.File(context.getNoBackupFilesDir(), "finance/personal-budget.json"));
-        this.vida = new salve.core.vida.VidaService(new java.io.File(context.getNoBackupFilesDir(), "vida/vida.tsv"));
+        this.vida = new salve.core.vida.VidaService(new java.io.File(context.getNoBackupFilesDir(), "vida/vida.tsv"),
+                java.time.Clock.systemDefaultZone(), new salve.core.vida.VidaService.Cloud() {
+                    // Una sola cola: una copia vieja nunca termina después de una nueva.
+                    private final java.util.concurrent.ExecutorService uploads =
+                            java.util.concurrent.Executors.newSingleThreadExecutor();
+                    @Override public String fetch() throws java.io.IOException {
+                        return salve.data.sync.CloudSyncManager.fetchVida(context);
+                    }
+                    @Override public void push(String content) {
+                        uploads.execute(() -> {
+                            boolean ok = salve.data.sync.CloudSyncManager.uploadVida(context, content);
+                            Log.d(TAG, "Vida → pCloud: " + (ok ? "verificada" : "pendiente"));
+                        });
+                    }
+                });
         this.voiceProfiles = new VoiceProfileStore(context);
         this.voiceProfile = voiceProfiles.load();
         this.avatarDesignTool = new salve.avatar.AvatarDesignTool(context.getApplicationContext());
@@ -621,7 +635,7 @@ public class MotorConversacional {
     /** Checked before UI cloud logging and again before model history or generic memory. */
     public boolean isPrivateBudgetInput(String input) { return personalBudget.handles(input); }
 
-    /** Anotaciones y consultas del módulo Vida: locales, fuera del historial del modelo y de la nube. */
+    /** Anotaciones y consultas del módulo Vida: fuera del historial del modelo; copia propia en pCloud. */
     public boolean isVidaInput(String input) { return vida.handles(input); }
 
     /** Importa un CSV exportado de Hevy. Llamar fuera del hilo de la pantalla. */

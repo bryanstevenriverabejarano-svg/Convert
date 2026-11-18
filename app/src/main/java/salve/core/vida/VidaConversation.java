@@ -45,13 +45,13 @@ public final class VidaConversation {
     private static final String[] DAYS = {"lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"};
     private static final String[] HOUR_WORDS = {"una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce"};
 
-    static final String HELP_TEXT = "Módulo Vida: lo guardo solo en este móvil.\n"
+    static final String HELP_TEXT = "Módulo Vida: lo guardo en este móvil y, si tienes pCloud conectado, una copia en Salve/vida/vida.tsv.\n"
             + "• Gym: «curl predicador, 15 kilos, 8 reps» o compárteme el CSV que exporta Hevy.\n"
             + "• Sueño: «me acosté a la una y me levanté a las ocho».\n"
             + "• Comidas: «he comido lentejas con arroz».\n"
             + "• Horario: «añade al horario gym los lunes, martes y jueves a las 19:00 durante 60 minutos».\n"
             + "• Consultas: «qué tengo hoy», «mi horario», «resumen semanal», «historial de curl predicador».\n"
-            + "• «deshaz la última anotación» o «borra mis datos de vida».";
+            + "• «deshaz la última anotación», «recupera mis datos de vida» o «borra mis datos de vida».";
 
     public static final class Response {
         public final String reply;

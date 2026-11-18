@@ -439,6 +439,30 @@ public final class CloudSyncManager {
 
     private static final String MIND_REMOTE = ROOT + "/mind/salve_mind_v1.json";
 
+    private static final String VIDA_REMOTE_DIR = ROOT + "/vida";
+    private static final String VIDA_REMOTE = VIDA_REMOTE_DIR + "/vida.tsv";
+
+    /**
+     * Copia de Vida en pCloud. {@code null} = la cuenta responde y no hay copia;
+     * IOException = no se pudo comprobar (sin conexión, sin cuenta o pausada). Fuera del hilo principal.
+     */
+    public static String fetchVida(Context ctx) throws java.io.IOException {
+        if (!isEnabled(ctx) || !isPCloudConfigured(ctx)) throw new java.io.IOException("Nube pCloud no conectada o pausada");
+        PCloudProvider provider = new PCloudProvider(ctx);
+        boolean exists = false;
+        for (String path : provider.listFilesChecked(VIDA_REMOTE_DIR)) if (path.endsWith("/vida.tsv")) exists = true;
+        if (!exists) return null;
+        byte[] bytes = provider.downloadBounded(VIDA_REMOTE, salve.core.vida.VidaService.MAX_CLOUD_BYTES);
+        if (bytes == null) throw new java.io.IOException("No se pudo descargar la copia de Vida");
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    /** Sube el registro completo de Vida (verificado por checksum). Fuera del hilo principal. */
+    public static boolean uploadVida(Context ctx, String content) {
+        if (!isEnabled(ctx) || !isPCloudConfigured(ctx) || content == null) return false;
+        return new PCloudProvider(ctx).uploadJson(VIDA_REMOTE, content);
+    }
+
     /** Sube su mente (yo persistente y juego) si cambió desde la última copia. Fuera del hilo principal. */
     public static boolean uploadMind(Context ctx) {
         if (!isEnabled(ctx) || !isPCloudConfigured(ctx)) return false;

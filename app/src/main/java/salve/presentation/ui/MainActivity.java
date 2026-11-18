@@ -784,7 +784,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (motorConversacional.isVidaInput(limpio)) {
-            // Gym, sueño, comidas y horario se quedan en el móvil: sin evento en la nube.
+            // Gym, sueño, comidas y horario: sin evento de chat en la nube (Vida sube su propia copia).
             motorConversacional.procesarEntrada(limpio, porVoz);
             inputChat.setText("");
             return;
