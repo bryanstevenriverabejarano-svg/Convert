@@ -1,8 +1,6 @@
 package salve.core.vida;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,12 +25,6 @@ public final class HevyCsvImporter {
     }
 
     private static final Pattern ISO_DATE = Pattern.compile("(\\d{4}-\\d{2}-\\d{2})");
-    private static final DateTimeFormatter[] DATE_TIMES = {
-            DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("d MMM yyyy HH:mm", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", new Locale("es")),
-            DateTimeFormatter.ofPattern("d MMM yyyy HH:mm", new Locale("es")),
-    };
 
     private HevyCsvImporter() {}
 
@@ -47,6 +39,8 @@ public final class HevyCsvImporter {
         if (!col.containsKey("exercise_title") || !col.containsKey("start_time"))
             throw new IllegalArgumentException("No parece un CSV de Hevy: faltan las columnas exercise_title y start_time.");
         List<VidaLog.GymSet> out = new ArrayList<>();
+        // Hevy repite set_index si el mismo ejercicio aparece dos veces en un entreno: se numeran las apariciones.
+        Map<String, Integer> seen = new HashMap<>();
         int skipped = 0;
         for (int r = 1; r < rows.size(); r++) {
             List<String> row = rows.get(r);
@@ -61,26 +55,44 @@ public final class HevyCsvImporter {
                 out.add(new VidaLog.GymSet(date, cell(row, col, "title"), exercise, index, type,
                         dbl(cell(row, col, "weight_kg")), integer(cell(row, col, "reps")),
                         dbl(cell(row, col, "distance_km")), integer(cell(row, col, "duration_seconds")),
-                        "hevy", "hevy|" + start + "|" + exercise + "|" + index));
+                        "hevy", key(seen, "hevy|" + start + "|" + exercise + "|" + index)));
             } catch (IllegalArgumentException bad) { skipped++; }
         }
         return new Result(out, skipped);
     }
 
-    /** Fecha ISO (yyyy-MM-dd) a partir de los formatos que usa Hevy; null si no se reconoce. */
+    private static final Pattern DAY_MONTH_YEAR = Pattern.compile("^(\\d{1,2})\\s+([a-z\u00e1\u00e9\u00ed\u00f3\u00fa]{3,10})\\.?\\s+(\\d{4})");
+    private static final String[][] MONTHS = {
+            {"ene", "jan"}, {"feb"}, {"mar"}, {"abr", "apr"}, {"may"}, {"jun"},
+            {"jul"}, {"ago", "aug"}, {"sep"}, {"oct"}, {"nov"}, {"dic", "dec"}};
+
+    /**
+     * Fecha ISO (yyyy-MM-dd) a partir de los formatos de Hevy: «12 nov 2026, 21:27» (español),
+     * «12 Nov 2026, 21:27» (inglés) o ISO. Los meses se leen a mano: los nombres cortos de
+     * Locale("es") cambian entre versiones de Android («sep» / «sept.»). null si no se reconoce.
+     */
     static String date(String raw) {
         if (raw == null) return null;
-        String text = raw.trim();
+        String text = raw.trim().toLowerCase(Locale.ROOT);
         Matcher iso = ISO_DATE.matcher(text);
         if (iso.find()) {
             try { return LocalDate.parse(iso.group(1)).toString(); } catch (DateTimeParseException ignored) { return null; }
         }
-        String clean = text.replace(".", "");
-        for (DateTimeFormatter f : DATE_TIMES) {
-            try { return LocalDateTime.parse(clean, f).toLocalDate().toString(); }
-            catch (DateTimeParseException ignored) { /* siguiente formato */ }
-        }
+        Matcher m = DAY_MONTH_YEAR.matcher(text);
+        if (!m.find()) return null;
+        String month = m.group(2);
+        for (int i = 0; i < MONTHS.length; i++)
+            for (String prefix : MONTHS[i])
+                if (month.startsWith(prefix)) {
+                    try { return LocalDate.of(Integer.parseInt(m.group(3)), i + 1, Integer.parseInt(m.group(1))).toString(); }
+                    catch (RuntimeException invalid) { return null; }
+                }
         return null;
+    }
+
+    private static String key(Map<String, Integer> seen, String base) {
+        int n = seen.merge(base, 1, Integer::sum);
+        return n == 1 ? base : base + "#" + n;
     }
 
     private static String type(String raw) {

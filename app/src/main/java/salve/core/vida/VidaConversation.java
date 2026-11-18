@@ -263,7 +263,7 @@ public final class VidaConversation {
         int plannedGym = 0;
         for (VidaLog.Block b : log.blocks) if (normalize(b.title).contains("gym") || normalize(b.title).contains("entreno")) plannedGym++;
         StringBuilder out = new StringBuilder("Últimos 7 días:\n");
-        out.append("• Gym: ").append(gymDays.size()).append(" días");
+        out.append("• Gym: ").append(gymDays.size()).append(gymDays.size() == 1 ? " día" : " días");
         if (plannedGym > 0) out.append(" de ").append(plannedGym).append(" planificados");
         out.append(", ").append(sets).append(" series, ").append(fmt(volume)).append(" kg de volumen.\n");
         out.append("• Sueño: ").append(sleepDays == 0 ? "sin registros" : "media de " + hours(sleepTotal / sleepDays) + " (" + sleepDays + " noches)").append(".\n");

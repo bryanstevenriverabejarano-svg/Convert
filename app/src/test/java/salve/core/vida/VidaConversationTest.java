@@ -86,7 +86,7 @@ public class VidaConversationTest {
         say("deshaz la ultima anotacion");
         assertTrue(log.meals.isEmpty());
         String week = say("resumen semanal");
-        assertTrue(week, week.contains("1 días"));
+        assertTrue(week, week.contains("1 día,"));
         assertTrue(week, week.contains("480 kg"));
         say("borra mis datos de vida");
         assertTrue(log.isEmpty());
