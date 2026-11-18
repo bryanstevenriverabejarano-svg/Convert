@@ -102,8 +102,25 @@ final class VidaUi {
         return row;
     }
 
+    /**
+     * Escala del texto según el ancho de la pantalla (411 dp = 1). Los tamaños van en dp para que
+     * la letra grande del sistema no rompa el panel; en móviles estrechos todo se reduce un poco.
+     */
+    static float scale(Activity a) {
+        int w = a.getResources().getConfiguration().screenWidthDp;
+        return Math.max(0.78f, Math.min(1.15f, w / 411f));
+    }
+
+    static boolean narrow(Activity a) { return a.getResources().getConfiguration().screenWidthDp < 360; }
+
+    static void size(Activity a, TextView t, float dpSize) { t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, dpSize * scale(a)); }
+
     static TextView text(Activity a, LinearLayout parent, String value, int size, int color, boolean bold) {
-        TextView t = new TextView(a); t.setText(value); t.setTextSize(size); t.setTextColor(color);
+        return text(a, parent, value, (float) size, color, bold);
+    }
+
+    static TextView text(Activity a, LinearLayout parent, String value, float size, int color, boolean bold) {
+        TextView t = new TextView(a); t.setText(value); size(a, t, size); t.setTextColor(color);
         if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setPadding(0, dp(a, 3), 0, dp(a, 3));
         if (parent != null) parent.addView(t);
@@ -124,14 +141,14 @@ final class VidaUi {
     }
 
     static Button button(Activity a, String label, int color) {
-        Button b = new Button(a); b.setText(label); b.setAllCaps(false); b.setTextColor(Color.WHITE); b.setTextSize(16);
+        Button b = new Button(a); b.setText(label); b.setAllCaps(false); b.setTextColor(Color.WHITE); size(a, b, 15);
         b.setBackground(color == BLUE ? neonButton(a) : neon(a, false, 12));
         b.setMinHeight(dp(a, 48));
         return b;
     }
 
     static TextView chip(Activity a, String label, boolean selected) {
-        TextView t = new TextView(a); t.setText(label); t.setTextSize(15);
+        TextView t = new TextView(a); t.setText(label); size(a, t, 14);
         t.setTextColor(selected ? Color.WHITE : LIGHT);
         t.setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
         int p = dp(a, 14); t.setPadding(p, dp(a, 8), p, dp(a, 8));
@@ -140,7 +157,7 @@ final class VidaUi {
     }
 
     static TextView link(Activity a, String label, View.OnClickListener click) {
-        TextView t = new TextView(a); t.setText(label); t.setTextColor(BLUE); t.setTextSize(15);
+        TextView t = new TextView(a); t.setText(label); t.setTextColor(BLUE); size(a, t, 14);
         t.setPadding(dp(a, 8), dp(a, 8), dp(a, 8), dp(a, 8)); t.setOnClickListener(click);
         return t;
     }
