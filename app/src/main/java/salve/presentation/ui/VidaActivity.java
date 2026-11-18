@@ -282,12 +282,14 @@ public final class VidaActivity extends Activity {
         nav.setBackground(neon(this, false, 12)); nav.setPadding(dp(this, 2), 0, dp(this, 2), 0);
         nav.addView(tapIcon(VidaIcon.Type.CHEVRON, MUTED, 16, v -> { viewDate = viewDate.minusDays(1); render(); }, true));
         nav.addView(icon(VidaIcon.Type.CALENDAR, CYAN, 16));
-        TextView date = text(this, null, VidaPlanner.cap(today.format(DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", new Locale("es")))), 13, Color.WHITE, true);
-        date.setPadding(dp(this, 6), dp(this, 8), dp(this, 2), dp(this, 8)); date.setMaxLines(1);
+        TextView date = text(this, null, VidaPlanner.cap(today.format(DateTimeFormatter.ofPattern("EEEE, d MMM", new Locale("es")))), 13, Color.WHITE, true);
+        date.setPadding(dp(this, 6), dp(this, 4), dp(this, 2), dp(this, 4)); date.setMaxLines(1); date.setGravity(Gravity.CENTER_VERTICAL);
+        // Se encoge antes que cortarse en pantallas estrechas.
+        date.setAutoSizeTextTypeUniformWithConfiguration(9, 13, 1, android.util.TypedValue.COMPLEX_UNIT_DIP);
         date.setEllipsize(android.text.TextUtils.TruncateAt.END);
         date.setOnClickListener(v -> new DatePickerDialog(this, (picker, y, m, d) -> { viewDate = LocalDate.of(y, m + 1, d); render(); },
                 today.getYear(), today.getMonthValue() - 1, today.getDayOfMonth()).show());
-        nav.addView(date, new LinearLayout.LayoutParams(0, -2, 1));
+        nav.addView(date, new LinearLayout.LayoutParams(0, dp(this, 36), 1));
         nav.addView(tapIcon(VidaIcon.Type.CHEVRON, MUTED, 16, v -> { viewDate = viewDate.plusDays(1); render(); }, false));
         dateRow.addView(nav, new LinearLayout.LayoutParams(0, -2, 1));
         TextView week = text(this, null, "Semana " + today.get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear()), 12, Color.WHITE, false);
@@ -402,10 +404,10 @@ public final class VidaActivity extends Activity {
         list.addView(meter(VidaIcon.Type.CHECK_CIRCLE, "Hábitos", habitsDone + "/" + log.habits.size(), log.habits.isEmpty() ? 0 : (float) habitsDone / log.habits.size()));
         list.addView(meter(VidaIcon.Type.DUMBBELL, "Gym", (gymToday ? 1 : 0) + "/" + (gymBlock != null || gymToday ? 1 : 0), gymToday ? 1 : 0));
         list.addView(meter(VidaIcon.Type.FORK_KNIFE, "Comidas", eaten.size() + "/3", Math.min(1f, eaten.size() / 3f)));
-        list.addView(meter(VidaIcon.Type.MOON, "Sueño", (night == null ? "—" : String.format(new Locale("es"), "%.1f", night.minutes / 60.0)) + "/7,5 h", night == null ? 0 : night.minutes / 450f));
+        list.addView(meter(VidaIcon.Type.MOON, "Sueño", (night == null ? "—" : String.format(new Locale("es"), "%.1f", night.minutes / 60.0)) + " h", night == null ? 0 : night.minutes / 450f));
         pr.addView(list, new LinearLayout.LayoutParams(0, -2, 1));
         prog.addView(pr);
-        content.addView(cols(new View[]{goal, prog}, new float[]{1, 1.15f}, compact));
+        content.addView(cols(new View[]{goal, prog}, new float[]{1, 1.25f}, compact));
 
         // ---- 6. agenda | hábitos (esta semana)
         LinearLayout ag = panel();
@@ -454,7 +456,7 @@ public final class VidaActivity extends Activity {
             LinearLayout mid = column(this); mid.setPadding(dp(this, 8), 0, dp(this, 6), 0);
             LinearLayout top = row(this);
             TextView n = text(this, null, h.name, 12, Color.WHITE, false);
-            n.setMaxLines(2); n.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            n.setMaxLines(3); n.setEllipsize(android.text.TextUtils.TruncateAt.END);
             top.addView(n, new LinearLayout.LayoutParams(0, -2, 1));
             top.addView(text(this, null, weekDone + "/" + h.perWeek, 11, weekDone >= h.perWeek ? GREEN : MUTED, true));
             mid.addView(top);
