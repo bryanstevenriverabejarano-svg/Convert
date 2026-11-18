@@ -45,7 +45,10 @@ final class VidaWidgets {
         private float[] values = new float[0];
         private final Paint bar = new Paint(Paint.ANTI_ALIAS_FLAG);
         Bars(Context c) { super(c); bar.setColor(VidaUi.BLUE); }
-        void set(float[] values) { this.values = values; invalidate(); }
+        private int highlight = -1;
+        void set(float[] values) { this.values = values; this.highlight = -1; invalidate(); }
+        /** Igual, pero resalta la barra {@code highlight} (p. ej. hoy) en vez de la última. */
+        void set(float[] values, int highlight) { this.values = values; this.highlight = highlight; invalidate(); }
         @Override protected void onDraw(Canvas canvas) {
             if (values.length == 0) return;
             float max = 0.0001f; for (float v : values) max = Math.max(max, v);
@@ -54,7 +57,8 @@ final class VidaWidgets {
             for (int i = 0; i < values.length; i++) {
                 float h = Math.max(getHeight() * 0.12f, getHeight() * values[i] / max);
                 float x = i * (w + gap);
-                bar.setAlpha(i == values.length - 1 ? 255 : 150);
+                bar.setColor(i == (highlight < 0 ? values.length - 1 : highlight) ? VidaUi.CYAN : VidaUi.BLUE);
+                bar.setAlpha(i == (highlight < 0 ? values.length - 1 : highlight) ? 255 : 160);
                 canvas.drawRoundRect(new RectF(x, getHeight() - h, x + w, getHeight()), r, r, bar);
             }
         }

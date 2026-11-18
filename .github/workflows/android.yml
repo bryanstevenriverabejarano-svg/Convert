@@ -110,6 +110,18 @@ jobs:
             exit 1
           fi
 
+      # Capturas renderizadas de la pantalla «Hoy» de Vida (VidaActivityTest, Robolectric):
+      # se suben siempre para comparar con la referencia de diseño.
+      - name: Upload Vida screenshots
+        if: ${{ always() && matrix.variant == 'debug' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vida-shots-${{ github.sha }}
+          path: app/build/vida-shots/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Compile opt-in real device inference tests
         if: matrix.variant == 'debug'
         run: >-

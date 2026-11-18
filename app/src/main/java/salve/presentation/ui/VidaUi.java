@@ -16,9 +16,12 @@ import java.util.Locale;
 
 /** Piezas de interfaz compartidas por las pantallas de Vida (tema oscuro, tarjetas, botones). */
 final class VidaUi {
-    static final int BG = Color.BLACK, CARD = Color.rgb(8, 14, 28), CARD_2 = Color.rgb(14, 24, 46),
-            BLUE = Color.rgb(30, 144, 255), MUTED = Color.rgb(150, 168, 200), LIGHT = Color.rgb(220, 230, 248),
-            STROKE = Color.rgb(28, 96, 190), NEON = Color.rgb(41, 160, 255), NIGHT_TOP = Color.rgb(4, 10, 26),
+    // Paleta de la especificación de Vida: fondo #030712, superficies #071326/#0A1930,
+    // primario #168BFF y cian #00C8FF; texto blanco y gris azulado.
+    static final int BG = Color.rgb(3, 7, 18), CARD = Color.rgb(7, 19, 38), CARD_2 = Color.rgb(10, 25, 48),
+            BLUE = Color.rgb(22, 139, 255), MUTED = Color.rgb(143, 163, 196), LIGHT = Color.rgb(214, 226, 245),
+            STROKE = Color.rgb(24, 84, 170), NEON = Color.rgb(22, 139, 255), CYAN = Color.rgb(0, 200, 255),
+            NIGHT_TOP = Color.rgb(6, 16, 38),
             GREEN = Color.rgb(67, 160, 71), AMBER = Color.rgb(255, 179, 0), RED = Color.rgb(229, 57, 53),
             DONE_ROW = Color.rgb(27, 94, 32);
 
@@ -57,9 +60,9 @@ final class VidaUi {
         GradientDrawable halo = new GradientDrawable();
         halo.setCornerRadius(r + dp(a, 2));
         halo.setColor(Color.TRANSPARENT);
-        halo.setStroke(dp(a, strong ? 5 : 3), Color.argb(strong ? 90 : 45, 30, 144, 255));
+        halo.setStroke(dp(a, strong ? 5 : 3), Color.argb(strong ? 90 : 40, 22, 139, 255));
         GradientDrawable body = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                strong ? new int[]{Color.rgb(10, 40, 92), Color.rgb(4, 16, 40)} : new int[]{Color.rgb(9, 17, 34), Color.rgb(2, 5, 12)});
+                strong ? new int[]{Color.rgb(10, 40, 92), Color.rgb(7, 19, 38)} : new int[]{CARD_2, CARD});
         body.setCornerRadius(r);
         body.setStroke(Math.max(2, dp(a, strong ? 2 : 1)), strong ? NEON : STROKE);
         android.graphics.drawable.LayerDrawable layers = new android.graphics.drawable.LayerDrawable(
@@ -72,7 +75,7 @@ final class VidaUi {
     /** Botón principal: degradado azul con borde brillante. */
     static android.graphics.drawable.Drawable neonButton(Activity a) {
         GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{Color.rgb(18, 98, 230), Color.rgb(36, 150, 255), Color.rgb(18, 98, 230)});
+                new int[]{Color.rgb(16, 104, 230), BLUE, CYAN});
         g.setCornerRadius(dp(a, 14));
         g.setStroke(Math.max(2, dp(a, 1)), Color.rgb(140, 205, 255));
         return g;
@@ -80,7 +83,7 @@ final class VidaUi {
 
     /** Fondo de pantalla: noche azul arriba que funde a negro. */
     static GradientDrawable night() {
-        return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{NIGHT_TOP, Color.BLACK, Color.BLACK});
+        return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{NIGHT_TOP, BG, BG});
     }
 
     /** Icono (emoji) dentro de un círculo. */

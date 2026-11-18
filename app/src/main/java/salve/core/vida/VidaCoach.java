@@ -218,6 +218,184 @@ public final class VidaCoach {
         return out.toString().trim();
     }
 
+    // ---------------------------------------------------------------- plan del día
+
+    /** Una actividad propuesta para hoy, con su motivo (para «Explicación del plan»). */
+    public static final class PlanItem {
+        public final String title, reason, kind; public final int minutes;
+        PlanItem(String title, int minutes, String kind, String reason) { this.title = title; this.minutes = minutes; this.kind = kind; this.reason = reason; }
+    }
+
+    /**
+     * Plan realista para {@code day} a partir de datos registrados: el siguiente paso del proyecto
+     * activo (o la tarea principal), los hábitos que van por detrás de su meta semanal y el sueño.
+     * Como mucho 4 actividades; se adapta solo porque lee lo que ya cumpliste esta semana.
+     */
+    public static List<PlanItem> dayPlan(VidaLog log, LocalDate day) {
+        List<PlanItem> out = new ArrayList<>();
+        VidaLog.Focus f = focusOn(log, day);
+        int daysLeft = 8 - day.getDayOfWeek().getValue(); // contando hoy
+        if (f != null && !f.done) out.add(new PlanItem(f.text, 90, "proyecto", "Es tu tarea más importante de hoy: terminarla gana el día."));
+        else if (f == null) {
+            for (VidaLog.Project j : log.projects) {
+                if (!ACTIVE.equals(j.status)) continue;
+                VidaLog.Project.Step s = nextStep(j);
+                if (s == null) continue;
+                int[] p = progress(j);
+                String due = "";
+                for (VidaLog.Goal g : log.goals)
+                    if (!g.done && !g.due.isEmpty() && overlapWords(g.title, j.title)) {
+                        long d = java.time.temporal.ChronoUnit.DAYS.between(day, LocalDate.parse(g.due));
+                        due = d >= 0 ? " y su objetivo vence en " + d + " días" : " y su objetivo ya venció";
+                    }
+                out.add(new PlanItem(s.text, 90, "proyecto", "Es el siguiente paso de «" + j.title + "» (" + p[0] + "/" + p[1] + " pasos)" + due + "."));
+                break;
+            }
+        }
+        for (VidaLog.Habit h : log.habits) {
+            if (out.size() >= 4) break;
+            if (h.id.equals("sueno") || h.id.equals("revision") && day.getDayOfWeek() != DayOfWeek.SUNDAY) continue;
+            if (VidaPlanner.checked(log, h.id, day)) continue;
+            int done = VidaPlanner.doneThisWeek(log, h.id, day), missing = h.perWeek - done;
+            if (missing <= 0) continue;
+            // Solo si va por detrás: lo que falta no cabe en los días que quedan sin hacerlo hoy.
+            boolean behind = missing >= daysLeft || h.perWeek >= 4 || missing == 1 && daysLeft <= 3;
+            if (!behind) continue;
+            int minutes = h.id.equals("gym") ? 60 : h.id.equals("mates") ? 60 : h.id.equals("proyecto") ? 120 : h.id.equals("revision") ? 20 : 45;
+            String title = h.id.equals("gym") ? "Entrenamiento (Gym)" : h.name;
+            out.add(new PlanItem(title, minutes, h.id.equals("gym") ? "gym" : h.id.equals("mates") ? "estudio" : "habito",
+                    "Llevas " + done + " de " + h.perWeek + " esta semana y quedan " + daysLeft + (daysLeft == 1 ? " día." : " días.")));
+        }
+        int avg = VidaPlanner.averageMinutes(VidaPlanner.lastNights(log, 7));
+        if (out.size() < 4 && avg > 0 && avg < 7 * 60)
+            out.add(new PlanItem("Preparar el sueño (pantallas fuera)", 15, "descanso",
+                    "Tu media de sueño es " + VidaConversation.hours(avg) + "; dormir 7 h mejora el resto del plan."));
+        return out;
+    }
+
+    /** Texto breve del plan para la tarjeta «Salve te recomienda». */
+    public static String planSummary(List<PlanItem> plan) {
+        if (plan.isEmpty()) return "Vas al día con tus metas de esta semana. Elige una tarea principal o adelanta un paso de tu proyecto.";
+        StringBuilder out = new StringBuilder("Hoy puedes avanzar en «").append(plan.get(0).title).append("»");
+        boolean study = false, gym = false;
+        for (PlanItem p : plan) { if (p.kind.equals("estudio")) study = true; if (p.kind.equals("gym")) gym = true; }
+        if (study && gym) out.append(", mantener tu rutina de estudio y entrenar");
+        else if (study) out.append(" y mantener tu rutina de estudio");
+        else if (gym) out.append(" y entrenar");
+        return out.append(". He creado un plan equilibrado según lo que llevas esta semana.").toString();
+    }
+
+    /** Explicación paso a paso (sin modelo): cada actividad con su motivo. */
+    public static String planReasons(List<PlanItem> plan) {
+        StringBuilder out = new StringBuilder();
+        for (PlanItem p : plan) out.append("• ").append(p.title).append(" (≈ ").append(duration(p.minutes)).append("): ").append(p.reason).append('\n');
+        return out.toString().trim();
+    }
+
+    /**
+     * Aplica el plan: fija la primera actividad como tarea principal (si no hay) y añade a la agenda
+     * de ese día de la semana las que aún no tienen bloque, en huecos libres entre 08:00 y 23:00
+     * (el gym prefiere la tarde). No mueve ni borra nada de lo que ya tenías.
+     */
+    public static VidaLog applyPlan(VidaLog log, LocalDate day, List<PlanItem> plan) {
+        VidaLog out = log;
+        if (focusOn(out, day) == null && !plan.isEmpty()) out = setFocus(out, day, plan.get(0).title);
+        int dow = day.getDayOfWeek().getValue();
+        List<int[]> busy = new ArrayList<>();
+        for (VidaLog.Block b : out.blocks) if (b.day == dow) { int s0 = VidaPlanner.minutes(b.time); busy.add(new int[]{s0, s0 + b.minutes}); }
+        List<VidaLog.Block> next = new ArrayList<>(out.blocks);
+        for (PlanItem p : plan) {
+            boolean exists = false;
+            for (VidaLog.Block b : out.blocks)
+                if (b.day == dow && (VidaConversation.normalize(b.title).equals(VidaConversation.normalize(p.title))
+                        || p.kind.equals("gym") && VidaPlanner.kind(b.title) == VidaPlanner.Kind.GYM)) exists = true;
+            if (exists) continue;
+            int start = freeSlot(busy, p.minutes, p.kind.equals("gym") ? 17 * 60 : p.kind.equals("descanso") ? 22 * 60 + 30 : 8 * 60);
+            if (start < 0) start = freeSlot(busy, p.minutes, 8 * 60);
+            if (start < 0) continue;
+            busy.add(new int[]{start, start + p.minutes});
+            next.add(new VidaLog.Block(p.title, dow, VidaPlanner.hm(start), p.minutes));
+        }
+        return out.withBlocks(next);
+    }
+
+    /** Primer hueco de {@code minutes} a partir de {@code from} (en tramos de 15 min) antes de las 23:30. */
+    static int freeSlot(List<int[]> busy, int minutes, int from) {
+        for (int t = from; t + minutes <= 23 * 60 + 30; t += 15) {
+            boolean clash = false;
+            for (int[] b : busy) if (t < b[1] && b[0] < t + minutes) { clash = true; break; }
+            if (!clash) return t;
+        }
+        return -1;
+    }
+
+    public static String duration(int minutes) {
+        if (minutes < 60) return minutes + " min";
+        return minutes / 60 + " h" + (minutes % 60 == 0 ? "" : " " + minutes % 60 + " min");
+    }
+
+    private static boolean overlapWords(String a, String b) {
+        String na = VidaConversation.normalize(a), nb = VidaConversation.normalize(b).replaceAll("[^a-z0-9 ]", " ");
+        for (String w : nb.split("\\s+")) if (w.length() > 4 && na.contains(w)) return true;
+        return false;
+    }
+
+    /** Puntos de un día (hábitos cumplidos + bloques hechos + tarea principal), para la gráfica diaria. */
+    public static int dayScore(VidaLog log, LocalDate day) {
+        int n = 0;
+        for (VidaLog.Habit h : log.habits) if (VidaPlanner.checked(log, h.id, day)) n++;
+        for (VidaLog.Block b : log.blocks) if (b.day == day.getDayOfWeek().getValue() && VidaPlanner.blockDone(log, b, day)) n++;
+        VidaLog.Focus f = focusOn(log, day);
+        if (f != null && f.done) n++;
+        return n;
+    }
+
+    /** Cambio porcentual de una medida entre la semana anterior y esta (null si no hay base). */
+    public static Integer change(double before, double now) {
+        if (before <= 0) return now > 0 ? null : 0;
+        return (int) Math.round((now - before) * 100 / before);
+    }
+
+    /** Proyecto activo cuyo siguiente paso es {@code text} (la tarea principal sale de ahí), o null. */
+    public static VidaLog.Project projectOf(VidaLog log, String text) {
+        if (text == null) return null;
+        for (VidaLog.Project j : log.projects) {
+            VidaLog.Project.Step s = nextStep(j);
+            if (s != null && s.text.equals(text)) return j;
+        }
+        return null;
+    }
+
+    /**
+     * Marca o desmarca la tarea principal. Si era el siguiente paso de un proyecto, al completarla
+     * también se marca ese paso, así el progreso del proyecto avanza solo.
+     */
+    public static VidaLog completeFocus(VidaLog log, LocalDate day) {
+        VidaLog.Focus f = focusOn(log, day);
+        if (f == null) return log;
+        VidaLog.Project j = f.done ? null : projectOf(log, f.text);
+        VidaLog out = toggleFocus(log, day);
+        if (j != null) out = toggleStep(out, j.id, j.steps.indexOf(nextStep(j)));
+        return out;
+    }
+
+    /**
+     * Medidas de la semana de {@code day} hasta ese mismo día de la semana (para comparar semanas
+     * de forma justa): {hábitos marcados, entrenos, media de sueño en minutos, días ganados}.
+     */
+    public static int[] weekStats(VidaLog log, LocalDate day) {
+        LocalDate mon = monday(day);
+        int habits = 0, gym = 0, wins = 0, sleepSum = 0, nights = 0;
+        for (LocalDate d = mon; !d.isAfter(day); d = d.plusDays(1)) {
+            for (VidaLog.Habit h : log.habits) if (!h.id.equals("gym") && VidaPlanner.checked(log, h.id, d)) habits++;
+            if (VidaPlanner.checked(log, "gym", d)) gym++;
+            VidaLog.Focus f = focusOn(log, d);
+            if (f != null && f.done) wins++;
+            for (VidaLog.SleepEntry e : log.sleep) if (e.date.equals(d.toString())) { sleepSum += e.minutes; nights++; }
+        }
+        return new int[]{habits, gym, nights == 0 ? 0 : sleepSum / nights, wins};
+    }
+
     // ---------------------------------------------------------------- avisos
 
     public static final class Reminder {
