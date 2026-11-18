@@ -251,6 +251,9 @@ final class PhoneActionsDesk {
             case FINANCES:
                 openInternalPanel(salve.presentation.ui.BusinessFinanceActivity.class, "Finanzas");
                 return true;
+            case GYM:
+                openInternalPanel(salve.presentation.ui.GymActivity.class, "tu gym");
+                return true;
             case DEVICES:
                 openInternalPanel(salve.presentation.ui.DeviceControlActivity.class, "Mi móvil");
                 return true;

@@ -45,13 +45,13 @@ public final class VidaConversation {
     private static final String[] DAYS = {"lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"};
     private static final String[] HOUR_WORDS = {"una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce"};
 
-    static final String HELP_TEXT = "Módulo Vida: lo guardo solo en este móvil.\n"
+    static final String HELP_TEXT = "Módulo Vida: lo guardo en este móvil y, si tienes pCloud conectado, una copia en Salve/vida/vida.tsv.\n"
             + "• Gym: «curl predicador, 15 kilos, 8 reps» o compárteme el CSV que exporta Hevy.\n"
             + "• Sueño: «me acosté a la una y me levanté a las ocho».\n"
             + "• Comidas: «he comido lentejas con arroz».\n"
             + "• Horario: «añade al horario gym los lunes, martes y jueves a las 19:00 durante 60 minutos».\n"
             + "• Consultas: «qué tengo hoy», «mi horario», «resumen semanal», «historial de curl predicador».\n"
-            + "• «deshaz la última anotación» o «borra mis datos de vida».";
+            + "• «deshaz la última anotación», «recupera mis datos de vida» o «borra mis datos de vida».";
 
     public static final class Response {
         public final String reply;
@@ -263,7 +263,7 @@ public final class VidaConversation {
         int plannedGym = 0;
         for (VidaLog.Block b : log.blocks) if (normalize(b.title).contains("gym") || normalize(b.title).contains("entreno")) plannedGym++;
         StringBuilder out = new StringBuilder("Últimos 7 días:\n");
-        out.append("• Gym: ").append(gymDays.size()).append(" días");
+        out.append("• Gym: ").append(gymDays.size()).append(gymDays.size() == 1 ? " día" : " días");
         if (plannedGym > 0) out.append(" de ").append(plannedGym).append(" planificados");
         out.append(", ").append(sets).append(" series, ").append(fmt(volume)).append(" kg de volumen.\n");
         out.append("• Sueño: ").append(sleepDays == 0 ? "sin registros" : "media de " + hours(sleepTotal / sleepDays) + " (" + sleepDays + " noches)").append(".\n");

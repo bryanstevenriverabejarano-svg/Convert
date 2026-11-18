@@ -31,6 +31,23 @@ public class HevyCsvImporterTest {
         assertEquals("2026-09-01", r.sets.get(4).date);
     }
 
+    @Test public void spanishExportMonthsAndRepeatedSetIndex() {
+        String csv = "\"title\",\"start_time\",\"exercise_title\",\"set_index\",\"set_type\",\"weight_kg\",\"reps\"\n"
+                + "\"Pull\",\"17 sep 2026, 06:47\",\"Curl Martillo (Mancuerna)\",0,\"normal\",12,8\n"
+                + "\"Pull\",\"17 sep 2026, 06:47\",\"Curl Martillo (Mancuerna)\",0,\"normal\",10,8\n"
+                + "\"Push\",\"27 ago 2026, 18:44\",\"Press de Banca (Barra)\",0,\"normal\",50,10\n"
+                + "\"Push\",\"6 dic 2025, 14:52\",\"Press de Banca (Barra)\",0,\"normal\",60,8\n"
+                + "\"Push\",\"10 ene 2026, 18:11\",\"Press de Banca (Barra)\",0,\"normal\",60,7\n";
+        HevyCsvImporter.Result r = HevyCsvImporter.parse(csv);
+        assertEquals(0, r.skipped);
+        assertEquals(5, r.sets.size());
+        assertEquals("2026-09-17", r.sets.get(0).date);
+        assertFalse("la segunda aparición no se pierde", r.sets.get(0).key.equals(r.sets.get(1).key));
+        assertEquals("2026-08-27", r.sets.get(2).date);
+        assertEquals("2025-12-06", r.sets.get(3).date);
+        assertEquals("2026-01-10", r.sets.get(4).date);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void rejectsOtherCsv() { HevyCsvImporter.parse("fecha,importe\n2026-01-01,10\n"); }
 
