@@ -397,8 +397,6 @@ public class MotorConversacional {
         this.autonomousTools = AutonomousToolRuntime.get(context);
         this.personalBudget = new salve.core.finance.PersonalBudgetService(new java.io.File(context.getNoBackupFilesDir(), "finance/personal-budget.json"));
         this.vida = salve.core.vida.VidaRuntime.get(context);
-                    }
-                });
         this.voiceProfiles = new VoiceProfileStore(context);
         this.voiceProfile = voiceProfiles.load();
         this.avatarDesignTool = new salve.avatar.AvatarDesignTool(context.getApplicationContext());
