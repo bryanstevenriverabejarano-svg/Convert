@@ -123,6 +123,8 @@
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
+                <!-- CSV exportado de Hevy → módulo Vida -->
+                <data android:mimeType="application/csv" />
                 <data android:mimeType="image/*" />
                 <data android:mimeType="text/*" />
             </intent-filter>

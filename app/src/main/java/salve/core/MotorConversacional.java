@@ -313,6 +313,8 @@ public class MotorConversacional {
             new salve.core.research.ResearchConversation();
     private final DeviceClockContext deviceClock = new DeviceClockContext();
     private final salve.core.finance.PersonalBudgetService personalBudget;
+    /** Módulo Vida: gym (Hevy), sueño, comidas y horario; solo en este móvil. */
+    private final salve.core.vida.VidaService vida;
     final GoalAutonomyRuntime goalAutonomy;
     private volatile MindRuntime mindRuntime;
     /** Permiso explícito de Bryan para enviar la foto activa a Gemini una sola vez. */
@@ -394,6 +396,7 @@ public class MotorConversacional {
         this.goalAutonomy = GoalAutonomyRuntime.get(context);
         this.autonomousTools = AutonomousToolRuntime.get(context);
         this.personalBudget = new salve.core.finance.PersonalBudgetService(new java.io.File(context.getNoBackupFilesDir(), "finance/personal-budget.json"));
+        this.vida = new salve.core.vida.VidaService(new java.io.File(context.getNoBackupFilesDir(), "vida/vida.tsv"));
         this.voiceProfiles = new VoiceProfileStore(context);
         this.voiceProfile = voiceProfiles.load();
         this.avatarDesignTool = new salve.avatar.AvatarDesignTool(context.getApplicationContext());
@@ -618,6 +621,12 @@ public class MotorConversacional {
     /** Checked before UI cloud logging and again before model history or generic memory. */
     public boolean isPrivateBudgetInput(String input) { return personalBudget.handles(input); }
 
+    /** Anotaciones y consultas del módulo Vida: locales, fuera del historial del modelo y de la nube. */
+    public boolean isVidaInput(String input) { return vida.handles(input); }
+
+    /** Importa un CSV exportado de Hevy. Llamar fuera del hilo de la pantalla. */
+    public String importarHevyCsv(String csv) { return vida.importHevy(csv); }
+
     public static boolean isSensorInput(String input) { return salve.core.sensors.SensorCommand.parse(input) != null; }
 
     public synchronized void setConversationForeground(boolean visible) {
@@ -756,6 +765,12 @@ public class MotorConversacional {
             String response = personalBudget.respond(entrada);
             AvatarMotionProtocol.Result motion = AvatarMotionProtocol.parse(response);
             deliverResponse(motion.text, motion, false, true, true);
+            return;
+        }
+        if (vida.handles(entrada)) {
+            // Los datos de Vida son evidencia local: ni directivas del avatar ni recuerdos genéricos.
+            String response = vida.respond(entrada);
+            deliverResponse(response, AvatarMotionProtocol.parse(""), false, true, true);
             return;
         }
         String identityResponse = mesaIdentidad.comandoIdentidad(entrada);

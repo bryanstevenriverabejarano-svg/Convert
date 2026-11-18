@@ -783,6 +783,12 @@ public class MainActivity extends AppCompatActivity {
             inputChat.setText("");
             return;
         }
+        if (motorConversacional.isVidaInput(limpio)) {
+            // Gym, sueño, comidas y horario se quedan en el móvil: sin evento en la nube.
+            motorConversacional.procesarEntrada(limpio, porVoz);
+            inputChat.setText("");
+            return;
+        }
         if (handleModuloTemporal(limpio)) {
             guardarEventoNube(porVoz ? "voice_message_modulo_temporal" : "user_message_modulo_temporal",
                     limpio, null);
@@ -1310,6 +1316,10 @@ public class MainActivity extends AppCompatActivity {
 
             Log.d("Salve/Share", "Procesando uri=" + uri + " mime=" + mime);
 
+            if (esCsv(uri, mime)) {
+                importarCsvHevy(uri);
+                return;
+            }
             if (mime.startsWith("application/pdf") || mime.startsWith("text/")) {
                 // Antes lo leía en voz alta y lo guardaba siempre (también un examen). Ahora Bryan elige.
                 prepararLectura(uri, mime);
@@ -1332,6 +1342,32 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Fallo al procesar: " + e.getMessage(), Toast.LENGTH_LONG).show();
             Log.e("Salve/Share", "procesarArchivoCompartido error", e);
         }
+    }
+
+    private boolean esCsv(Uri uri, String mime) {
+        String m = mime == null ? "" : mime.toLowerCase(java.util.Locale.ROOT);
+        return m.contains("csv") || m.equals("text/comma-separated-values")
+                || nombreDeArchivo(uri).toLowerCase(java.util.Locale.ROOT).endsWith(".csv");
+    }
+
+    /** CSV de Hevy → módulo Vida. Se lee y guarda fuera del hilo de la pantalla. */
+    private void importarCsvHevy(Uri uri) {
+        Toast.makeText(this, "Importando entrenamientos de Hevy…", Toast.LENGTH_SHORT).show();
+        inferenceChecks.execute(() -> {
+            String resultado;
+            try {
+                String csv = leerTextoPlano(uri);
+                resultado = csv == null ? "No pude leer el CSV." : motorConversacional.importarHevyCsv(csv);
+            } catch (Exception e) {
+                Log.e("Salve/Vida", "Importación de Hevy fallida", e);
+                resultado = "No pude importar el CSV de Hevy; tu registro anterior se conserva.";
+            }
+            final String texto = resultado;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                Toast.makeText(this, texto, Toast.LENGTH_LONG).show();
+            });
+        });
     }
 
     /** Saca el texto (fuera del hilo de la pantalla) y pregunta qué hacer con él. */
