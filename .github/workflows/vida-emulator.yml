@@ -74,3 +74,22 @@ jobs:
           path: build/vida-emulator/
           if-no-files-found: warn
           retention-days: 14
+
+      # Copia reducida de cada captura en el registro del trabajo (base64 entre marcadores), para
+      # poder revisarlas también sin descargar artefactos.
+      - name: Print reduced screenshots to the log
+        if: always()
+        run: |
+          python3 -m pip install --quiet 'Pillow==11.3.0'
+          python3 - <<'PY'
+          import base64, glob, io
+          from PIL import Image
+          for f in sorted(glob.glob("build/vida-emulator/*.png")):
+              im = Image.open(f).convert("RGB")
+              im = im.resize((540, round(im.height * 540 / im.width)))
+              buf = io.BytesIO(); im.save(buf, "JPEG", quality=82)
+              print("VIDA-SHOT-BEGIN " + f.split("/")[-1])
+              data = base64.b64encode(buf.getvalue()).decode()
+              for i in range(0, len(data), 4000): print("VIDA-B64 " + data[i:i+4000])
+              print("VIDA-SHOT-END")
+          PY
