@@ -16,8 +16,9 @@ import java.util.Locale;
 
 /** Piezas de interfaz compartidas por las pantallas de Vida (tema oscuro, tarjetas, botones). */
 final class VidaUi {
-    static final int BG = Color.BLACK, CARD = Color.rgb(28, 28, 30), CARD_2 = Color.rgb(44, 44, 46),
-            BLUE = Color.rgb(30, 136, 229), MUTED = Color.rgb(158, 158, 158), LIGHT = Color.rgb(210, 210, 210),
+    static final int BG = Color.rgb(6, 10, 22), CARD = Color.rgb(17, 27, 49), CARD_2 = Color.rgb(26, 40, 70),
+            BLUE = Color.rgb(33, 150, 243), MUTED = Color.rgb(143, 163, 199), LIGHT = Color.rgb(214, 224, 242),
+            STROKE = Color.rgb(42, 63, 107), NIGHT_TOP = Color.rgb(12, 24, 52),
             GREEN = Color.rgb(67, 160, 71), AMBER = Color.rgb(255, 179, 0), RED = Color.rgb(229, 57, 53),
             DONE_ROW = Color.rgb(27, 94, 32);
 
@@ -32,16 +33,38 @@ final class VidaUi {
 
     static LinearLayout page(Activity a) {
         LinearLayout root = column(a);
-        int p = dp(a, 16); root.setPadding(p, dp(a, 12), p, dp(a, 96)); root.setBackgroundColor(BG);
+        int p = dp(a, 16); root.setPadding(p, dp(a, 12), p, dp(a, 96));
         return root;
     }
 
     static LinearLayout card(Activity a, LinearLayout parent) {
         LinearLayout card = column(a);
         int p = dp(a, 14); card.setPadding(p, p, p, p);
-        card.setBackground(rounded(a, CARD, 14));
+        card.setBackground(glass(a));
         parent.addView(card, wide(a, 10));
         return card;
+    }
+
+    /** Fondo de tarjeta: degradado azul noche con borde fino luminoso. */
+    static GradientDrawable glass(Activity a) {
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{Color.rgb(22, 35, 63), Color.rgb(11, 18, 34)});
+        bg.setCornerRadius(dp(a, 18));
+        bg.setStroke(Math.max(1, dp(a, 1)), STROKE);
+        return bg;
+    }
+
+    /** Fondo de pantalla: noche azul arriba que funde a negro. */
+    static GradientDrawable night() {
+        return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{NIGHT_TOP, BG, Color.BLACK});
+    }
+
+    /** Icono (emoji) dentro de un círculo. */
+    static TextView icon(Activity a, String emoji, int sizeDp) {
+        TextView t = new TextView(a); t.setText(emoji); t.setTextSize(sizeDp * 0.45f); t.setGravity(Gravity.CENTER);
+        GradientDrawable c = new GradientDrawable(); c.setShape(GradientDrawable.OVAL); c.setColor(CARD_2); c.setStroke(Math.max(1, dp(a, 1)), STROKE);
+        t.setBackground(c);
+        t.setLayoutParams(new LinearLayout.LayoutParams(dp(a, sizeDp), dp(a, sizeDp)));
+        return t;
     }
 
     static GradientDrawable rounded(Activity a, int color, int radiusDp) {

@@ -54,8 +54,8 @@ import salve.core.vida.VidaService;
  * resumen al terminar. Los datos son los del módulo Vida (mismo archivo, misma copia en pCloud).
  */
 public final class GymActivity extends Activity {
-    private static final int BG = Color.BLACK, CARD = Color.rgb(28, 28, 30), ROW_ALT = Color.rgb(36, 36, 38),
-            BLUE = Color.rgb(30, 136, 229), MUTED = Color.rgb(158, 158, 158), DONE = Color.rgb(27, 94, 32);
+    private static final int BG = Color.rgb(6, 10, 22), CARD = Color.rgb(17, 27, 49), ROW_ALT = Color.rgb(22, 35, 60),
+            BLUE = Color.rgb(33, 150, 243), MUTED = Color.rgb(143, 163, 199), DONE = Color.rgb(27, 94, 32);
     private static final int[] RESTS = {0, 60, 90, 120, 150, 180, 240};
     private static final int PICK_CSV = 41;
 
@@ -733,8 +733,7 @@ public final class GymActivity extends Activity {
     private LinearLayout card(LinearLayout parent) {
         LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
         int p = dp(12); card.setPadding(p, p, p, p);
-        GradientDrawable bg = new GradientDrawable(); bg.setColor(CARD); bg.setCornerRadius(dp(12));
-        card.setBackground(bg);
+        card.setBackground(VidaUi.glass(this));
         parent.addView(card, wide(10));
         return card;
     }

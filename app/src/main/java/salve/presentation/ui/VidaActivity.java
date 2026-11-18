@@ -61,11 +61,14 @@ public final class VidaActivity extends Activity {
         setTitle("Vida");
         vida = VidaRuntime.get(this);
         if (state != null) tab = state.getString("tab", tab);
-        LinearLayout root = column(this); root.setBackgroundColor(BG);
-        LinearLayout head = column(this);
-        head.setPadding(dp(this, 16), dp(this, 28), dp(this, 16), dp(this, 4));
-        text(this, head, "Vida", 30, Color.WHITE, true);
-        text(this, head, LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", new Locale("es"))), 15, MUTED, false);
+        LinearLayout root = column(this); root.setBackground(night());
+        LinearLayout head = row(this);
+        head.setPadding(dp(this, 16), dp(this, 30), dp(this, 16), dp(this, 6));
+        head.addView(icon(this, "💙", 48));
+        LinearLayout titles = column(this); titles.setPadding(dp(this, 12), 0, 0, 0);
+        text(this, titles, "Vida", 30, Color.WHITE, true);
+        text(this, titles, "Tu organización, bienestar y progreso.", 14, MUTED, false);
+        head.addView(titles, new LinearLayout.LayoutParams(0, -2, 1));
         root.addView(head);
         HorizontalScrollView bar = new HorizontalScrollView(this); bar.setHorizontalScrollBarEnabled(false);
         tabs = row(this); tabs.setPadding(dp(this, 12), dp(this, 6), dp(this, 12), dp(this, 6));
@@ -105,8 +108,20 @@ public final class VidaActivity extends Activity {
 
     private void paintTabs() {
         tabs.removeAllViews();
-        for (String t : TABS) {
-            TextView c = chip(this, t, t.equals(tab));
+        String[] icons = {"🏠", "🏋", "📅", "🗂", "🍽", "🌙", "🎯", "📊"};
+        for (int i = 0; i < TABS.length; i++) {
+            String t = TABS[i];
+            boolean sel = t.equals(tab);
+            LinearLayout c = column(this);
+            c.setGravity(Gravity.CENTER);
+            c.setPadding(dp(this, 14), dp(this, 8), dp(this, 14), dp(this, 8));
+            if (sel) {
+                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Color.rgb(41, 121, 255), Color.rgb(21, 80, 200)});
+                bg.setCornerRadius(dp(this, 16)); c.setBackground(bg);
+            } else c.setBackground(glass(this));
+            TextView ic = text(this, c, icons[i], 18, Color.WHITE, false); ic.setGravity(Gravity.CENTER);
+            TextView lb = text(this, c, t, 13, sel ? Color.WHITE : LIGHT, sel); lb.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
             lp.setMargins(dp(this, 4), 0, dp(this, 4), 0);
             c.setOnClickListener(v -> {
@@ -132,129 +147,336 @@ public final class VidaActivity extends Activity {
 
     // ================================================================ Hoy
 
+    private LocalDate viewDate = LocalDate.now();
+
+    private static final String[] QUOTES = {
+            "Disciplina hoy, libertad mañana.", "Termina una cosa. Luego la siguiente.", "No hace falta motivación, hace falta el primer paso.",
+            "Lo que repites cada día es lo que te convierte.", "Hecho es mejor que perfecto.", "Tu yo futuro te está mirando.",
+            "Un día ganado cada vez.", "La constancia gana al talento que no se presenta."};
+
     private void today() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = viewDate;
+        boolean isToday = today.equals(LocalDate.now());
         int dow = today.getDayOfWeek().getValue();
 
-        section(this, content, "Lo más importante hoy");
-        LinearLayout focus = card(this, content);
+        // Fecha con flechas y frase del día
+        LinearLayout nav = row(this);
+        nav.setBackground(glass(this)); nav.setPadding(dp(this, 6), dp(this, 2), dp(this, 6), dp(this, 2));
+        nav.addView(link(this, "‹", v -> { viewDate = viewDate.minusDays(1); render(); }));
+        TextView date = text(this, null, "📅  " + VidaPlanner.cap(today.format(DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", new Locale("es")))) + (isToday ? "" : "  ·  volver a hoy"), 16, Color.WHITE, false);
+        date.setGravity(Gravity.CENTER);
+        date.setOnClickListener(v -> { viewDate = LocalDate.now(); render(); });
+        nav.addView(date, new LinearLayout.LayoutParams(0, -2, 1));
+        nav.addView(link(this, "›", v -> { viewDate = viewDate.plusDays(1); render(); }));
+        content.addView(nav, wide(this, 2));
+        TextView quote = text(this, content, "“" + QUOTES[(int) (today.toEpochDay() % QUOTES.length)] + "”", 15, LIGHT, false);
+        quote.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.ITALIC));
+        quote.setPadding(dp(this, 10), dp(this, 8), 0, dp(this, 2));
+
+        // Datos del día
+        List<VidaLog.Block> blocks = new ArrayList<>();
+        for (VidaLog.Block b : log.blocks) if (b.day == dow) blocks.add(b);
+        blocks.sort(Comparator.comparing(b -> b.time));
+        List<VidaLog.Block> agenda = new ArrayList<>();
+        for (VidaLog.Block b : blocks) if (VidaPlanner.kind(b.title) != VidaPlanner.Kind.DESCANSO || b.title.toLowerCase(Locale.ROOT).contains("desconectar")) agenda.add(b);
+        int blocksDone = 0; for (VidaLog.Block b : agenda) if (VidaPlanner.blockDone(log, b, today)) blocksDone++;
         VidaLog.Focus f = VidaCoach.focusOn(log, today);
+        int dailyHabits = 0, dailyDone = 0;
+        for (VidaLog.Habit h : log.habits) { dailyHabits++; if (VidaPlanner.checked(log, h.id, today)) dailyDone++; }
+        int tasks = agenda.size() + dailyHabits + (f == null ? 0 : 1);
+        int tasksDone = blocksDone + dailyDone + (f != null && f.done ? 1 : 0);
+        List<VidaLog.Meal> eaten = VidaPlanner.mealsOn(log, today);
+        int planned = 0; for (String k : VidaPlanner.MEAL_KINDS) if (VidaPlanner.planned(log, dow, k) != null) planned++;
+        int mealsGoal = Math.max(3, planned);
+        VidaLog.SleepEntry night = null; for (VidaLog.SleepEntry e : log.sleep) if (e.date.equals(today.toString())) night = e;
+        boolean gymToday = false; for (VidaLog.GymSet s : log.sets) if (s.date.equals(today.toString())) { gymToday = true; break; }
+        boolean gymPlanned = false; for (VidaLog.Block b : blocks) if (VidaPlanner.kind(b.title) == VidaPlanner.Kind.GYM) gymPlanned = true;
+
+        // Fila: progreso diario | resumen
+        LinearLayout top = row(this); top.setGravity(Gravity.TOP);
+        LinearLayout progress = tile();
+        LinearLayout pr = row(this);
+        VidaWidgets.Ring ring = new VidaWidgets.Ring(this, BLUE);
+        int pct = tasks == 0 ? 0 : Math.round(100f * tasksDone / tasks);
+        ring.set(tasks == 0 ? 0 : (float) tasksDone / tasks, pct + "%");
+        pr.addView(ring, new LinearLayout.LayoutParams(dp(this, 74), dp(this, 74)));
+        LinearLayout pt = column(this); pt.setPadding(dp(this, 10), 0, 0, 0);
+        text(this, pt, "Progreso diario", 16, Color.WHITE, true);
+        text(this, pt, tasksDone + " de " + tasks + " tareas", 13, MUTED, false);
+        pr.addView(pt, new LinearLayout.LayoutParams(0, -2, 1));
+        progress.addView(pr);
+        LinearLayout summary = tile();
+        text(this, summary, "Resumen de hoy", 16, Color.WHITE, true);
+        LinearLayout g1 = row(this), g2 = row(this);
+        g1.addView(stat("🍽", eaten.size() + "/" + mealsGoal), weight(this, 1, 2));
+        g1.addView(stat("🏋", (gymToday ? 1 : 0) + "/" + (gymPlanned || gymToday ? 1 : 0)), weight(this, 1, 2));
+        g2.addView(stat("🌙", night == null ? "—" : String.format(Locale.ROOT, "%.1f h", night.minutes / 60.0)), weight(this, 1, 2));
+        g2.addView(stat("☑", blocksDone + "/" + agenda.size()), weight(this, 1, 2));
+        summary.addView(g1, wide(this, 6)); summary.addView(g2, wide(this, 6));
+        top.addView(progress, weight(this, 1, 4)); top.addView(summary, weight(this, 1, 4));
+        content.addView(top, wide(this, 10));
+
+        // Lo más importante hoy
+        LinearLayout focus = card(this, content);
+        focus.addView(header("🎯", "Lo más importante hoy"));
         if (f == null) {
-            text(this, focus, "Elige UNA cosa. Si la terminas, el día está ganado.", 15, MUTED, false);
+            text(this, focus, "Elige UNA cosa. Si la terminas, el día está ganado.", 14, MUTED, false);
             Button pick = button(this, "Elegir mi tarea de hoy", BLUE);
             pick.setOnClickListener(v -> askFocus(today));
             focus.addView(pick, wide(this, 6));
         } else {
             LinearLayout r = row(this);
-            TextView box = text(this, null, f.done ? "✔" : "○", 28, f.done ? GREEN : Color.WHITE, true);
-            box.setPadding(0, 0, dp(this, 14), 0);
-            TextView t = text(this, null, f.text, 20, f.done ? GREEN : Color.WHITE, true);
-            r.addView(box); r.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
+            TextView box = text(this, null, f.done ? "✔" : "○", 26, f.done ? GREEN : Color.WHITE, true);
+            box.setPadding(0, 0, dp(this, 12), 0);
+            r.addView(box);
+            r.addView(text(this, null, f.text, 18, f.done ? GREEN : Color.WHITE, true), new LinearLayout.LayoutParams(0, -2, 1));
+            r.addView(link(this, "Cambiar", v -> askFocus(today)));
             r.setOnClickListener(v -> change(l -> VidaCoach.toggleFocus(l, today)));
-            focus.addView(r);
-            if (f.done) text(this, focus, "¡Día ganado!", 15, GREEN, true);
-            focus.addView(link(this, "Cambiar", v -> askFocus(today)));
+            focus.addView(r, wide(this, 4));
+            if (f.done) text(this, focus, "¡Día ganado! 🏆", 15, GREEN, true);
         }
-        int wins = VidaCoach.focusWinsThisWeek(log, today), streak = VidaCoach.focusStreak(log, today);
-        text(this, focus, wins + " días ganados esta semana" + (streak > 1 ? " · " + streak + " seguidos" : ""), 13, MUTED, false);
+        LinearLayout dots = row(this);
+        LocalDate monday = VidaCoach.monday(today);
+        int wins = VidaCoach.focusWinsThisWeek(log, today);
+        TextView winsText = text(this, null, wins + " días ganados esta semana", 13, MUTED, false);
+        dots.addView(winsText, new LinearLayout.LayoutParams(0, -2, 1));
+        for (int i = 0; i < 7; i++) {
+            VidaLog.Focus df = VidaCoach.focusOn(log, monday.plusDays(i));
+            View dot = new View(this);
+            android.graphics.drawable.GradientDrawable o = new android.graphics.drawable.GradientDrawable();
+            o.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            o.setColor(df != null && df.done ? BLUE : CARD_2);
+            if (monday.plusDays(i).equals(today)) o.setStroke(dp(this, 2), BLUE);
+            dot.setBackground(o);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(this, 12), dp(this, 12)); lp.setMargins(dp(this, 3), 0, dp(this, 3), 0);
+            dots.addView(dot, lp);
+        }
+        focus.addView(dots, wide(this, 8));
         String priority = VidaCoach.currentPriority(log, today);
         if (priority != null) text(this, focus, "Prioridad de la semana: " + priority, 13, AMBER, false);
-        if (dow == 7 && VidaCoach.reviewFor(log, VidaCoach.monday(today)) == null)
+        if (dow == 7 && VidaCoach.reviewFor(log, monday) == null)
             focus.addView(link(this, "Hoy toca la revisión semanal →", v -> { tab = "Semana"; paintTabs(); render(); }));
 
-        List<VidaLog.Project> active = new ArrayList<>();
-        for (VidaLog.Project j : log.projects) if (VidaCoach.ACTIVE.equals(j.status)) active.add(j);
-        if (!active.isEmpty()) {
-            section(this, content, "Proyectos activos");
-            for (VidaLog.Project j : active) {
-                LinearLayout c = card(this, content);
-                int[] p = VidaCoach.progress(j);
-                text(this, c, j.title + "  ·  " + p[0] + "/" + p[1], 16, Color.WHITE, true);
-                VidaLog.Project.Step next = VidaCoach.nextStep(j);
-                text(this, c, next == null ? "Todos los pasos hechos: márcalo como terminado." : "Siguiente: " + next.text, 14, next == null ? GREEN : LIGHT, false);
-                c.setOnClickListener(v -> { tab = "Proyectos"; paintTabs(); render(); });
-            }
+        // Agenda en línea de tiempo
+        LinearLayout ag = card(this, content);
+        LinearLayout agh = header("📅", "Agenda de hoy");
+        agh.addView(link(this, "+", v -> askBlock(dow, null)));
+        ag.addView(agh);
+        if (agenda.isEmpty()) {
+            text(this, ag, "Nada planificado. Usa «Proponer mi semana» en Horario.", 14, MUTED, false);
+            ag.addView(link(this, "Ir a Horario →", v -> { tab = "Horario"; paintTabs(); render(); }));
         }
-
-        section(this, content, "Hábitos de hoy");
-        LinearLayout habits = card(this, content);
-        if (log.habits.isEmpty()) text(this, habits, "Sin hábitos. Añádelos en Objetivos.", 15, MUTED, false);
-        for (VidaLog.Habit h : log.habits) habitRow(habits, h, today);
-
-        section(this, content, "Tu día");
-        LinearLayout day = card(this, content);
-        List<VidaLog.Block> blocks = new ArrayList<>();
-        for (VidaLog.Block b : log.blocks) if (b.day == dow) blocks.add(b);
-        blocks.sort(Comparator.comparing(b -> b.time));
-        if (blocks.isEmpty()) text(this, day, "Nada en el horario de hoy.", 15, MUTED, false);
         String now = LocalTime.now().withSecond(0).withNano(0).toString();
-        for (VidaLog.Block b : blocks) {
-            boolean past = endOf(b).compareTo(now) <= 0;
-            text(this, day, b.time + "  " + b.title + " · " + b.minutes + " min", 16, past ? MUTED : Color.WHITE, !past);
+        for (int i = 0; i < agenda.size(); i++) {
+            VidaLog.Block b = agenda.get(i);
+            boolean done = VidaPlanner.blockDone(log, b, today);
+            boolean current = isToday && b.time.compareTo(now) <= 0 && endOf(b).compareTo(now) > 0;
+            LinearLayout r = row(this); r.setPadding(0, dp(this, 6), 0, dp(this, 6));
+            TextView time = text(this, null, b.time, 15, current ? BLUE : Color.WHITE, current);
+            r.addView(time, new LinearLayout.LayoutParams(dp(this, 52), -2));
+            View dotLine = new View(this);
+            android.graphics.drawable.GradientDrawable o = new android.graphics.drawable.GradientDrawable();
+            o.setShape(android.graphics.drawable.GradientDrawable.OVAL); o.setColor(done ? GREEN : BLUE); o.setStroke(dp(this, 3), Color.rgb(13, 40, 80));
+            dotLine.setBackground(o);
+            LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(dp(this, 14), dp(this, 14)); dl.setMargins(0, 0, dp(this, 10), 0);
+            r.addView(dotLine, dl);
+            r.addView(text(this, null, emojiFor(VidaPlanner.kind(b.title)), 18, Color.WHITE, false));
+            LinearLayout tt = column(this); tt.setPadding(dp(this, 10), 0, 0, 0);
+            text(this, tt, b.title, 15, done ? MUTED : Color.WHITE, true);
+            text(this, tt, b.time + " – " + endOf(b) + (current ? "  · ahora" : ""), 12, MUTED, false);
+            r.addView(tt, new LinearLayout.LayoutParams(0, -2, 1));
+            TextView check = text(this, null, done ? "☑" : "☐", 24, done ? BLUE : MUTED, false);
+            check.setPadding(dp(this, 8), 0, dp(this, 4), 0);
+            r.addView(check);
+            r.setOnClickListener(v -> change(l -> VidaPlanner.toggleBlock(l, b, today)));
+            ag.addView(r);
+            if (i < agenda.size() - 1) { View sep = new View(this); sep.setBackgroundColor(STROKE); ag.addView(sep, new LinearLayout.LayoutParams(-1, 1)); }
         }
-        day.addView(link(this, "Editar horario", v -> { tab = "Horario"; paintTabs(); render(); }));
 
-        section(this, content, "Comidas de hoy");
-        LinearLayout food = card(this, content);
-        List<VidaLog.Meal> eaten = VidaPlanner.mealsOn(log, today);
-        for (String kind : VidaPlanner.MEAL_KINDS) {
-            String planned = VidaPlanner.planned(log, dow, kind);
-            VidaLog.Meal ate = null; for (VidaLog.Meal m : eaten) if (m.kind.equals(kind)) ate = m;
-            if (planned == null && ate == null) continue;
-            LinearLayout r = row(this);
-            TextView label = text(this, null, VidaPlanner.cap(kind) + ": " + (ate != null ? ate.text : planned), 16, ate != null ? GREEN : Color.WHITE, false);
-            r.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
-            if (ate == null) {
-                String plan = planned;
-                r.addView(link(this, "✓ Comido", v -> change(l -> VidaPlanner.logMeal(l, today, nowHm(), kind, plan))));
-            } else r.addView(text(this, null, "✔", 18, GREEN, true));
-            food.addView(r);
+        // Comidas | Sueño
+        LinearLayout pair = row(this); pair.setGravity(Gravity.TOP);
+        LinearLayout meals = tile();
+        meals.addView(header("🍽", "Comidas"));
+        text(this, meals, eaten.size() + " de " + mealsGoal + " comidas", 13, MUTED, false);
+        VidaWidgets.Line ml = new VidaWidgets.Line(this, BLUE); ml.set((float) eaten.size() / mealsGoal);
+        meals.addView(ml, lineParams());
+        String nextMeal = null;
+        for (String k : VidaPlanner.MEAL_KINDS) {
+            boolean ate = false; for (VidaLog.Meal m : eaten) if (m.kind.equals(k)) ate = true;
+            String p = VidaPlanner.planned(log, dow, k);
+            if (!ate && p != null) { nextMeal = VidaPlanner.cap(k) + ": " + p; break; }
         }
-        if (food.getChildCount() == 0) text(this, food, "No hay comidas planificadas para hoy.", 15, MUTED, false);
-        food.addView(link(this, "+ Anotar otra comida", v -> askMeal(today)));
+        if (nextMeal != null) text(this, meals, nextMeal, 12, LIGHT, false).setMaxLines(2);
+        meals.setOnClickListener(v -> { tab = "Comidas"; paintTabs(); render(); });
+        LinearLayout sleep = tile();
+        sleep.addView(header("🌙", "Sueño"));
+        text(this, sleep, "Anoche: " + (night == null ? "—" : hours(night.minutes)), 13, night == null ? MUTED : sleepColor(night.minutes), night != null);
+        text(this, sleep, "Objetivo: 7,5 – 8 h", 12, MUTED, false);
+        VidaWidgets.Line sl = new VidaWidgets.Line(this, night == null ? BLUE : sleepColor(night.minutes)); sl.set(night == null ? 0 : night.minutes / 480f);
+        sleep.addView(sl, lineParams());
+        if (night == null && isToday) sleep.addView(link(this, "Anotar", v -> askSleep(today)));
+        sleep.setOnClickListener(v -> { tab = "Sueño"; paintTabs(); render(); });
+        pair.addView(meals, weight(this, 1, 4)); pair.addView(sleep, weight(this, 1, 4));
+        content.addView(pair, wide(this, 10));
 
-        section(this, content, "Sueño");
-        LinearLayout night = card(this, content);
-        VidaLog.SleepEntry last = null; for (VidaLog.SleepEntry e : log.sleep) if (e.date.equals(today.toString())) last = e;
-        if (last != null) text(this, night, "Anoche: " + hours(last.minutes) + " (" + last.bed + " → " + last.wake + ")", 16, sleepColor(last.minutes), true);
-        else night.addView(link(this, "Anotar cómo dormí anoche", v -> askSleep(today)));
-        int avg = VidaPlanner.averageMinutes(VidaPlanner.lastNights(log, 7));
-        if (avg > 0) text(this, night, "Media de tus últimas noches: " + hours(avg), 14, MUTED, false);
-
-        section(this, content, "Gym");
+        // Gym
         LinearLayout gym = card(this, content);
-        VidaLog.Habit gh = habit("gym");
+        LinearLayout gh = header("🏋", "Gym");
+        gym.addView(gh);
+        VidaLog.Habit gymHabit = habit("gym");
         int weekGym = VidaPlanner.doneThisWeek(log, "gym", today);
-        text(this, gym, weekGym + (gh != null ? " de " + gh.perWeek : "") + " entrenos esta semana", 16, Color.WHITE, true);
-        if (last != null && last.minutes < 6 * 60 && !blocksWith(blocks, "gym").isEmpty())
-            text(this, gym, "Dormiste poco y hoy tienes gym: baja un poco el peso o el volumen.", 14, AMBER, false);
-        Button go = button(this, "Abrir gym", BLUE);
-        go.setOnClickListener(v -> startActivity(new Intent(this, GymActivity.class)));
-        gym.addView(go, wide(this, 6));
+        text(this, gym, weekGym + " de " + (gymHabit == null ? 4 : gymHabit.perWeek) + " entrenos esta semana", 14, MUTED, false);
+        LinearLayout days = row(this);
+        String[] letters = {"L", "M", "X", "J", "V", "S", "D"};
+        for (int i = 0; i < 7; i++) {
+            LocalDate d = monday.plusDays(i);
+            boolean trained = VidaPlanner.checked(log, "gym", d);
+            TextView c = text(this, null, letters[i], 14, Color.WHITE, d.equals(today));
+            c.setGravity(Gravity.CENTER);
+            c.setBackground(rounded(this, trained ? GREEN : d.equals(today) ? BLUE : CARD_2, 8));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(this, 34), 1); lp.setMargins(dp(this, 3), 0, dp(this, 3), 0);
+            days.addView(c, lp);
+        }
+        gym.addView(days, wide(this, 6));
+        if (night != null && night.minutes < 6 * 60 && gymPlanned)
+            text(this, gym, "Dormiste poco y hoy toca gym: baja un poco el peso o el volumen.", 13, AMBER, false);
+        gym.setOnClickListener(v -> startActivity(new Intent(this, GymActivity.class)));
 
-        VidaLog.Goal nextGoal = null;
-        for (VidaLog.Goal g : VidaPlanner.sortedGoals(log)) if (!g.done) { nextGoal = g; break; }
-        if (nextGoal != null) {
-            section(this, content, "Próximo objetivo");
+        // Objetivo principal
+        VidaLog.Goal main = null;
+        for (VidaLog.Goal g : VidaPlanner.sortedGoals(log)) if (!g.done) { main = g; break; }
+        if (main != null) {
             LinearLayout goal = card(this, content);
-            text(this, goal, nextGoal.title, 17, Color.WHITE, true);
-            text(this, goal, dueText(nextGoal), 14, dueColor(nextGoal), false);
+            LinearLayout gr = row(this);
+            LinearLayout gt = column(this);
+            gt.addView(header("🎯", "Objetivo principal"));
+            text(this, gt, main.title, 16, Color.WHITE, true);
+            text(this, gt, "📆 " + dueText(main), 13, dueColor(main) == MUTED ? AMBER : dueColor(main), false);
+            gr.addView(gt, new LinearLayout.LayoutParams(0, -2, 1));
+            float gp = goalProgress(main);
+            VidaWidgets.Ring gring = new VidaWidgets.Ring(this, Color.rgb(171, 71, 188));
+            gring.set(gp, Math.round(gp * 100) + "%");
+            gr.addView(gring, new LinearLayout.LayoutParams(dp(this, 70), dp(this, 70)));
+            goal.addView(gr);
+            goal.setOnClickListener(v -> { tab = "Objetivos"; paintTabs(); render(); });
+        }
+
+        // Hábitos en fichas
+        LinearLayout hb = card(this, content);
+        LinearLayout hh = header("✅", "Hábitos de hoy");
+        hh.addView(link(this, "Ver todos ›", v -> { tab = "Objetivos"; paintTabs(); render(); }));
+        hb.addView(hh);
+        HorizontalScrollView hs = new HorizontalScrollView(this); hs.setHorizontalScrollBarEnabled(false);
+        LinearLayout tiles = row(this);
+        for (VidaLog.Habit h : log.habits) tiles.addView(habitTile(h, today), habitParams());
+        hs.addView(tiles); hb.addView(hs, wide(this, 6));
+
+        // Evolución semanal
+        LinearLayout evo = card(this, content);
+        LinearLayout er = row(this);
+        LinearLayout et = column(this);
+        et.addView(header("📊", "Evolución semanal"));
+        text(this, et, "Hábitos · Entrenos · Sueño · Proyectos", 13, MUTED, false);
+        er.addView(et, new LinearLayout.LayoutParams(0, -2, 1));
+        VidaWidgets.Bars bars = new VidaWidgets.Bars(this);
+        float[] weeks = new float[6];
+        for (int i = 0; i < 6; i++) {
+            LocalDate w = today.minusWeeks(5 - i);
+            int sum = 0; for (VidaLog.Habit h : log.habits) sum += Math.min(h.perWeek, VidaPlanner.doneThisWeek(log, h.id, w));
+            weeks[i] = sum;
+        }
+        bars.set(weeks);
+        er.addView(bars, new LinearLayout.LayoutParams(dp(this, 90), dp(this, 44)));
+        evo.addView(er);
+        evo.setOnClickListener(v -> { tab = "Semana"; paintTabs(); render(); });
+    }
+
+    private float goalProgress(VidaLog.Goal g) {
+        // Si un proyecto activo comparte palabras con el objetivo, su avance cuenta como el del objetivo.
+        String t = VidaPlanner.cap(g.title).toLowerCase(Locale.ROOT);
+        for (VidaLog.Project j : log.projects) {
+            String jt = j.title.toLowerCase(Locale.ROOT).replaceAll("[«»\"]", "");
+            for (String word : jt.split("\\s+"))
+                if (word.length() > 4 && t.contains(word)) { int[] p = VidaCoach.progress(j); return p[1] == 0 ? 0 : (float) p[0] / p[1]; }
+        }
+        return g.done ? 1 : 0;
+    }
+
+    private LinearLayout tile() {
+        LinearLayout t = column(this);
+        int p = dp(this, 12); t.setPadding(p, p, p, p);
+        t.setBackground(glass(this));
+        return t;
+    }
+
+    private LinearLayout header(String emoji, String title) {
+        LinearLayout r = row(this);
+        TextView i = text(this, null, emoji, 17, Color.WHITE, false);
+        i.setPadding(0, 0, dp(this, 8), 0);
+        r.addView(i);
+        r.addView(text(this, null, title, 17, Color.WHITE, true), new LinearLayout.LayoutParams(0, -2, 1));
+        return r;
+    }
+
+    private View stat(String emoji, String value) {
+        TextView t = text(this, null, emoji + "  " + value, 14, Color.WHITE, true);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(0, dp(this, 8), 0, dp(this, 8));
+        t.setBackground(rounded(this, CARD_2, 10));
+        return t;
+    }
+
+    private View habitTile(VidaLog.Habit h, LocalDate day) {
+        boolean done = VidaPlanner.checked(log, h.id, day);
+        int week = VidaPlanner.doneThisWeek(log, h.id, day);
+        LinearLayout t = column(this);
+        t.setGravity(Gravity.CENTER_HORIZONTAL);
+        int p = dp(this, 10); t.setPadding(p, p, p, p);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                done ? new int[]{Color.rgb(20, 70, 40), Color.rgb(12, 40, 24)} : new int[]{Color.rgb(24, 38, 66), Color.rgb(14, 22, 40)});
+        bg.setCornerRadius(dp(this, 14)); bg.setStroke(Math.max(1, dp(this, 1)), done ? GREEN : STROKE);
+        t.setBackground(bg);
+        TextView i = text(this, t, habitEmoji(h), 22, Color.WHITE, false); i.setGravity(Gravity.CENTER);
+        TextView n = text(this, t, h.name, 13, Color.WHITE, true); n.setGravity(Gravity.CENTER); n.setMaxLines(2);
+        TextView s = text(this, t, done ? "✔ Hoy" : week + "/" + h.perWeek + " sem", 12, done ? GREEN : MUTED, false); s.setGravity(Gravity.CENTER);
+        VidaWidgets.Line line = new VidaWidgets.Line(this, done ? GREEN : BLUE); line.set((float) week / h.perWeek);
+        t.addView(line, lineParams());
+        t.setOnClickListener(v -> change(l -> VidaPlanner.toggle(l, h.id, day)));
+        return t;
+    }
+
+    private LinearLayout.LayoutParams habitParams() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(this, 112), dp(this, 140));
+        lp.setMargins(0, 0, dp(this, 8), 0);
+        return lp;
+    }
+
+    private LinearLayout.LayoutParams lineParams() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(this, 6));
+        lp.topMargin = dp(this, 8);
+        return lp;
+    }
+
+    private static String emojiFor(VidaPlanner.Kind k) {
+        switch (k) {
+            case GYM: return "🏋"; case TRABAJO: return "💼"; case ESTUDIO: return "📚"; case PROYECTO: return "💻";
+            case CREAR: return "🎬"; case DESCANSO: return "🌙"; case REVISION: return "🧭"; default: return "•";
         }
     }
 
-    private void habitRow(LinearLayout parent, VidaLog.Habit h, LocalDate today) {
-        boolean done = VidaPlanner.checked(log, h.id, today);
-        LinearLayout r = row(this); r.setPadding(0, dp(this, 4), 0, dp(this, 4));
-        TextView box = text(this, null, done ? "✔" : "○", 22, done ? GREEN : MUTED, true);
-        box.setPadding(0, 0, dp(this, 12), 0);
-        LinearLayout texts = column(this);
-        text(this, texts, h.name, 16, done ? GREEN : Color.WHITE, true);
-        int week = VidaPlanner.doneThisWeek(log, h.id, today);
-        int streak = VidaPlanner.weekStreak(log, h, today);
-        text(this, texts, week + "/" + h.perWeek + " esta semana" + (streak > 0 ? " · racha " + streak + (streak == 1 ? " semana" : " semanas") : ""), 13, MUTED, false);
-        r.addView(box); r.addView(texts, new LinearLayout.LayoutParams(0, -2, 1));
-        r.setOnClickListener(v -> change(l -> VidaPlanner.toggle(l, h.id, today)));
-        parent.addView(r);
+    private static String habitEmoji(VidaLog.Habit h) {
+        String n = h.name.toLowerCase(Locale.ROOT);
+        if (h.id.equals("gym") || n.contains("gym")) return "🏋";
+        if (n.contains("mate")) return "📐";
+        if (h.id.equals("sueno") || n.contains("dorm")) return "🌙";
+        if (n.contains("agua")) return "💧";
+        if (n.contains("creatina") || n.contains("suplemento")) return "💊";
+        if (n.contains("historia") || n.contains("escrib")) return "✍";
+        if (n.contains("revis")) return "🧭";
+        if (n.contains("prioridad") || n.contains("proyecto")) return "🚀";
+        if (n.contains("leer")) return "📖";
+        return "⭐";
     }
 
     // ================================================================ Comidas
