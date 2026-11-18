@@ -287,11 +287,125 @@ public final class VidaPlanner {
         return out;
     }
 
+    // ---------------------------------------------------------------- horario
+
+    /** Tipo de bloque, para el color de la tabla. Se deduce del título. */
+    public enum Kind { GYM, TRABAJO, ESTUDIO, PROYECTO, CREAR, DESCANSO, REVISION, OTRO }
+
+    public static Kind kind(String title) {
+        String t = " " + VidaConversation.normalize(title).replaceAll("[^a-z0-9 ]", " ") + " ";
+        if (has(t, "gym", "gimnasio", "entreno", "pesas", "correr", "cardio")) return Kind.GYM;
+        if (has(t, "trabajo", "zenitcorp", "empresa", "oficina", "cliente", "clientes")) return Kind.TRABAJO;
+        if (has(t, "matematicas", "mates", "estudio", "estudiar", "uned", "curso", "clase", "leer", "lectura")) return Kind.ESTUDIO;
+        if (has(t, "salve", "prioridad", "proyecto", "programar", "codigo")) return Kind.PROYECTO;
+        if (has(t, "youtube", "video", "canal", "grabar", "editar", "historia", "microhistoria", "guion", "reels", "reel")) return Kind.CREAR;
+        if (has(t, "revision", "planificar", "planificacion")) return Kind.REVISION;
+        if (has(t, "descanso", "libre", "familia", "dormir", "sueno", "siesta", "desconectar")) return Kind.DESCANSO;
+        return Kind.OTRO;
+    }
+
+    private static boolean has(String padded, String... words) {
+        for (String w : words) if (padded.contains(" " + w + " ")) return true;
+        return false;
+    }
+
+    /**
+     * Semana propuesta a partir de los objetivos: gym 4 días, matemáticas 45 min × 5 (base UNED),
+     * prioridad del trimestre 2 h × 5, microhistoria el miércoles, canal y revisión el domingo,
+     * sábado de descanso total y desconectar pantallas a las 23:00. Encaja alrededor del trabajo.
+     */
+    public static List<VidaLog.Block> suggestedWeek(int workStart, int workEnd, Set<Integer> workDays) {
+        List<VidaLog.Block> out = new ArrayList<>();
+        for (int d = 1; d <= 7; d++) {
+            boolean works = workDays.contains(d);
+            if (works) out.add(new VidaLog.Block("Trabajo (Zenitcorp)", d, hm(workStart * 60), Math.max(60, (workEnd - workStart) * 60)));
+            int t = works ? Math.max(workEnd, 8) * 60 + 30 : 10 * 60;
+            if (d == 6) { out.add(new VidaLog.Block("Descanso total (sin proyectos)", d, hm(Math.max(t, 10 * 60)), 10 * 60)); }
+            else {
+                if (d == 1 || d == 2 || d == 4 || d == 5) { out.add(new VidaLog.Block("Gym", d, hm(t), 75)); t += 90; }
+                if (d <= 5) { out.add(new VidaLog.Block("Matemáticas (1 vídeo)", d, hm(t), 45)); t += 60; }
+                if (d <= 5) { out.add(new VidaLog.Block("Prioridad del trimestre", d, hm(t), 120)); t += 120; }
+                if (d == 3) out.add(new VidaLog.Block("Escribir microhistoria", d, hm(t), 45));
+                if (d == 7) {
+                    out.add(new VidaLog.Block("Canal: grabar y editar", d, "11:00", 120));
+                    out.add(new VidaLog.Block("Revisión semanal", d, "19:00", 30));
+                }
+            }
+            out.add(new VidaLog.Block("Desconectar pantallas", d, "23:00", 30));
+        }
+        return out;
+    }
+
+    /** Pone la propuesta y conserva los bloques tuyos que no choquen con ella. */
+    public static VidaLog applySuggested(VidaLog log, List<VidaLog.Block> week) {
+        List<VidaLog.Block> next = new ArrayList<>(week);
+        for (VidaLog.Block b : log.blocks) {
+            boolean clash = false;
+            for (VidaLog.Block w : week) if (w.day == b.day && overlaps(w, b)) clash = true;
+            if (!clash) next.add(b);
+        }
+        return log.withBlocks(next);
+    }
+
+    static boolean overlaps(VidaLog.Block a, VidaLog.Block b) {
+        int as = minutes(a.time), bs = minutes(b.time);
+        return as < bs + b.minutes && bs < as + a.minutes;
+    }
+
+    /** Un bloque concreto hecho en una fecha se guarda como un día cumplido con este id. */
+    public static String blockId(VidaLog.Block b) { return "b:" + VidaConversation.normalize(b.title) + "@" + b.time; }
+    public static boolean blockDone(VidaLog log, VidaLog.Block b, LocalDate date) { return checked(log, blockId(b), date); }
+    public static VidaLog toggleBlock(VidaLog log, VidaLog.Block b, LocalDate date) { return toggle(log, blockId(b), date); }
+
+    /** {hechos, planificados} de lunes a hoy en la semana de {@code today}. */
+    public static int[] weekCompliance(VidaLog log, LocalDate today) {
+        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        int planned = 0, done = 0;
+        for (VidaLog.Block b : log.blocks) {
+            if (b.day > today.getDayOfWeek().getValue() || kind(b.title) == Kind.DESCANSO) continue;
+            planned++;
+            if (blockDone(log, b, monday.plusDays(b.day - 1))) done++;
+        }
+        return new int[]{done, planned};
+    }
+
+    /** Minutos planificados por tipo en la semana, para ver dónde va tu tiempo. */
+    public static java.util.Map<Kind, Integer> minutesByKind(VidaLog log) {
+        java.util.Map<Kind, Integer> out = new java.util.EnumMap<>(Kind.class);
+        for (VidaLog.Block b : log.blocks) out.merge(kind(b.title), b.minutes, Integer::sum);
+        return out;
+    }
+
+    public static VidaLog addBlocks(VidaLog log, String title, Set<Integer> days, String time, int minutes) {
+        List<VidaLog.Block> next = new ArrayList<>(log.blocks);
+        for (int d : days) next.add(new VidaLog.Block(title, d, time, minutes));
+        return log.withBlocks(next);
+    }
+
+    public static VidaLog removeBlock(VidaLog log, VidaLog.Block target, boolean allDays) {
+        List<VidaLog.Block> next = new ArrayList<>();
+        for (VidaLog.Block o : log.blocks) {
+            boolean same = o.title.equalsIgnoreCase(target.title) && (allDays || (o.day == target.day && o.time.equals(target.time)));
+            if (!same) next.add(o);
+        }
+        return log.withBlocks(next);
+    }
+
+    public static VidaLog moveBlock(VidaLog log, VidaLog.Block target, String time, int minutes) {
+        List<VidaLog.Block> next = new ArrayList<>();
+        for (VidaLog.Block o : log.blocks)
+            next.add(o == target || (o.day == target.day && o.time.equals(target.time) && o.title.equals(target.title))
+                    ? new VidaLog.Block(o.title, o.day, time, minutes) : o);
+        return log.withBlocks(next);
+    }
+
+    public static String hm(int minutes) { return String.format(Locale.ROOT, "%02d:%02d", (minutes / 60) % 24, minutes % 60); }
+
     // ---------------------------------------------------------------- utilidades
 
     public static String newId() { return UUID.randomUUID().toString().substring(0, 8); }
 
-    static int minutes(String hhmm) {
+    public static int minutes(String hhmm) {
         String[] p = hhmm.trim().split("[:.]");
         int h = Integer.parseInt(p[0]), m = p.length > 1 ? Integer.parseInt(p[1]) : 0;
         if (h < 0 || h > 23 || m < 0 || m > 59) throw new IllegalArgumentException("Hora no válida: " + hhmm);

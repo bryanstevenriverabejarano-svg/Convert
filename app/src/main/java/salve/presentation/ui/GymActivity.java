@@ -117,7 +117,10 @@ public final class GymActivity extends Activity {
     @Override protected void onPause() { super.onPause(); saveDraft(); }
     @Override protected void onDestroy() { ui.removeCallbacksAndMessages(null); io.shutdown(); super.onDestroy(); }
 
+    private boolean onHome = true;
+
     @Override public void onBackPressed() {
+        if (workout == null && !onHome) { showHome(); return; } // de la ficha o el editor, vuelve al inicio
         if (workout != null) {
             saveDraft();
             Toast.makeText(this, "Tu entreno sigue en curso; vuelve cuando quieras.", Toast.LENGTH_SHORT).show();
@@ -130,7 +133,7 @@ public final class GymActivity extends Activity {
     private boolean routinesOpen = true;
 
     private void showHome() {
-        workout = null;
+        workout = null; onHome = true;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         LinearLayout root = page();
         ScrollView scroll = new ScrollView(this); scroll.setBackgroundColor(BG); scroll.addView(root);
@@ -180,6 +183,24 @@ public final class GymActivity extends Activity {
         }
         if (routinesOpen) for (VidaLog.Routine r : mine) routineCard(root, r);
 
+        List<String> tracked = GymTracker.trackedExercises(log);
+        if (!tracked.isEmpty()) {
+            text(root, "Progreso por ejercicio", 22, Color.WHITE, true).setPadding(0, dp(18), 0, dp(6));
+            for (int i = 0; i < Math.min(8, tracked.size()); i++) {
+                String ex = tracked.get(i);
+                double[] best = GymTracker.bests(log, ex);
+                LinearLayout card = card(root);
+                text(card, ex, 16, Color.WHITE, true);
+                text(card, GymTracker.sessionCount(log, ex) + " sesiones · récord " + kg(best[0]) + " kg · 1RM est. " + kg(Math.round(best[1] * 10) / 10.0) + " kg", 13, MUTED, false);
+                card.setOnClickListener(v -> showExercise(ex));
+            }
+            if (tracked.size() > 8) {
+                TextView all = text(root, "Ver todos los ejercicios (" + tracked.size() + ")", 15, BLUE, false);
+                all.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Ejercicios")
+                        .setItems(tracked.toArray(new String[0]), (d, w) -> showExercise(tracked.get(w))).show());
+            }
+        }
+
         text(root, "Historial", 22, Color.WHITE, true).setPadding(0, dp(18), 0, dp(6));
         if (sessions.isEmpty()) text(root, "Aún no hay entrenos. Empieza uno o importa el CSV de Hevy.", 14, MUTED, false);
         for (int i = 0; i < Math.min(20, sessions.size()); i++) {
@@ -199,6 +220,66 @@ public final class GymActivity extends Activity {
             catch (RuntimeException none) { Toast.makeText(this, "No hay selector de archivos disponible.", Toast.LENGTH_LONG).show(); }
         });
         root.addView(importer, wide(20));
+        setContentView(scroll);
+    }
+
+    private String chartMetric = "1rm";
+
+    /** Gráfica y récords de un ejercicio, como la ficha de ejercicio de Hevy. */
+    private void showExercise(String exercise) {
+        onHome = false;
+        LinearLayout root = page();
+        ScrollView scroll = new ScrollView(this); scroll.setBackgroundColor(BG); scroll.addView(root);
+        TextView back = text(root, "← Volver", 16, BLUE, false);
+        back.setOnClickListener(v -> showHome());
+        text(root, exercise, 24, Color.WHITE, true);
+        List<GymTracker.Point> points = GymTracker.progress(log, exercise);
+        LinearLayout chips = new LinearLayout(this);
+        String[][] metrics = {{"1rm", "1RM estimado"}, {"max", "Peso máximo"}, {"vol", "Volumen"}};
+        for (String[] m : metrics) {
+            TextView c = VidaUi.chip(this, m[1], m[0].equals(chartMetric));
+            c.setOnClickListener(v -> { chartMetric = m[0]; showExercise(exercise); });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2); lp.setMargins(0, dp(8), dp(6), dp(8));
+            chips.addView(c, lp);
+        }
+        root.addView(chips);
+        VidaChartView chart = new VidaChartView(this);
+        double[] values = new double[points.size()];
+        String[] labels = new String[points.size()];
+        for (int i = 0; i < points.size(); i++) {
+            GymTracker.Point p = points.get(i);
+            values[i] = chartMetric.equals("max") ? p.maxKg : chartMetric.equals("vol") ? p.volume : p.oneRm;
+            labels[i] = pretty(p.date);
+        }
+        chart.setData(values, labels, "kg");
+        root.addView(chart, new LinearLayout.LayoutParams(-1, dp(230)));
+
+        double maxKg = 0, best1rm = 0, bestVol = 0; String maxDate = "", rmDate = "", volDate = "";
+        for (GymTracker.Point p : points) {
+            if (p.maxKg > maxKg) { maxKg = p.maxKg; maxDate = p.date; }
+            if (p.oneRm > best1rm) { best1rm = p.oneRm; rmDate = p.date; }
+            if (p.volume > bestVol) { bestVol = p.volume; volDate = p.date; }
+        }
+        LinearLayout records = card(root);
+        text(records, "Récords personales", 17, Color.WHITE, true);
+        if (points.isEmpty()) text(records, "Aún no hay series con peso de este ejercicio.", 14, MUTED, false);
+        else {
+            text(records, "Peso máximo: " + kg(maxKg) + " kg (" + pretty(maxDate) + ")", 15, Color.LTGRAY, false);
+            text(records, "Mejor 1RM estimado: " + kg(Math.round(best1rm * 10) / 10.0) + " kg (" + pretty(rmDate) + ")", 15, Color.LTGRAY, false);
+            text(records, "Mejor volumen en una sesión: " + kg(bestVol) + " kg (" + pretty(volDate) + ")", 15, Color.LTGRAY, false);
+            if (points.size() >= 2) {
+                GymTracker.Point first = points.get(0), last = points.get(points.size() - 1);
+                double diff = last.oneRm - first.oneRm;
+                text(records, "Desde " + pretty(first.date) + ": " + (diff >= 0 ? "+" : "") + kg(Math.round(diff * 10) / 10.0) + " kg de 1RM estimado", 14, diff >= 0 ? Color.rgb(102, 187, 106) : Color.rgb(239, 154, 154), false);
+            }
+        }
+        text(root, "Historial", 20, Color.WHITE, true).setPadding(0, dp(14), 0, dp(4));
+        for (int i = points.size() - 1; i >= Math.max(0, points.size() - 15); i--) {
+            GymTracker.Point p = points.get(i);
+            LinearLayout c = card(root);
+            text(c, pretty(p.date), 15, Color.WHITE, true);
+            text(c, "Mejor serie " + kg(p.maxKg) + " kg × " + p.bestReps + " · 1RM est. " + kg(Math.round(p.oneRm * 10) / 10.0) + " · volumen " + kg(p.volume) + " kg", 13, MUTED, false);
+        }
         setContentView(scroll);
     }
 
@@ -284,6 +365,7 @@ public final class GymActivity extends Activity {
     }
 
     private void showEditor() {
+        onHome = false;
         LinearLayout root = page();
         ScrollView scroll = new ScrollView(this); scroll.setBackgroundColor(BG); scroll.addView(root);
         LinearLayout bar = new LinearLayout(this); bar.setGravity(Gravity.CENTER_VERTICAL);

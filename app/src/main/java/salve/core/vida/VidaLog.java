@@ -117,6 +117,50 @@ public final class VidaLog {
         }
     }
 
+    /** La tarea más importante de un día. */
+    public static final class Focus {
+        public final String date, text; public final boolean done;
+        public Focus(String date, String text, boolean done) { this.date = req(date); this.text = req(text); this.done = done; }
+    }
+
+    /** Proyecto con pasos. {@code status}: activo, pausado o hecho. */
+    public static final class Project {
+        public static final class Step {
+            public final String text; public final boolean done;
+            public Step(String text, boolean done) { this.text = req(text); this.done = done; }
+        }
+        public final String id, title, status, created; public final List<Step> steps;
+        public Project(String id, String title, String status, String created, List<Step> steps) {
+            this.id = req(id); this.title = req(title); this.status = req(status); this.created = opt(created);
+            this.steps = Collections.unmodifiableList(new ArrayList<>(steps));
+        }
+        String encode() {
+            StringBuilder b = new StringBuilder();
+            for (Step st : steps) {
+                if (b.length() > 0) b.append('\u001E');
+                b.append(st.text.replace('\u001E', ' ').replace('\u001F', ' ')).append('\u001F').append(st.done ? 1 : 0);
+            }
+            return b.toString();
+        }
+        static List<Step> decode(String s) {
+            List<Step> out = new ArrayList<>();
+            if (s == null || s.isEmpty()) return out;
+            for (String part : s.split("\u001E")) {
+                String[] f = part.split("\u001F");
+                if (f.length == 2) out.add(new Step(f[0], "1".equals(f[1])));
+            }
+            return out;
+        }
+    }
+
+    /** Revisión semanal: lunes de la semana revisada y las tres respuestas. */
+    public static final class Review {
+        public final String week, good, bad, priority;
+        public Review(String week, String good, String bad, String priority) {
+            this.week = req(week); this.good = opt(good); this.bad = opt(bad); this.priority = opt(priority);
+        }
+    }
+
     public final List<GymSet> sets;
     public final List<SleepEntry> sleep;
     public final List<Meal> meals;
@@ -126,6 +170,9 @@ public final class VidaLog {
     public final List<HabitCheck> checks;
     public final List<Goal> goals;
     public final List<Routine> routines;
+    public final List<Focus> focus;
+    public final List<Project> projects;
+    public final List<Review> reviews;
 
     public VidaLog() { this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>()); }
 
@@ -140,6 +187,12 @@ public final class VidaLog {
 
     public VidaLog(List<GymSet> sets, List<SleepEntry> sleep, List<Meal> meals, List<Block> blocks,
                    List<PlannedMeal> plan, List<Habit> habits, List<HabitCheck> checks, List<Goal> goals, List<Routine> routines) {
+        this(sets, sleep, meals, blocks, plan, habits, checks, goals, routines, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+    }
+
+    public VidaLog(List<GymSet> sets, List<SleepEntry> sleep, List<Meal> meals, List<Block> blocks,
+                   List<PlannedMeal> plan, List<Habit> habits, List<HabitCheck> checks, List<Goal> goals, List<Routine> routines,
+                   List<Focus> focus, List<Project> projects, List<Review> reviews) {
         this.sets = Collections.unmodifiableList(new ArrayList<>(sets));
         this.sleep = Collections.unmodifiableList(new ArrayList<>(sleep));
         this.meals = Collections.unmodifiableList(new ArrayList<>(meals));
@@ -149,22 +202,29 @@ public final class VidaLog {
         this.checks = Collections.unmodifiableList(new ArrayList<>(checks));
         this.goals = Collections.unmodifiableList(new ArrayList<>(goals));
         this.routines = Collections.unmodifiableList(new ArrayList<>(routines));
+        this.focus = Collections.unmodifiableList(new ArrayList<>(focus));
+        this.projects = Collections.unmodifiableList(new ArrayList<>(projects));
+        this.reviews = Collections.unmodifiableList(new ArrayList<>(reviews));
     }
 
     public boolean isEmpty() {
         return sets.isEmpty() && sleep.isEmpty() && meals.isEmpty() && blocks.isEmpty()
-                && plan.isEmpty() && habits.isEmpty() && checks.isEmpty() && goals.isEmpty() && routines.isEmpty();
+                && plan.isEmpty() && habits.isEmpty() && checks.isEmpty() && goals.isEmpty() && routines.isEmpty()
+                && focus.isEmpty() && projects.isEmpty() && reviews.isEmpty();
     }
 
-    public VidaLog withSets(List<GymSet> next) { return new VidaLog(next, sleep, meals, blocks, plan, habits, checks, goals, routines); }
-    public VidaLog withSleep(List<SleepEntry> next) { return new VidaLog(sets, next, meals, blocks, plan, habits, checks, goals, routines); }
-    public VidaLog withMeals(List<Meal> next) { return new VidaLog(sets, sleep, next, blocks, plan, habits, checks, goals, routines); }
-    public VidaLog withBlocks(List<Block> next) { return new VidaLog(sets, sleep, meals, next, plan, habits, checks, goals, routines); }
-    public VidaLog withPlan(List<PlannedMeal> next) { return new VidaLog(sets, sleep, meals, blocks, next, habits, checks, goals, routines); }
-    public VidaLog withHabits(List<Habit> next) { return new VidaLog(sets, sleep, meals, blocks, plan, next, checks, goals, routines); }
-    public VidaLog withChecks(List<HabitCheck> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, next, goals, routines); }
-    public VidaLog withGoals(List<Goal> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, next, routines); }
-    public VidaLog withRoutines(List<Routine> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, next); }
+    public VidaLog withSets(List<GymSet> next) { return new VidaLog(next, sleep, meals, blocks, plan, habits, checks, goals, routines, focus, projects, reviews); }
+    public VidaLog withSleep(List<SleepEntry> next) { return new VidaLog(sets, next, meals, blocks, plan, habits, checks, goals, routines, focus, projects, reviews); }
+    public VidaLog withMeals(List<Meal> next) { return new VidaLog(sets, sleep, next, blocks, plan, habits, checks, goals, routines, focus, projects, reviews); }
+    public VidaLog withBlocks(List<Block> next) { return new VidaLog(sets, sleep, meals, next, plan, habits, checks, goals, routines, focus, projects, reviews); }
+    public VidaLog withPlan(List<PlannedMeal> next) { return new VidaLog(sets, sleep, meals, blocks, next, habits, checks, goals, routines, focus, projects, reviews); }
+    public VidaLog withHabits(List<Habit> next) { return new VidaLog(sets, sleep, meals, blocks, plan, next, checks, goals, routines, focus, projects, reviews); }
+    public VidaLog withChecks(List<HabitCheck> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, next, goals, routines, focus, projects, reviews); }
+    public VidaLog withGoals(List<Goal> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, next, routines, focus, projects, reviews); }
+    public VidaLog withRoutines(List<Routine> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, next, focus, projects, reviews); }
+    public VidaLog withFocus(List<Focus> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, routines, next, projects, reviews); }
+    public VidaLog withProjects(List<Project> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, routines, focus, next, reviews); }
+    public VidaLog withReviews(List<Review> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, routines, focus, projects, next); }
 
     // ---------------------------------------------------------------- serialización
 
@@ -180,6 +240,9 @@ public final class VidaLog {
         for (HabitCheck k : checks) line(out, "K", k.habitId, k.date);
         for (Goal g : goals) line(out, "G", g.id, g.title, g.due, g.area, g.done ? "1" : "0");
         for (Routine r : routines) line(out, "R", r.id, r.title, r.encode());
+        for (Focus f : focus) line(out, "F", f.date, f.text, f.done ? "1" : "0");
+        for (Project j : projects) line(out, "J", j.id, j.title, j.status, j.created, j.encode());
+        for (Review w : reviews) line(out, "W", w.week, w.good, w.bad, w.priority);
         return out.toString();
     }
 
@@ -192,6 +255,7 @@ public final class VidaLog {
         List<PlannedMeal> plan = new ArrayList<>(); List<Habit> habits = new ArrayList<>();
         List<HabitCheck> checks = new ArrayList<>(); List<Goal> goals = new ArrayList<>();
         List<Routine> routines = new ArrayList<>();
+        List<Focus> focus = new ArrayList<>(); List<Project> projects = new ArrayList<>(); List<Review> reviews = new ArrayList<>();
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isEmpty()) continue;
             String[] f = fields(lines[i]);
@@ -206,10 +270,13 @@ public final class VidaLog {
                 case "K": checks.add(new HabitCheck(f[1], f[2])); break;
                 case "G": goals.add(new Goal(f[1], f[2], f[3], f[4], "1".equals(f[5]))); break;
                 case "R": routines.add(new Routine(f[1], f[2], Routine.decode(f[3]))); break;
+                case "F": focus.add(new Focus(f[1], f[2], "1".equals(f[3]))); break;
+                case "J": projects.add(new Project(f[1], f[2], f[3], f[4], Project.decode(f[5]))); break;
+                case "W": reviews.add(new Review(f[1], f[2], f[3], f[4])); break;
                 default: break; // tipos futuros: se ignoran sin perder el resto
             }
         }
-        return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, routines);
+        return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, routines, focus, projects, reviews);
     }
 
     private static void line(StringBuilder out, String... f) {

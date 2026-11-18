@@ -14,6 +14,7 @@
         tools:targetApi="33" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -140,6 +141,12 @@
 
         <activity android:name="salve.presentation.ui.BusinessFinanceActivity" android:exported="false" android:theme="@style/Theme.Salve" />
         <activity android:name="salve.presentation.ui.VidaActivity" android:exported="false" android:theme="@style/Theme.Salve" />
+        <receiver android:name="salve.core.vida.VidaReminders$Receiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <activity android:name="salve.presentation.ui.GymActivity" android:exported="false" android:theme="@style/Theme.Salve"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name="salve.presentation.ui.AvatarCoreActivity" android:exported="false" android:theme="@style/Theme.Salve" />
