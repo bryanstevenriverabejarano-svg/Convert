@@ -1063,6 +1063,7 @@ public class MainActivity extends AppCompatActivity {
         // ===== manejar Intents de compartir =====
         handleShareIntent(getIntent());
         handleVoiceLaunch(getIntent());
+        handleOpenMemory(getIntent());
 
         // Preserve existing model paths. New downloads/imports use app-private storage.
         if (!getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(salve.core.LocalModelPolicy.DOWNLOAD_VERSION_KEY, false)) {
@@ -1081,6 +1082,16 @@ public class MainActivity extends AppCompatActivity {
         setIntent(intent);
         handleShareIntent(intent);
         handleVoiceLaunch(intent);
+        handleOpenMemory(intent);
+    }
+
+    /** Lo pide la barra inferior de Vida («Memoria»): abre el panel de memoria existente. */
+    public static final String EXTRA_OPEN_MEMORY = "salve.extra.OPEN_MEMORY";
+
+    private void handleOpenMemory(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_OPEN_MEMORY, false)) return;
+        intent.removeExtra(EXTRA_OPEN_MEMORY);
+        getWindow().getDecorView().post(() -> { if (!isFinishing()) mostrarMemoriaEspanol(); });
     }
 
     /**

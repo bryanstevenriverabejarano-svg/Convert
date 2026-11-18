@@ -14,7 +14,7 @@ import android.view.View;
  */
 final class VidaIcon extends View {
     enum Type { HOME, CALENDAR, LAYERS, CHECK_CIRCLE, DUMBBELL, FORK_KNIFE, MOON, BARS, HEART_PULSE, TARGET, SPARKLE,
-        PLAY, PENCIL, BED, CHECKBOX, CHECKBOX_ON, CLAPPER, CLOCK, BRIEFCASE, LAPTOP, BOOK, COMPASS, DROP, PILL, STAR, PLUS, CHEVRON }
+        PLAY, PENCIL, BED, CHECKBOX, CHECKBOX_ON, CLAPPER, CLOCK, BRIEFCASE, LAPTOP, BOOK, COMPASS, DROP, PILL, STAR, PLUS, CHEVRON, BELL, GEAR }
 
     private final Type type;
     private final int color;
@@ -169,6 +169,20 @@ final class VidaIcon extends View {
                 break;
             case CHEVRON:
                 path.moveTo(9, 5); path.lineTo(16, 12); path.lineTo(9, 19);
+                break;
+            case BELL:
+                path.moveTo(6, 16.5f); path.lineTo(6, 11); path.cubicTo(6, 7.5f, 8.5f, 5, 12, 5); path.cubicTo(15.5f, 5, 18, 7.5f, 18, 11);
+                path.lineTo(18, 16.5f); path.lineTo(19.5f, 18); path.lineTo(4.5f, 18); path.close();
+                path.moveTo(10, 20.5f); path.lineTo(14, 20.5f);
+                break;
+            case GEAR:
+                canvas.drawCircle(12, 12, 3, p);
+                for (int k = 0; k < 8; k++) {
+                    double ang = Math.PI * k / 4;
+                    path.moveTo((float) (12 + 6 * Math.cos(ang)), (float) (12 + 6 * Math.sin(ang)));
+                    path.lineTo((float) (12 + 8.5 * Math.cos(ang)), (float) (12 + 8.5 * Math.sin(ang)));
+                }
+                canvas.drawCircle(12, 12, 6, p);
                 break;
         }
         canvas.drawPath(path, p);

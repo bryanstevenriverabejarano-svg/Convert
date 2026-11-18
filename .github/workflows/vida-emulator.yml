@@ -1,0 +1,95 @@
+name: Vida UI on an emulator
+
+# Captura real de la pantalla «Hoy» de Vida en un emulador Android (x86_64 con traducción ARM,
+# porque el APK de Salve es solo ARM64). Sube las capturas como artefacto para compararlas con
+# la referencia de diseño. No publica nada ni fusiona.
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/salve/presentation/ui/Vida*.java'
+      - 'app/src/main/java/salve/presentation/ui/GymActivity.java'
+      - 'app/src/main/java/salve/core/vida/**'
+      - 'app/src/androidTest/java/salve/presentation/ui/VidaScreenshotDeviceTest.java'
+      - '.github/workflows/vida-emulator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vida-emulator-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: Vida screenshots (emulator)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-read-only: true
+
+      - name: Prepare Android SDK
+        timeout-minutes: 10
+        run: bash scripts/setup-android-sdk.sh
+
+      - name: Build the debug APK and the instrumented test APK
+        timeout-minutes: 40
+        run: >-
+          bash ./gradlew --no-daemon --console=plain --max-workers=2
+          --init-script scripts/android-arm64.init.gradle
+          :app:assembleDebug :app:assembleDebugAndroidTest
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Capture Vida on the emulator
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/vida-emulator-shots.sh
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vida-emulator-shots-${{ github.sha }}
+          path: build/vida-emulator/
+          if-no-files-found: warn
+          retention-days: 14
+
+      # Copia reducida de cada captura en el registro del trabajo (base64 entre marcadores), para
+      # poder revisarlas también sin descargar artefactos.
+      - name: Print reduced screenshots to the log
+        if: always()
+        run: |
+          python3 -m pip install --quiet 'Pillow==11.3.0'
+          python3 - <<'PY'
+          import base64, glob, io
+          from PIL import Image
+          for f in sorted(glob.glob("build/vida-emulator/*.png")):
+              im = Image.open(f).convert("RGB")
+              im = im.resize((540, round(im.height * 540 / im.width)))
+              buf = io.BytesIO(); im.save(buf, "JPEG", quality=82)
+              print("VIDA-SHOT-BEGIN " + f.split("/")[-1])
+              data = base64.b64encode(buf.getvalue()).decode()
+              for i in range(0, len(data), 4000): print("VIDA-B64 " + data[i:i+4000])
+              print("VIDA-SHOT-END")
+          PY

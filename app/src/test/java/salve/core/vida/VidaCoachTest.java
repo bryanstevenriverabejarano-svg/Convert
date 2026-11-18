@@ -105,4 +105,52 @@ public class VidaCoachTest {
         assertEquals(60 * (1 + 7 / 30.0), p.get(1).oneRm, 1e-9);
         assertEquals("Press", GymTracker.trackedExercises(new VidaLog().withSets(s)).get(0));
     }
+
+    @Test public void dayPlanUsesRealProgressAndApplies() {
+        VidaLog log = VidaCoach.seedProjects(VidaPlanner.seedDefaults(new VidaLog()), wed);
+        List<VidaCoach.PlanItem> plan = VidaCoach.dayPlan(log, wed);
+        assertEquals("Terminar escena pendiente 1", plan.get(0).title);
+        boolean gym = false, mates = false;
+        for (VidaCoach.PlanItem p : plan) { if (p.kind.equals("gym")) gym = true; if (p.kind.equals("estudio")) mates = true; }
+        assertTrue(gym); assertTrue(mates);
+        assertTrue(plan.size() <= 4);
+        assertTrue(VidaCoach.planReasons(plan).contains("0 de 4"));
+        VidaLog busy = VidaPlanner.addBlocks(log, "Trabajo", new HashSet<>(Arrays.asList(3)), "08:00", 9 * 60);
+        VidaLog applied = VidaCoach.applyPlan(busy, wed, plan);
+        assertEquals("Terminar escena pendiente 1", VidaCoach.focusOn(applied, wed).text);
+        List<VidaLog.Block> today = new ArrayList<>();
+        for (VidaLog.Block b : applied.blocks) if (b.day == 3) today.add(b);
+        for (VidaLog.Block a : today) for (VidaLog.Block b : today) if (a != b) assertFalse(a.title + "/" + b.title, VidaPlanner.overlaps(a, b));
+        VidaLog.Block g = null; for (VidaLog.Block b : today) if (b.title.contains("Gym")) g = b;
+        assertTrue("el gym va por la tarde", VidaPlanner.minutes(g.time) >= 17 * 60);
+        assertEquals("aplicar dos veces no duplica", applied.blocks.size(), VidaCoach.applyPlan(applied, wed, plan).blocks.size());
+        // Se adapta: con el gym ya cumplido esta semana deja de proponerlo
+        for (int i = 0; i < 4; i++) applied = VidaPlanner.toggle(applied, "gym", VidaCoach.monday(wed).plusDays(i == 2 ? 4 : i));
+        for (VidaCoach.PlanItem p : VidaCoach.dayPlan(applied, wed)) assertFalse(p.kind.equals("gym"));
+    }
+
+    @Test public void scoresAndChanges() {
+        VidaLog log = VidaPlanner.toggle(VidaPlanner.seedDefaults(new VidaLog()), "mates", wed);
+        assertEquals(1, VidaCoach.dayScore(log, wed));
+        assertEquals(Integer.valueOf(50), VidaCoach.change(2, 3));
+        assertNull(VidaCoach.change(0, 3));
+        assertEquals("1 h 30 min", VidaCoach.duration(90));
+    }
+
+    @Test public void completingFocusAdvancesProjectAndWeekStatsCompare() {
+        VidaLog log = VidaCoach.seedProjects(VidaPlanner.seedDefaults(new VidaLog()), wed);
+        VidaLog.Project j = log.projects.get(0);
+        log = VidaCoach.setFocus(log, wed, VidaCoach.nextStep(j).text);
+        assertSame(j, VidaCoach.projectOf(log, VidaCoach.focusOn(log, wed).text));
+        VidaLog done = VidaCoach.completeFocus(log, wed);
+        assertTrue(VidaCoach.focusOn(done, wed).done);
+        assertEquals(1, VidaCoach.progress(done.projects.get(0))[0]);
+        VidaLog undone = VidaCoach.completeFocus(done, wed);
+        assertFalse(VidaCoach.focusOn(undone, wed).done);
+        assertEquals("deshacer no toca el paso", 1, VidaCoach.progress(undone.projects.get(0))[0]);
+        VidaLog s = VidaPlanner.logSleep(VidaPlanner.toggle(done, "gym", wed), wed, "23:30", "06:30");
+        int[] now = VidaCoach.weekStats(s, wed), before = VidaCoach.weekStats(s, wed.minusWeeks(1));
+        assertEquals(1, now[1]); assertEquals(420, now[2]); assertEquals(1, now[3]);
+        assertEquals(0, before[1]);
+    }
 }
