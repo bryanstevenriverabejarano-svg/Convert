@@ -762,7 +762,7 @@ public final class GymActivity extends Activity {
     }
 
     private TextView text(LinearLayout parent, String value, int size, int color, boolean bold) {
-        TextView t = new TextView(this); t.setText(value); t.setTextSize(size); t.setTextColor(color);
+        TextView t = new TextView(this); t.setText(value); VidaUi.size(this, t, size); t.setTextColor(color);
         if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setPadding(0, dp(4), 0, dp(4));
         if (parent != null) parent.addView(t);
@@ -770,7 +770,7 @@ public final class GymActivity extends Activity {
     }
 
     private Button button(String label, int color) {
-        Button b = new Button(this); b.setText(label); b.setAllCaps(false); b.setTextColor(Color.WHITE); b.setTextSize(16);
+        Button b = new Button(this); b.setText(label); b.setAllCaps(false); b.setTextColor(Color.WHITE); VidaUi.size(this, b, 15);
         GradientDrawable bg = new GradientDrawable(); bg.setColor(color); bg.setCornerRadius(dp(10));
         b.setBackground(bg);
         return b;
