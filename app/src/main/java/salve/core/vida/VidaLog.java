@@ -54,26 +54,117 @@ public final class VidaLog {
         }
     }
 
+    /** Comida planificada para un día de la semana. {@code kind}: desayuno, comida, merienda, cena. */
+    public static final class PlannedMeal {
+        public final int day; public final String kind, text;
+        public PlannedMeal(int day, String kind, String text) {
+            if (day < 1 || day > 7) throw new IllegalArgumentException("Día no válido.");
+            this.day = day; this.kind = req(kind); this.text = req(text);
+        }
+    }
+
+    /** Hábito diario o semanal. {@code perWeek}: veces por semana que cuenta como cumplido (1–7). */
+    public static final class Habit {
+        public final String id, name; public final int perWeek;
+        public Habit(String id, String name, int perWeek) {
+            this.id = req(id); this.name = req(name); this.perWeek = Math.max(1, Math.min(7, perWeek));
+        }
+    }
+
+    /** Un día en que se cumplió un hábito. */
+    public static final class HabitCheck {
+        public final String habitId, date;
+        public HabitCheck(String habitId, String date) { this.habitId = req(habitId); this.date = req(date); }
+    }
+
+    /** Objetivo o hito con fecha límite opcional (yyyy-MM-dd o vacío). */
+    public static final class Goal {
+        public final String id, title, due, area; public final boolean done;
+        public Goal(String id, String title, String due, String area, boolean done) {
+            this.id = req(id); this.title = req(title); this.due = opt(due); this.area = opt(area); this.done = done;
+        }
+        public Goal withDone(boolean d) { return new Goal(id, title, due, area, d); }
+    }
+
+    /** Rutina guardada (plantilla): ejercicios en orden con nº de series y descanso. */
+    public static final class Routine {
+        public static final class Item {
+            public final String exercise; public final int sets, restSeconds;
+            public Item(String exercise, int sets, int restSeconds) {
+                this.exercise = req(exercise); this.sets = Math.max(1, Math.min(20, sets)); this.restSeconds = Math.max(0, Math.min(600, restSeconds));
+            }
+        }
+        public final String id, title; public final List<Item> items;
+        public Routine(String id, String title, List<Item> items) {
+            this.id = req(id); this.title = req(title); this.items = Collections.unmodifiableList(new ArrayList<>(items));
+        }
+        String encode() {
+            StringBuilder b = new StringBuilder();
+            for (Item i : items) {
+                if (b.length() > 0) b.append('\u001E');
+                b.append(i.exercise.replace('\u001E', ' ').replace('\u001F', ' ')).append('\u001F').append(i.sets).append('\u001F').append(i.restSeconds);
+            }
+            return b.toString();
+        }
+        static List<Item> decode(String s) {
+            List<Item> out = new ArrayList<>();
+            if (s == null || s.isEmpty()) return out;
+            for (String part : s.split("\u001E")) {
+                String[] f = part.split("\u001F");
+                if (f.length == 3) out.add(new Item(f[0], Integer.parseInt(f[1]), Integer.parseInt(f[2])));
+            }
+            return out;
+        }
+    }
+
     public final List<GymSet> sets;
     public final List<SleepEntry> sleep;
     public final List<Meal> meals;
     public final List<Block> blocks;
+    public final List<PlannedMeal> plan;
+    public final List<Habit> habits;
+    public final List<HabitCheck> checks;
+    public final List<Goal> goals;
+    public final List<Routine> routines;
 
     public VidaLog() { this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>()); }
 
     public VidaLog(List<GymSet> sets, List<SleepEntry> sleep, List<Meal> meals, List<Block> blocks) {
+        this(sets, sleep, meals, blocks, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+    }
+
+    public VidaLog(List<GymSet> sets, List<SleepEntry> sleep, List<Meal> meals, List<Block> blocks,
+                   List<PlannedMeal> plan, List<Habit> habits, List<HabitCheck> checks, List<Goal> goals) {
+        this(sets, sleep, meals, blocks, plan, habits, checks, goals, new ArrayList<>());
+    }
+
+    public VidaLog(List<GymSet> sets, List<SleepEntry> sleep, List<Meal> meals, List<Block> blocks,
+                   List<PlannedMeal> plan, List<Habit> habits, List<HabitCheck> checks, List<Goal> goals, List<Routine> routines) {
         this.sets = Collections.unmodifiableList(new ArrayList<>(sets));
         this.sleep = Collections.unmodifiableList(new ArrayList<>(sleep));
         this.meals = Collections.unmodifiableList(new ArrayList<>(meals));
         this.blocks = Collections.unmodifiableList(new ArrayList<>(blocks));
+        this.plan = Collections.unmodifiableList(new ArrayList<>(plan));
+        this.habits = Collections.unmodifiableList(new ArrayList<>(habits));
+        this.checks = Collections.unmodifiableList(new ArrayList<>(checks));
+        this.goals = Collections.unmodifiableList(new ArrayList<>(goals));
+        this.routines = Collections.unmodifiableList(new ArrayList<>(routines));
     }
 
-    public boolean isEmpty() { return sets.isEmpty() && sleep.isEmpty() && meals.isEmpty() && blocks.isEmpty(); }
+    public boolean isEmpty() {
+        return sets.isEmpty() && sleep.isEmpty() && meals.isEmpty() && blocks.isEmpty()
+                && plan.isEmpty() && habits.isEmpty() && checks.isEmpty() && goals.isEmpty() && routines.isEmpty();
+    }
 
-    public VidaLog withSets(List<GymSet> next) { return new VidaLog(next, sleep, meals, blocks); }
-    public VidaLog withSleep(List<SleepEntry> next) { return new VidaLog(sets, next, meals, blocks); }
-    public VidaLog withMeals(List<Meal> next) { return new VidaLog(sets, sleep, next, blocks); }
-    public VidaLog withBlocks(List<Block> next) { return new VidaLog(sets, sleep, meals, next); }
+    public VidaLog withSets(List<GymSet> next) { return new VidaLog(next, sleep, meals, blocks, plan, habits, checks, goals, routines); }
+    public VidaLog withSleep(List<SleepEntry> next) { return new VidaLog(sets, next, meals, blocks, plan, habits, checks, goals, routines); }
+    public VidaLog withMeals(List<Meal> next) { return new VidaLog(sets, sleep, next, blocks, plan, habits, checks, goals, routines); }
+    public VidaLog withBlocks(List<Block> next) { return new VidaLog(sets, sleep, meals, next, plan, habits, checks, goals, routines); }
+    public VidaLog withPlan(List<PlannedMeal> next) { return new VidaLog(sets, sleep, meals, blocks, next, habits, checks, goals, routines); }
+    public VidaLog withHabits(List<Habit> next) { return new VidaLog(sets, sleep, meals, blocks, plan, next, checks, goals, routines); }
+    public VidaLog withChecks(List<HabitCheck> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, next, goals, routines); }
+    public VidaLog withGoals(List<Goal> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, next, routines); }
+    public VidaLog withRoutines(List<Routine> next) { return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, next); }
 
     // ---------------------------------------------------------------- serialización
 
@@ -84,6 +175,11 @@ public final class VidaLog {
         for (SleepEntry e : sleep) line(out, "D", e.date, e.bed, e.wake, String.valueOf(e.minutes));
         for (Meal m : meals) line(out, "C", m.date, m.time, m.kind, m.text);
         for (Block b : blocks) line(out, "B", b.title, String.valueOf(b.day), b.time, String.valueOf(b.minutes));
+        for (PlannedMeal p : plan) line(out, "P", String.valueOf(p.day), p.kind, p.text);
+        for (Habit h : habits) line(out, "H", h.id, h.name, String.valueOf(h.perWeek));
+        for (HabitCheck k : checks) line(out, "K", k.habitId, k.date);
+        for (Goal g : goals) line(out, "G", g.id, g.title, g.due, g.area, g.done ? "1" : "0");
+        for (Routine r : routines) line(out, "R", r.id, r.title, r.encode());
         return out.toString();
     }
 
@@ -93,6 +189,9 @@ public final class VidaLog {
         if (!lines[0].startsWith("vida\t")) throw new IllegalArgumentException("No es un registro de Vida.");
         List<GymSet> sets = new ArrayList<>(); List<SleepEntry> sleep = new ArrayList<>();
         List<Meal> meals = new ArrayList<>(); List<Block> blocks = new ArrayList<>();
+        List<PlannedMeal> plan = new ArrayList<>(); List<Habit> habits = new ArrayList<>();
+        List<HabitCheck> checks = new ArrayList<>(); List<Goal> goals = new ArrayList<>();
+        List<Routine> routines = new ArrayList<>();
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isEmpty()) continue;
             String[] f = fields(lines[i]);
@@ -102,10 +201,15 @@ public final class VidaLog {
                 case "D": sleep.add(new SleepEntry(f[1], f[2], f[3], Integer.parseInt(f[4]))); break;
                 case "C": meals.add(new Meal(f[1], f[2], f[3], f[4])); break;
                 case "B": blocks.add(new Block(f[1], Integer.parseInt(f[2]), f[3], Integer.parseInt(f[4]))); break;
+                case "P": plan.add(new PlannedMeal(Integer.parseInt(f[1]), f[2], f[3])); break;
+                case "H": habits.add(new Habit(f[1], f[2], Integer.parseInt(f[3]))); break;
+                case "K": checks.add(new HabitCheck(f[1], f[2])); break;
+                case "G": goals.add(new Goal(f[1], f[2], f[3], f[4], "1".equals(f[5]))); break;
+                case "R": routines.add(new Routine(f[1], f[2], Routine.decode(f[3]))); break;
                 default: break; // tipos futuros: se ignoran sin perder el resto
             }
         }
-        return new VidaLog(sets, sleep, meals, blocks);
+        return new VidaLog(sets, sleep, meals, blocks, plan, habits, checks, goals, routines);
     }
 
     private static void line(StringBuilder out, String... f) {

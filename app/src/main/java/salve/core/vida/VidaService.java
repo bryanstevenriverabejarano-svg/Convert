@@ -136,6 +136,17 @@ public final class VidaService {
         }
     }
 
+    /** Cambio hecho desde las pantallas de Vida: leer → aplicar → guardar → subir, con el mismo candado. */
+    public VidaLog update(java.util.function.UnaryOperator<VidaLog> change) throws IOException {
+        synchronized (lock) {
+            VidaLog current = load();
+            VidaLog next = change.apply(current);
+            if (next == current) { cached = current; return current; } // sin cambios: ni disco ni nube
+            store.save(next); cached = next; push(next);
+            return next;
+        }
+    }
+
     // ---------------------------------------------------------------- nube
 
     private static boolean isCloudCommand(String input) {
@@ -206,8 +217,26 @@ public final class VidaService {
         Map<String, VidaLog.Block> blocks = new LinkedHashMap<>();
         for (VidaLog.Block b : remote.blocks) blocks.put(VidaConversation.normalize(b.title) + "|" + b.day, b);
         for (VidaLog.Block b : local.blocks) blocks.put(VidaConversation.normalize(b.title) + "|" + b.day, b);
+        Map<String, VidaLog.PlannedMeal> plan = new LinkedHashMap<>();
+        for (VidaLog.PlannedMeal p : remote.plan) plan.put(p.day + "|" + p.kind, p);
+        for (VidaLog.PlannedMeal p : local.plan) plan.put(p.day + "|" + p.kind, p);
+        Map<String, VidaLog.Habit> habits = new LinkedHashMap<>();
+        for (VidaLog.Habit h : remote.habits) habits.put(h.id, h);
+        for (VidaLog.Habit h : local.habits) habits.put(h.id, h);
+        Map<String, VidaLog.HabitCheck> checks = new LinkedHashMap<>();
+        for (VidaLog.HabitCheck k : remote.checks) checks.put(k.habitId + "|" + k.date, k);
+        for (VidaLog.HabitCheck k : local.checks) checks.put(k.habitId + "|" + k.date, k);
+        Map<String, VidaLog.Goal> goals = new LinkedHashMap<>();
+        for (VidaLog.Goal g : remote.goals) goals.put(g.id, g);
+        // Un objetivo marcado como hecho en cualquier móvil sigue hecho.
+        for (VidaLog.Goal g : local.goals) { VidaLog.Goal r = goals.get(g.id); goals.put(g.id, r != null && r.done && !g.done ? r : g); }
+        Map<String, VidaLog.Routine> routines = new LinkedHashMap<>();
+        for (VidaLog.Routine r : remote.routines) routines.put(r.id, r);
+        for (VidaLog.Routine r : local.routines) routines.put(r.id, r);
         return new VidaLog(new ArrayList<>(sets.values()), new ArrayList<>(sleep.values()),
-                new ArrayList<>(meals.values()), new ArrayList<>(blocks.values()));
+                new ArrayList<>(meals.values()), new ArrayList<>(blocks.values()), new ArrayList<>(plan.values()),
+                new ArrayList<>(habits.values()), new ArrayList<>(checks.values()), new ArrayList<>(goals.values()),
+                new ArrayList<>(routines.values()));
     }
 
     private VidaLog snapshot() {

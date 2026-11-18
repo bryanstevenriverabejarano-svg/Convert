@@ -26,6 +26,7 @@ public class AssistantControlCommandTest {
         assertEquals(AssistantControlCommand.Type.FINANCES, AssistantControlCommand.parse("Salve, abre finanzas").type);
         assertEquals(AssistantControlCommand.Type.GYM, AssistantControlCommand.parse("Salve, abre el gym").type);
         assertEquals(AssistantControlCommand.Type.GYM, AssistantControlCommand.parse("Empieza entreno").type);
+        assertEquals(AssistantControlCommand.Type.VIDA, AssistantControlCommand.parse("Salve, abre mis hábitos").type);
         assertNull(AssistantControlCommand.parse("Quiero aprender de finanzas"));
         assertNull(AssistantControlCommand.parse("No abras finanzas"));
     }

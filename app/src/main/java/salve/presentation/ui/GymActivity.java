@@ -44,6 +44,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import salve.core.vida.GymTracker;
 import salve.core.vida.VidaLog;
+import salve.core.vida.VidaPlanner;
 import salve.core.vida.VidaRuntime;
 import salve.core.vida.VidaService;
 
@@ -126,13 +127,15 @@ public final class GymActivity extends Activity {
 
     // ================================================================ inicio
 
+    private boolean routinesOpen = true;
+
     private void showHome() {
         workout = null;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         LinearLayout root = page();
         ScrollView scroll = new ScrollView(this); scroll.setBackgroundColor(BG); scroll.addView(root);
 
-        text(root, "Gym", 28, Color.WHITE, true);
+        text(root, "Entrenamiento", 30, Color.WHITE, true);
         List<GymTracker.Session> sessions = GymTracker.sessions(log);
         LocalDate today = LocalDate.now();
         int month = 0, week = 0;
@@ -143,30 +146,49 @@ public final class GymActivity extends Activity {
         }
         text(root, sessions.size() + " entrenos · " + month + " este mes · " + week + " en 7 días", 15, MUTED, false);
 
-        Button empty = button("Empezar entreno vacío", BLUE);
+        Button empty = button("+  Empezar entrenamiento vacío", CARD);
+        empty.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        empty.setPadding(dp(20), 0, dp(20), 0);
         empty.setOnClickListener(v -> startWorkout("Entreno", new ArrayList<>()));
-        root.addView(empty, wide(16));
+        root.addView(empty, wide(14));
 
-        List<GymTracker.Routine> routines = GymTracker.routines(log);
-        if (!routines.isEmpty()) {
-            text(root, "Rutinas", 20, Color.WHITE, true);
-            for (GymTracker.Routine r : routines) {
-                LinearLayout card = card(root);
-                text(card, r.title, 17, BLUE, true);
-                text(card, r.exercises.size() + " ejercicios · " + r.sessions + " veces · última " + pretty(r.lastDate), 13, MUTED, false);
-                text(card, String.join(", ", r.exercises), 13, Color.LTGRAY, false);
-                card.setOnClickListener(v -> startWorkout(r.title, GymTracker.start(log, r)));
+        text(root, "Rutinas", 22, Color.WHITE, true).setPadding(0, dp(18), 0, dp(6));
+        LinearLayout actions = new LinearLayout(this);
+        Button create = button("Nueva rutina", CARD);
+        create.setOnClickListener(v -> editRoutine(null));
+        Button fromHistory = button("Desde mi historial", CARD);
+        fromHistory.setOnClickListener(v -> pickFromHistory());
+        LinearLayout.LayoutParams half = new LinearLayout.LayoutParams(0, -2, 1); half.setMargins(0, 0, dp(6), 0);
+        LinearLayout.LayoutParams half2 = new LinearLayout.LayoutParams(0, -2, 1); half2.setMargins(dp(6), 0, 0, 0);
+        actions.addView(create, half); actions.addView(fromHistory, half2);
+        root.addView(actions);
+
+        List<VidaLog.Routine> mine = log.routines;
+        TextView header = text(root, (routinesOpen ? "▾ " : "▸ ") + "Mis rutinas (" + mine.size() + ")", 17, MUTED, false);
+        header.setPadding(0, dp(14), 0, dp(4));
+        header.setOnClickListener(v -> { routinesOpen = !routinesOpen; showHome(); });
+        if (mine.isEmpty()) {
+            LinearLayout hint = card(root);
+            text(hint, "Aún no tienes rutinas guardadas.", 16, Color.WHITE, true);
+            text(hint, sessions.isEmpty() ? "Crea una con «Nueva rutina» o importa tu CSV de Hevy."
+                    : "Puedo crearlas a partir de tus entrenos importados (las que usaste en el último año).", 14, MUTED, false);
+            if (!sessions.isEmpty()) {
+                Button auto = button("Crear mis rutinas desde el historial", BLUE);
+                auto.setOnClickListener(v -> autoRoutines());
+                hint.addView(auto, wide(8));
             }
         }
+        if (routinesOpen) for (VidaLog.Routine r : mine) routineCard(root, r);
 
-        text(root, "Historial", 20, Color.WHITE, true);
+        text(root, "Historial", 22, Color.WHITE, true).setPadding(0, dp(18), 0, dp(6));
         if (sessions.isEmpty()) text(root, "Aún no hay entrenos. Empieza uno o importa el CSV de Hevy.", 14, MUTED, false);
         for (int i = 0; i < Math.min(20, sessions.size()); i++) {
             GymTracker.Session s = sessions.get(i);
             LinearLayout card = card(root);
             text(card, s.title, 16, Color.WHITE, true);
             text(card, pretty(s.date) + " · " + s.sets + " series · " + kg(s.volume) + " kg", 13, MUTED, false);
-            text(card, String.join(", ", s.exercises), 13, Color.LTGRAY, false);
+            TextView ex = text(card, String.join(", ", s.exercises), 13, Color.LTGRAY, false);
+            ex.setMaxLines(2); ex.setEllipsize(android.text.TextUtils.TruncateAt.END);
         }
 
         Button importer = button("Importar CSV de Hevy", CARD);
@@ -178,6 +200,163 @@ public final class GymActivity extends Activity {
         });
         root.addView(importer, wide(20));
         setContentView(scroll);
+    }
+
+    private void routineCard(LinearLayout root, VidaLog.Routine r) {
+        LinearLayout card = card(root);
+        card.setPadding(dp(16), dp(14), dp(16), dp(16));
+        LinearLayout top = new LinearLayout(this); top.setGravity(Gravity.CENTER_VERTICAL);
+        TextView name = text(null, r.title, 20, Color.WHITE, true);
+        top.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView more = text(null, "•••", 20, Color.WHITE, true);
+        more.setPadding(dp(12), 0, 0, 0);
+        more.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle(r.title)
+                .setItems(new String[]{"Editar rutina", "Duplicar", "Borrar"}, (d, which) -> {
+                    if (which == 0) editRoutine(r);
+                    else if (which == 1) changeRoutines(l -> VidaPlanner.duplicateRoutine(l, r.id));
+                    else new AlertDialog.Builder(this).setTitle("¿Borrar «" + r.title + "»?")
+                            .setMessage("Tu historial de entrenos no cambia.")
+                            .setPositiveButton("Borrar", (dd, ww) -> changeRoutines(l -> VidaPlanner.removeRoutine(l, r.id)))
+                            .setNegativeButton("Cancelar", null).show();
+                }).show());
+        top.addView(more);
+        card.addView(top);
+        List<String> names = new ArrayList<>();
+        for (VidaLog.Routine.Item i : r.items) names.add(i.exercise);
+        TextView list = text(card, names.isEmpty() ? "Sin ejercicios" : String.join(", ", names), 16, MUTED, false);
+        list.setMaxLines(2); list.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        Button start = button("Empezar rutina", BLUE);
+        start.setOnClickListener(v -> startWorkout(r.title, VidaPlanner.start(log, r)));
+        card.addView(start, wide(12));
+    }
+
+    private void changeRoutines(java.util.function.UnaryOperator<VidaLog> change) {
+        io.execute(() -> {
+            String error = null;
+            try { log = vida.update(change); } catch (Exception e) { error = "No pude guardar la rutina; lo anterior se conserva."; }
+            final String err = error;
+            ui.post(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (err != null) Toast.makeText(this, err, Toast.LENGTH_LONG).show();
+                if (workout == null) showHome();
+            });
+        });
+    }
+
+    /** Las rutinas usadas en el último año, guardadas como editables (sin duplicar títulos). */
+    private void autoRoutines() {
+        LocalDate yearAgo = LocalDate.now().minusYears(1);
+        changeRoutines(l -> {
+            VidaLog out = l;
+            java.util.Set<String> have = new java.util.HashSet<>();
+            for (VidaLog.Routine r : l.routines) have.add(r.title.toLowerCase(Locale.ROOT));
+            List<GymTracker.Routine> derived = GymTracker.routines(l);
+            for (int i = derived.size() - 1; i >= 0; i--) {
+                GymTracker.Routine d = derived.get(i);
+                if (LocalDate.parse(d.lastDate).isBefore(yearAgo) || !have.add(d.title.toLowerCase(Locale.ROOT))) continue;
+                out = VidaPlanner.saveRoutine(out, VidaPlanner.fromHistory(l, d));
+            }
+            return out;
+        });
+    }
+
+    private void pickFromHistory() {
+        List<GymTracker.Routine> derived = GymTracker.routines(log);
+        if (derived.isEmpty()) { Toast.makeText(this, "Importa primero tu CSV de Hevy o haz algún entreno.", Toast.LENGTH_LONG).show(); return; }
+        String[] names = new String[derived.size()];
+        for (int i = 0; i < names.length; i++) names[i] = derived.get(i).title + "  ·  " + pretty(derived.get(i).lastDate);
+        new AlertDialog.Builder(this).setTitle("Crear rutina a partir de…")
+                .setItems(names, (d, which) -> editRoutine(VidaPlanner.fromHistory(log, derived.get(which)))).show();
+    }
+
+    // ================================================================ editor de rutinas
+
+    private String editingId;
+    private String editingTitle;
+    private List<VidaLog.Routine.Item> editingItems;
+
+    /** null = nueva rutina. Una rutina sin guardar (desde historial) también se edita aquí. */
+    private void editRoutine(VidaLog.Routine r) {
+        editingId = r == null ? VidaPlanner.newId() : r.id;
+        editingTitle = r == null ? "" : r.title;
+        editingItems = r == null ? new ArrayList<>() : new ArrayList<>(r.items);
+        showEditor();
+    }
+
+    private void showEditor() {
+        LinearLayout root = page();
+        ScrollView scroll = new ScrollView(this); scroll.setBackgroundColor(BG); scroll.addView(root);
+        LinearLayout bar = new LinearLayout(this); bar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView cancel = text(null, "Cancelar", 16, BLUE, false);
+        cancel.setOnClickListener(v -> showHome());
+        TextView heading = text(null, "Rutina", 18, Color.WHITE, true);
+        heading.setGravity(Gravity.CENTER);
+        TextView save = text(null, "Guardar", 16, BLUE, true);
+        save.setOnClickListener(v -> saveEditor());
+        bar.addView(cancel); bar.addView(heading, new LinearLayout.LayoutParams(0, -2, 1)); bar.addView(save);
+        root.addView(bar);
+
+        EditText title = new EditText(this); title.setHint("Título de la rutina"); title.setText(editingTitle);
+        title.setTextColor(Color.WHITE); title.setHintTextColor(Color.GRAY); title.setTextSize(22); title.setSingleLine(true);
+        title.addTextChangedListener(VidaUi.after(t -> editingTitle = t));
+        root.addView(title, wide(12));
+
+        if (editingItems.isEmpty()) text(root, "Empieza añadiendo un ejercicio a tu rutina.", 15, MUTED, false);
+        for (int i = 0; i < editingItems.size(); i++) {
+            final int index = i;
+            VidaLog.Routine.Item item = editingItems.get(i);
+            LinearLayout card = card(root);
+            LinearLayout top = new LinearLayout(this); top.setGravity(Gravity.CENTER_VERTICAL);
+            top.addView(text(null, item.exercise, 17, BLUE, true), new LinearLayout.LayoutParams(0, -2, 1));
+            top.addView(small("↑", v -> { if (index > 0) { java.util.Collections.swap(editingItems, index, index - 1); showEditor(); } }));
+            top.addView(small("↓", v -> { if (index < editingItems.size() - 1) { java.util.Collections.swap(editingItems, index, index + 1); showEditor(); } }));
+            top.addView(small("✕", v -> { editingItems.remove(index); showEditor(); }));
+            card.addView(top);
+            LinearLayout sets = new LinearLayout(this); sets.setGravity(Gravity.CENTER_VERTICAL);
+            sets.addView(text(null, "Series", 15, MUTED, false), new LinearLayout.LayoutParams(0, -2, 1));
+            sets.addView(small("−", v -> { editingItems.set(index, new VidaLog.Routine.Item(item.exercise, item.sets - 1, item.restSeconds)); showEditor(); }));
+            sets.addView(text(null, String.valueOf(item.sets), 18, Color.WHITE, true));
+            sets.addView(small("+", v -> { editingItems.set(index, new VidaLog.Routine.Item(item.exercise, item.sets + 1, item.restSeconds)); showEditor(); }));
+            card.addView(sets);
+            TextView rest = text(card, restLabel(item.restSeconds), 15, MUTED, false);
+            rest.setOnClickListener(v -> {
+                int k = 0; while (k < RESTS.length && RESTS[k] != item.restSeconds) k++;
+                editingItems.set(index, new VidaLog.Routine.Item(item.exercise, item.sets, RESTS[(k + 1) % RESTS.length]));
+                showEditor();
+            });
+            List<VidaLog.GymSet> prev = GymTracker.previous(log, item.exercise);
+            if (!prev.isEmpty()) {
+                StringBuilder last = new StringBuilder("Última vez: ");
+                for (int j = 0; j < prev.size(); j++) { if (j > 0) last.append(" · "); last.append(previousLabel(prev.get(j))); }
+                TextView lv = text(card, last.toString(), 13, Color.LTGRAY, false);
+                lv.setMaxLines(2); lv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            }
+        }
+        Button add = button("+ Añadir ejercicio", BLUE);
+        add.setOnClickListener(v -> {
+            AutoCompleteTextView input = new AutoCompleteTextView(this);
+            input.setHint("Busca o escribe un ejercicio"); input.setThreshold(1);
+            input.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, GymTracker.exercises(log)));
+            new AlertDialog.Builder(this).setTitle("Añadir ejercicio").setView(input)
+                    .setPositiveButton("Añadir", (d, w) -> {
+                        String name = input.getText().toString().trim();
+                        if (name.isEmpty()) return;
+                        for (String known : GymTracker.exercises(log)) if (known.equalsIgnoreCase(name)) name = known;
+                        editingItems.add(new VidaLog.Routine.Item(name, Math.max(3, GymTracker.previous(log, name).size()), 90));
+                        showEditor();
+                    }).setNegativeButton("Cancelar", null).show();
+        });
+        root.addView(add, wide(14));
+        setContentView(scroll);
+    }
+
+    private void saveEditor() {
+        String t = editingTitle == null ? "" : editingTitle.trim();
+        if (t.isEmpty()) { Toast.makeText(this, "Ponle un título a la rutina.", Toast.LENGTH_SHORT).show(); return; }
+        if (editingItems.isEmpty()) { Toast.makeText(this, "Añade al menos un ejercicio.", Toast.LENGTH_SHORT).show(); return; }
+        VidaLog.Routine r = new VidaLog.Routine(editingId, t, editingItems);
+        changeRoutines(l -> VidaPlanner.saveRoutine(l, r));
+        Toast.makeText(this, "Rutina «" + t + "» guardada.", Toast.LENGTH_SHORT).show();
     }
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
@@ -393,6 +572,15 @@ public final class GymActivity extends Activity {
         String date = Instant.ofEpochMilli(startMillis).atZone(ZoneId.systemDefault()).toLocalDate().toString();
         List<VidaLog.GymSet> sets = GymTracker.toSets(date, String.valueOf(startMillis), title, workout);
         String name = title;
+        // Si el entreno no venía de una rutina guardada con ese título, ofrecer guardarlo como rutina.
+        boolean known = false;
+        for (VidaLog.Routine r : log.routines) if (r.title.equalsIgnoreCase(title)) known = true;
+        List<VidaLog.Routine.Item> asRoutine = new ArrayList<>();
+        for (GymTracker.LiveExercise ex : workout) {
+            int n = 0; for (GymTracker.LiveSet s0 : ex.sets) if (s0.done) n++;
+            if (n > 0) asRoutine.add(new VidaLog.Routine.Item(ex.name, n, ex.restSeconds));
+        }
+        boolean offerRoutine = !known && !asRoutine.isEmpty();
         io.execute(() -> {
             GymTracker.Summary summary = null; String error = null;
             try { summary = vida.saveWorkout(sets); log = vida.read(); deleteDraftFile(); }
@@ -411,8 +599,11 @@ public final class GymActivity extends Activity {
                     for (String r : s.records) msg.append("\n• ").append(r);
                 }
                 showHome();
-                new AlertDialog.Builder(this).setTitle("¡" + name + " terminado!").setMessage(msg.toString())
-                        .setPositiveButton("Hecho", null).show();
+                AlertDialog.Builder done = new AlertDialog.Builder(this).setTitle("¡" + name + " terminado!").setMessage(msg.toString())
+                        .setPositiveButton("Hecho", null);
+                if (offerRoutine) done.setNeutralButton("Guardar como rutina", (d, w) ->
+                        changeRoutines(l -> VidaPlanner.saveRoutine(l, new VidaLog.Routine(VidaPlanner.newId(), name, asRoutine))));
+                done.show();
             });
         });
     }
@@ -493,7 +684,7 @@ public final class GymActivity extends Activity {
         TextView t = new TextView(this); t.setText(value); t.setTextSize(size); t.setTextColor(color);
         if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setPadding(0, dp(4), 0, dp(4));
-        parent.addView(t);
+        if (parent != null) parent.addView(t);
         return t;
     }
 
