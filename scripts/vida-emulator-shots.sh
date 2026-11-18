@@ -7,10 +7,17 @@ mkdir -p "$out"
 adb shell getprop ro.product.cpu.abilist | tee "$out/abilist.txt"
 adb install -r -g app/build/outputs/apk/debug/app-debug.apk 2>&1 | tee "$out/install.txt"
 adb install -r -g app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk 2>&1 | tee -a "$out/install.txt"
+# El lanzador del emulador recién arrancado a veces muestra «no responde»: se ocultan los diálogos
+# de error del sistema y se cierra cualquiera abierto para que no tape la captura.
+adb shell settings put global hide_error_dialogs 1 || true
+adb shell input keyevent KEYCODE_HOME || true
+sleep 15
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
 status=0
 for density in 420 480; do
   adb shell wm density "$density"
   sleep 3
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
   adb shell am instrument -w -e vidaShots true -e class salve.presentation.ui.VidaScreenshotDeviceTest \
     com.salve.app.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee "$out/instrument-$density.txt"
   grep -q "OK (1 test)" "$out/instrument-$density.txt" || status=1

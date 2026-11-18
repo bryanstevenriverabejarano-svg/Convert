@@ -273,6 +273,8 @@ public final class VidaActivity extends Activity {
         total += night == null ? 0 : Math.min(1f, night.minutes / 450f); parts++;
         float dayProgress = parts == 0 ? 0 : total / parts;
         List<VidaCoach.PlanItem> plan = VidaCoach.dayPlan(log, today);
+        // En móviles de menos de 400 dp de ancho las parejas de tarjetas se apilan para que nada se corte.
+        boolean compact = getResources().getConfiguration().screenWidthDp < 400;
 
         // ---- 3. fecha + semana + avisos + ajustes
         LinearLayout dateRow = row(this);
@@ -367,7 +369,7 @@ public final class VidaActivity extends Activity {
         goal.addView(gb);
         // Barra: progreso del proyecto al que pertenece (si lo hay) o la propia tarea.
         float gfrac; String glabel;
-        if (gp != null) { int[] pp = VidaCoach.progress(gp); gfrac = pp[1] == 0 ? 0 : (float) pp[0] / pp[1]; glabel = "«" + gp.title + "» · " + pp[0] + "/" + pp[1] + " pasos"; }
+        if (gp != null) { int[] pp = VidaCoach.progress(gp); gfrac = pp[1] == 0 ? 0 : (float) pp[0] / pp[1]; glabel = "Proyecto: " + pp[0] + "/" + pp[1] + " pasos"; }
         else { gfrac = f != null && f.done ? 1 : 0; glabel = f != null && f.done ? "Completado" : "Pendiente"; }
         LinearLayout gr = row(this);
         TextView gl = text(this, null, glabel, 10, MUTED, false); gl.setMaxLines(1); gl.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -393,7 +395,7 @@ public final class VidaActivity extends Activity {
         LinearLayout pr = row(this); pr.setPadding(0, dp(this, 6), 0, 0); pr.setGravity(Gravity.CENTER_VERTICAL);
         VidaWidgets.Ring ring = new VidaWidgets.Ring(this, CYAN);
         ring.set(dayProgress, Math.round(dayProgress * 100) + "%");
-        int ringSize = Math.round(dp(this, 72) * scale(this));
+        int ringSize = Math.round(dp(this, 66) * scale(this));
         pr.addView(ring, new LinearLayout.LayoutParams(ringSize, ringSize));
         LinearLayout list = column(this); list.setPadding(dp(this, 8), 0, 0, 0);
         list.addView(meter(VidaIcon.Type.CHECKBOX, "Tareas", tasksDone + "/" + tasks, tasks == 0 ? 0 : (float) tasksDone / tasks));
@@ -403,7 +405,7 @@ public final class VidaActivity extends Activity {
         list.addView(meter(VidaIcon.Type.MOON, "Sueño", (night == null ? "—" : String.format(new Locale("es"), "%.1f", night.minutes / 60.0)) + "/7,5 h", night == null ? 0 : night.minutes / 450f));
         pr.addView(list, new LinearLayout.LayoutParams(0, -2, 1));
         prog.addView(pr);
-        content.addView(cols(new View[]{goal, prog}, new float[]{1, 1.15f}));
+        content.addView(cols(new View[]{goal, prog}, new float[]{1, 1.15f}, compact));
 
         // ---- 6. agenda | hábitos (esta semana)
         LinearLayout ag = panel();
@@ -431,7 +433,7 @@ public final class VidaActivity extends Activity {
             r.addView(dot, dl);
             r.addView(icon(blockIcon(b), done ? MUTED : current ? CYAN : LIGHT, 16));
             TextView t = text(this, null, " " + b.title, 12, done ? MUTED : Color.WHITE, current);
-            t.setMaxLines(1); t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            t.setMaxLines(2); t.setEllipsize(android.text.TextUtils.TruncateAt.END);
             if (done) t.setPaintFlags(t.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
             r.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
             r.addView(text(this, null, " " + VidaCoach.duration(b.minutes), 10, MUTED, false));
@@ -452,7 +454,7 @@ public final class VidaActivity extends Activity {
             LinearLayout mid = column(this); mid.setPadding(dp(this, 8), 0, dp(this, 6), 0);
             LinearLayout top = row(this);
             TextView n = text(this, null, h.name, 12, Color.WHITE, false);
-            n.setMaxLines(1); n.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            n.setMaxLines(2); n.setEllipsize(android.text.TextUtils.TruncateAt.END);
             top.addView(n, new LinearLayout.LayoutParams(0, -2, 1));
             top.addView(text(this, null, weekDone + "/" + h.perWeek, 11, weekDone >= h.perWeek ? GREEN : MUTED, true));
             mid.addView(top);
@@ -474,7 +476,7 @@ public final class VidaActivity extends Activity {
         }
         if (log.habits.isEmpty()) text(this, hb, "Sin hábitos todavía.", 12, MUTED, false);
         hb.addView(link(this, "Ver todos ›", v -> go("Hábitos")));
-        content.addView(cols(new View[]{ag, hb}, new float[]{1.1f, 1}));
+        content.addView(cols(new View[]{ag, hb}, new float[]{1.1f, 1}, compact));
 
         // ---- 7. gym | sueño | evolución semanal
         LinearLayout gym = panel();
@@ -544,7 +546,10 @@ public final class VidaActivity extends Activity {
         }
         text(this, evo, "vs. semana anterior (hasta hoy)", 9, MUTED, false);
         evo.setOnClickListener(v -> go("Evolución"));
-        content.addView(cols(new View[]{gym, sl, evo}, new float[]{1, 0.95f, 1.2f}));
+        if (compact) {
+            content.addView(cols(new View[]{gym, sl}, new float[]{1, 1}));
+            content.addView(cols(new View[]{evo}, new float[]{1}));
+        } else content.addView(cols(new View[]{gym, sl, evo}, new float[]{1, 0.95f, 1.2f}));
 
         if (dow == 7 && VidaCoach.reviewFor(log, monday) == null)
             content.addView(link(this, "Hoy es domingo: toca tu revisión semanal ›", v -> go("Evolución")));
@@ -656,8 +661,10 @@ public final class VidaActivity extends Activity {
     private void go(String t) { tab = t; paintTabs(); render(); }
 
     /** Fila de columnas que se apila en pantallas estrechas. */
-    private LinearLayout cols(View[] views, float[] weights) {
-        boolean stack = narrow(this) && views.length > 1;
+    private LinearLayout cols(View[] views, float[] weights) { return cols(views, weights, false); }
+
+    private LinearLayout cols(View[] views, float[] weights, boolean forceStack) {
+        boolean stack = (forceStack || narrow(this)) && views.length > 1;
         LinearLayout r = stack ? column(this) : row(this);
         r.setGravity(Gravity.TOP);
         for (int i = 0; i < views.length; i++) {
@@ -683,7 +690,7 @@ public final class VidaActivity extends Activity {
         r.addView(icon(type, NEON, 20));
         TextView t = text(this, null, "  " + title, 14, Color.WHITE, true);
         t.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD_ITALIC));
-        t.setMaxLines(1); t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        t.setMaxLines(2); t.setEllipsize(android.text.TextUtils.TruncateAt.END);
         r.addView(t, new LinearLayout.LayoutParams(right == null && extra == null ? 0 : -2, -2, right == null && extra == null ? 1 : 0));
         if (extra != null) r.addView(text(this, null, " " + extra, 12, MUTED, false), new LinearLayout.LayoutParams(0, -2, 1));
         else if (right != null) r.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
@@ -695,9 +702,11 @@ public final class VidaActivity extends Activity {
         LinearLayout r = row(this); r.setPadding(0, dp(this, 2), 0, dp(this, 2));
         r.addView(icon(type, LIGHT, 13));
         TextView t = text(this, null, " " + label, 10, LIGHT, false); t.setMaxLines(1); t.setPadding(0, 0, 0, 0);
-        r.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
+        // Ancho fijo para la etiqueta: «Comidas» o «Hábitos» nunca se recortan y las barras quedan alineadas.
+        r.addView(t, new LinearLayout.LayoutParams(Math.round(dp(this, 52) * scale(this)), -2));
         VidaWidgets.Line line = new VidaWidgets.Line(this, NEON); line.set(fraction);
-        r.addView(line, new LinearLayout.LayoutParams(0, dp(this, 4), 1));
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, dp(this, 4), 1); bl.setMargins(dp(this, 2), 0, dp(this, 2), 0);
+        r.addView(line, bl);
         TextView v = text(this, null, " " + value, 10, Color.WHITE, false); v.setMaxLines(1); v.setPadding(0, 0, 0, 0);
         r.addView(v);
         return r;
