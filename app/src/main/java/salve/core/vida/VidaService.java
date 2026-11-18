@@ -233,10 +233,20 @@ public final class VidaService {
         Map<String, VidaLog.Routine> routines = new LinkedHashMap<>();
         for (VidaLog.Routine r : remote.routines) routines.put(r.id, r);
         for (VidaLog.Routine r : local.routines) routines.put(r.id, r);
+        Map<String, VidaLog.Focus> focus = new LinkedHashMap<>();
+        for (VidaLog.Focus f : remote.focus) focus.put(f.date, f);
+        for (VidaLog.Focus f : local.focus) { VidaLog.Focus r = focus.get(f.date); focus.put(f.date, r != null && r.done && !f.done && r.text.equals(f.text) ? r : f); }
+        Map<String, VidaLog.Project> projects = new LinkedHashMap<>();
+        for (VidaLog.Project j : remote.projects) projects.put(j.id, j);
+        for (VidaLog.Project j : local.projects) projects.put(j.id, j);
+        Map<String, VidaLog.Review> reviews = new LinkedHashMap<>();
+        for (VidaLog.Review w : remote.reviews) reviews.put(w.week, w);
+        for (VidaLog.Review w : local.reviews) reviews.put(w.week, w);
         return new VidaLog(new ArrayList<>(sets.values()), new ArrayList<>(sleep.values()),
                 new ArrayList<>(meals.values()), new ArrayList<>(blocks.values()), new ArrayList<>(plan.values()),
                 new ArrayList<>(habits.values()), new ArrayList<>(checks.values()), new ArrayList<>(goals.values()),
-                new ArrayList<>(routines.values()));
+                new ArrayList<>(routines.values()), new ArrayList<>(focus.values()), new ArrayList<>(projects.values()),
+                new ArrayList<>(reviews.values()));
     }
 
     private VidaLog snapshot() {

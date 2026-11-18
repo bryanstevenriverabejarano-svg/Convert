@@ -149,6 +149,45 @@ public final class GymTracker {
         return ex;
     }
 
+    /** Un punto de la gráfica de un ejercicio: mejor serie de la sesión. */
+    public static final class Point {
+        public final String date; public final double maxKg, oneRm, volume; public final int bestReps;
+        Point(String date, double maxKg, double oneRm, double volume, int bestReps) {
+            this.date = date; this.maxKg = maxKg; this.oneRm = oneRm; this.volume = volume; this.bestReps = bestReps;
+        }
+    }
+
+    /** Evolución de un ejercicio por sesión (sin calentamientos), de la más antigua a la más reciente. */
+    public static List<Point> progress(VidaLog log, String exercise) {
+        Map<String, double[]> byDate = new TreeMap<>(); // maxKg, oneRm, volume, repsAtMax
+        for (VidaLog.GymSet s : log.sets) {
+            if (!s.exercise.equals(exercise) || "calentamiento".equals(s.type) || s.kg == null || s.reps == null) continue;
+            double[] p = byDate.computeIfAbsent(s.date, k -> new double[]{0, 0, 0, 0});
+            if (s.kg > p[0] || (s.kg == p[0] && s.reps > p[3])) { p[0] = s.kg; p[3] = s.reps; }
+            p[1] = Math.max(p[1], estimatedOneRepMax(s.kg, s.reps));
+            p[2] += s.volume();
+        }
+        List<Point> out = new ArrayList<>();
+        for (Map.Entry<String, double[]> e : byDate.entrySet())
+            out.add(new Point(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2], (int) e.getValue()[3]));
+        return out;
+    }
+
+    /** Ejercicios con peso, ordenados por número de sesiones (los que más haces primero). */
+    public static List<String> trackedExercises(VidaLog log) {
+        Map<String, java.util.Set<String>> dates = new HashMap<>();
+        for (VidaLog.GymSet s : log.sets) if (s.kg != null && s.reps != null) dates.computeIfAbsent(s.exercise, k -> new java.util.HashSet<>()).add(s.date);
+        List<String> out = new ArrayList<>(dates.keySet());
+        out.sort(Comparator.comparingInt((String n) -> -dates.get(n).size()).thenComparing(n -> n));
+        return out;
+    }
+
+    public static int sessionCount(VidaLog log, String exercise) {
+        java.util.Set<String> d = new java.util.HashSet<>();
+        for (VidaLog.GymSet s : log.sets) if (s.exercise.equals(exercise)) d.add(s.date);
+        return d.size();
+    }
+
     // ---------------------------------------------------------------- récords
 
     /** 1RM estimado (Epley); solo con 1–12 reps, donde la fórmula es razonable. */
