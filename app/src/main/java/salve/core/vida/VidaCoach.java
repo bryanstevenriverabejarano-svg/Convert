@@ -233,9 +233,24 @@ public final class VidaCoach {
      */
     public static List<PlanItem> dayPlan(VidaLog log, LocalDate day) {
         List<PlanItem> out = new ArrayList<>();
+        // Priorizar la última noche conocida, no ocultar una noche de 3 h con la media semanal.
+        List<VidaLog.SleepEntry> recent = VidaPlanner.lastNights(log, 7);
+        VidaLog.SleepEntry latest = null;
+        for (VidaLog.SleepEntry e : recent)
+            if (!LocalDate.parse(e.date).isAfter(day)
+                    && (latest == null || e.date.compareTo(latest.date) > 0)) latest = e;
+        // No aplicar un registro antiguo como si describiera el descanso actual.
+        int sleepMinutes = latest != null && !LocalDate.parse(latest.date).isBefore(day.minusDays(1))
+                ? latest.minutes : 0;
+        boolean severeSleepDebt = sleepMinutes > 0 && sleepMinutes < 4 * 60;
+        boolean lowSleep = sleepMinutes > 0 && sleepMinutes < 6 * 60;
+        if (severeSleepDebt)
+            out.add(new PlanItem("Priorizar descanso y recuperación", 20, "descanso",
+                    "La última noche registrada fue de " + VidaConversation.hours(sleepMinutes)
+                    + ". Hoy evita exigirte y considera consultar con un profesional si se repite."));
         VidaLog.Focus f = focusOn(log, day);
         int daysLeft = 8 - day.getDayOfWeek().getValue(); // contando hoy
-        if (f != null && !f.done) out.add(new PlanItem(f.text, 90, "proyecto", "Es tu tarea más importante de hoy: terminarla gana el día."));
+        if (f != null && !f.done) out.add(new PlanItem(f.text, lowSleep ? 20 : 90, "proyecto", "Es tu tarea más importante de hoy: terminarla gana el día."));
         else if (f == null) {
             for (VidaLog.Project j : log.projects) {
                 if (!ACTIVE.equals(j.status)) continue;
@@ -248,12 +263,13 @@ public final class VidaCoach {
                         long d = java.time.temporal.ChronoUnit.DAYS.between(day, LocalDate.parse(g.due));
                         due = d >= 0 ? " y su objetivo vence en " + d + " días" : " y su objetivo ya venció";
                     }
-                out.add(new PlanItem(s.text, 90, "proyecto", "Es el siguiente paso de «" + j.title + "» (" + p[0] + "/" + p[1] + " pasos)" + due + "."));
+                out.add(new PlanItem(s.text, lowSleep ? 20 : 90, "proyecto", "Es el siguiente paso de «" + j.title + "» (" + p[0] + "/" + p[1] + " pasos)" + due + "."));
                 break;
             }
         }
         for (VidaLog.Habit h : log.habits) {
             if (out.size() >= 4) break;
+            if (lowSleep && h.id.equals("gym")) continue;
             if (h.id.equals("sueno") || h.id.equals("revision") && day.getDayOfWeek() != DayOfWeek.SUNDAY) continue;
             if (VidaPlanner.checked(log, h.id, day)) continue;
             int done = VidaPlanner.doneThisWeek(log, h.id, day), missing = h.perWeek - done;
@@ -261,13 +277,13 @@ public final class VidaCoach {
             // Solo si va por detrás: lo que falta no cabe en los días que quedan sin hacerlo hoy.
             boolean behind = missing >= daysLeft || h.perWeek >= 4 || missing == 1 && daysLeft <= 3;
             if (!behind) continue;
-            int minutes = h.id.equals("gym") ? 60 : h.id.equals("mates") ? 60 : h.id.equals("proyecto") ? 120 : h.id.equals("revision") ? 20 : 45;
+            int minutes = lowSleep ? 20 : h.id.equals("gym") ? 60 : h.id.equals("mates") ? 60 : h.id.equals("proyecto") ? 120 : h.id.equals("revision") ? 20 : 45;
             String title = h.id.equals("gym") ? "Entrenamiento (Gym)" : h.name;
             out.add(new PlanItem(title, minutes, h.id.equals("gym") ? "gym" : h.id.equals("mates") ? "estudio" : "habito",
                     "Llevas " + done + " de " + h.perWeek + " esta semana y quedan " + daysLeft + (daysLeft == 1 ? " día." : " días.")));
         }
         int avg = VidaPlanner.averageMinutes(VidaPlanner.lastNights(log, 7));
-        if (out.size() < 4 && avg > 0 && avg < 7 * 60)
+        if (!severeSleepDebt && out.size() < 4 && avg > 0 && avg < 7 * 60)
             out.add(new PlanItem("Preparar el sueño (pantallas fuera)", 15, "descanso",
                     "Tu media de sueño es " + VidaConversation.hours(avg) + "; dormir 7 h mejora el resto del plan."));
         return out;
