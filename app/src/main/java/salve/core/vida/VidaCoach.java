@@ -166,6 +166,24 @@ public final class VidaCoach {
         return addProject(log, "Vídeo «Me dicen Bray»", steps, today);
     }
 
+    /** Consejos basados en pasos y antigüedad; no se infiere inactividad sin historial. */
+    public static List<String> projectInsights(VidaLog log, LocalDate today) {
+        List<String> out = new ArrayList<>();
+        for (VidaLog.Project project : log.projects) {
+            if (!ACTIVE.equals(project.status)) continue;
+            int[] progress = progress(project);
+            if (progress[1] == 0 || progress[0] == progress[1]) continue;
+            VidaLog.Project.Step next = nextStep(project);
+            if (progress[1] >= 4 && progress[0] * 100 >= progress[1] * 80)
+                out.add("Modo Terminar: " + project.title + ". Completa «" + next.text + "» antes de añadir más mejoras.");
+            else if (java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(project.created), today) >= 14)
+                out.add("Revisa " + project.title + ": lleva tiempo abierto. ¿Qué dificulta «" + next.text + "»?");
+        }
+        if (activeCount(log) >= MAX_ACTIVE)
+            out.add("Ya hay dos proyectos activos: pausa uno antes de iniciar otro.");
+        return out;
+    }
+
     // ---------------------------------------------------------------- revisión semanal
 
     public static LocalDate monday(LocalDate day) { return day.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)); }
@@ -215,6 +233,7 @@ public final class VidaCoach {
             int[] p = progress(j);
             out.append("Proyecto ").append(j.title).append(": ").append(p[0]).append("/").append(p[1]).append(" pasos\n");
         }
+        for (String insight : projectInsights(log, day)) out.append("• ").append(insight).append('\n');
         return out.toString().trim();
     }
 
