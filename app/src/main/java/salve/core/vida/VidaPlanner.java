@@ -399,6 +399,45 @@ public final class VidaPlanner {
         return log.withBlocks(next);
     }
 
+    /** Reprograma un bloque y conserva su marca de hecho en la semana seleccionada. */
+    public static VidaLog rescheduleBlock(VidaLog log, VidaLog.Block target, int newDay,
+                                          String newTime, LocalDate weekMonday) {
+        if (newDay < 1 || newDay > 7) throw new IllegalArgumentException("Día no válido.");
+        int start = minutes(newTime);
+        if (start + target.minutes > 24 * 60)
+            throw new IllegalArgumentException("La actividad debe terminar antes de medianoche.");
+        for (VidaLog.Block other : log.blocks) {
+            if (other == target || other.day != newDay) continue;
+            int otherStart = minutes(other.time);
+            if (start < otherStart + other.minutes && otherStart < start + target.minutes)
+                throw new IllegalArgumentException("Ese horario ya tiene otra actividad.");
+        }
+        List<VidaLog.Block> blocks = new ArrayList<>(log.blocks);
+        int index = blocks.indexOf(target);
+        if (index < 0) {
+            for (int i = 0; i < blocks.size(); i++) {
+                VidaLog.Block b = blocks.get(i);
+                if (b.day == target.day && b.time.equals(target.time) && b.title.equals(target.title)) {
+                    index = i; break;
+                }
+            }
+        }
+        if (index < 0) throw new IllegalArgumentException("Actividad no encontrada.");
+        VidaLog.Block moved = new VidaLog.Block(target.title, newDay, newTime, target.minutes);
+        blocks.set(index, moved);
+        LocalDate oldDate = weekMonday.plusDays(target.day - 1);
+        LocalDate newDate = weekMonday.plusDays(newDay - 1);
+        List<VidaLog.HabitCheck> checks = new ArrayList<>();
+        boolean wasDone = false;
+        for (VidaLog.HabitCheck check : log.checks) {
+            if (check.habitId.equals(blockId(target)) && check.date.equals(oldDate.toString())) {
+                wasDone = true;
+            } else checks.add(check);
+        }
+        if (wasDone) checks.add(new VidaLog.HabitCheck(blockId(moved), newDate.toString()));
+        return log.withBlocks(blocks).withChecks(checks);
+    }
+
     public static String hm(int minutes) { return String.format(Locale.ROOT, "%02d:%02d", (minutes / 60) % 24, minutes % 60); }
 
     // ---------------------------------------------------------------- utilidades
