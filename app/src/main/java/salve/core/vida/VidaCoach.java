@@ -175,6 +175,11 @@ public final class VidaCoach {
             if (progress[1] == 0 || progress[0] == progress[1]) continue;
             VidaLog.Project.Step next = nextStep(project);
             LocalDate lastFocus = lastRecordedProjectFocus(log, project, today);
+            for (VidaLog.ProjectEvent event : projectHistory(log, project.id)) {
+                LocalDate eventDay = LocalDate.parse(event.date);
+                if (!eventDay.isAfter(today) && (lastFocus == null || eventDay.isAfter(lastFocus)))
+                    lastFocus = eventDay;
+            }
             if (lastFocus != null && java.time.temporal.ChronoUnit.DAYS.between(lastFocus, today) >= 7)
                 out.add("Última tarea principal registrada de " + project.title + ": " + lastFocus
                         + ". ¿Has avanzado por otra vía? Puedes actualizar tus pasos.");
@@ -186,6 +191,27 @@ public final class VidaCoach {
         if (activeCount(log) >= MAX_ACTIVE)
             out.add("Ya hay dos proyectos activos: pausa uno antes de iniciar otro.");
         return out;
+    }
+
+    /** Registra un avance explícito sin cambiar automáticamente el estado de los pasos. */
+    public static VidaLog recordProjectEvent(VidaLog log, String projectId, LocalDate day,
+                                             String action, String detail) {
+        boolean exists = false;
+        for (VidaLog.Project project : log.projects)
+            if (project.id.equals(projectId)) { exists = true; break; }
+        if (!exists) throw new IllegalArgumentException("Proyecto no encontrado.");
+        List<VidaLog.ProjectEvent> events = new ArrayList<>(log.projectEvents);
+        events.add(new VidaLog.ProjectEvent(VidaPlanner.newId(), projectId, day.toString(), action, detail));
+        return log.withProjectEvents(events);
+    }
+
+    /** Historial de eventos de un proyecto, ordenado por fecha. */
+    public static List<VidaLog.ProjectEvent> projectHistory(VidaLog log, String projectId) {
+        List<VidaLog.ProjectEvent> result = new ArrayList<>();
+        for (VidaLog.ProjectEvent event : log.projectEvents)
+            if (event.projectId.equals(projectId)) result.add(event);
+        result.sort(Comparator.comparing((VidaLog.ProjectEvent e) -> e.date).thenComparing(e -> e.id));
+        return result;
     }
 
     /**
