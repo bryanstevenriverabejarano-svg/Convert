@@ -242,11 +242,20 @@ public final class VidaService {
         Map<String, VidaLog.Review> reviews = new LinkedHashMap<>();
         for (VidaLog.Review w : remote.reviews) reviews.put(w.week, w);
         for (VidaLog.Review w : local.reviews) reviews.put(w.week, w);
+        Map<String, VidaLog.ProjectEvent> events = new LinkedHashMap<>();
+        for (VidaLog.ProjectEvent e : remote.projectEvents) events.put(e.id, e);
+        for (VidaLog.ProjectEvent e : local.projectEvents) events.put(e.id, e);
+        Map<String, VidaLog.DayOverride> overrides = new LinkedHashMap<>();
+        for (VidaLog.DayOverride o : remote.dayOverrides)
+            overrides.put(o.originalDate + "|" + o.title + "|" + o.originalTime, o);
+        for (VidaLog.DayOverride o : local.dayOverrides)
+            overrides.put(o.originalDate + "|" + o.title + "|" + o.originalTime, o);
         return new VidaLog(new ArrayList<>(sets.values()), new ArrayList<>(sleep.values()),
                 new ArrayList<>(meals.values()), new ArrayList<>(blocks.values()), new ArrayList<>(plan.values()),
                 new ArrayList<>(habits.values()), new ArrayList<>(checks.values()), new ArrayList<>(goals.values()),
                 new ArrayList<>(routines.values()), new ArrayList<>(focus.values()), new ArrayList<>(projects.values()),
-                new ArrayList<>(reviews.values()));
+                new ArrayList<>(reviews.values())).withProjectEvents(new ArrayList<>(events.values()))
+                .withDayOverrides(new ArrayList<>(overrides.values()));
     }
 
     private VidaLog snapshot() {

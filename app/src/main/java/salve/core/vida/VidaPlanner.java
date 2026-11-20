@@ -399,6 +399,106 @@ public final class VidaPlanner {
         return log.withBlocks(next);
     }
 
+    /** Bloques efectivos de una fecha: plantilla semanal con cambios solo para ese día. */
+    public static List<VidaLog.Block> blocksOn(VidaLog log, LocalDate date) {
+        List<VidaLog.Block> out = new ArrayList<>();
+        for (VidaLog.Block block : log.blocks) {
+            if (block.day != date.getDayOfWeek().getValue()) continue;
+            boolean overridden = false;
+            for (VidaLog.DayOverride override : log.dayOverrides)
+                if (override.originalDate.equals(date.toString()) && override.title.equals(block.title)
+                        && override.originalTime.equals(block.time)) { overridden = true; break; }
+            if (!overridden) out.add(block);
+        }
+        for (VidaLog.DayOverride override : log.dayOverrides)
+            if (override.targetDate.equals(date.toString())) {
+                VidaLog.Block original = null;
+                for (VidaLog.Block block : log.blocks)
+                    if (block.title.equals(override.title) && block.time.equals(override.originalTime)
+                            && block.day == LocalDate.parse(override.originalDate).getDayOfWeek().getValue()) {
+                        original = block; break;
+                    }
+                if (original != null) out.add(new VidaLog.Block(original.title, date.getDayOfWeek().getValue(),
+                        override.targetTime, original.minutes));
+            }
+        return out;
+    }
+
+    /** Solo cambia esta ocurrencia semanal; no edita la plantilla ni las semanas futuras. */
+    public static VidaLog moveOccurrence(VidaLog log, VidaLog.Block displayed, LocalDate from,
+                                         LocalDate to, String time) {
+        int start = minutes(time);
+        if (start + displayed.minutes > 1440) throw new IllegalArgumentException("La actividad termina después de medianoche.");
+        for (VidaLog.Block other : blocksOn(log, to)) {
+            if (from.equals(to) && other.title.equals(displayed.title) && other.time.equals(displayed.time)) continue;
+            int o = minutes(other.time);
+            if (start < o + other.minutes && o < start + displayed.minutes)
+                throw new IllegalArgumentException("Hay otra actividad en ese horario.");
+        }
+        List<VidaLog.DayOverride> overrides = new ArrayList<>(log.dayOverrides);
+        String originalDate = from.toString(), originalTime = displayed.time;
+        for (VidaLog.DayOverride o : overrides) {
+            if (o.targetDate.equals(from.toString()) && o.targetTime.equals(displayed.time)
+                    && o.title.equals(displayed.title)) {
+                originalDate = o.originalDate; originalTime = o.originalTime;
+                break;
+            }
+        }
+        final String sourceDate = originalDate, sourceTime = originalTime;
+        overrides.removeIf(o -> o.originalDate.equals(sourceDate) && o.originalTime.equals(sourceTime)
+                && o.title.equals(displayed.title));
+        if (!(sourceDate.equals(to.toString()) && sourceTime.equals(time)))
+            overrides.add(new VidaLog.DayOverride(sourceDate, displayed.title, sourceTime, to.toString(), time));
+        List<VidaLog.HabitCheck> checks = new ArrayList<>();
+        boolean done = false;
+        for (VidaLog.HabitCheck check : log.checks) {
+            if (check.date.equals(from.toString()) && check.habitId.equals(blockId(displayed))) done = true;
+            else checks.add(check);
+        }
+        if (done) checks.add(new VidaLog.HabitCheck(blockId(new VidaLog.Block(displayed.title,
+                to.getDayOfWeek().getValue(), time, displayed.minutes)), to.toString()));
+        return log.withDayOverrides(overrides).withChecks(checks);
+    }
+
+    /** Reprograma un bloque y conserva su marca de hecho en la semana seleccionada. */
+    public static VidaLog rescheduleBlock(VidaLog log, VidaLog.Block target, int newDay,
+                                          String newTime, LocalDate weekMonday) {
+        if (newDay < 1 || newDay > 7) throw new IllegalArgumentException("Día no válido.");
+        int start = minutes(newTime);
+        if (start + target.minutes > 24 * 60)
+            throw new IllegalArgumentException("La actividad debe terminar antes de medianoche.");
+        for (VidaLog.Block other : log.blocks) {
+            if (other == target || other.day != newDay) continue;
+            int otherStart = minutes(other.time);
+            if (start < otherStart + other.minutes && otherStart < start + target.minutes)
+                throw new IllegalArgumentException("Ese horario ya tiene otra actividad.");
+        }
+        List<VidaLog.Block> blocks = new ArrayList<>(log.blocks);
+        int index = blocks.indexOf(target);
+        if (index < 0) {
+            for (int i = 0; i < blocks.size(); i++) {
+                VidaLog.Block b = blocks.get(i);
+                if (b.day == target.day && b.time.equals(target.time) && b.title.equals(target.title)) {
+                    index = i; break;
+                }
+            }
+        }
+        if (index < 0) throw new IllegalArgumentException("Actividad no encontrada.");
+        VidaLog.Block moved = new VidaLog.Block(target.title, newDay, newTime, target.minutes);
+        blocks.set(index, moved);
+        LocalDate oldDate = weekMonday.plusDays(target.day - 1);
+        LocalDate newDate = weekMonday.plusDays(newDay - 1);
+        List<VidaLog.HabitCheck> checks = new ArrayList<>();
+        boolean wasDone = false;
+        for (VidaLog.HabitCheck check : log.checks) {
+            if (check.habitId.equals(blockId(target)) && check.date.equals(oldDate.toString())) {
+                wasDone = true;
+            } else checks.add(check);
+        }
+        if (wasDone) checks.add(new VidaLog.HabitCheck(blockId(moved), newDate.toString()));
+        return log.withBlocks(blocks).withChecks(checks);
+    }
+
     public static String hm(int minutes) { return String.format(Locale.ROOT, "%02d:%02d", (minutes / 60) % 24, minutes % 60); }
 
     // ---------------------------------------------------------------- utilidades

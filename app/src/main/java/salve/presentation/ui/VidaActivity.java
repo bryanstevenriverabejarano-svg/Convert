@@ -944,7 +944,7 @@ public final class VidaActivity extends Activity {
         propose.setOnClickListener(v -> askProposal());
         actions.addView(add, weight(this, 1, 3)); actions.addView(propose, weight(this, 1.4f, 3));
         top.addView(actions, wide(this, 8));
-        text(this, top, "Toca un hueco para añadir · toca un bloque para marcarlo hecho, moverlo o quitarlo.", 12, MUTED, false);
+        text(this, top, "Toca un bloque para opciones · mantenlo pulsado y arrástralo a otro horario o día.", 12, MUTED, false);
 
         // Rango de horas: de 6:00 (o antes si hay bloques) a medianoche
         int startHour = 6;
@@ -985,13 +985,50 @@ public final class VidaActivity extends Activity {
             }
             final float[] touchY = {0};
             body.setOnTouchListener((v, e) -> { if (e.getAction() == android.view.MotionEvent.ACTION_DOWN) touchY[0] = e.getY(); return false; });
+            body.setOnDragListener((view, event) -> {
+                switch (event.getAction()) {
+                    case android.view.DragEvent.ACTION_DRAG_STARTED:
+                        return event.getLocalState() instanceof VidaLog.Block;
+                    case android.view.DragEvent.ACTION_DRAG_ENTERED:
+                        body.setAlpha(0.82f);
+                        return true;
+                    case android.view.DragEvent.ACTION_DRAG_EXITED:
+                    case android.view.DragEvent.ACTION_DRAG_ENDED:
+                        body.setAlpha(1f);
+                        return true;
+                    case android.view.DragEvent.ACTION_DROP:
+                        body.setAlpha(1f);
+                        VidaLog.Block dragged = (VidaLog.Block) event.getLocalState();
+                        int minute = firstHour * 60 + Math.round(event.getY() / hourPx * 2) * 30;
+                        minute = Math.max(0, Math.min(24 * 60 - dragged.minutes, minute));
+                        minute = minute / 30 * 30;
+                        String targetTime = VidaPlanner.hm(minute);
+                        new AlertDialog.Builder(this)
+                                .setTitle("Cambiar horario")
+                                .setMessage("¿Mover «" + dragged.title + "» al "
+                                        + VidaPlanner.dayName(day) + " a las " + targetTime
+                                        + "? Solo cambiará esta semana. Se conservará su duración y estado.")
+                                .setPositiveButton("Mover", (dialog, which) -> {
+                                    try {
+                                        LocalDate sourceDate = monday.plusDays(dragged.day - 1);
+                                        VidaLog next = VidaPlanner.moveOccurrence(log, dragged, sourceDate,
+                                                monday.plusDays(day - 1), targetTime);
+                                        change(ignored -> next);
+                                    } catch (IllegalArgumentException ex) {
+                                        new AlertDialog.Builder(this).setTitle("No se puede mover")
+                                                .setMessage(ex.getMessage()).setPositiveButton("Aceptar", null).show();
+                                    }
+                                }).setNegativeButton("Cancelar", null).show();
+                        return true;
+                    default: return true;
+                }
+            });
             body.setOnClickListener(v -> {
                 int minute = firstHour * 60 + (int) (touchY[0] / hourPx * 60);
                 minute = Math.max(0, Math.min(23 * 60 + 30, minute / 30 * 30));
                 askBlock(day, VidaPlanner.hm(minute));
             });
-            List<VidaLog.Block> blocks = new ArrayList<>();
-            for (VidaLog.Block b : log.blocks) if (b.day == d) blocks.add(b);
+            List<VidaLog.Block> blocks = VidaPlanner.blocksOn(log, date);
             for (VidaLog.Block b : blocks) {
                 int start = VidaPlanner.minutes(b.time) - firstHour * 60;
                 int len = Math.min(b.minutes, 24 * 60 - VidaPlanner.minutes(b.time));
@@ -1005,6 +1042,11 @@ public final class VidaActivity extends Activity {
                 if (date.isBefore(today) && !done && VidaPlanner.kind(b.title) != VidaPlanner.Kind.DESCANSO) t.setAlpha(0.55f);
                 android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(-1, Math.max(dp(this, 22), len * hourPx / 60 - dp(this, 2)));
                 lp.topMargin = start * hourPx / 60 + 1; lp.leftMargin = dp(this, 2); lp.rightMargin = dp(this, 2);
+                t.setOnLongClickListener(v -> {
+                    android.content.ClipData clip = android.content.ClipData.newPlainText("vida-block", b.title);
+                    v.startDragAndDrop(clip, new View.DragShadowBuilder(v), b, 0);
+                    return true;
+                });
                 t.setOnClickListener(v -> blockMenu(b, date));
                 body.addView(t, lp);
             }
