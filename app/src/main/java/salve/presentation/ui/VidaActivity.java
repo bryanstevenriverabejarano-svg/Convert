@@ -1007,10 +1007,12 @@ public final class VidaActivity extends Activity {
                                 .setTitle("Cambiar horario")
                                 .setMessage("¿Mover «" + dragged.title + "» al "
                                         + VidaPlanner.dayName(day) + " a las " + targetTime
-                                        + "? Se conservará su duración y el estado de realización.")
+                                        + "? Solo cambiará esta semana. Se conservará su duración y estado.")
                                 .setPositiveButton("Mover", (dialog, which) -> {
                                     try {
-                                        VidaLog next = VidaPlanner.rescheduleBlock(log, dragged, day, targetTime, monday);
+                                        LocalDate sourceDate = monday.plusDays(dragged.day - 1);
+                                        VidaLog next = VidaPlanner.moveOccurrence(log, dragged, sourceDate,
+                                                monday.plusDays(day - 1), targetTime);
                                         change(ignored -> next);
                                     } catch (IllegalArgumentException ex) {
                                         new AlertDialog.Builder(this).setTitle("No se puede mover")
@@ -1026,8 +1028,7 @@ public final class VidaActivity extends Activity {
                 minute = Math.max(0, Math.min(23 * 60 + 30, minute / 30 * 30));
                 askBlock(day, VidaPlanner.hm(minute));
             });
-            List<VidaLog.Block> blocks = new ArrayList<>();
-            for (VidaLog.Block b : log.blocks) if (b.day == d) blocks.add(b);
+            List<VidaLog.Block> blocks = VidaPlanner.blocksOn(log, date);
             for (VidaLog.Block b : blocks) {
                 int start = VidaPlanner.minutes(b.time) - firstHour * 60;
                 int len = Math.min(b.minutes, 24 * 60 - VidaPlanner.minutes(b.time));
