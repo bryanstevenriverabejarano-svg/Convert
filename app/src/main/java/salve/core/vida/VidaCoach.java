@@ -166,6 +166,49 @@ public final class VidaCoach {
         return addProject(log, "Vídeo «Me dicen Bray»", steps, today);
     }
 
+    /** Consejos basados en pasos y antigüedad; no se infiere inactividad sin historial. */
+    public static List<String> projectInsights(VidaLog log, LocalDate today) {
+        List<String> out = new ArrayList<>();
+        for (VidaLog.Project project : log.projects) {
+            if (!ACTIVE.equals(project.status)) continue;
+            int[] progress = progress(project);
+            if (progress[1] == 0 || progress[0] == progress[1]) continue;
+            VidaLog.Project.Step next = nextStep(project);
+            LocalDate lastFocus = lastRecordedProjectFocus(log, project, today);
+            if (lastFocus != null && java.time.temporal.ChronoUnit.DAYS.between(lastFocus, today) >= 7)
+                out.add("Última tarea principal registrada de " + project.title + ": " + lastFocus
+                        + ". ¿Has avanzado por otra vía? Puedes actualizar tus pasos.");
+            if (progress[1] >= 4 && progress[0] * 100 >= progress[1] * 80)
+                out.add("Modo Terminar: " + project.title + ". Completa «" + next.text + "» antes de añadir más mejoras.");
+            else if (java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(project.created), today) >= 14)
+                out.add("Revisa " + project.title + ": lleva tiempo abierto. ¿Qué dificulta «" + next.text + "»?");
+        }
+        if (activeCount(log) >= MAX_ACTIVE)
+            out.add("Ya hay dos proyectos activos: pausa uno antes de iniciar otro.");
+        return out;
+    }
+
+    /**
+     * Última tarea principal completada cuyo texto menciona el proyecto o alguno de sus pasos.
+     * Es evidencia parcial, no un historial exhaustivo de edición o trabajo.
+     */
+    public static LocalDate lastRecordedProjectFocus(VidaLog log, VidaLog.Project project, LocalDate today) {
+        LocalDate latest = null;
+        String title = VidaConversation.normalize(project.title);
+        for (VidaLog.Focus focus : log.focus) {
+            if (!focus.done) continue;
+            LocalDate date = LocalDate.parse(focus.date);
+            if (date.isAfter(today)) continue;
+            String text = VidaConversation.normalize(focus.text);
+            boolean matches = text.contains(title);
+            if (!matches) for (VidaLog.Project.Step step : project.steps) {
+                if (text.contains(VidaConversation.normalize(step.text))) { matches = true; break; }
+            }
+            if (matches && (latest == null || date.isAfter(latest))) latest = date;
+        }
+        return latest;
+    }
+
     // ---------------------------------------------------------------- revisión semanal
 
     public static LocalDate monday(LocalDate day) { return day.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)); }
@@ -215,6 +258,7 @@ public final class VidaCoach {
             int[] p = progress(j);
             out.append("Proyecto ").append(j.title).append(": ").append(p[0]).append("/").append(p[1]).append(" pasos\n");
         }
+        for (String insight : projectInsights(log, day)) out.append("• ").append(insight).append('\n');
         return out.toString().trim();
     }
 
